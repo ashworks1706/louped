@@ -48,16 +48,15 @@ experiments                      leaf, nothing imports it
 cli
 server                           FastAPI, read-only over the stores; Playground generation
 train                            sft on TRL/PEFT or Unsloth, logged as MLflow training runs
-stores                           views over Inspect logs, MLflow, experiments/
-inspect_ext | rl_ext             loupe/ Inspect model provider, shared scorers; scorer -> reward
-analysis                         activations, logit lens, patching; results as UI views
-interventions | vectors          Steer and Ablate specs on nnsight, batched generation; directions
+stores | tracking | analysis     views over Inspect logs and MLflow; start an MLflow run;
+  | inspect_ext                  lens and patching as UI views; loupe/ provider and scorers
+interventions                    Steer and Ablate specs on nnsight, batched generation
+vectors                          directions as safetensors
 models | data                    load a model into nnsight; training sets from product traces
-tracking                         start an MLflow run with RunMeta attached
 core                             run metadata, paths
 ```
 
-Today everything from `core` to `cli` exists except `rl_ext`. Each phase adds its layers here and in the contract in
+Today everything from `core` to `cli` exists; `rl_ext` (scorer to reward) joins `inspect_ext` in v0.5. Each phase adds its layers here and in the contract in
 `pyproject.toml`.
 
 ## Data
