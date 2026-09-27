@@ -2,28 +2,53 @@
 
 ## What loupe is
 
-A testbed for research on language models, from activations to agents, with a UI as its main
-surface. Every capability is delegated to an existing free tool; loupe owns only the glue that
-makes them share one model, one intervention spec and one data format.
+A testbed where an intervention on a language model is something you evaluate, train against and
+look inside, with a UI as its main surface. Every capability is delegated to an existing free
+tool; loupe owns only the glue that makes them share one model, one intervention spec and one data
+format.
+
+What loupe owns, because no existing tool joins them:
+
+- The `loupe/` Inspect provider: any open-weight model under Steer or Ablate, tool agents
+  included, so an intervention is one eval run.
+- Intervened against base, statistically: paired bootstrap differences and flips, and sweeps of
+  score against KL coherence cost over layer and strength.
+- One check as both the Inspect scorer and the GRPO reward, and interp across the checkpoints of a
+  training run (a direction's projection, model diffing).
+- The Playground: base and intervened replies side by side, with the lens, attention and
+  projections of the same prompt.
+- The interp views these need (lens, attention, projection, patching, probes, top examples),
+  drawn from JSON the analyses log.
+
+What loupe leaves to others, and links to:
+
+| Need | Tool | Why not in loupe |
+|---|---|---|
+| SAE feature dashboards, autointerp, steering chat | Neuronpedia (self-hostable) | A complete, maintained UI |
+| Attribution graphs over transcoders | circuit-tracer, its own UI or Neuronpedia's | Pins transformers 4.57; runs in its own environment |
+| Reading transcripts and tool calls in depth | Inspect View (`inspect view`) | Inspect's own viewer; loupe keeps comparison screens |
+| Training dashboards, clusters, sweeps of hyperparameters | Transformer Lab, LLaMA-Factory, Oumi | Full training products; loupe drives TRL from a YAML |
+| Fast steered serving | EasySteer | A vLLM fork, not a library |
+| ReFT | pyreft, in its own environment | Pins transformers 4.45 |
 
 ## The tools it composes
 
 | Need | Tool |
 |---|---|
 | Hooks, caching, patching, steering on real HF models | nnsight |
-| SAEs; lens; attribution graphs | SAELens; tuned-lens; circuit-tracer |
+| SAEs | SAELens |
 | Linear probes | scikit-learn |
-| Evals, multi-turn, agents, coding sandboxes | Inspect AI + inspect_evals |
-| Standard benchmarks | lm-evaluation-harness |
-| SFT, DPO, GRPO, LoRA; ReFT | TRL, PEFT, unsloth; pyreft |
-| RL environments | verifiers (LLM), gymnasium (classic) |
-| Fast generation | vLLM |
+| Evals, multi-turn, agents, coding sandboxes, benchmarks | Inspect AI + inspect_evals |
+| SFT, DPO, GRPO, LoRA | TRL, PEFT, unsloth |
+| Multi-turn RL environments | TRL environment_factory |
+| Verifiable tasks and answer checks | reasoning-gym, math-verify |
 | Tracking | MLflow (self-hosted) and Inspect logs |
-| Cluster and cloud | submitit (Slurm), SkyPilot |
 | UI | Next.js static export, shadcn/ui, Tailwind, Geist, cmdk, TanStack Query, nuqs, Recharts |
 | API | FastAPI |
 
-Rejected: TransformerLens (reimplements architectures, lags new models), Hydra (each tool keeps its
+Rejected: verifiers (pulls in hosted-API clients; TRL's environments cover it), vLLM and cluster
+launchers (training products do this; loupe stays single-machine), TransformerLens (reimplements
+architectures, lags new models), Hydra (each tool keeps its
 native config; our scripts use tyro), W&B (server not self-hostable for free), a custom plugin
 registry (Inspect's registries and Python entry points already exist).
 
@@ -34,7 +59,7 @@ Policy = model + [interventions] + generation params
 ```
 
 The same Policy is valid in an Inspect eval (through a loupe model provider, tool agents
-included), a TRL or verifiers training run, the UI Playground, and an activation analysis. "Base", "base + steering", "base +
+included), a TRL training run, the UI Playground, and an activation analysis. "Base", "base + steering", "base +
 ablation" and "LoRA checkpoint" are therefore compared by one eval, one scorer and one UI view.
 A task's scorer is a plain function wrapped once as an Inspect scorer and once as a reward, so an
 eval becomes an RL environment without a rewrite.
@@ -91,7 +116,9 @@ generate, and inspect, which returns a prompt's views in the same shapes a run l
 Pages: Home, Experiments, Run (Overview, Figures, Samples, Transcripts, Artifacts, Config), Compare,
 Vectors, Playground. Principles: one question per screen, every number links to the samples behind
 it, compare is first-class, empty states show the command that fills them, keyboard-first (⌘K and
-`G` jumps), view state in the URL. Neuronpedia and Docent are linked from it, not replacements for it: an SAE feature with a Neuronpedia id links to its dashboard from the Figures table and from its saved vector.
+`G` jumps), view state in the URL. Neuronpedia and Inspect View are linked from it, not rebuilt in
+it: an SAE feature with a Neuronpedia id links to its dashboard from the Figures table and from its
+saved vector.
 
 Design rules live in `apps/web/AGENTS.md`.
 

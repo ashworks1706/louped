@@ -1,0 +1,25 @@
+# loupe train grpo experiments/tool-rl/grpo.yaml   (after data.py)
+name: tool-rl
+experiment: tool-rl
+base_model: Qwen/Qwen3-0.6B
+dataset: data/tool-rl/train.jsonl
+output_dir: checkpoints/tool-rl
+max_seq_length: 2048
+environment: env.py:Calculator
+max_tool_turns: 6
+num_generations: 8
+max_completion_length: 512
+temperature: 1.0
+lora:
+  r: 16
+  alpha: 32
+train:
+  max_steps: 300
+  per_device_batch_size: 8
+  gradient_accumulation: 2
+  learning_rate: 1.0e-5
+  logging_steps: 5
+  save_steps: 50
+  seed: 0
+export:
+  merge_as: qwen3-0.6b-tool-rl

@@ -1,9 +1,11 @@
 # loupe: agent guide
 
-A research testbed for looking inside language models. loupe is **glue, not a framework**: nnsight
-does interpretability, Inspect does evals and agents, TRL does training, verifiers does RL
-environments, vLLM does fast generation, MLflow does tracking. loupe gives them one model, one
-intervention spec and one data format, and a UI over all of it. The UI is the product.
+A research testbed where an intervention on a language model is something you evaluate, train
+against and look inside. loupe is **glue, not a framework**: nnsight does interpretability, Inspect
+does evals and agents, TRL does training and RL environments, MLflow does tracking. loupe gives
+them one model, one intervention spec and one data format, and a UI over all of it. The UI is the
+product. It builds only the joins; what Neuronpedia, circuit-tracer, Inspect View or a training
+product already does is linked, not rebuilt (docs/ARCHITECTURE.md lists them).
 
 Read `docs/ARCHITECTURE.md` for the layers and the design, `docs/ROADMAP.md` for what is built in
 what order. Do not contradict them; propose an edit to the doc instead.
@@ -83,7 +85,7 @@ core
 
 Everything runs locally with no API keys: models come from the Hugging Face Hub or a path, the
 stores are files under LOUPE_HOME, and no step calls a hosted model. Keep it that way; a model
-judge, if one is ever needed, is a local model through the loupe/ provider or vLLM.
+judge, if one is ever needed, is a local model through the loupe/ provider.
 
 nnsight traces the source of the block it runs: keep trace bodies in files, use explicit loops
 (not comprehensions) inside them, and touch modules in execution order.

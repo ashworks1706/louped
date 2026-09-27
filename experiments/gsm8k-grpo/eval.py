@@ -12,7 +12,6 @@ import json
 from dataclasses import dataclass
 
 import tyro
-from checks import correct
 from inspect_ai import Task, eval
 from inspect_ai.dataset import Sample
 from inspect_ai.model import ChatMessageSystem, ChatMessageUser, GenerateConfig
@@ -20,6 +19,7 @@ from inspect_ai.solver import generate
 
 from loupe.core import home, logs_dir
 from loupe.inspect_ext import as_scorer
+from loupe.train.tasks import math_equal
 
 
 @dataclass
@@ -39,7 +39,7 @@ def task(limit: int, max_tokens: int) -> Task:
         samples.append(Sample(id=i, target=row["answer"], metadata={"answer": row["answer"]},
                               input=[ChatMessageSystem(content=system["content"]),
                                      ChatMessageUser(content=user["content"])]))  # fmt: skip
-    return Task(dataset=samples, solver=generate(), scorer=as_scorer(correct),
+    return Task(dataset=samples, solver=generate(), scorer=as_scorer(math_equal),
                 config=GenerateConfig(temperature=0, max_tokens=max_tokens))  # fmt: skip
 
 

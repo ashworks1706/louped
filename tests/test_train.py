@@ -201,7 +201,85 @@ def test_checks_load_from_a_module_or_a_file_and_fail_clearly(tmp_path: Path) ->
     assert load_check("os.path:basename")("a/b") == "b"
     (tmp_path / "c.py").write_text("def one(completion):\n    return 1.0\n")
     assert load_check("c.py:one", tmp_path)("x") == 1.0
-    for spec, message in [("nocolon", "file.py:function"), ("gone.py:f", "no reward file"),
+    for spec, message in [("nocolon", "file.py:name"), ("gone.py:f", "no file"),
                           ("c.py:two", "no function")]:  # fmt: skip
         with pytest.raises(TrainError, match=message):
             load_check(spec, tmp_path)
+
+
+ENV = '''
+class Counter:
+    seen: list = []
+
+    def reset(self, word: str, **_) -> None:
+        Counter.seen.append(word)
+        self.calls = 0
+
+    def bump(self, n: int) -> str:
+        """Count.
+
+        Args:
+            n: How much.
+
+        Returns:
+            The count.
+        """
+        self.calls += n
+        return str(self.calls)
+
+    def get_reward(self) -> float:
+        return 1.0
+'''
+
+
+def test_grpo_trains_in_a_tool_environment_and_logs_rollouts(tmp_path: Path) -> None:
+    from trl.chat_template_utils import qwen3_chat_template
+
+    from loupe.train import grpo
+
+    lm = tiny(layers=2, hidden=32)
+    base = home() / "models" / "tiny-tools"
+    lm._model.save_pretrained(base)  # pyright: ignore[reportCallIssue]
+    lm.tokenizer.chat_template = qwen3_chat_template
+    lm.tokenizer.save_pretrained(base)
+    (tmp_path / "env.py").write_text(ENV)
+    user = [{"role": "user", "content": "write a poem"}]
+    write_rows(home() / "data/t-env.jsonl", [{"prompt": user, "word": "sure"}] * 4)
+    path = config(tmp_path, name="t-env", base_model="tiny-tools", dataset="data/t-env.jsonl",
+                  environment="env.py:Counter", num_generations=2, max_completion_length=4,
+                  export={"merge_as": None},
+                  train={"max_steps": 1, "per_device_batch_size": 2, "gradient_accumulation": 1,
+                         "logging_steps": 1, "seed": 0})  # fmt: skip
+    cfg = grpo.load_config(path)
+    assert grpo.plan(cfg).tools == ["bump"]
+    grpo.train(cfg)
+
+    (run,) = [r for r in stores.list_runs() if r.kind == "training"]
+    assert "rewards/Counter/mean" in stores.get_run(run.id).history
+    (view,) = [v.view for v in stores.list_views(run.id) or [] if v.path.endswith("rollouts.json")]
+    assert view.kind == "table" and view.columns[:2] == ["step", "reward"]
+    assert all(row[1] == 1.0 for row in view.rows)
+
+
+def test_gym_and_math_checks_score_replies() -> None:
+    from loupe.train.tasks import gym, gym_rows, math_equal
+
+    (row,) = gym_rows("chain_sum", 1, seed=1)
+    right = f"so <answer>{row['answer']}</answer>"
+    assert gym(right, row["task"], row["entry"]) == 1.0
+    assert gym("no tag", row["task"], row["entry"]) == 0.0
+    assert [math_equal(r, a) for r, a in [("it is 1/2", "0.5"), ("3,000 apples", "3000"),
+                                           ("no idea", "3")]] == [1.0, 1.0, 0.0]  # fmt: skip
+
+
+def test_tool_rl_calculator_scores_the_submitted_answer() -> None:
+    from loupe.train.rewards import load_object
+    from loupe.train.tasks import gym_rows
+
+    calc = load_object("experiments/tool-rl/env.py:Calculator")()
+    (row,) = gym_rows("basic_arithmetic", 1, seed=0)
+    calc.reset(**row)
+    assert calc.calculate("(3 + 4) * 2") == "14" and calc.calculate("2 ** 9").startswith("error")
+    assert calc.get_reward() == 0.0
+    calc.submit(row["answer"])
+    assert calc.get_reward() == 1.0

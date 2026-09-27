@@ -1,5 +1,10 @@
 # Roadmap
 
+loupe builds the joins between interventions, evals, training and interp, and links to existing
+tools for the rest (ARCHITECTURE.md). Out of scope, because other free tools do it: a training
+dashboard, cluster and vLLM scale-out (Transformer Lab, LLaMA-Factory, Oumi), SAE and graph
+browsing (Neuronpedia, circuit-tracer), ReFT (pyreft).
+
 Each phase ends with an acceptance test, most of them reproducing a published result: if loupe
 cannot reproduce a number someone else got, its own numbers cannot be trusted. Every phase ships
 with its UI view.
@@ -44,7 +49,8 @@ with its UI view.
       "sure" once the refusal direction is ablated; every view renders on desktop and mobile
 - [x] Model diffing: per layer, residual cosine, norm change and the cosine of a contrast
       direction between two models of one architecture
-- [ ] Attribution graphs with circuit-tracer and a graph view
+- [x] Attribution graphs are circuit-tracer's, in its own environment and viewer (`just circuit`);
+      loupe does not draw graphs (see ARCHITECTURE.md, what loupe leaves to others)
 - [ ] Acceptance: reproduce the refusal direction (Arditi et al. 2024) on a Qwen2.5 instruct model,
       read entirely in the UI
 
@@ -79,7 +85,6 @@ with its UI view.
 - [x] `experiments/refusal-finetuning`, verified offline (`--tiny`): DPO on the model's own ablated
       replies; refusal and the direction's projection both collapse by step 5
 - [x] `experiments/gsm8k-grpo`: data, recipe and eval for the acceptance below (not yet run)
-- [ ] ReFT with pyreft: a trained intervention saved and applied like a Steer
 - [ ] Acceptance: GRPO on GSM8K on a small Qwen shows the known gain
 
 ## v0.6 Agentic and coding
@@ -90,14 +95,16 @@ with its UI view.
       interventions
 - [x] `experiments/agent-sandbox`: bash in a Docker sandbox, verified with the tiny model and
       scripted calls
-- [ ] verifiers tool environments; GRPO over agent rollouts
+- [x] Multi-turn agent RL: `environment: file.py:Class` in a GRPO config is a TRL environment
+      (per-rollout state, its methods as tools, an optional episode reward); every logged step's
+      rollouts kept and the first and last shown as a Rollouts figure
+- [x] Verifiable tasks from reasoning-gym (procedural, offline) and maths answers checked by
+      math-verify, as plain checks (`loupe.train.tasks`), so reward and scorer stay one function
+- [x] `experiments/tool-rl`: calculator and submit tools over reasoning-gym arithmetic, reward
+      from the environment (not yet run)
+- [x] Transcripts in depth open in Inspect View (`just inspect-view`); loupe keeps comparison
 - [ ] Black-box benchmarking of zipy, SparkyAI and piramid through their endpoints
 - [ ] Acceptance: an inspect_evals agentic task end to end in Docker
-
-## v0.7 Scale-out
-
-- [ ] submitit and SkyPilot launchers; nnsight vLLM backend
-- [ ] Acceptance: a steered sweep on a cluster matches local results
 
 ## v1.0 Open source
 

@@ -76,3 +76,16 @@ new-experiment name:
 api-types:
     uv run python -c "import json; from loupe.server import create_app; print(json.dumps(create_app().openapi(), indent=2))" > apps/web/src/lib/openapi.json
     cd {{web}} && pnpm exec openapi-typescript src/lib/openapi.json -o src/lib/api-types.ts && pnpm exec prettier --write src/lib/api-types.ts src/lib/openapi.json > /dev/null
+
+# Inspect's own viewer over loupe's eval logs, for reading transcripts in depth (:7575)
+inspect-view:
+    uv run inspect view --log-dir "$(uv run python -c 'from loupe.core import logs_dir; print(logs_dir())')"
+
+# an attribution graph with circuit-tracer, in its own environment (it pins transformers 4.57),
+# written under <home>/graphs and opened in its viewer; transcoders are a Hub repo such as
+# mwhanna/gemma-scope-transcoders for google/gemma-2-2b
+circuit model transcoders prompt slug="graph":
+    uvx --from circuit-tracer circuit-tracer attribute -m "{{model}}" -t "{{transcoders}}" \
+        -p "{{prompt}}" --slug "{{slug}}" \
+        --graph_file_dir "$(uv run python -c 'from loupe.core import home; print(home() / "graphs")')" \
+        --server

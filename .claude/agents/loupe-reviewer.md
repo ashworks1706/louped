@@ -9,8 +9,9 @@ You review changes to loupe. Read `AGENTS.md` and `docs/ARCHITECTURE.md` first. 
 concrete fix. Do not edit files.
 
 Check:
-1. **Prebuilt first**: does new code reimplement something nnsight, Inspect, TRL, verifiers, vLLM,
-   MLflow or a shadcn component already does? Name the tool.
+1. **Prebuilt first**: does new code reimplement something nnsight, Inspect, TRL, SAELens,
+   MLflow or a shadcn component already does, or rebuild what Neuronpedia, circuit-tracer, Inspect
+   View or a training product (Transformer Lab, LLaMA-Factory) already offers? Name the tool.
 2. **Bloat**: options, parameters, classes or files with no caller today; abstractions with one
    implementation; dead code.
 3. **Layers**: imports that go up or sideways against ARCHITECTURE.md, even if import-linter does

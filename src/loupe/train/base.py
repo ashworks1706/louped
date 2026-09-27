@@ -197,11 +197,17 @@ def trainer_args(cfg: TrainConfig) -> dict[str, Any]:
 MakeTrainer = Callable[[Any, Any, Any, dict[str, Any]], Any]
 
 
-def fit(cfg: TrainConfig, recipe: str, rows: int, make: MakeTrainer) -> Path:
+def fit(
+    cfg: TrainConfig,
+    recipe: str,
+    rows: int,
+    make: MakeTrainer,
+    after: Callable[[TrainConfig], None] | None = None,
+) -> Path:
     """Run a recipe's trainer inside an MLflow training run; returns the adapter directory.
 
     Checkpoints a previous run left in output_dir are removed first, so every checkpoint there
-    belongs to this run.
+    belongs to this run. `after` runs inside the run once training is done, to log more to it.
     """
     from loupe.tracking import start_run
 
@@ -222,6 +228,8 @@ def fit(cfg: TrainConfig, recipe: str, rows: int, make: MakeTrainer) -> Path:
         tuned.save_pretrained(str(adapter))
         tok.save_pretrained(str(adapter))
         _export(cfg, kind, tuned, tok)
+        if after is not None:
+            after(cfg)
         import mlflow
 
         mlflow.set_tag("loupe.adapter", str(adapter))

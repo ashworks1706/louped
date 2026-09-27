@@ -7,23 +7,30 @@
   <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
-loupe puts interpretability, evals, training and RL environments behind one model, one
-intervention spec and one UI. A steered, ablated or patched model is a drop-in policy: the same
-eval scores it, the same trainer can train against it, and the same UI shows what changed, down to
-the transcript and the activation behind a number.
+loupe makes an intervention a first-class object. A steered or ablated model is a drop-in policy:
+an Inspect eval scores it, a paired test says whether it changed anything, a sweep maps where it
+works and what it costs in coherence, a trainer can train against it, and the same UI shows what
+changed inside the model, from the transcript down to the activation behind a number, and across
+training checkpoints.
 
-It is glue, not a framework. The work is done by [nnsight](https://nnsight.net),
-[Inspect](https://inspect.aisi.org.uk), [TRL](https://github.com/huggingface/trl),
-[verifiers](https://github.com/willccbb/verifiers), [vLLM](https://github.com/vllm-project/vllm) and
-[MLflow](https://mlflow.org); loupe connects them and shows the results.
+It is glue, not a framework, and it covers only the joins. The work is done by
+[nnsight](https://nnsight.net), [Inspect](https://inspect.aisi.org.uk),
+[TRL](https://github.com/huggingface/trl) and [MLflow](https://mlflow.org). What other tools
+already do well, loupe links to instead of rebuilding: SAE feature and circuit browsing in
+[Neuronpedia](https://github.com/hijohnnylin/neuronpedia) and
+[circuit-tracer](https://github.com/safety-research/circuit-tracer), transcript reading in
+[Inspect View](https://inspect.aisi.org.uk/log-viewer.html), and training dashboards and cluster
+runs in [Transformer Lab](https://github.com/transformerlab/transformerlab-app) or
+[LLaMA-Factory](https://github.com/hiyouga/LLaMA-Factory).
 
 Everything runs on your machine with no API keys: open-weight models from the Hugging Face Hub or
 a local path, results in files under `LOUPE_HOME`, and no step that calls a hosted model. A GPU
 makes the big models practical; every pipeline also runs on CPU with a tiny model for checking.
 
-> Status: v0.4, with v0.5 training underway. Interpretability (steering, ablation, lens,
-> patching), Inspect evals under interventions, a Playground, and LoRA SFT from product traces.
-> See the [roadmap](docs/ROADMAP.md).
+> Status: v0.6. Interventions (steer, ablate) with lens, attention, projection, patching and
+> probes; Inspect evals under interventions with paired statistics and steering sweeps; SFT, DPO
+> and GRPO on TRL with one check as reward and scorer, multi-turn tool environments, and interp
+> across checkpoints; tool agents in Docker. See the [roadmap](docs/ROADMAP.md).
 
 ## Quick start
 

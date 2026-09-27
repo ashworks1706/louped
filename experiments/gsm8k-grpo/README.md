@@ -9,7 +9,8 @@ reported for Qwen2.5 models (a gain of several points within a few hundred steps
 
 Greedy test accuracy, base against GRPO, on the same samples: the paired difference and its
 bootstrap interval in Compare. A gain whose interval excludes zero reproduces; one inside noise
-does not. The reward and the scorer are the same function (`checks.py:correct`).
+does not. The reward and the scorer are the same function, math-verify's symbolic answer check
+(`loupe.train.tasks:math_equal`).
 
 ## Run
 
@@ -22,7 +23,7 @@ loupe train grpo experiments/gsm8k-grpo/grpo.yaml
 uv run --all-extras python experiments/gsm8k-grpo/eval.py
 ```
 
-The training run shows loss and `rewards/correct` by step; the two evals compare under Compare.
+The training run shows loss and `rewards/math_equal` by step; the two evals compare under Compare.
 
 ## Result
 

@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 # One extra per capability. A module imports only its own extra's packages, so an install carries
-# only what it uses. Later phases add rl, vllm and cluster.
+# only what it uses.
 [project.optional-dependencies]
 # Reading and serving results. Pulls in the readers for both stores it serves.
 server = [
@@ -22,6 +22,7 @@ server = [
 ]
 evals = [
     "inspect-ai>=0.3.271,<0.4",
+    "inspect-evals>=0.22",
 ]
 # MLflow on a SQLite file; the file store is in maintenance mode in MLflow 3.
 tracking = [
@@ -42,7 +43,14 @@ train = [
     "loupelab[data,interp,tracking]",
     "datasets>=4",
     "peft>=0.17",
-    "trl>=0.24",
+    "trl>=1.14",
+]
+# Verifiable RL tasks and answer checks for GRPO: procedural tasks with their own scorers, and
+# symbolic comparison of maths answers.
+rl = [
+    "loupelab[train]",
+    "math-verify>=0.9",
+    "reasoning-gym>=0.1.25",
 ]
 # Training sets from product traces: the Phoenix source needs httpx, review needs rich.
 data = [

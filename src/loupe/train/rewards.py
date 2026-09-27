@@ -36,21 +36,26 @@ def as_reward(check: Check) -> Callable[..., list[float]]:
     return reward
 
 
-def load_check(spec: str, base: Path | None = None) -> Check:
-    """A check named file.py:function (relative to base) or module:function."""
+def load_object(spec: str, base: Path | None = None) -> Any:
+    """What file.py:name (relative to base) or module:name names: a check or an environment."""
     target, _, name = spec.rpartition(":")
     if not target or not name:
-        raise TrainError(f"reward {spec!r} is not file.py:function or module:function")
+        raise TrainError(f"{spec!r} is not file.py:name or module:name")
     if target.endswith(".py"):
         path = Path(target) if Path(target).is_absolute() or base is None else base / target
         loader = importlib.util.spec_from_file_location(path.stem, path)
         if loader is None or loader.loader is None or not path.exists():
-            raise TrainError(f"no reward file at {path}")
+            raise TrainError(f"no file at {path}")
         module = importlib.util.module_from_spec(loader)
         loader.loader.exec_module(module)
     else:
         module = importlib.import_module(target)
-    check: Any = getattr(module, name, None)
-    if not callable(check):
-        raise TrainError(f"{spec}: no function {name!r}")
-    return cast(Check, check)
+    found: Any = getattr(module, name, None)
+    if not callable(found):
+        raise TrainError(f"{spec}: no function or class {name!r}")
+    return found
+
+
+def load_check(spec: str, base: Path | None = None) -> Check:
+    """A check named file.py:function (relative to base) or module:function."""
+    return cast(Check, load_object(spec, base))

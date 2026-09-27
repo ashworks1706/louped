@@ -5,7 +5,7 @@ base_model: Qwen/Qwen2.5-0.5B-Instruct
 dataset: data/gsm8k-grpo/train.jsonl
 output_dir: checkpoints/gsm8k-grpo
 max_seq_length: 1024
-rewards: [checks.py:correct]
+rewards: [loupe.train.tasks:math_equal]
 num_generations: 8
 max_completion_length: 384
 temperature: 1.0
