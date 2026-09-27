@@ -8,12 +8,12 @@ label; the split is by a hash of the text. The classifier is saved with joblib. 
 
 from __future__ import annotations
 
-import hashlib
 import json
 from pathlib import Path
 
 from pydantic import BaseModel
 
+from loupe.data.collect import bucket
 from loupe.train.base import TrainError, _Strict, _under_home
 
 
@@ -69,10 +69,6 @@ def plan(cfg: ClassifyConfig) -> ClassifyPlan:
     return ClassifyPlan(name=cfg.name, encoder=cfg.encoder, rows=len(rows), labels=labels)
 
 
-def held_out(text: str, fraction: float) -> bool:
-    return int(hashlib.sha256(text.encode()).hexdigest()[:8], 16) / 16**8 < fraction
-
-
 def train(cfg: ClassifyConfig) -> Path:
     """Fit, score on the held-out split, log to MLflow; returns the saved classifier."""
     import joblib
@@ -84,8 +80,8 @@ def train(cfg: ClassifyConfig) -> Path:
     from loupe.tracking import start_run
 
     rows = _rows(cfg)
-    test = [r for r in rows if held_out(r.text, cfg.test_fraction)]
-    fit = [r for r in rows if not held_out(r.text, cfg.test_fraction)]
+    test = [r for r in rows if bucket(r.text) < cfg.test_fraction]
+    fit = [r for r in rows if bucket(r.text) >= cfg.test_fraction]
     if not test or len({r.label for r in fit}) < 2:
         raise TrainError("need two labels to train on and at least one held-out row")
     params = {**cfg.model_dump(mode="json"), "rows": len(rows), "test_rows": len(test)}

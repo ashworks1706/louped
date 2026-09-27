@@ -303,3 +303,13 @@ def test_tool_rl_calculator_scores_the_submitted_answer() -> None:
     assert calc.get_reward() == 0.0
     calc.submit(row["answer"])
     assert calc.get_reward() == 1.0
+
+
+def test_soft_prompt_and_masked_diffusion_stay_on_trl(tmp_path: Path) -> None:
+    from loupe.train.base import backend
+
+    with pytest.raises(TrainError, match="causal"):
+        load_config(config(tmp_path, soft_prompt=4, masked_diffusion=True))
+    with pytest.raises(TrainError, match="trl backend"):
+        backend(load_config(config(tmp_path, soft_prompt=4, backend="unsloth")))
+    assert backend(load_config(config(tmp_path, masked_diffusion=True, backend="auto"))) == "trl"

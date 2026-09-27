@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import torch
@@ -35,16 +36,28 @@ class Diffusion:
     shift: bool
 
 
-def base(name: str, dtype: torch.dtype | str = "auto", device: str | None = None) -> Any:
-    """The bare HF model saved under <home>/models by name, or a Hub id or path."""
-    from transformers import AutoConfig, AutoModel, AutoModelForMaskedLM
+def base(
+    name: str,
+    dtype: torch.dtype | str = "auto",
+    device: str | None = None,
+    revision: str | None = None,
+) -> Any:
+    """The bare HF model saved under <home>/models by name, or a Hub id or path. LLaDA and Dream
+    run their own code from the Hub, so a Hub id of theirs needs a pinned revision (a commit)."""
+    from transformers import AutoModel, AutoModelForMaskedLM, PretrainedConfig
 
-    path = str(saved_model(name) or name)
-    kind = AutoConfig.from_pretrained(path, trust_remote_code=True).model_type.lower()
+    local = saved_model(name)
+    path = str(local or name)
+    config, _ = PretrainedConfig.get_config_dict(path, revision=revision)
+    kind = str(config.get("model_type", "")).lower()
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
     if kind in REMOTE:
-        return AutoModel.from_pretrained(path, dtype=dtype, trust_remote_code=True).to(device)
-    return AutoModelForMaskedLM.from_pretrained(path, dtype=dtype).to(device)
+        if revision is None and local is None and not Path(name).exists():
+            raise ValueError(f"{name} runs code from the Hub; pin it with revision=<commit>")
+        model = AutoModel.from_pretrained(path, dtype=dtype, revision=revision,
+                                          trust_remote_code=True)  # fmt: skip
+        return model.to(device)
+    return AutoModelForMaskedLM.from_pretrained(path, dtype=dtype, revision=revision).to(device)
 
 
 def load_diffusion(
@@ -53,14 +66,15 @@ def load_diffusion(
     merges: list[dict[str, Any]] | None = None,
     dtype: torch.dtype | str = "auto",
     device: str | None = None,
+    revision: str | None = None,
 ) -> Diffusion:
     """A masked diffusion model by name, with an adapter bank as loupe.models.load takes one."""
     from loupe.models.adapters import activate, merge
     from loupe.models.adapters import bank as build_bank
     from loupe.models.load import tokenizer
 
-    model = base(name, dtype, device)
-    tok = tokenizer(str(saved_model(name) or name))
+    model = base(name, dtype, device, revision)
+    tok = tokenizer(str(saved_model(name) or name), revision)
     if bank:
         peft = build_bank(model, bank)
         for spec in merges or []:

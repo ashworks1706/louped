@@ -23,9 +23,12 @@ def generate(
     max_new_tokens: int = 64,
     batch_size: int = 8,
     on_step: Callable[[int, int], None] | None = None,
+    strip: bool = True,
 ) -> list[str]:
     """Greedy completions, with the plan applied at every generated token when one is given.
-    on_step(token, max_new_tokens) runs before each token's forward pass (phase schedules)."""
+    on_step(token, max_new_tokens) runs before each token's forward pass (phase schedules).
+    Without strip, each completion is exactly the text it adds to its prompt, spacing included,
+    for continuing a prefilled reply."""
     out: list[str] = []
     for i in range(0, len(prompts), batch_size):
         chunk = prompts[i : i + batch_size]
@@ -45,8 +48,20 @@ def generate(
                         apply(lm, plan)
             with tracer.invoke():
                 tokens = lm.generator.output.save()  # pyright: ignore[reportAttributeAccessIssue]
-        out.extend(lm.tokenizer.batch_decode(tokens[:, width:], skip_special_tokens=True))
-    return [text.strip() for text in out]
+        if strip:
+            out.extend(lm.tokenizer.batch_decode(tokens[:, width:], skip_special_tokens=True))
+        else:
+            out.extend(_added(lm, row, width) for row in tokens)
+    return [text.strip() for text in out] if strip else out
+
+
+def _added(lm: LanguageModel, row: torch.Tensor, width: int) -> str:
+    """The text the tokens after width add to the text of the tokens before it."""
+    head = str(lm.tokenizer.decode(row[:width], skip_special_tokens=True))
+    full = str(lm.tokenizer.decode(row, skip_special_tokens=True))
+    if full.startswith(head):
+        return full[len(head) :]
+    return str(lm.tokenizer.decode(row[width:], skip_special_tokens=True))
 
 
 class _Steps(LogitsProcessor):

@@ -50,6 +50,13 @@ def test_grid_pairs_conditions_against_the_baseline_per_sample(lm) -> None:
     moved = paired(a, b)
     assert moved == (1.0, 1.0, 1.0) and verdict(moved, paired(a, a)) == "moved, held"
     assert verdict(paired(a, a), paired(b, a)) == "same, broke"
+    import random
+
+    rng = random.Random(0)
+    x = {(str(i), 1, 0): float(rng.random() < 0.5) for i in range(20)}
+    y = {(str(i), 1, 0): float(rng.random() < 0.6) for i in range(20)}
+    triple = [{(i, e, s): v for (i, e, _), v in d.items() for s in range(3)} for d in (x, y)]
+    assert paired(*triple) == paired(x, y)  # identical seeds add no samples
 
 
 def lora(lm, name: str, seed: int) -> str:
@@ -226,14 +233,11 @@ def encoders() -> tuple[str, str, str]:
 
 
 def test_retrieval_fuses_bm25_and_dense_and_reranks() -> None:
-    from loupe.retrieval import Index, chunk, exact_match, f1, ndcg_at_k, recall_at_k, rrf
+    from loupe.retrieval import Index, chunk, recall_at_k, rrf
 
     assert chunk("a b c d e", words=2, overlap=1) == ["a b", "b c", "c d", "d e"]
     assert list(rrf([["x", "y"], ["y", "z"]])) == ["y", "x", "z"]
-    assert recall_at_k(["a", "b"], ["b", "c"], 2) == 0.5 and ndcg_at_k(["g"], ["g"], 1) == 1.0
-    assert exact_match("The Blue.", ["blue"]) == 1.0 and f1("blue sky", ["blue"]) == pytest.approx(
-        2 / 3
-    )
+    assert recall_at_k(["a", "b"], ["b", "c"], 2) == 0.5
 
     enc, rerank, _ = encoders()
     index = Index(PASSAGES, encoder=enc)
@@ -323,7 +327,8 @@ def test_distillation_collects_dedups_splits_and_flags_contamination(tmp_path, c
     examples = (home() / "data/distil/raw.jsonl").read_text().splitlines()
     assert len(examples) == 2  # the mock teacher repeats itself; duplicates dropped
     first = json.loads(examples[0])
-    assert first["meta"] == {"source": "teacher", "model": "mockllm/model"} and first["reply"]
+    assert first["meta"]["model"] == "mockllm/model" and first["meta"]["sample"] == "0"
+    assert first["reply"] and (home() / "data/distil/raw.meta.json").exists()
     from loupe.data import read_jsonl
 
     rows = read_jsonl(home() / "data/distil/raw.jsonl")
@@ -349,3 +354,47 @@ def test_distillation_collects_dedups_splits_and_flags_contamination(tmp_path, c
     assert train(config).exists()
     (run_,) = [r for r in stores.list_runs() if r.kind == "training"]
     assert 0.0 <= stores.get_run(run_.id).metrics["accuracy"] <= 1.0
+
+
+def test_masked_diffusion_loss_masks_only_the_reply_and_weights_by_one_over_t(monkeypatch) -> None:
+    import math
+
+    from loupe.models.diffusion import Diffusion, logits, loss
+
+    vocab, seen = 7, []
+
+    class Uniform(torch.nn.Module):
+        def forward(self, input_ids):
+            seen.append(input_ids.clone())
+            return torch.zeros(*input_ids.shape, vocab, requires_grad=True)
+
+    def rand(*shape, device=None):
+        return torch.full(shape, 0.5) if shape[-1] == 1 else torch.zeros(shape)
+
+    monkeypatch.setattr(torch, "rand", rand)
+    d = Diffusion(Uniform(), None, mask_id=6, shift=False)
+    ids = torch.tensor([[1, 2, 3, 4, 5], [1, 2, 3, 4, 5]])
+    value = loss(d, ids, torch.tensor([2, 3]))
+    p_mask = (1 - 1e-3) * 0.5 + 1e-3
+    assert float(value) == pytest.approx(math.log(vocab) / p_mask)
+    assert (seen[0][0, :2] == ids[0, :2]).all() and (seen[0][0, 2:] == 6).all()
+    assert (seen[0][1, :3] == ids[1, :3]).all() and (seen[0][1, 3:] == 6).all()
+
+    class Positions(torch.nn.Module):
+        def forward(self, input_ids):
+            return torch.arange(input_ids.shape[1]).float()[None, :, None].expand(1, -1, vocab)
+
+    shifted = logits(
+        Diffusion(Positions(), None, 6, shift=True), torch.zeros(1, 4, dtype=torch.long)
+    )
+    assert shifted[0, :, 0].tolist() == [0.0, 0.0, 1.0, 2.0]
+
+
+def test_generate_without_strip_returns_the_exact_continuation(lm) -> None:
+    from loupe.interventions import generate
+
+    prompt = ["<user> what is the sky <assistant> the"]
+    raw = generate(lm, prompt, max_new_tokens=3, strip=False)[0]
+    assert raw.strip() == generate(lm, prompt, max_new_tokens=3)[0]
+    decoded = lm.tokenizer.decode(lm.tokenizer(prompt[0])["input_ids"], skip_special_tokens=True)
+    assert raw == "" or raw[0].isspace() or decoded.endswith(" ")

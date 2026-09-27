@@ -80,7 +80,7 @@ question is an experiment in `experiments/` on a domain's capabilities; no produ
 | 2 Conditioning | prompt text, steering vectors, soft prompts at matched budget | zipy, SparkyAI |
 | 3 Adapters | a bank of LoRA adapters live in any subset, merging (linear, TIES, DARE), overlap | Bijou |
 | 4 Decoding and model families | per-step hooks; phase-routed adapters; masked diffusion (LLaDA, Dream) | Bijou |
-| 5 Retrieval and grounding | BM25, dense, fusion, reranking; recall, nDCG, EM, F1, NLI faithfulness | SparkyAI, piramid |
+| 5 Retrieval and grounding | BM25, dense, fusion, reranking; recall@k, EM, F1, NLI faithfulness | SparkyAI, piramid |
 | 6 Retrieval inside the model | Inject at a layer; retrieval during decoding; spliced KV divergence | piramid |
 | 7 Small models and data | teacher collection, hashed splits, SFT, a small classifier | Bijou, zipy |
 

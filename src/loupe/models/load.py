@@ -75,12 +75,12 @@ def load(
     return lm
 
 
-def tokenizer(path: str) -> Any:
+def tokenizer(path: str, revision: str | None = None) -> Any:
     """A saved tokenizer exactly as saved (AutoTokenizer would rebuild the family's default from
     model_type and drop a custom pre-tokenizer or decoder), else the Hub's."""
     if Path(path, "tokenizer.json").exists():
         return PreTrainedTokenizerFast.from_pretrained(path)
-    return AutoTokenizer.from_pretrained(path)
+    return AutoTokenizer.from_pretrained(path, revision=revision)
 
 
 def _merged(model: str, adapter: str | Path, dtype: torch.dtype | str, device: str) -> Any:

@@ -11,11 +11,11 @@ from typing import Any, Literal
 from inspect_ai import Task
 from inspect_ai.dataset import Sample
 from inspect_ai.model import ChatMessageAssistant, ChatMessageSystem, ChatMessageUser
-from inspect_ai.scorer import Score, Target, mean, scorer, stderr
+from inspect_ai.scorer import Score, Target, exact, f1, mean, scorer, stderr
 from inspect_ai.solver import Generate, TaskState, generate, solver
 
 from loupe.interventions import INJECT
-from loupe.retrieval import Hit, Index, exact_match, f1, recall_at_k
+from loupe.retrieval import Hit, Index, recall_at_k
 from loupe.retrieval.index import Mode
 
 PROMPT = (
@@ -67,7 +67,8 @@ def reretrieve(
     prompt: str = PROMPT,
 ):  # fmt: skip
     """Generate every tokens at a time, retrieving again before each chunk with the question plus
-    the answer so far, which is continued from as a prefill under the new context."""
+    the answer so far, which is continued from as a prefill under the new context. Needs a model
+    that returns a prefill's continuation exactly, as the loupe/ provider does."""
 
     async def solve(state: TaskState, generate: Generate) -> TaskState:
         question, so_far, seen = state.input_text, "", []
@@ -78,36 +79,16 @@ def reretrieve(
             if so_far:
                 state.messages.append(ChatMessageAssistant(content=so_far))
             state = await generate(state, max_tokens=every)
-            new = state.output.completion.strip()
-            if not new:
+            new = state.output.completion
+            if not new.strip():
                 break
-            so_far = f"{so_far} {new}".strip()
+            so_far += new  # a continuation of the prefill, spacing included
+        so_far = so_far.strip()
         state.metadata["retrieved"] = seen
         state.output.completion = so_far
         return state
 
     return solve
-
-
-@scorer(metrics=[mean(), stderr()])
-def answer_f1():
-    """Token F1 of the answer against the best gold answer."""
-
-    async def score(state: TaskState, target: Target) -> Score:
-        answer = state.output.completion
-        return Score(value=f1(answer, target.target), answer=answer[:200])
-
-    return score
-
-
-@scorer(metrics=[mean(), stderr()])
-def answer_em():
-    """Exact match of the answer against any gold answer."""
-
-    async def score(state: TaskState, target: Target) -> Score:
-        return Score(value=exact_match(state.output.completion, target.target))
-
-    return score
 
 
 @scorer(metrics=[mean(), stderr()])
@@ -156,7 +137,7 @@ def rag(
     faithfulness score too; with every, retrieval again every that many generated tokens."""
     data = [Sample(id=i + 1, input=q, target=answers, metadata={"gold": gold})
             for i, (q, answers, gold) in enumerate(items)]  # fmt: skip
-    scorers = [answer_f1(), answer_em(), recall(k)] + ([faithful(nli)] if nli else [])
+    scorers = [f1(), exact(), recall(k)] + ([faithful(nli)] if nli else [])
     solve = ([reretrieve(index, every, k, mode)] if every
              else [retrieve(index, k, mode, reranker, into=into), generate()])  # fmt: skip
     return Task(dataset=data, solver=solve, scorer=scorers, name=name)

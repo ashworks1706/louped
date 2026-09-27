@@ -412,7 +412,7 @@ def test_provider_runs_a_tool_agent_and_the_transcript_keeps_the_calls(lm, monke
                     "the answer is 5"])  # fmt: skip
     prompts: list[str] = []
 
-    def fake(model, batch, plan, max_new, on_step=None):
+    def fake(model, batch, plan, max_new, on_step=None, strip=True):
         prompts.extend(batch)
         return [next(replies)]
 

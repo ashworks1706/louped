@@ -140,9 +140,12 @@ def run(cmd: Command) -> None:
 
             lines = cmd.prompts.read_text(encoding="utf-8").splitlines()
             prompts = [json.loads(line) for line in lines if line.strip()]
+            from loupe.core import capture
+
             examples = collect(prompts, cmd.teacher, cmd.system, cmd.max_tokens, cmd.samples)
             out = cmd.out or _dir(cmd.name) / "raw.jsonl"
             write_jsonl(out, examples)
+            capture().write(out.with_suffix(".meta.json"))
             print(f"{len(examples)} examples -> {out}")
         case Overlap():
             from loupe.data.collect import overlap, plain

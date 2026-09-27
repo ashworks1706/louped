@@ -105,8 +105,13 @@ def sample_scores(log: EvalLog, name: str, seed: int = 0) -> Scores:
 
 
 def paired(a: Scores, b: Scores) -> tuple[float, float, float]:
-    """Mean of b minus a over the samples both scored, with its 95% bootstrap interval."""
-    diffs = [b[k] - a[k] for k in a if k in b]
+    """Mean of b minus a over the samples both scored, with its 95% bootstrap interval. Seeds of
+    one sample are averaged first, so the interval resamples samples, not seeds."""
+    per: dict[tuple[str, int], list[float]] = {}
+    for k in a:
+        if k in b:
+            per.setdefault(k[:2], []).append(b[k] - a[k])
+    diffs = [sum(d) / len(d) for d in per.values()]
     if not diffs:
         return 0.0, 0.0, 0.0
     low, high = interval(diffs)

@@ -9,7 +9,8 @@ model's family, so agent tasks run under interventions too.
 
 Adapters: bank loads named adapters beside each other, adapters makes a set of them live, phases
 changes the live set along one generation. diffusion serves a masked diffusion model through
-loupe.models.diffusion, with the sampler's arguments ({"length": 64, "steps": 64}).
+loupe.models.diffusion, with the sampler's arguments ({"length": 64, "steps": 64}) and, for
+LLaDA or Dream from the Hub, the pinned revision their code runs at.
 
 inject ({"layer": 6, "alpha": 1.0}) takes passages a solver sent as an INJECT system message and
 adds their state at that layer instead of rendering them. A conversation that ends on an assistant
@@ -53,23 +54,20 @@ def shared_model(
     bank: list[str] | None = None,
     merges: list[dict[str, Any]] | None = None,
     diffusion: bool = False,
+    revision: str | None = None,
 ) -> Any:
     """The model the provider serves under this name (with this adapter bank), loaded once per
     process: a LanguageModel, or a Diffusion for a masked diffusion model."""
     local = saved_model(name)
     key = str(local) if local else name  # a saved model's name is only unique per home
-    key += json.dumps([bank or [], merges or [], diffusion], sort_keys=True)
+    key += json.dumps([bank or [], merges or [], diffusion, revision], sort_keys=True)
     with _LOCK:
         if key not in _MODELS:
-            loader = load_diffusion if diffusion else load
-            _MODELS[key] = loader(name, bank=bank, merges=merges)
+            if diffusion:
+                _MODELS[key] = load_diffusion(name, bank, merges, revision=revision)
+            else:
+                _MODELS[key] = load(name, bank=bank, merges=merges)
         return _MODELS[key]
-
-
-def release() -> None:
-    """Drop every loaded model, for a grid that walks through more models than fit at once."""
-    with _LOCK:
-        _MODELS.clear()
 
 
 class LoupeAPI(ModelAPI):
@@ -91,9 +89,11 @@ class LoupeAPI(ModelAPI):
         super().__init__(model_name, base_url, api_key, [], config or GenerateConfig())
         named = set(adapters or []) | {a for p in phases or [] for a in p["adapters"]}
         bank = bank or (sorted(named) if named else None)
-        self.lm = shared_model(model_name, bank, merges, diffusion is not None)
-        self.sampler = diffusion
-        if interventions and diffusion is not None:
+        sampler = dict(diffusion or {})
+        revision = sampler.pop("revision", None)
+        self.lm = shared_model(model_name, bank, merges, diffusion is not None, revision)
+        self.sampler = sampler
+        if (interventions or inject) and diffusion is not None:
             raise ValueError("interventions act on causal LMs; a diffusion model takes none")
         self.plan = compile(self.lm, parse(interventions)) if interventions else None
         self.adapters = list(adapters or []) if bank else None
@@ -120,6 +120,7 @@ class LoupeAPI(ModelAPI):
         if passages and not self.inject:
             raise ValueError("passages to inject need the inject model arg: {'layer': ...}")
         prompt = self.render(input, tools)
+        prefill = bool(input) and input[-1].role == "assistant"
         max_new = config.max_tokens or 256
 
         def run() -> str:
@@ -129,12 +130,14 @@ class LoupeAPI(ModelAPI):
                     activate(model, self.adapters)
                 hook = phase_hook(model, self.phases) if self.phases else None
                 if isinstance(self.lm, Diffusion):
-                    return denoise_all(self.lm, [prompt], hook, **(self.sampler or {}))[0]
+                    return denoise_all(self.lm, [prompt], hook, **self.sampler)[0]
                 plan = self.plan
                 if passages and self.inject:
                     injected = compile(self.lm, [Inject(passages=passages, **self.inject)])
                     plan = merge(plan or {}, injected)
-                return generate(self.lm, [prompt], plan, max_new, on_step=hook)[0]
+                return generate(self.lm, [prompt], plan, max_new, on_step=hook, strip=not prefill)[
+                    0
+                ]
 
         text = await asyncio.to_thread(run)
         if not tools:

@@ -58,8 +58,10 @@ def collect(
         for n in range(samples):
             reply = (await model.generate(chat)).completion
             key = hashlib.sha256(json.dumps([sent, n], sort_keys=True).encode()).hexdigest()
-            out.append(Example(id=f"teacher-{key[:16]}", messages=sent, reply=reply,
-                               meta={"source": "teacher", "model": teacher},
+            args = json.dumps(model_args, sort_keys=True)
+            meta = {"source": "teacher", "model": teacher, "max_tokens": str(max_tokens),
+                    "sample": str(n), "model_args": args}  # fmt: skip
+            out.append(Example(id=f"teacher-{key[:16]}", messages=sent, reply=reply, meta=meta,
                                at=datetime.now(UTC)))  # fmt: skip
         return out
 
@@ -80,10 +82,14 @@ def dedup(examples: Iterable[Example]) -> list[Example]:
     return out
 
 
+def bucket(text: str) -> float:
+    """A stable number in [0, 1) from a hash of the text, for splits that survive re-collection."""
+    return int(hashlib.sha256(text.encode()).hexdigest()[:8], 16) / 16**8
+
+
 def split(example: Example, dev: float = 0.1, test: float = 0.1) -> str:
     """train, dev or test, from a hash of the prompt alone."""
-    text = json.dumps(example.messages, sort_keys=True)
-    u = int(hashlib.sha256(text.encode()).hexdigest()[:8], 16) / 16**8
+    u = bucket(json.dumps(example.messages, sort_keys=True))
     return "test" if u < test else "dev" if u < test + dev else "train"
 
 

@@ -116,12 +116,16 @@ def read_rows(cfg: TrainConfig, row: type[BaseModel]) -> list[Any]:
 
 
 def backend(cfg: TrainConfig) -> str:
+    """unsloth or trl; soft prompts and masked diffusion models train on trl only."""
+    plain = not (cfg.soft_prompt or getattr(cfg, "masked_diffusion", False))
+    if cfg.backend == "unsloth" and not plain:
+        raise TrainError("soft_prompt and masked_diffusion need the trl backend")
     if cfg.backend != "auto":
         return cfg.backend
     import torch
 
     has_unsloth = importlib.util.find_spec("unsloth") is not None
-    return "unsloth" if has_unsloth and torch.cuda.is_available() else "trl"
+    return "unsloth" if plain and has_unsloth and torch.cuda.is_available() else "trl"
 
 
 def model_path(name: str) -> str:
@@ -130,8 +134,6 @@ def model_path(name: str) -> str:
 
 def _load(cfg: TrainConfig, kind: str):
     if kind == "unsloth":
-        if cfg.soft_prompt:
-            raise TrainError("soft_prompt needs the trl backend")
         from unsloth import FastLanguageModel  # pyright: ignore[reportMissingImports]
 
         model, tok = FastLanguageModel.from_pretrained(

@@ -2,6 +2,6 @@
 metrics that separate a retrieval failure from a reading failure. Needs the rag extra."""
 
 from loupe.retrieval.index import Hit, Index, chunk, rrf
-from loupe.retrieval.metrics import exact_match, f1, ndcg_at_k, recall_at_k
+from loupe.retrieval.metrics import recall_at_k
 
-__all__ = ["Hit", "Index", "chunk", "exact_match", "f1", "ndcg_at_k", "recall_at_k", "rrf"]
+__all__ = ["Hit", "Index", "chunk", "recall_at_k", "rrf"]

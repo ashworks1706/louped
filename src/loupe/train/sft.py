@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from loupe.data import Example, conversation, read_jsonl
 from loupe.train.base import TrainConfig, TrainError, fit
@@ -22,6 +22,12 @@ class SftConfig(TrainConfig):
 
     #: The base is a masked diffusion model (LLaDA, Dream, a masked LM); trl backend only.
     masked_diffusion: bool = False
+
+    @model_validator(mode="after")
+    def _one_method(self) -> SftConfig:
+        if self.masked_diffusion and self.soft_prompt:
+            raise ValueError("soft_prompt is for causal LMs; masked_diffusion trains LoRA")
+        return self
 
 
 class SftPlan(BaseModel):
