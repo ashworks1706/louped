@@ -1,4 +1,4 @@
-"""The HTTP API the UI reads from. Read-only over existing stores."""
+"""The HTTP API the UI reads from: read-only over existing stores, plus the Playground."""
 
 from loupe.server.app import create_app
 

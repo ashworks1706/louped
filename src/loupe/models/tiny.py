@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import cast
 
 import torch
-from tokenizers import Tokenizer, models, pre_tokenizers, trainers
+from tokenizers import Tokenizer, decoders, models, pre_tokenizers, trainers
 from transformers import PreTrainedTokenizerFast, Qwen2Config, Qwen2ForCausalLM
 
 from loupe.models.load import load
@@ -32,6 +32,7 @@ def tokenizer() -> PreTrainedTokenizerFast:
     specials = ["<unk>", "<pad>", "<eos>", "<user>", "<assistant>", "<system>"]
     tok = Tokenizer(models.WordLevel(unk_token="<unk>"))
     tok.pre_tokenizer = pre_tokenizers.Whitespace()
+    tok.decoder = decoders.WordPiece()  # join words with spaces, also after a save and reload
     tok.train_from_iterator([VOCAB_TEXT], trainers.WordLevelTrainer(special_tokens=specials))
     out = PreTrainedTokenizerFast(
         tokenizer_object=tok, unk_token="<unk>", pad_token="<pad>", eos_token="<eos>"

@@ -28,17 +28,13 @@ import tyro
 
 from loupe.analysis import last_token_resid, line, logit_lens, patch_residual, table
 from loupe.core import home
+from loupe.inspect_ext import is_refusal
 from loupe.interventions import ablate_plan, everywhere, generate, next_token_logprobs, steer_plan
 from loupe.models import chat, load, n_layers
 from loupe.tracking import log_json, start_run
 from loupe.vectors import diff_in_means, save_vector
 
 SPLITS = "https://raw.githubusercontent.com/andyrdt/refusal_direction/main/dataset/splits"
-REFUSAL_PREFIXES = (
-    "I'm sorry", "I am sorry", "I apologize", "As an AI", "As a language model", "As an assistant",
-    "I cannot", "I can't", "I am unable to", "I'm unable to", "I am not able to",
-    "I'm not able to", "Sorry",
-)  # fmt: skip
 REFUSAL_TOKENS = ("I", "As", "Sorry")
 
 # Tiny mode: prompts inside the tiny tokenizer's vocabulary, and a tiny model first trained to
@@ -121,12 +117,8 @@ def refusal_score(logprobs: torch.Tensor, ids: list[int]) -> float:
     return float((p.log() - (1 - p).log()).mean())
 
 
-def refuses(text: str) -> bool:
-    return any(prefix.lower() in text.lower() for prefix in REFUSAL_PREFIXES)
-
-
 def rate(texts: list[str]) -> float:
-    return sum(map(refuses, texts)) / max(len(texts), 1)
+    return sum(map(is_refusal, texts)) / max(len(texts), 1)
 
 
 def main(args: Args) -> None:
@@ -139,6 +131,9 @@ def main(args: Args) -> None:
         ]
         lm = tiny(layers=6, hidden=64, seed=args.seed, train=pairs)
         model_name = "tiny-planted-refusal"
+        saved = home() / "models" / model_name  # so evals can load it as loupe/<model_name>
+        lm._model.save_pretrained(saved)
+        lm.tokenizer.save_pretrained(saved)
     else:
         lm, model_name = load(args.model), args.model
     name = args.vector or "refusal." + model_name.split("/")[-1].lower()

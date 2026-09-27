@@ -33,8 +33,13 @@ with its UI view.
 
 ## v0.4 Evals bridge and Playground
 
-- [ ] Policy as an Inspect model provider; shared scorers
-- [ ] Playground: base and steered streamed side by side
+- [x] `loupe/<model>` Inspect model provider taking intervention specs as model args; shared
+      `refusal` scorer
+- [x] Playground (`loupe serve --model`): base and intervened replies side by side, steer or
+      ablate, layer and strength, the spec as a copyable `-M interventions=...`
+- [x] Verified offline: `refusal-direction/eval.py --tiny` runs base and ablated through the
+      provider, Compare shows harmful refusal 1 to 0 on all 12 harmful samples
+- [ ] Stream replies token by token (today each side returns when done)
 - [ ] Acceptance: an inspect_evals score within noise of the reported number; steered and base in Compare
 
 ## v0.5 Training

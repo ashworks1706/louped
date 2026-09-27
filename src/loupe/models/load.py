@@ -11,6 +11,9 @@ from typing import Any
 
 import torch
 from nnsight import LanguageModel
+from transformers import PreTrainedTokenizerFast
+
+from loupe.core import home
 
 #: Attribute paths to the decoder blocks, tried in order. Covers Qwen2/3, Llama, Mistral, Gemma,
 #: Phi (model.layers), GPT-2 (transformer.h) and GPT-NeoX/Pythia (gpt_neox.layers).
@@ -24,14 +27,22 @@ def load(
     dtype: torch.dtype | str = "auto",
     device: str | None = None,
 ) -> LanguageModel:
-    """A model id or path from the Hub, or an already-built HF model with its tokenizer.
+    """A model saved under <home>/models by name, a Hub id or path, or a built HF model.
 
     Padding is set to the left so the last position of every row is its last real token, which is
     what generation needs and what last-token analyses read.
     """
     if isinstance(model, str):
+        local = home() / "models" / model
+        kwargs: dict[str, Any] = {}
+        if (local / "config.json").exists():
+            model = str(local)
+            if (local / "tokenizer.json").exists():
+                # What was saved, exactly: AutoTokenizer would rebuild the family's default
+                # tokenizer from model_type and drop a custom pre-tokenizer or decoder.
+                kwargs["tokenizer"] = PreTrainedTokenizerFast.from_pretrained(model)
         device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        lm = LanguageModel(model, device_map=device, dtype=dtype, dispatch=True)
+        lm = LanguageModel(model, device_map=device, dtype=dtype, dispatch=True, **kwargs)
     else:
         lm = LanguageModel(model, tokenizer=tokenizer)
     lm.tokenizer.padding_side = "left"

@@ -46,9 +46,9 @@ only what it uses. A package imports only packages below it; `import-linter` enf
 ```
 experiments                      leaf, nothing imports it
 cli
-server                           FastAPI, read-only over the stores
+server                           FastAPI, read-only over the stores; Playground generation
 stores                           views over Inspect logs, MLflow, experiments/
-inspect_ext | rl_ext             Policy as an Inspect model provider; scorer -> reward
+inspect_ext | rl_ext             loupe/ Inspect model provider, shared scorers; scorer -> reward
 analysis                         activations, logit lens, patching; results as UI views
 interventions | vectors          Steer and Ablate specs on nnsight, batched generation; directions
 models                           load a model, module-path map per architecture family
@@ -56,7 +56,7 @@ tracking                         start an MLflow run with RunMeta attached
 core                             run metadata, paths
 ```
 
-Today everything from `core` to `cli` exists except `inspect_ext` and `rl_ext`. Each phase adds its layers here and in the contract in
+Today everything from `core` to `cli` exists except `rl_ext`. Each phase adds its layers here and in the contract in
 `pyproject.toml`.
 
 ## Data
@@ -73,7 +73,8 @@ Today everything from `core` to `cli` exists except `inspect_ext` and `rl_ext`. 
 ## UI
 
 The UI is the product. `apps/web` is a static Next.js export served by `loupe serve` next to the
-API, so there is no Node server in production. The server owns no database and no auth.
+API, so there is no Node server in production. The server owns no database and no auth. Its
+one computing route is the Playground, which runs the model given to `loupe serve --model`.
 
 Pages: Home, Experiments, Run (Overview, Figures, Samples, Transcripts, Artifacts, Config), Compare,
 Vectors, Playground. Principles: one question per screen, every number links to the samples behind

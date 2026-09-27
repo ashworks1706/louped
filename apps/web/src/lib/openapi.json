@@ -317,6 +317,62 @@
           }
         }
       }
+    },
+    "/api/playground": {
+      "get": {
+        "summary": "Info",
+        "operationId": "info_api_playground_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaygroundInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/playground/generate": {
+      "post": {
+        "summary": "Generate",
+        "operationId": "generate_api_playground_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -430,6 +486,46 @@
         "type": "object",
         "required": ["name", "question", "runs"],
         "title": "Experiment"
+      },
+      "GenerateRequest": {
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Prompt"
+          },
+          "interventions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Interventions",
+            "default": []
+          },
+          "max_new_tokens": {
+            "type": "integer",
+            "maximum": 512.0,
+            "minimum": 1.0,
+            "title": "Max New Tokens",
+            "default": 64
+          }
+        },
+        "type": "object",
+        "required": ["prompt"],
+        "title": "GenerateRequest"
+      },
+      "GenerateResponse": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": ["text"],
+        "title": "GenerateResponse"
       },
       "HTTPValidationError": {
         "properties": {
@@ -610,6 +706,35 @@
         "type": "object",
         "required": ["step", "value"],
         "title": "MetricPoint"
+      },
+      "PlaygroundInfo": {
+        "properties": {
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "layers": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Layers"
+          }
+        },
+        "type": "object",
+        "required": ["model", "layers"],
+        "title": "PlaygroundInfo"
       },
       "RunDetail": {
         "properties": {

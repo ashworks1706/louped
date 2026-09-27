@@ -39,6 +39,9 @@ interp = [
 [project.scripts]
 loupe = "loupe.cli:main"
 
+[project.entry-points.inspect_ai]
+loupe = "loupe.inspect_ext._registry"
+
 [dependency-groups]
 dev = [
     "httpx2>=2.13",
@@ -85,7 +88,7 @@ type = "layers"
 layers = [
     "loupe.cli",
     "loupe.server",
-    "loupe.stores | loupe.tracking | loupe.analysis",
+    "loupe.stores | loupe.tracking | loupe.analysis | loupe.inspect_ext",
     "loupe.interventions",
     "loupe.vectors",
     "loupe.models",

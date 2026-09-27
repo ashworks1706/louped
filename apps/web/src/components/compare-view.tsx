@@ -193,7 +193,9 @@ function Samples({ a, b }: { a: RunDetail; b: RunDetail }) {
         <TableBody>
           {rows.map((p) => (
             <TableRow key={p.id} className="cursor-pointer" onClick={() => setOpen(p.id)}>
-              <TableCell className="text-muted-foreground font-mono text-xs">{p.id}</TableCell>
+              <TableCell className="text-muted-foreground font-mono text-xs whitespace-nowrap">
+                {p.id}
+              </TableCell>
               <TableCell className="max-w-md truncate">{p.input}</TableCell>
               {names.map((n) => (
                 <TableCell key={n} className="text-center whitespace-nowrap">

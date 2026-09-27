@@ -17,6 +17,7 @@ from pydantic import BaseModel
 
 from loupe import __version__, stores
 from loupe.core import Direction, home
+from loupe.server import playground
 from loupe.stores.runs import read_artifact
 from loupe.stores.types import (
     Experiment,
@@ -37,8 +38,8 @@ class Health(BaseModel):
     home: str
 
 
-def create_app(web_dir: Path | None = None) -> FastAPI:
-    """The app. With web_dir, the static UI export is served at /."""
+def create_app(web_dir: Path | None = None, model: str | None = None) -> FastAPI:
+    """The app. With web_dir, the static UI export is served at /; with model, the Playground."""
     app = FastAPI(
         title="loupe",
         version=__version__,
@@ -94,6 +95,8 @@ def create_app(web_dir: Path | None = None) -> FastAPI:
     @app.get("/api/experiments")
     def experiments() -> list[Experiment]:
         return stores.list_experiments()
+
+    app.include_router(playground.router(model))
 
     if web_dir is not None and web_dir.is_dir():
         app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")

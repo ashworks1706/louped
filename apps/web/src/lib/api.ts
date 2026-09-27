@@ -15,6 +15,9 @@ export type HeatmapView = Schemas["HeatmapView"];
 export type LineView = Schemas["LineView"];
 export type TableView = Schemas["TableView"];
 export type Direction = Schemas["Direction"];
+export type PlaygroundInfo = Schemas["PlaygroundInfo"];
+export type GenerateRequest = Schemas["GenerateRequest"];
+export type GenerateResponse = Schemas["GenerateResponse"];
 
 export class ApiError extends Error {
   constructor(
@@ -30,6 +33,26 @@ export async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
   if (!res.ok) throw new ApiError(res.status, `${res.status} ${path}`);
   return res.json() as Promise<T>;
 }
+
+export async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+  const res = await fetch(`${API}/api${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+    signal,
+  });
+  if (!res.ok) {
+    const detail = await res
+      .json()
+      .then((b: { detail?: unknown }) => b.detail)
+      .catch(() => null);
+    throw new ApiError(res.status, typeof detail === "string" ? detail : `${res.status} ${path}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+export const generate = (req: GenerateRequest) =>
+  post<GenerateResponse>("/playground/generate", req);
 
 export const health = (signal?: AbortSignal) => get<Health>("/health", signal);
 
@@ -54,6 +77,10 @@ export const q = {
   views: (id: string) => ({
     queryKey: ["views", id],
     queryFn: () => get<RunView[]>(`/runs/${encodeURIComponent(id)}/views`),
+  }),
+  playground: () => ({
+    queryKey: ["playground"],
+    queryFn: () => get<PlaygroundInfo>("/playground"),
   }),
   vectors: () => ({ queryKey: ["vectors"], queryFn: () => get<Direction[]>("/vectors") }),
   experiments: () => ({

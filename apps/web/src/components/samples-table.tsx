@@ -88,7 +88,9 @@ export function SamplesTable({ runId, samples }: { runId: string; samples: Sampl
               data-state={open === s.id ? "selected" : undefined}
               onClick={() => setOpen(s.id)}
             >
-              <TableCell className="text-muted-foreground font-mono text-xs">{s.id}</TableCell>
+              <TableCell className="text-muted-foreground font-mono text-xs whitespace-nowrap">
+                {s.id}
+              </TableCell>
               <TableCell className="max-w-md truncate">{s.input}</TableCell>
               <TableCell className="max-w-40 truncate font-mono text-xs">{s.target}</TableCell>
               {scoreNames.map((n) => (

@@ -116,3 +116,58 @@ def test_batched_generate_matches_single(lm) -> None:
     lp = next_token_logprobs(lm, prompts)
     assert lp.shape == (2, len(lm.tokenizer))
     assert torch.allclose(lp.exp().sum(-1), torch.ones(2), atol=1e-4)
+
+
+def test_inspect_provider_applies_interventions(lm) -> None:
+    import asyncio
+
+    from inspect_ai.model import ChatMessageUser, GenerateConfig, get_model
+
+    from loupe.core import home
+    from loupe.interventions import generate
+
+    saved = home() / "models" / "tiny-saved"
+    lm._model.save_pretrained(saved)
+    lm.tokenizer.save_pretrained(saved)
+    save_vector("p", torch.randn(hidden(lm)) * 50, model="tiny-saved", layer=1, method="random")
+    spec = '{"kind": "steer", "vector": "p"}'
+    config = GenerateConfig(max_tokens=4)
+
+    async def ask(interventions: str | None) -> str:
+        model = get_model("loupe/tiny-saved", interventions=interventions, config=config)
+        return (await model.generate([ChatMessageUser(content="write a poem")])).completion
+
+    base, steered = asyncio.run(ask(None)), asyncio.run(ask(spec))
+    prompt = chat(lm, "write a poem")
+    assert base == generate(lm, [prompt], None, 4)[0]
+    assert steered == generate(lm, [prompt], compile(lm, parse(spec)), 4)[0]
+    assert base != steered
+
+
+def test_playground_generates_base_and_intervened(lm) -> None:
+    from fastapi.testclient import TestClient
+
+    from loupe.core import home
+    from loupe.server import create_app
+
+    saved = home() / "models" / "tiny-play"
+    lm._model.save_pretrained(saved)
+    lm.tokenizer.save_pretrained(saved)
+    save_vector("pv", torch.randn(hidden(lm)) * 50, model="tiny-play", layer=1, method="random")
+    client = TestClient(create_app(model="tiny-play"))
+    assert client.get("/api/playground").json() == {"model": "tiny-play", "layers": n_layers(lm)}
+    ask = {"prompt": "write a poem", "max_new_tokens": 4}
+    base = client.post("/api/playground/generate", json=ask).json()["text"]
+    steer = [{"kind": "steer", "vector": "pv", "alpha": 1.0}]
+    steered = client.post("/api/playground/generate", json={**ask, "interventions": steer})
+    assert steered.json()["text"] != base
+    bad = [{"kind": "steer", "vector": "pv", "layer": 99}]
+    assert (
+        client.post("/api/playground/generate", json={**ask, "interventions": bad}).status_code
+        == 400
+    )
+    missing = [{"kind": "ablate", "vector": "nope"}]
+    assert (
+        client.post("/api/playground/generate", json={**ask, "interventions": missing}).status_code
+        == 400
+    )

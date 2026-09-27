@@ -42,10 +42,15 @@ A change is not done until `just check` passes.
 
 ```
 src/loupe/       the Python package (distribution name: loupelab)
-  core/          run metadata, paths
+  core/          run metadata, paths, the direction header
+  models/        load a model into nnsight; a tiny offline Qwen2 for tests
+  vectors/       directions as safetensors under <home>/vectors
+  interventions/ Steer and Ablate specs, compiled to per-layer edits; batched generation
+  analysis/      activations, logit lens, patching; results as UI views (heatmap, line, table)
+  inspect_ext/   the loupe/ Inspect model provider and shared scorers
   tracking/      start an MLflow run the UI can read
-  stores/        read-only views over Inspect logs, MLflow and experiments/
-  server/        FastAPI over the stores
+  stores/        read-only views over Inspect logs, MLflow, views/, vectors and experiments/
+  server/        FastAPI over the stores, plus the Playground
   cli.py         the loupe command
 apps/web/        the UI: Next.js static export, shadcn/ui. Its own AGENTS.md holds the design rules
 experiments/     one folder per research question; nothing imports it
@@ -61,9 +66,15 @@ contract is in `pyproject.toml`. New layers are added there in the position ARCH
 ```
 cli
 server
-stores | tracking
+stores | tracking | analysis | inspect_ext
+interventions
+vectors
+models
 core
 ```
+
+nnsight traces the source of the block it runs: keep trace bodies in files, use explicit loops
+(not comprehensions) inside them, and touch modules in execution order.
 
 The UI talks to the server over HTTP only.
 

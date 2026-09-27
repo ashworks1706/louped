@@ -19,6 +19,9 @@ class Serve:
     port: int = 8000
     web_dir: Path = Path("apps/web/out")
     """The UI's static export; built by `just web-build`."""
+    model: str | None = None
+    """A model for the Playground: a Hub id, a path, or a name under <home>/models. Needs the
+    interp extra."""
 
 
 @dataclass(frozen=True)
@@ -41,7 +44,7 @@ def serve(cmd: Serve) -> None:
         raise SystemExit(
             "loupe serve needs the server extra: pip install 'loupelab[server]'"
         ) from exc
-    uvicorn.run(create_app(cmd.web_dir), host=cmd.host, port=cmd.port)
+    uvicorn.run(create_app(cmd.web_dir, cmd.model), host=cmd.host, port=cmd.port)
 
 
 def main() -> None:
