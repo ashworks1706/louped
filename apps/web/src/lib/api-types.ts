@@ -492,6 +492,8 @@ export interface components {
       rows: (string | number | boolean | null)[][];
       /** Note */
       note?: string | null;
+      /** Links */
+      links?: (string | null)[][] | null;
     };
     /** ToolCall */
     ToolCall: {

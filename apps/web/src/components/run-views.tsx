@@ -222,18 +222,33 @@ function TableFigure({ view }: { view: TableView }) {
       <TableBody>
         {view.rows.map((row, i) => (
           <TableRow key={i}>
-            {row.map((v, j) => (
-              <TableCell
-                key={j}
-                className={
-                  typeof v === "number"
-                    ? "text-right font-mono tabular-nums"
-                    : "max-w-md align-top text-sm whitespace-pre-wrap"
-                }
-              >
-                {v === null ? "—" : typeof v === "number" ? num(v) : String(v)}
-              </TableCell>
-            ))}
+            {row.map((v, j) => {
+              const href = view.links?.[i]?.[j];
+              const text = v === null ? "—" : typeof v === "number" ? num(v) : String(v);
+              return (
+                <TableCell
+                  key={j}
+                  className={
+                    typeof v === "number"
+                      ? "text-right font-mono tabular-nums"
+                      : "max-w-md align-top text-sm whitespace-pre-wrap"
+                  }
+                >
+                  {href ? (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline-offset-4 hover:underline"
+                    >
+                      {text}
+                    </a>
+                  ) : (
+                    text
+                  )}
+                </TableCell>
+              );
+            })}
           </TableRow>
         ))}
       </TableBody>

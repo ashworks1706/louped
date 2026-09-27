@@ -86,7 +86,7 @@ one computing route is the Playground, which runs the model given to `loupe serv
 Pages: Home, Experiments, Run (Overview, Figures, Samples, Transcripts, Artifacts, Config), Compare,
 Vectors, Playground. Principles: one question per screen, every number links to the samples behind
 it, compare is first-class, empty states show the command that fills them, keyboard-first (⌘K and
-`G` jumps), view state in the URL. Neuronpedia and Docent are linked from it, not replacements for it.
+`G` jumps), view state in the URL. Neuronpedia and Docent are linked from it, not replacements for it: an SAE feature with a Neuronpedia id links to its dashboard from the Figures table and from its saved vector.
 
 Design rules live in `apps/web/AGENTS.md`.
 

@@ -54,6 +54,12 @@ def line(
 
 
 def table(
-    title: str, columns: list[str], rows: list[list[Any]], note: str | None = None
+    title: str,
+    columns: list[str],
+    rows: list[list[Any]],
+    note: str | None = None,
+    links: list[list[str | None]] | None = None,
 ) -> dict[str, Any]:
-    return {"kind": "table", "title": title, "columns": columns, "rows": rows, "note": note}
+    """A table; `links`, shaped like `rows`, turns a cell into a link to that URL."""
+    return {"kind": "table", "title": title, "columns": columns, "rows": rows, "note": note,
+            "links": links}  # fmt: skip

@@ -231,7 +231,15 @@ def test_sae_features_and_steering_a_feature(lm) -> None:
     assert len(top["rows"]) == acts.shape[0] and len(top["columns"]) == 5
     assert len(over["z"]) == 3 and len(over["z"][0]) == acts.shape[0]
 
+    assert top["links"] is None
+    sae.cfg.metadata.neuronpedia_id = "tiny/1-res"
+    _, linked, _ = sae_features(lm, sae, prompt, k=3)
+    first = next(i for i, c in enumerate(linked["rows"][0]) if isinstance(c, str) and c[0] == "#")
+    feature = linked["rows"][0][first].split()[0][1:]
+    assert linked["links"][0][first] == f"https://neuronpedia.org/tiny/1-res/{feature}"
+
     meta = save_feature(sae, 7, "feat7", model="tiny")
+    assert meta.notes is not None and meta.notes.endswith("tiny/1-res/7")
     assert meta.layer == 1 and meta.method == "sae-decoder"
     with lm.trace(prompt):
         base = blocks(lm)[1].output.save()

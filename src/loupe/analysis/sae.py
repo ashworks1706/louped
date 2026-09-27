@@ -23,7 +23,14 @@ from loupe.vectors import save_vector
 if TYPE_CHECKING:
     from sae_lens import SAE
 
+NEURONPEDIA = "https://neuronpedia.org"
 _HOOK = re.compile(r"^blocks\.(\d+)\.hook_resid_(pre|post)$")
+
+
+def neuronpedia(sae: SAE, feature: int) -> str | None:
+    """The feature's Neuronpedia dashboard, for SAEs SAELens knows a Neuronpedia id for."""
+    sae_id = sae.cfg.metadata.neuronpedia_id
+    return f"{NEURONPEDIA}/{sae_id}/{feature}" if sae_id else None
 
 
 def _layer(sae: SAE) -> int:
@@ -54,16 +61,22 @@ def sae_features(
     labels = positions(lm, prompt)
     top = acts.topk(k, dim=-1)
     rows: list[list[Any]] = []
+    links: list[list[str | None]] = []
     for pos, (values, indices) in enumerate(zip(top.values, top.indices, strict=True)):
-        cells = [
-            f"#{int(i)} {float(v):.2f}" if v > 0 else None
-            for v, i in zip(values, indices, strict=True)
-        ]
-        rows.append([pos, labels[pos].split(":", 1)[1], *cells])
+        active = [(int(i), float(v)) for v, i in zip(values, indices, strict=True) if v > 0]
+        pad = [None] * (k - len(active))
+        rows.append(
+            [pos, labels[pos].split(":", 1)[1], *[f"#{i} {v:.2f}" for i, v in active], *pad]
+        )
+        links.append([None, None, *[neuronpedia(sae, i) for i, _ in active], *pad])
     hook = sae.cfg.metadata.hook_name
     columns = ["position", "token", *[f"top {j + 1}" for j in range(k)]]
     note = "feature index and activation; empty where fewer are active"
-    view_table = table(f"SAE features per token at {hook}", columns, rows, note=note)
+    has_links = sae.cfg.metadata.neuronpedia_id is not None
+    if has_links:
+        note += "; a feature opens its Neuronpedia dashboard"
+    view_table = table(f"SAE features per token at {hook}", columns, rows, note=note,
+                       links=links if has_links else None)  # fmt: skip
     peak = acts.max(0).values.topk(min(k, acts.shape[1])).indices.tolist()
     view_heat = heatmap(f"Top SAE features over positions at {hook}",
                         [acts[:, f].tolist() for f in peak], x=labels, y=[f"#{f}" for f in peak],
@@ -76,5 +89,7 @@ def save_feature(
 ) -> Direction:
     """Save a feature's decoder row as a direction at the SAE's layer, to steer or ablate."""
     notes = f"feature {feature} of the SAE at {sae.cfg.metadata.hook_name}"
+    if url := neuronpedia(sae, feature):
+        notes += f"; {url}"
     return save_vector(name, sae.W_dec[feature], model=model, layer=_layer(sae),
                        method="sae-decoder", run=run, notes=notes)  # fmt: skip

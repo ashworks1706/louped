@@ -113,6 +113,7 @@ class TableView(BaseModel):
     columns: list[str]
     rows: list[list[str | float | int | bool | None]]
     note: str | None = None
+    links: list[list[str | None]] | None = None
 
 
 View = Annotated[HeatmapView | LineView | TableView, Field(discriminator="kind")]
