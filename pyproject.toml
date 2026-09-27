@@ -23,6 +23,8 @@ server = [
 evals = [
     "inspect-ai>=0.3.271,<0.4",
     "inspect-evals>=0.22",
+    # Inspect's openai-api provider: any local OpenAI-compatible server (llama-server, vLLM).
+    "openai>=1.0",
 ]
 # MLflow on a SQLite file; the file store is in maintenance mode in MLflow 3.
 tracking = [

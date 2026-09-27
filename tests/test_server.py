@@ -26,7 +26,8 @@ def test_missing_ui_dir_serves_api_only(tmp_path: Path) -> None:
 
 def test_playground_without_a_model_says_so() -> None:
     client = TestClient(create_app(), base_url="http://localhost")
-    assert client.get("/api/playground").json() == {"model": None, "layers": None}
+    info = client.get("/api/playground").json()
+    assert info == {"model": None, "layers": None, "heads": None, "bank": [], "diffusion": False}
     assert client.post("/api/playground/generate", json={"prompt": "hi"}).status_code == 409
     assert client.post("/api/playground/inspect", json={"prompt": "hi"}).status_code == 409
 

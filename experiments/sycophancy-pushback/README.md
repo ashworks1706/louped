@@ -18,8 +18,8 @@ held"). Patching locates where the pushed answer enters.
 ## Run
 
 ```sh
-uv run --extra interp python experiments/sycophancy-pushback/run.py            # Qwen2.5-0.5B-Instruct
-uv run --extra interp python experiments/sycophancy-pushback/run.py --tiny     # offline, a minute
+uv run --all-extras python experiments/sycophancy-pushback/run.py            # Qwen2.5-0.5B-Instruct
+uv run --all-extras python experiments/sycophancy-pushback/run.py --tiny     # offline, a minute
 ```
 
 The analysis run (layer scores, pushback outcomes, patching) and the grid run appear under Runs;

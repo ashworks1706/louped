@@ -304,8 +304,6 @@ export interface components {
     };
     /** GenerateRequest */
     GenerateRequest: {
-      /** Prompt */
-      prompt: string;
       /**
        * Interventions
        * @default []
@@ -314,15 +312,24 @@ export interface components {
         [key: string]: unknown;
       }[];
       /**
+       * Adapters
+       * @description Adapters of the bank live for this request.
+       * @default []
+       */
+      adapters: string[];
+      /**
        * Max New Tokens
+       * @description Tokens to generate; a diffusion model's reply length.
        * @default 64
        */
       max_new_tokens: number;
-    };
-    /** GenerateResponse */
-    GenerateResponse: {
-      /** Text */
-      text: string;
+      /**
+       * Steps
+       * @description Denoising steps; the length if unset.
+       */
+      steps?: number | null;
+      /** Prompt */
+      prompt: string;
     };
     /**
      * Graph
@@ -380,8 +387,6 @@ export interface components {
     };
     /** InspectRequest */
     InspectRequest: {
-      /** Prompt */
-      prompt: string;
       /**
        * Interventions
        * @default []
@@ -389,6 +394,25 @@ export interface components {
       interventions: {
         [key: string]: unknown;
       }[];
+      /**
+       * Adapters
+       * @description Adapters of the bank live for this request.
+       * @default []
+       */
+      adapters: string[];
+      /**
+       * Max New Tokens
+       * @description Tokens to generate; a diffusion model's reply length.
+       * @default 64
+       */
+      max_new_tokens: number;
+      /**
+       * Steps
+       * @description Denoising steps; the length if unset.
+       */
+      steps?: number | null;
+      /** Prompt */
+      prompt: string;
       /**
        * Vectors
        * @description Saved directions to read, each at its own layer.
@@ -498,6 +522,18 @@ export interface components {
       model: string | null;
       /** Layers */
       layers: number | null;
+      /** Heads */
+      heads?: number | null;
+      /**
+       * Bank
+       * @default []
+       */
+      bank: string[];
+      /**
+       * Diffusion
+       * @default false
+       */
+      diffusion: boolean;
     };
     /** RunDetail */
     RunDetail: {
@@ -1052,7 +1088,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["GenerateResponse"];
+          "text/plain": string;
         };
       };
       /** @description Validation Error */

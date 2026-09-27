@@ -1,8 +1,8 @@
 """The shapes the Run page's Figures tab renders. A run stores each as JSON under views/ in MLflow.
 
 Four kinds cover the standard figures: a heatmap (patching: layer by position; attention: one
-slice per layer and head; the logit lens, each cell labelled with its token), a line chart
-(anything by layer), a table, and tokens (text coloured by a per-token value).
+slice per layer and head; the logit lens and a diffusion trajectory, each cell labelled with its
+token), a line chart (anything by layer), a table, and tokens (text coloured by a per-token value).
 Keeping them as data, not images, is what lets the UI hover, sort and link them.
 """
 
@@ -38,6 +38,12 @@ def heatmap(
         "slices": slices,
         "labels": labels,
     }
+
+
+def by_head(title: str, z: list[list[float]], note: str | None = None) -> dict[str, Any]:
+    """A heatmap of z, one row per layer and one column per head."""
+    heads = [str(j) for j in range(len(z[0]) if z else 0)]
+    return heatmap(title, z, heads, [str(i) for i in range(len(z))], "head", "layer", note)
 
 
 def line(

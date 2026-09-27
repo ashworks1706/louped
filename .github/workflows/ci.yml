@@ -65,6 +65,23 @@ jobs:
       - run: uv sync --locked --all-extras
       - run: just check-python
 
+  # The roadmap's acceptance "a fresh user runs an example from a clean clone": the worked examples
+  # from the docs, on their tiny offline models, from a fresh checkout and a locked install.
+  examples:
+    name: Examples
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+      - uses: extractions/setup-just@v4
+      - run: uv sync --locked --all-extras
+      - run: just examples
+
   web:
     name: Web
     needs: changes
@@ -119,7 +136,7 @@ jobs:
   ci:
     name: CI
     if: always()
-    needs: [changes, python, web, site]
+    needs: [changes, python, examples, web, site]
     runs-on: ubuntu-latest
     steps:
       - run: |

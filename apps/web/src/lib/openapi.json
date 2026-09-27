@@ -424,9 +424,9 @@
           "200": {
             "description": "Successful Response",
             "content": {
-              "application/json": {
+              "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/GenerateResponse"
+                  "type": "string"
                 }
               }
             }
@@ -627,12 +627,6 @@
       },
       "GenerateRequest": {
         "properties": {
-          "prompt": {
-            "type": "string",
-            "maxLength": 8000,
-            "minLength": 1,
-            "title": "Prompt"
-          },
           "interventions": {
             "items": {
               "additionalProperties": true,
@@ -642,28 +636,47 @@
             "title": "Interventions",
             "default": []
           },
+          "adapters": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Adapters",
+            "description": "Adapters of the bank live for this request.",
+            "default": []
+          },
           "max_new_tokens": {
             "type": "integer",
             "maximum": 512.0,
             "minimum": 1.0,
             "title": "Max New Tokens",
+            "description": "Tokens to generate; a diffusion model's reply length.",
             "default": 64
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 512.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps",
+            "description": "Denoising steps; the length if unset."
+          },
+          "prompt": {
+            "type": "string",
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Prompt"
           }
         },
         "type": "object",
         "required": ["prompt"],
         "title": "GenerateRequest"
-      },
-      "GenerateResponse": {
-        "properties": {
-          "text": {
-            "type": "string",
-            "title": "Text"
-          }
-        },
-        "type": "object",
-        "required": ["text"],
-        "title": "GenerateResponse"
       },
       "Graph": {
         "properties": {
@@ -822,12 +835,6 @@
       },
       "InspectRequest": {
         "properties": {
-          "prompt": {
-            "type": "string",
-            "maxLength": 4000,
-            "minLength": 1,
-            "title": "Prompt"
-          },
           "interventions": {
             "items": {
               "additionalProperties": true,
@@ -836,6 +843,43 @@
             "type": "array",
             "title": "Interventions",
             "default": []
+          },
+          "adapters": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Adapters",
+            "description": "Adapters of the bank live for this request.",
+            "default": []
+          },
+          "max_new_tokens": {
+            "type": "integer",
+            "maximum": 512.0,
+            "minimum": 1.0,
+            "title": "Max New Tokens",
+            "description": "Tokens to generate; a diffusion model's reply length.",
+            "default": 64
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 512.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps",
+            "description": "Denoising steps; the length if unset."
+          },
+          "prompt": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Prompt"
           },
           "vectors": {
             "items": {
@@ -1086,6 +1130,30 @@
               }
             ],
             "title": "Layers"
+          },
+          "heads": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heads"
+          },
+          "bank": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Bank",
+            "default": []
+          },
+          "diffusion": {
+            "type": "boolean",
+            "title": "Diffusion",
+            "default": false
           }
         },
         "type": "object",

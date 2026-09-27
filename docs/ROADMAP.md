@@ -64,12 +64,16 @@ with its UI view.
       ablate, layer and strength, the spec as a copyable `-M interventions=...`
 - [x] Verified offline: `refusal-direction/eval.py --tiny` runs base and ablated through the
       provider, Compare shows harmful refusal 1 to 0 on all 12 harmful samples
-- [ ] Stream replies token by token (today each side returns when done)
+- [x] Replies stream token by token, with a stop that ends generation on the server
+- [x] Playground: live adapters from a bank (`--bank`), masked diffusion models (`--diffusion`)
+      with the denoising trajectory, and head ablation
 - [x] Paired comparison in Compare: beside the per-sample flips, each score's paired difference
       with a seeded bootstrap interval and the count of samples that went up and down
 - [x] `loupe sweep`: a task under Steer at every layer and strength, as heatmaps of score and of
       coherence cost (KL on neutral prompts), a line of score against strength, and a table
       linking every cell's eval run
+- [x] `experiments/inspect-evals-baseline`: inspect_evals GSM8K base and ablated, against Qwen's
+      reported number (not yet run)
 - [ ] Acceptance: an inspect_evals score within noise of the reported number; steered and base in Compare
 
 ## v0.5 Training
@@ -106,11 +110,15 @@ with its UI view.
       from the environment (not yet run)
 - [x] Inspect View served by loupe at /inspect, read-only over its logs, as an Inspect tab on
       every eval run, opened at the selected sample
+- [x] Tool-use scorers (calls, errors, required tool, answer grounded in a tool result) usable as
+      grid metrics; `experiments/coding-agent`: hidden-test coding in Docker, HumanEval format
+- [x] `experiments/intercode-ctf`: inspect_evals InterCode CTF through loupe/, verified with scripted
+      calls in Docker (not yet run on a model)
 - [ ] Acceptance: an inspect_evals agentic task end to end in Docker
 
 ## v0.7 Research domains
 
-The research questions of the ARC thesis, zipy, SparkyAI, piramid and Bijou, as reusable domains
+The research questions of the ARC thesis, zipy (which now includes Bijou), SparkyAI and piramid, as reusable domains
 (ARCHITECTURE.md). Product regression evals and performance numbers stay in each product's repo.
 
 - [x] Grid: conditions by tasks by seeds, each against a baseline with a paired bootstrap interval
@@ -128,11 +136,20 @@ The research questions of the ARC thesis, zipy, SparkyAI, piramid and Bijou, as 
       decoding, spliced KV divergence with and without the rotary phase error
 - [x] Small models and data: teacher collection, hashed splits, n-gram contamination, a
       classifier recipe
-- [ ] Black box: one experiment per product through its OpenAI-compatible endpoint
+- [x] Black box: one experiment per product through its OpenAI-compatible endpoint
+      (`experiments/{sparky,zipy,piramid}-blackbox`), verified against mocks and a local stub
+- [x] Attention: a Heads spec (zero or mean ablation), per-head patching, attention mass on a span;
+      latency, tokens per second and peak memory as grid metrics (`experiments/attention-heads`)
+- [x] Attention kernels: `attn` on load, the provider and `loupe serve` (eager, sdpa, flash, flex,
+      or a file.py:function registered with AttentionInterface); `experiments/attention-kernels`
+- [x] Diffusion: the denoising trajectory as a view; `experiments/diffusion-adapters` (skills,
+      merged, phase-routed) run offline with `--tiny`
 - [ ] Acceptance: one result per project read entirely in the UI, on a real model
 
 ## v1.0 Open source
 
 - [x] Docs site (apps/site) and a read-only demo image (deploy/app)
-- [ ] Three worked examples, model support matrix; the site and demo deployed
+- [x] Three worked examples and a model support page in the docs; `just examples` runs the
+      offline examples from a clean clone in CI
+- [ ] The site and demo deployed
 - [ ] Acceptance: a fresh user runs an example from a clean clone

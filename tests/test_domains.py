@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 import torch
 
@@ -29,6 +31,7 @@ def test_grid_pairs_conditions_against_the_baseline_per_sample(lm) -> None:
     from loupe import stores
     from loupe.grid import grid, paired, verdict
     from loupe.inspect_ext import pushback, single_turn
+    from loupe.stores.runs import read_artifact
 
     name = saved(lm, "tiny-grid")
     save_vector("g", torch.randn(lm._model.config.hidden_size) * 30, model=name, layer=1,
@@ -36,12 +39,20 @@ def test_grid_pairs_conditions_against_the_baseline_per_sample(lm) -> None:
     steer = {"interventions": {"kind": "steer", "vector": "g", "alpha": 4.0}}
     run_id = grid({"pushback": pushback(ITEMS), "control": single_turn(ITEMS)}, name,
                   {"base": {}, "steer": steer}, "correct_first/accuracy", seeds=[0, 1],
-                  held="correct_first/accuracy")  # fmt: skip
+                  held="correct_first/accuracy", extra=["correct_first/accuracy"])  # fmt: skip
     views = [v.view.model_dump() for v in stores.list_views(run_id)]
-    assert [v["kind"] for v in views] == ["heatmap", "heatmap", "heatmap", "table"]
+    assert [v["kind"] for v in views] == ["heatmap", "heatmap", "heatmap", "heatmap", "table"]
     assert views[0]["y"] == ["base", "steer"] and views[0]["x"] == ["pushback", "control"]
     assert views[1]["z"][0] == [0.0, 0.0]  # the baseline against itself
-    rows = views[3]["rows"]
+    more = views[3]  # the extra score: its mean, labelled with its difference against base
+    assert more["title"] == "correct_first/accuracy" and more["z"] == views[0]["z"]
+    for i, row in enumerate(more["labels"]):
+        for j, label in enumerate(row):
+            assert label == f"{views[0]['z'][i][j]:.3g} ({views[1]['z'][i][j]:+.3g})"
+    assert stores.get_run(run_id).params["conditions"] == "['base', 'steer']"
+    conditions = json.loads(read_artifact(run_id, "conditions.json"))
+    assert conditions["steer"] == steer
+    rows = views[4]["rows"]
     assert rows[0][4] == "baseline" and rows[2][4].split(", ")[1] in ("held", "broke")
     assert len([r for r in stores.list_runs() if r.kind == "eval"]) == 8  # 2 x 2 x 2 seeds
 
@@ -168,6 +179,19 @@ def test_masked_diffusion_fills_blocks_and_hooks_every_step() -> None:
     assert steps == list(range(8))
     with pytest.raises(ValueError):
         denoise(d, prompt, length=8, block=3)
+
+
+def test_diffusion_trajectory_commits_each_position_once() -> None:
+    from loupe.analysis import trajectory
+    from loupe.models.diffusion import load_diffusion
+
+    d = load_diffusion(masked("tiny-mdm-traj"))
+    view = trajectory(d, "<user> what is the sky <assistant>", length=6, block=3, steps=6)
+    z = torch.tensor(view["z"])
+    assert z.shape == (6, 6) and view["y"] == [str(s) for s in range(6)]
+    assert ((z > 0).sum(0) == 1).all() and ((z > 0).sum(1) == 1).all()
+    assert (z[:3, 3:] == 0).all() and (z[3:, :3] == 0).all()  # blocks fill left to right
+    assert view["labels"][0].count("") == 5 and "" not in view["labels"][-1]
 
 
 def test_masked_diffusion_trains_an_adapter_and_serves_it_in_a_grid(tmp_path) -> None:

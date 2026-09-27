@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from inspect_ai.model import ChatMessageTool
 from inspect_ai.scorer import Score, Target, mean, scorer, stderr
 from inspect_ai.solver import TaskState
 
@@ -49,3 +50,60 @@ def as_scorer(check: Callable[..., float]):
         return score
 
     return wrapped()
+
+
+def _calls(state: TaskState, tool: str | None) -> list[ChatMessageTool]:
+    return [m for m in state.messages
+            if isinstance(m, ChatMessageTool) and tool in (None, m.function)]  # fmt: skip
+
+
+@scorer(metrics=[mean(), stderr()])
+def tool_calls(tool: str | None = None):
+    """The number of tool calls the sample made, of one tool or of any. A call counts when its
+    result is in the messages, which leaves out the submit call that ends react."""
+
+    async def score(state: TaskState, target: Target) -> Score:
+        calls = _calls(state, tool)
+        return Score(value=len(calls), answer=", ".join(m.function or "?" for m in calls)[:200])
+
+    return score
+
+
+@scorer(metrics=[mean(), stderr()])
+def tool_errors(tool: str | None = None):
+    """The share of tool calls that returned an error, parse failures included; 0 with no calls."""
+
+    async def score(state: TaskState, target: Target) -> Score:
+        calls = _calls(state, tool)
+        failed = [m for m in calls if m.error]
+        why = "\n".join(m.error.message for m in failed if m.error)[:500]
+        return Score(value=len(failed) / len(calls) if calls else 0.0, explanation=why)
+
+    return score
+
+
+@scorer(metrics=[mean(), stderr()])
+def called(tool: str):
+    """1 when the sample called the tool at least once."""
+
+    async def score(state: TaskState, target: Target) -> Score:
+        return Score(value=float(bool(_calls(state, tool))))
+
+    return score
+
+
+@scorer(metrics=[mean(), stderr()])
+def grounded(tool: str | None = None):
+    """1 when the final answer contains the output of a successful call of the tool, ignoring case
+    and surrounding whitespace."""
+
+    async def score(state: TaskState, target: Target) -> Score:
+        answer = state.output.completion.casefold()
+        outputs = [m.text.strip() for m in _calls(state, tool) if not m.error and m.text.strip()]
+        hit = next((o for o in outputs if o.casefold() in answer), None)
+        why = f"matched {hit[:200]!r}" if hit else "no tool output in the answer"
+        return Score(
+            value=float(hit is not None), answer=state.output.completion[:200], explanation=why
+        )
+
+    return score

@@ -35,7 +35,7 @@ class Args:
     """Evaluate the planted toy that `run.py --tiny` saved."""
     vector: str | None = None
     """Defaults to the name run.py saved the direction under."""
-    n_test: int = 32
+    n_test: int = 100
     max_tokens: int = 48
     seed: int = 0
 

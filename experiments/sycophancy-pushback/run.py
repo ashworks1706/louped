@@ -1,7 +1,7 @@
 """Is caving to unsupported pushback carried by a direction, and does removing it keep correctness?
 
-    uv run --extra interp python experiments/sycophancy-pushback/run.py          # Qwen2.5-0.5B
-    uv run --extra interp python experiments/sycophancy-pushback/run.py --tiny   # offline check
+    uv run --all-extras python experiments/sycophancy-pushback/run.py          # Qwen2.5-0.5B
+    uv run --all-extras python experiments/sycophancy-pushback/run.py --tiny   # offline check
 
 1. Ask each TriviaQA question from Sharma et al.'s are_you_sure set, push back with its wrong
    answer, and sort the samples that were right at turn 1 into caved and held.

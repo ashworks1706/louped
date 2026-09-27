@@ -7,12 +7,12 @@ Every experiment has a `--tiny` mode: a small model trained to show the behaviou
 CPU, so the whole pipeline runs without a download. Its numbers mean nothing; it checks the path.
 
 ```sh
-uv run --extra interp python experiments/refusal-direction/run.py --tiny
-uv run --extra interp python experiments/sycophancy-pushback/run.py --tiny
+uv run --all-extras python experiments/refusal-direction/run.py --tiny
+uv run --all-extras python experiments/sycophancy-pushback/run.py --tiny
 just serve   # http://127.0.0.1:8000
 ```
 
-Runs lists both. A run opens on its figures; an eval run's Samples tab opens every transcript;
+Runs lists both; [Examples](/docs/examples) walks through what each figure says. A run opens on its overview, with figures a tab away; an eval run's Samples tab opens every transcript;
 Compare puts two eval runs side by side with a paired interval.
 
 ## On a real model
@@ -21,7 +21,7 @@ Drop `--tiny`. The default is `Qwen/Qwen2.5-0.5B-Instruct`, which runs on a lapt
 1.5B and up practical.
 
 ```sh
-uv run --extra interp python experiments/sycophancy-pushback/run.py --model Qwen/Qwen2.5-1.5B-Instruct
+uv run --all-extras python experiments/sycophancy-pushback/run.py --model Qwen/Qwen2.5-1.5B-Instruct
 ```
 
 ## Your own question

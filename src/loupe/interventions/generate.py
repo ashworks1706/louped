@@ -11,6 +11,7 @@ from collections.abc import Callable
 import torch
 from nnsight import LanguageModel
 from transformers import LogitsProcessor, LogitsProcessorList
+from transformers.generation.streamers import BaseStreamer
 
 from loupe.interventions.specs import Plan, apply
 
@@ -24,16 +25,18 @@ def generate(
     batch_size: int = 8,
     on_step: Callable[[int, int], None] | None = None,
     strip: bool = True,
+    streamer: BaseStreamer | None = None,
 ) -> list[str]:
     """Greedy completions, with the plan applied at every generated token when one is given.
     on_step(token, max_new_tokens) runs before each token's forward pass (phase schedules).
     Without strip, each completion is exactly the text it adds to its prompt, spacing included,
-    for continuing a prefilled reply."""
+    for continuing a prefilled reply. A streamer receives the tokens as they are generated and
+    takes one prompt only."""
     out: list[str] = []
     for i in range(0, len(prompts), batch_size):
         chunk = prompts[i : i + batch_size]
         width = lm.tokenizer(chunk, return_tensors="pt", padding=True)["input_ids"].shape[1]
-        extra = {}
+        extra: dict[str, object] = {"streamer": streamer} if streamer is not None else {}
         if on_step is not None:
             on_step(0, max_new_tokens)
             extra["logits_processor"] = LogitsProcessorList(

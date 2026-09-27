@@ -1,15 +1,16 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { CornerDownLeft, MessageSquareText } from "lucide-react";
+import { CornerDownLeft, MessageSquareText, Square } from "lucide-react";
 import {
+  parseAsArrayOf,
   parseAsFloat,
   parseAsInteger,
   parseAsString,
   parseAsStringLiteral,
   useQueryStates,
 } from "nuqs";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CopyButton } from "@/components/copy-button";
 import { EmptyState } from "@/components/empty-state";
@@ -17,13 +18,14 @@ import { QueryState } from "@/components/query-state";
 import { Figure } from "@/components/run-views";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generate, inspect, q, type Direction, type PlaygroundInfo } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-const MODES = ["steer", "ablate"] as const;
+const MODES = ["steer", "ablate", "heads"] as const;
 type Mode = (typeof MODES)[number];
 const TABS = ["reply", "inspect"] as const;
 const SIDES = ["base", "intervention"] as const;
@@ -68,6 +70,9 @@ function Loaded({
     alpha: parseAsFloat.withDefault(1),
     layer: parseAsInteger,
     tokens: parseAsInteger.withDefault(64),
+    steps: parseAsInteger,
+    heads: parseAsString.withDefault("0"),
+    adapters: parseAsArrayOf(parseAsString).withDefault([]),
     tab: parseAsStringLiteral(TABS).withDefault("reply"),
     side: parseAsStringLiteral(SIDES).withDefault("base"),
   });
@@ -76,14 +81,33 @@ function Loaded({
   const vector = vectors.find((v) => v.name === s.vector) ?? vectors[0];
   const layer = s.layer ?? vector?.layer ?? 0;
 
-  const spec = vector
-    ? s.mode === "steer"
-      ? { kind: "steer", vector: vector.name, alpha: s.alpha, layer }
-      : { kind: "ablate", vector: vector.name }
-    : null;
+  const bank = info.bank ?? [];
+  const live = bank.filter((a) => s.adapters.includes(a));
+  const heads = [
+    ...new Set(
+      s.heads
+        .split(/[\s,]+/)
+        .filter(Boolean)
+        .map(Number),
+    ),
+  ].filter((h) => Number.isInteger(h) && h >= 0 && h < (info.heads ?? 0));
+  const spec = info.diffusion
+    ? null
+    : s.mode === "heads"
+      ? heads.length
+        ? { kind: "heads", layers: [layer], heads }
+        : null
+      : vector
+        ? s.mode === "steer"
+          ? { kind: "steer", vector: vector.name, alpha: s.alpha, layer }
+          : { kind: "ablate", vector: vector.name }
+        : null;
+  const interventions = spec ? [spec] : [];
+  const intervened = spec != null || live.length > 0;
+  const gen = { max_new_tokens: s.tokens, steps: s.steps };
 
-  const base = useMutation({ mutationFn: generate });
-  const edited = useMutation({ mutationFn: generate });
+  const base = useReply();
+  const edited = useReply();
   const looked = useMutation({ mutationFn: inspect });
   const lookedEdited = useMutation({ mutationFn: inspect });
   const run = () => {
@@ -91,30 +115,44 @@ function Loaded({
     if (!prompt) return;
     void set({ prompt });
     if (s.tab === "reply") {
-      base.mutate({ prompt, interventions: [], max_new_tokens: s.tokens });
-      if (spec) edited.mutate({ prompt, interventions: [spec], max_new_tokens: s.tokens });
+      base.start({ prompt, interventions: [], adapters: [], ...gen });
+      if (intervened) edited.start({ prompt, interventions, adapters: live, ...gen });
       else edited.reset();
       return;
     }
-    const read = { prompt, vectors: vectors.map((v) => v.name), chat: true };
-    looked.mutate({ ...read, interventions: [] });
-    if (spec) lookedEdited.mutate({ ...read, interventions: [spec] });
+    const read = { prompt, vectors: info.diffusion ? [] : vectors.map((v) => v.name), chat: true };
+    looked.mutate({ ...read, ...gen, interventions: [], adapters: [] });
+    if (intervened) lookedEdited.mutate({ ...read, ...gen, interventions, adapters: live });
     else lookedEdited.reset();
   };
-  const pending = s.tab === "reply" ? base.isPending : looked.isPending;
-  const shown = s.side === "intervention" && spec ? lookedEdited : looked;
+  const streaming = s.tab === "reply" && (base.pending || edited.pending);
+  const shown = s.side === "intervention" && intervened ? lookedEdited : looked;
 
   useEffect(() => {
     if (!vectors.length || s.vector) return;
     void set({ vector: vectors[0].name });
   }, [vectors, s.vector, set]);
 
-  const specText = spec ? JSON.stringify(spec) : "";
-  const label = spec
-    ? s.mode === "steer"
-      ? `steer ${vector?.name} · α ${s.alpha} · layer ${layer}`
-      : `ablate ${vector?.name} · every layer`
-    : "no vector";
+  const modelArg = [
+    spec && `-M interventions='${JSON.stringify(spec)}'`,
+    live.length && `-M adapters='${JSON.stringify(live)}'`,
+    info.diffusion &&
+      `-M diffusion='${JSON.stringify({ length: s.tokens, steps: s.steps ?? s.tokens })}'`,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const label =
+    [
+      spec &&
+        (s.mode === "steer"
+          ? `steer ${vector?.name} · α ${s.alpha} · layer ${layer}`
+          : s.mode === "ablate"
+            ? `ablate ${vector?.name} · every layer`
+            : `heads ${heads.join(",")} · layer ${layer}`),
+      live.join(" + "),
+    ]
+      .filter(Boolean)
+      .join(" · ") || (info.diffusion ? "no adapters" : "no intervention");
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
@@ -122,91 +160,142 @@ function Loaded({
         <Field label="Model">
           <div className="flex items-baseline justify-between gap-2">
             <span className="truncate font-mono text-sm">{info.model}</span>
-            <span className="text-muted-foreground shrink-0 text-xs">{layers} layers</span>
+            <span className="text-muted-foreground shrink-0 text-xs">
+              {info.diffusion ? "masked diffusion" : `${layers} layers`}
+            </span>
           </div>
         </Field>
-        <Field label="Vector">
-          {vectors.length === 0 ? (
-            <p className="text-muted-foreground text-xs">
-              {loading ? "Loading…" : `No vectors saved for this model. Compute one first.`}
-            </p>
-          ) : (
-            <select
-              aria-label="Vector"
-              value={vector?.name}
-              onChange={(e) => void set({ vector: e.target.value, layer: null })}
-              className="focus-visible:border-ring h-8 w-full rounded-md border bg-transparent px-2 font-mono text-sm outline-none"
-            >
-              {vectors.map((v) => (
-                <option key={v.name} value={v.name} className="bg-popover">
-                  {v.name}
-                </option>
-              ))}
-            </select>
-          )}
-        </Field>
-        <Field label="Intervention">
-          <div className="bg-muted grid grid-cols-2 gap-1 rounded-md p-1" role="radiogroup">
-            {MODES.map((m) => (
-              <button
-                key={m}
-                role="radio"
-                aria-checked={s.mode === m}
-                onClick={() => void set({ mode: m as Mode })}
-                className={cn(
-                  "h-7 rounded-[5px] text-sm capitalize transition-colors",
-                  s.mode === m
-                    ? "bg-background shadow-xs"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {m}
-              </button>
+        {bank.length > 0 && (
+          <Field label="Adapters">
+            {bank.map((a) => (
+              <label key={a} className="flex items-center gap-2 font-mono text-sm">
+                <Checkbox
+                  checked={live.includes(a)}
+                  onCheckedChange={(on) =>
+                    void set({
+                      adapters: bank.filter((b) => (b === a ? on === true : live.includes(b))),
+                    })
+                  }
+                />
+                {a}
+              </label>
             ))}
-          </div>
-        </Field>
-        {s.mode === "steer" ? (
-          <>
-            <Slider
-              label="Strength α"
-              value={s.alpha}
-              min={-4}
-              max={4}
-              step={0.25}
-              onChange={(alpha) => void set({ alpha })}
+          </Field>
+        )}
+        {!info.diffusion && (
+          <Field label="Intervention">
+            <div className="bg-muted grid grid-cols-3 gap-1 rounded-md p-1" role="radiogroup">
+              {MODES.map((m) => (
+                <button
+                  key={m}
+                  role="radio"
+                  aria-checked={s.mode === m}
+                  onClick={() => void set({ mode: m as Mode })}
+                  className={cn(
+                    "h-7 rounded-[5px] text-sm capitalize transition-colors",
+                    s.mode === m
+                      ? "bg-background shadow-xs"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          </Field>
+        )}
+        {!info.diffusion && s.mode !== "heads" && (
+          <Field label="Vector">
+            {vectors.length === 0 ? (
+              <p className="text-muted-foreground text-xs">
+                {loading ? "Loading…" : `No vectors saved for this model. Compute one first.`}
+              </p>
+            ) : (
+              <select
+                aria-label="Vector"
+                value={vector?.name}
+                onChange={(e) => void set({ vector: e.target.value, layer: null })}
+                className="focus-visible:border-ring h-8 w-full rounded-md border bg-transparent px-2 font-mono text-sm outline-none"
+              >
+                {vectors.map((v) => (
+                  <option key={v.name} value={v.name} className="bg-popover">
+                    {v.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
+        )}
+        {!info.diffusion && s.mode === "steer" && (
+          <Slider
+            label="Strength α"
+            value={s.alpha}
+            min={-4}
+            max={4}
+            step={0.25}
+            onChange={(alpha) => void set({ alpha })}
+          />
+        )}
+        {!info.diffusion && s.mode !== "ablate" && (
+          <Slider
+            label="Layer"
+            value={layer}
+            min={0}
+            max={layers - 1}
+            step={1}
+            onChange={(l) => void set({ layer: l })}
+            hint={vector && s.mode === "steer" ? `taken at ${vector.layer}` : undefined}
+          />
+        )}
+        {!info.diffusion && s.mode === "heads" && (
+          <Field label={`Heads to zero, of ${info.heads ?? 0}`}>
+            <Input
+              aria-label="Heads"
+              value={s.heads}
+              placeholder="0, 3"
+              onChange={(e) => void set({ heads: e.target.value })}
+              className="font-mono"
             />
-            <Slider
-              label="Layer"
-              value={layer}
-              min={0}
-              max={layers - 1}
-              step={1}
-              onChange={(l) => void set({ layer: l })}
-              hint={vector ? `taken at ${vector.layer}` : undefined}
-            />
-          </>
-        ) : (
+          </Field>
+        )}
+        {!info.diffusion && s.mode === "ablate" && (
           <p className="text-muted-foreground text-xs leading-relaxed">
             Projects the direction out of the embeddings and every layer&apos;s output.
           </p>
         )}
-        <Field label="Max new tokens">
-          <Input
-            type="number"
-            min={1}
-            max={512}
-            value={s.tokens}
-            onChange={(e) => void set({ tokens: Number(e.target.value) || 64 })}
-            className="font-mono"
-          />
-        </Field>
-        {spec && (
-          <Field label="As an Inspect model arg">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={info.diffusion ? "Length" : "Max new tokens"}>
+            <Input
+              type="number"
+              aria-label={info.diffusion ? "Length" : "Max new tokens"}
+              min={1}
+              max={512}
+              value={s.tokens}
+              onChange={(e) => void set({ tokens: Number(e.target.value) || 64 })}
+              className="font-mono"
+            />
+          </Field>
+          {info.diffusion && (
+            <Field label="Steps">
+              <Input
+                type="number"
+                aria-label="Steps"
+                min={1}
+                max={512}
+                value={s.steps ?? s.tokens}
+                onChange={(e) => void set({ steps: Number(e.target.value) || null })}
+                className="font-mono"
+              />
+            </Field>
+          )}
+        </div>
+        {modelArg && (
+          <Field label="As Inspect model args">
             <div className="bg-muted/50 flex items-start gap-1 rounded-md border p-2">
               <code className="min-w-0 flex-1 font-mono text-[11px] leading-5 break-all">
-                -M interventions=&apos;{specText}&apos;
+                {modelArg}
               </code>
-              <CopyButton text={`-M interventions='${specText}'`} />
+              <CopyButton text={modelArg} />
             </div>
           </Field>
         )}
@@ -237,13 +326,33 @@ function Loaded({
           <div className="flex items-center justify-between border-t px-3 py-2">
             <span className="text-muted-foreground text-xs">
               {s.tab === "reply"
-                ? "Greedy. The same prompt goes to both."
-                : "Logit lens, projections onto this model's vectors, and attention."}
+                ? `${info.diffusion ? "Denoised" : "Greedy"}. The same prompt goes to both.`
+                : info.diffusion
+                  ? "What each denoising step committed, and how sure it was."
+                  : "Logit lens, projections onto this model's vectors, and attention."}
             </span>
-            <Button type="submit" size="sm" disabled={!draft.trim() || pending}>
-              Run <Kbd>⌘</Kbd>
-              <CornerDownLeft className="size-3.5" />
-            </Button>
+            {streaming ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  base.stop();
+                  edited.stop();
+                }}
+              >
+                <Square className="size-3" /> Stop
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                size="sm"
+                disabled={!draft.trim() || (s.tab === "inspect" && looked.isPending)}
+              >
+                Run <Kbd>⌘</Kbd>
+                <CornerDownLeft className="size-3.5" />
+              </Button>
+            )}
           </div>
         </form>
         <Tabs
@@ -273,7 +382,7 @@ function Loaded({
             </div>
           </TabsContent>
           <TabsContent value="inspect" className="flex flex-col gap-4 pt-4">
-            {spec && (
+            {intervened && (
               <Tabs
                 value={s.side}
                 onValueChange={(side) => void set({ side: side as (typeof SIDES)[number] })}
@@ -297,7 +406,7 @@ function Loaded({
               shown.data.views.map((v, i) => <Figure key={`${shown.submittedAt}-${i}`} view={v} />)
             ) : (
               <span className="text-muted-foreground text-sm">
-                Run a prompt to read its layers.
+                Run a prompt to {info.diffusion ? "watch it denoise" : "read its layers"}.
               </span>
             )}
           </TabsContent>
@@ -361,9 +470,10 @@ function Reply({
 }: {
   title: string;
   badge?: React.ReactNode;
-  state: { isPending: boolean; error: Error | null; data?: { text: string } };
+  state: ReplyState;
   intervention?: boolean;
 }) {
+  const text = state.text.trimStart();
   return (
     <section
       data-testid={`reply-${intervention ? "intervention" : "base"}`}
@@ -377,16 +487,47 @@ function Reply({
         <span className="flex min-w-0 justify-end overflow-hidden">{badge}</span>
       </header>
       <div className="flex-1 p-4 text-sm leading-relaxed whitespace-pre-wrap">
-        {state.isPending ? (
-          <span className="text-muted-foreground animate-pulse">Generating…</span>
-        ) : state.error ? (
+        {state.error ? (
           <span className="text-negative">{state.error.message}</span>
-        ) : state.data ? (
-          state.data.text || <span className="text-muted-foreground">(empty reply)</span>
+        ) : text ? (
+          text
+        ) : state.pending ? (
+          <span className="text-muted-foreground animate-pulse">Generating…</span>
+        ) : state.ran ? (
+          <span className="text-muted-foreground">(empty reply)</span>
         ) : (
           <span className="text-muted-foreground">Run a prompt to see the reply.</span>
         )}
       </div>
     </section>
   );
+}
+
+type ReplyState = { text: string; pending: boolean; error: Error | null; ran: boolean };
+const IDLE: ReplyState = { text: "", pending: false, error: null, ran: false };
+
+/** One side's reply, filled as it streams in; a new start or stop aborts the one in flight. */
+function useReply() {
+  const [reply, setReply] = useState(IDLE);
+  const live = useRef<AbortController | null>(null);
+  const stop = useCallback(() => live.current?.abort(), []);
+  useEffect(() => stop, [stop]);
+  const start = (req: Parameters<typeof generate>[0]) => {
+    stop();
+    const c = new AbortController();
+    live.current = c;
+    setReply({ ...IDLE, pending: true, ran: true });
+    generate(req, (t) => setReply((r) => ({ ...r, text: r.text + t })), c.signal)
+      .catch((error: Error) => {
+        if (!c.signal.aborted) setReply((r) => ({ ...r, error }));
+      })
+      .finally(() => {
+        if (live.current === c) setReply((r) => ({ ...r, pending: false }));
+      });
+  };
+  const reset = () => {
+    stop();
+    setReply(IDLE);
+  };
+  return { ...reply, start, stop, reset };
 }

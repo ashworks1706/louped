@@ -2,7 +2,8 @@
 
 `patch_residual` patches each (layer, position) in turn, exactly. `attribution_patch` estimates the
 same grid linearly from one forward and backward pass (Nanda, 2023), cheap enough for a real model
-and every position; use it to find the cells worth patching exactly.
+and every position; use it to find the cells worth patching exactly. `patch_heads` patches each
+attention head's output, at every position, to find the heads that carry it.
 """
 
 from __future__ import annotations
@@ -13,8 +14,8 @@ import torch
 from nnsight import LanguageModel
 
 from loupe.analysis.activations import positions
-from loupe.analysis.views import heatmap
-from loupe.models import blocks
+from loupe.analysis.views import by_head, heatmap
+from loupe.models import attention, blocks, n_heads, out_proj
 
 
 def _token(lm: LanguageModel, text: str) -> int:
@@ -115,3 +116,46 @@ def attribution_patch(
         z.append(effect.tolist())
     note = "linear estimate of residual patching: 1 = clean restored, 0 = corrupt"
     return _view(lm, f"Attribution patching: {answer!r} vs {foil!r}", z, corrupt, note)
+
+
+@torch.no_grad()
+def patch_heads(
+    lm: LanguageModel, clean: str, corrupt: str, answer: str, foil: str
+) -> tuple[torch.Tensor, dict[str, Any]]:
+    """Patch each head's clean output into the corrupt run at every position: [layers, heads] on
+    patch_residual's scale, and a heatmap of it by layer and head.
+
+    A head's output is its slice of the input of the attention output projection.
+    """
+    a, b = _pair(lm, clean, corrupt, answer, foil)
+    layers, n = blocks(lm), n_heads(lm)
+
+    clean_heads: list[torch.Tensor] = []
+    with lm.trace(clean):
+        for layer in layers:
+            clean_heads.append(out_proj(attention(layer)).input.save())
+        clean_logits = lm.lm_head.output[0, -1].save()
+    with lm.trace(corrupt):
+        corrupt_logits = lm.lm_head.output[0, -1].save()
+
+    def diff(logits: torch.Tensor) -> float:
+        return float(logits[a] - logits[b])
+
+    lo, hi = diff(corrupt_logits), diff(clean_logits)
+    span = _span(lo, hi)
+    width = clean_heads[0].shape[-1] // n
+    z = torch.zeros(len(layers), n)
+    for layer_i in range(len(layers)):
+        for head in range(n):
+            cols = slice(head * width, (head + 1) * width)
+            with lm.trace(corrupt):
+                proj = out_proj(attention(layers[layer_i]))
+                proj.input[..., cols] = clean_heads[layer_i][..., cols]
+                patched = lm.lm_head.output[0, -1].save()
+            z[layer_i, head] = (diff(patched) - lo) / span
+    view = by_head(
+        f"Head patching: {answer!r} vs {foil!r}",
+        z.round(decimals=4).tolist(),
+        "each head's clean output at every position; 1 = clean restored, 0 = corrupt",
+    )
+    return z, view
