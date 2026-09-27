@@ -6,6 +6,7 @@ import pytest
 import torch
 
 from loupe.analysis import last_token_resid, logit_lens, patch_residual
+from loupe.core import home
 from loupe.interventions import Ablate, Steer, apply, compile, parse
 from loupe.models import blocks, chat, n_layers
 from loupe.models.tiny import tiny
@@ -308,6 +309,11 @@ def test_sae_features_and_steering_a_feature(lm) -> None:
     first = next(i for i, c in enumerate(linked["rows"][0]) if isinstance(c, str) and c[0] == "#")
     feature = linked["rows"][0][first].split()[0][1:]
     assert linked["links"][0][first] == f"https://neuronpedia.org/tiny/1-res/{feature}"
+    (home() / "neuronpedia").parent.mkdir(parents=True, exist_ok=True)
+    (home() / "neuronpedia").write_text("http://localhost:3100\n")
+    _, local, _ = sae_features(lm, sae, prompt, k=3)
+    assert local["links"][0][first] == f"http://localhost:3100/tiny/1-res/{feature}"
+    (home() / "neuronpedia").unlink()
 
     meta = save_feature(sae, 7, "feat7", model="tiny")
     assert meta.notes is not None and meta.notes.endswith("tiny/1-res/7")

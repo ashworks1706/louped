@@ -63,6 +63,7 @@ src/loupe/       the Python package (distribution name: loupelab)
   cli.py         the loupe command
 apps/web/        the UI: Next.js static export, shadcn/ui. Its own AGENTS.md holds the design rules
 experiments/     one folder per research question; nothing imports it
+deploy/          Docker setups for the tools loupe embeds (neuronpedia/: just neuronpedia)
 tests/           Python tests, CPU only
 docs/            ARCHITECTURE.md, ROADMAP.md, decisions/
 ```

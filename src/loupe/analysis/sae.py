@@ -17,7 +17,7 @@ from nnsight import LanguageModel
 from loupe.analysis.activations import positions
 from loupe.analysis.project import top_examples
 from loupe.analysis.views import heatmap, table
-from loupe.core import Direction
+from loupe.core import Direction, home
 from loupe.interventions.specs import EMBED, Plan
 from loupe.models import blocks
 from loupe.vectors import save_vector
@@ -28,12 +28,17 @@ if TYPE_CHECKING:
 _HOOK = re.compile(r"^blocks\.(\d+)\.hook_resid_(pre|post)$")
 
 
+def neuronpedia_origin() -> str:
+    """LOUPE_NEURONPEDIA when set, else the local one just neuronpedia started, else the public."""
+    local = home() / "neuronpedia"
+    default = local.read_text().strip() if local.exists() else "https://neuronpedia.org"
+    return os.environ.get("LOUPE_NEURONPEDIA", default).rstrip("/")
+
+
 def neuronpedia(sae: SAE, feature: int) -> str | None:
-    """The feature's Neuronpedia dashboard, for SAEs SAELens knows a Neuronpedia id for; on
-    LOUPE_NEURONPEDIA's origin when set, for a self-hosted Neuronpedia."""
-    origin = os.environ.get("LOUPE_NEURONPEDIA", "https://neuronpedia.org").rstrip("/")
+    """The feature's Neuronpedia dashboard, for SAEs SAELens knows a Neuronpedia id for."""
     sae_id = sae.cfg.metadata.neuronpedia_id
-    return f"{origin}/{sae_id}/{feature}" if sae_id else None
+    return f"{neuronpedia_origin()}/{sae_id}/{feature}" if sae_id else None
 
 
 def _layer(sae: SAE) -> int:

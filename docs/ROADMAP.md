@@ -51,8 +51,8 @@ with its UI view.
       direction between two models of one architecture
 - [x] Attribution graphs: circuit-tracer runs in its own environment (`just circuit`); its viewer
       is served by loupe on the Circuits page
-- [x] SAE features link to Neuronpedia's dashboard, embedded beside the table (`LOUPE_NEURONPEDIA`
-      for a self-hosted one)
+- [x] SAE features link to Neuronpedia's dashboard, embedded beside the table; `just neuronpedia`
+      runs it locally in Docker and the links follow (`LOUPE_NEURONPEDIA` for another host)
 - [ ] Acceptance: reproduce the refusal direction (Arditi et al. 2024) on a Qwen2.5 instruct model,
       read entirely in the UI
 

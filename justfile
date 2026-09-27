@@ -92,3 +92,18 @@ circuit model transcoders prompt slug="graph":
     assets="$("${ct[@]}" python -c 'import circuit_tracer.frontend as f, pathlib; print(pathlib.Path(f.__file__).parent / "assets")')"
     rm -rf "$graphs/viewer" && cp -r "$assets" "$graphs/viewer"
     echo "open /circuits/?slug={{slug}} in loupe"
+
+# a local Neuronpedia in Docker (built on first run); loupe's SAE feature links then open it
+neuronpedia port="3100":
+    NEURONPEDIA_PORT={{port}} docker compose -f deploy/neuronpedia/compose.yaml up -d --build --wait
+    uv run python -c 'from loupe.core import home; p = home() / "neuronpedia"; p.parent.mkdir(parents=True, exist_ok=True); p.write_text("http://localhost:{{port}}")'
+    echo "http://localhost:{{port}}"
+
+# features for one SAE into the local Neuronpedia, e.g. gpt2-small 6-res-jb (ids as on neuronpedia.org)
+neuronpedia-import model source port="3100":
+    curl -fsSN "http://localhost:{{port}}/api/admin/import?modelId={{model}}&sourceId={{source}}"
+
+# stop the local Neuronpedia; its database stays in a Docker volume
+neuronpedia-down:
+    docker compose -f deploy/neuronpedia/compose.yaml down
+    uv run python -c 'from loupe.core import home; (home() / "neuronpedia").unlink(missing_ok=True)'

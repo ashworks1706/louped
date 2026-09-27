@@ -24,7 +24,7 @@ What loupe leaves to others, and links to:
 
 | Need | Tool | Why not in loupe |
 |---|---|---|
-| SAE feature dashboards, autointerp, steering chat | Neuronpedia, embedded beside SAE figures (LOUPE_NEURONPEDIA for a self-hosted one) | A complete, maintained UI |
+| SAE feature dashboards, autointerp, steering chat | Neuronpedia, embedded beside SAE figures; local in Docker with `just neuronpedia` | A complete, maintained UI |
 | Attribution graphs over transcoders | circuit-tracer (`just circuit`), its viewer served on the Circuits page | Pins transformers 4.57; runs in its own environment |
 | Reading transcripts and tool calls in depth | Inspect View, served at /inspect and shown as a Run tab | Inspect's own viewer; loupe keeps comparison screens |
 | Training dashboards, clusters, sweeps of hyperparameters | Transformer Lab, LLaMA-Factory, Oumi | Full training products; loupe drives TRL from a YAML |

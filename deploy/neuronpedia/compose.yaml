@@ -1,0 +1,32 @@
+# A local Neuronpedia for loupe's embedded feature pages: just neuronpedia, just neuronpedia-down.
+name: loupe-neuronpedia
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 2s
+      retries: 30
+
+  webapp:
+    build:
+      context: .
+      args:
+        PORT: ${NEURONPEDIA_PORT:-3100}
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NEXTAUTH_SECRET: loupe-local-only
+      POSTGRES_PRISMA_URL: postgres://postgres:postgres@db:5432/postgres?pgbouncer=true&connect_timeout=15
+      POSTGRES_URL_NON_POOLING: postgres://postgres:postgres@db:5432/postgres
+    ports:
+      - "127.0.0.1:${NEURONPEDIA_PORT:-3100}:3000"
+
+volumes:
+  db:
