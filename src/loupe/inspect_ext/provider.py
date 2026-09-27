@@ -4,24 +4,24 @@ Weights are loaded once per process and model id; each provider instance only ho
 plan, so a base and an ablated eval in one process share the model. Generation is serialised with
 a lock because one nnsight model runs one trace at a time. Given tools, the prompt carries their
 schemas through the chat template and tool calls are parsed back with Inspect's own Hugging Face
-handler, so agent tasks run under interventions too.
+handler, chosen by the loaded model's family, so agent tasks run under interventions too.
 """
 
 from __future__ import annotations
 
 import asyncio
-import copy
 import threading
 from typing import Any
 
 from inspect_ai.model import (
     ChatCompletionChoice,
     ChatMessage,
+    ChatMessageAssistant,
+    ChatMessageTool,
     GenerateConfig,
     ModelAPI,
     ModelOutput,
 )
-from inspect_ai.model._providers.hf import inspect_tools_to_string, message_content_to_string
 from inspect_ai.model._providers.util import HFHandler
 from inspect_ai.tool import ToolChoice, ToolInfo
 from inspect_ai.util._json import JSON_SCHEMA_EXTENDED_FIELDS, json_schema_dump
@@ -82,7 +82,8 @@ class LoupeAPI(ModelAPI):
         text = await asyncio.to_thread(run)
         if not tools:
             return ModelOutput.from_content(model=self.model_name, content=text)
-        message = HFHandler(self.model_name).parse_assistant_response(text, tools)
+        family = str(getattr(self.lm._model.config, "model_type", self.model_name))
+        message = HFHandler(self.model_name, family).parse_assistant_response(text, tools)
         stop = "tool_calls" if message.tool_calls else "stop"
         choice = ChatCompletionChoice(message=message, stop_reason=stop)
         return ModelOutput(model=self.model_name, choices=[choice])
@@ -94,15 +95,27 @@ class LoupeAPI(ModelAPI):
     def render(self, input: list[ChatMessage], tools: list[ToolInfo]) -> str:
         """The conversation through the model's chat template, with the tools' JSON schemas.
 
-        Earlier tool calls are written into the assistant text the way Inspect's own Hugging Face
-        provider does for Qwen, the format HFHandler parses back.
+        Earlier tool calls and results go in as the template's own tool_calls and tool messages,
+        so the model reads them in the format it writes them. Thinking is off (Qwen3).
         """
-        history = message_content_to_string(inspect_tools_to_string(copy.deepcopy(input)))
         schemas: list[Any] = [
             json_schema_dump(t, exclude=JSON_SCHEMA_EXTENDED_FIELDS) for t in tools
         ]
-        messages = [m.model_dump(exclude_none=True) for m in history]
         text = self.lm.tokenizer.apply_chat_template(
-            messages, tools=schemas or None, tokenize=False, add_generation_prompt=True
-        )
+            [hf_message(m) for m in input], tools=schemas or None, tokenize=False,
+            add_generation_prompt=True, enable_thinking=False,
+        )  # fmt: skip
         return str(text)
+
+
+def hf_message(m: ChatMessage) -> dict[str, Any]:
+    """One Inspect message as a chat-template message."""
+    out: dict[str, Any] = {"role": m.role, "content": m.text}
+    if isinstance(m, ChatMessageAssistant) and m.tool_calls:
+        out["tool_calls"] = [{"type": "function", "function": {"name": c.function,
+                              "arguments": c.arguments}} for c in m.tool_calls]  # fmt: skip
+    if isinstance(m, ChatMessageTool):
+        out["name"] = m.function
+        if m.error:
+            out["content"] = f"Error: {m.error.message}"
+    return out

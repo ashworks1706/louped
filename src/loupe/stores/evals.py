@@ -98,6 +98,12 @@ def _find(run_id: str) -> tuple[Path, EvalLog] | None:
     return next(((p, log) for p, log in _logs() if log.eval.eval_id == eval_id), None)
 
 
+def log_mtime(run_id: str) -> float | None:
+    """When the run's log last changed, None for an unknown run: a cache key for derived results."""
+    found = _find(run_id)
+    return found[0].stat().st_mtime if found else None
+
+
 def _stringify(values: dict[str, Any] | None) -> dict[str, str]:
     return {k: str(v) for k, v in (values or {}).items()}
 

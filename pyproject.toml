@@ -21,7 +21,7 @@ server = [
     "loupelab[evals,tracking]",
 ]
 evals = [
-    "inspect-ai>=0.3.200",
+    "inspect-ai>=0.3.271,<0.4",
 ]
 # MLflow on a SQLite file; the file store is in maintenance mode in MLflow 3.
 tracking = [

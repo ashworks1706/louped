@@ -31,10 +31,17 @@ def load_config(path: Path) -> DpoConfig:
     return _load_config(path, DpoConfig)
 
 
-def plan(cfg: DpoConfig) -> dict[str, Any]:
+class DpoPlan(BaseModel):
+    name: str
+    base_model: str
+    pairs: int
+    beta: float
+
+
+def plan(cfg: DpoConfig) -> DpoPlan:
     """What a run would do, without loading a model."""
     pairs = len(read_rows(cfg, Preference))
-    return {"name": cfg.name, "base_model": cfg.base_model, "pairs": pairs, "beta": cfg.beta}
+    return DpoPlan(name=cfg.name, base_model=cfg.base_model, pairs=pairs, beta=cfg.beta)
 
 
 def train(cfg: DpoConfig) -> Path:

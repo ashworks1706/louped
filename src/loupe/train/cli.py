@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import importlib
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -25,8 +24,6 @@ class Command:
 def run(cmd: Command) -> None:
     recipe = importlib.import_module(f"loupe.train.{cmd.recipe}")
     cfg = recipe.load_config(cmd.config)
-    shown = recipe.plan(cfg)
-    print(shown.model_dump_json(indent=2) if hasattr(shown, "model_dump_json")
-          else json.dumps(shown, indent=2, default=str))  # fmt: skip
+    print(recipe.plan(cfg).model_dump_json(indent=2))
     if not cmd.dry_run:
         recipe.train(cfg)

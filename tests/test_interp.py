@@ -411,14 +411,37 @@ def test_provider_runs_a_tool_agent_and_the_transcript_keeps_the_calls(lm, monke
         return [next(replies)]
 
     monkeypatch.setattr(provider, "generate", fake)
+    template = (
+        "{% for m in messages %}<{{ m.role }}>{{ m.content }}"
+        "{% for c in m.tool_calls or [] %}<tool_call>{{ c.function.name }} "
+        "{{ c.function.arguments | tojson }}</tool_call>{% endfor %}{% endfor %}<assistant>"
+    )
+    agent_lm = provider.shared_model("tiny-agent")
+    monkeypatch.setattr(agent_lm.tokenizer, "chat_template", template)
     task = Task(dataset=[Sample(input="what is 2 + 3 ?", target="5")],
                 solver=[use_tools(add()), gen(tool_calls="loop")])  # fmt: skip
     [log] = eval(task, model="loupe/tiny-agent", log_dir=str(logs_dir()), display="none")
     assert log.status == "success" and len(prompts) == 2
-    assert "5" in prompts[1]  # the tool's result went back into the second prompt
+    # the call goes back as the template's own tool_calls, then the tool's result
+    assert '<tool_call>add {"a": 2, "b": 3}</tool_call><tool>5' in prompts[1]
     run = next(r for r in stores.list_runs() if r.kind == "eval")
     messages = stores.get_sample(run.id, "1").messages
     call = messages[1].tool_calls[0]
     assert (call.function, json.loads(call.arguments)) == ("add", {"a": 2, "b": 3})
     assert (messages[2].role, messages[2].function, messages[2].text) == ("tool", "add", "5")
     assert messages[2].tool_call_id == call.id and messages[3].text == "the answer is 5"
+
+
+def test_transcripts_keep_tool_errors_and_parse_errors() -> None:
+    from inspect_ai.model import ChatMessageAssistant, ChatMessageTool
+    from inspect_ai.tool import ToolCall, ToolCallError
+
+    from loupe.stores.evals import _message
+
+    call = ToolCall(id="c1", function="bash", arguments={}, parse_error="bad json")
+    said = _message(ChatMessageAssistant(content="", tool_calls=[call]))
+    assert (said.tool_calls[0].parse_error, said.tool_calls[0].arguments) == ("bad json", "{}")
+    error = ToolCallError(type="timeout", message="took too long")
+    failed = ChatMessageTool(content="", tool_call_id="c1", function="bash", error=error)
+    got = _message(failed)
+    assert (got.tool_call_id, got.function, got.error) == ("c1", "bash", "timeout: took too long")

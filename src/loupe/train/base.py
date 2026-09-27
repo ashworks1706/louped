@@ -14,6 +14,7 @@ the loupe/ Inspect provider and the Playground can load it by name.
 from __future__ import annotations
 
 import importlib.util
+import shutil
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Literal
@@ -197,9 +198,15 @@ MakeTrainer = Callable[[Any, Any, Any, dict[str, Any]], Any]
 
 
 def fit(cfg: TrainConfig, recipe: str, rows: int, make: MakeTrainer) -> Path:
-    """Run a recipe's trainer inside an MLflow training run; returns the adapter directory."""
+    """Run a recipe's trainer inside an MLflow training run; returns the adapter directory.
+
+    Checkpoints a previous run left in output_dir are removed first, so every checkpoint there
+    belongs to this run.
+    """
     from loupe.tracking import start_run
 
+    for old in cfg.output_dir.glob("checkpoint-*"):
+        shutil.rmtree(old)
     kind = backend(cfg)
     params = {"recipe": recipe, "model": cfg.base_model, "backend": kind, "examples": rows,
               **cfg.model_dump(mode="json")}  # fmt: skip

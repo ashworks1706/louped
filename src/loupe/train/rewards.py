@@ -9,11 +9,11 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
-import inspect
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, cast
 
+from loupe.core import named_fields
 from loupe.train.base import TrainError
 
 Check = Callable[..., float]
@@ -21,7 +21,7 @@ Check = Callable[..., float]
 
 def as_reward(check: Check) -> Callable[..., list[float]]:
     """A TRL reward function over a batch of completions and their dataset columns."""
-    takes = _takes(check)
+    takes = named_fields(check)
 
     def reward(prompts: list[Any], completions: list[Any], **columns: Any) -> list[float]:
         out: list[float] = []
@@ -34,14 +34,6 @@ def as_reward(check: Check) -> Callable[..., list[float]]:
 
     reward.__name__ = check.__name__
     return reward
-
-
-def _takes(check: Check) -> Callable[[dict[str, Any]], dict[str, Any]]:
-    params = inspect.signature(check).parameters.values()
-    if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params):
-        return lambda row: row
-    names = {p.name for p in params}
-    return lambda row: {k: v for k, v in row.items() if k in names}
 
 
 def load_check(spec: str, base: Path | None = None) -> Check:

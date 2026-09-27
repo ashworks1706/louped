@@ -11,7 +11,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-import mlflow
+import torch
 from inspect_ai import Task, eval
 from inspect_ai.model import get_model
 
@@ -35,11 +35,16 @@ NEUTRAL = (
 )
 
 
-def coherence_cost(model: str, spec: Steer, prompts: list[str]) -> float:
-    """Mean KL(base || steered) of the next token after each prompt, in nats."""
+def coherence_cost(
+    model: str, spec: Steer, prompts: list[str], base: torch.Tensor | None = None
+) -> float:
+    """Mean KL(base || steered) of the next token after each prompt, in nats. base, the unsteered
+    log-probabilities on these prompts, is computed when not given.
+    """
     lm = shared_model(model)
     rendered = [chat(lm, p) for p in prompts]
-    base = next_token_logprobs(lm, rendered)
+    if base is None:
+        base = next_token_logprobs(lm, rendered)
     steered = next_token_logprobs(lm, rendered, compile(lm, [spec]))
     return float((base.exp() * (base - steered)).sum(-1).mean())
 
@@ -53,7 +58,7 @@ def sweep(
     metric: str,
     experiment: str = "steering-sweep",
     neutral: list[str] | None = None,
-    task_args: dict[str, Any] | None = None,
+    seed: int = 0,
 ) -> str:
     """Run task at every (layer, alpha) and log the grid as an MLflow run; returns its UI id.
 
@@ -67,23 +72,23 @@ def sweep(
     links: list[list[str | None]] = []
     params = {"task": str(task), "model": model, "vector": vector, "layers": layers,
               "alphas": alphas, "metric": metric, "sweep": sweep_id}  # fmt: skip
-    with start_run(experiment, name=f"sweep · {vector}", params=params) as run:
+    with start_run(experiment, name=f"sweep · {vector}", params=params, seed=seed) as run:
+        lm = shared_model(model)
+        base = next_token_logprobs(lm, [chat(lm, p) for p in prompts])
         for i, layer in enumerate(layers):
             for j, alpha in enumerate(alphas):
                 spec = Steer(vector=vector, alpha=alpha, layer=layer)
                 [log] = eval(
                     task,
-                    task_args=task_args or {},
                     model=get_model(f"loupe/{model}", interventions=spec.model_dump()),
                     log_dir=str(logs_dir()),
                     tags=[f"experiment:{experiment}", f"sweep:{sweep_id}"],
                     metadata={"interventions": spec.model_dump()},
+                    seed=seed,
                     display="none",
                 )
                 score[i][j] = _metric(log, metric)
-                cost[i][j] = coherence_cost(model, spec, prompts)
-                mlflow.log_metrics({f"score/L{layer}": score[i][j], f"kl/L{layer}": cost[i][j]},
-                                   step=j)  # fmt: skip
+                cost[i][j] = coherence_cost(model, spec, prompts, base)
                 run_id = f"e-{log.eval.eval_id}"
                 rows.append([layer, alpha, score[i][j], cost[i][j], run_id])
                 links.append([None, None, None, None, f"/run/?id={run_id}"])

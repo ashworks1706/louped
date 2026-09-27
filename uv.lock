@@ -1743,7 +1743,7 @@ requires-dist = [
     { name = "datasets", marker = "extra == 'train'", specifier = ">=4" },
     { name = "fastapi", marker = "extra == 'server'", specifier = ">=0.115" },
     { name = "httpx", marker = "extra == 'data'", specifier = ">=0.28" },
-    { name = "inspect-ai", marker = "extra == 'evals'", specifier = ">=0.3.200" },
+    { name = "inspect-ai", marker = "extra == 'evals'", specifier = ">=0.3.271,<0.4" },
     { name = "loupelab", extras = ["data", "interp", "tracking"], marker = "extra == 'train'" },
     { name = "loupelab", extras = ["evals", "tracking"], marker = "extra == 'server'" },
     { name = "loupelab", extras = ["interp"], marker = "extra == 'sae'" },

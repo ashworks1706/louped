@@ -1,6 +1,7 @@
 """What every other package shares: run metadata, paths and the direction header."""
 
 from loupe.core.direction import Direction
+from loupe.core.fields import named_fields
 from loupe.core.meta import RunMeta, capture
 from loupe.core.paths import (
     artifacts_dir,
@@ -20,6 +21,7 @@ __all__ = [
     "experiments_dir",
     "home",
     "logs_dir",
+    "named_fields",
     "saved_model",
     "tracking_uri",
     "vectors_dir",

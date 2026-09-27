@@ -101,7 +101,7 @@ def test_dpo_trains_on_preference_pairs(tmp_path: Path) -> None:
     path = config(tmp_path, name="t-dpo", dataset="data/t-dpo.jsonl", beta=0.2,
                   export={"merge_as": None})  # fmt: skip
     cfg = dpo.load_config(path)
-    assert dpo.plan(cfg)["pairs"] == 4
+    assert dpo.plan(cfg).pairs == 4
     assert (dpo.train(cfg) / "adapter_config.json").exists()
     (run,) = [r for r in stores.list_runs() if r.kind == "training"]
     detail = stores.get_run(run.id)
@@ -123,7 +123,8 @@ def test_grpo_rewards_come_from_a_plain_check_and_checkpoints_are_kept(tmp_path:
                   train={"max_steps": 2, "per_device_batch_size": 2, "gradient_accumulation": 1,
                          "logging_steps": 1, "save_steps": 1, "seed": 0})  # fmt: skip
     cfg = grpo.load_config(path)
-    assert grpo.plan(cfg)["prompts"] == 4
+    assert grpo.plan(cfg).prompts == 4
+    (cfg.output_dir / "checkpoint-99").mkdir(parents=True)  # a previous run's, removed
     grpo.train(cfg)
     assert sorted(p.name for p in cfg.output_dir.glob("checkpoint-*")) == [
         "checkpoint-1",
@@ -181,3 +182,26 @@ def test_a_model_diffed_with_itself_is_unchanged() -> None:
     assert all(abs(c - 1) < 1e-5 for c in series["residual cosine"] + series["direction cosine"])
     assert all(abs(n) < 1e-6 for n in series["relative norm change"])
     assert view["kind"] == "line" and len(view["x"]) == 2
+
+
+def test_grpo_config_rejects_groups_that_do_not_fit_and_no_rewards(tmp_path: Path) -> None:
+    from loupe.train import grpo
+
+    uneven = config(tmp_path, rewards=["checks.py:says"], num_generations=8,
+                    train={"per_device_batch_size": 1, "gradient_accumulation": 10})  # fmt: skip
+    with pytest.raises(TrainError, match="multiple of num_generations"):
+        grpo.load_config(uneven)
+    with pytest.raises(TrainError, match="rewards"):
+        grpo.load_config(config(tmp_path, rewards=[]))
+
+
+def test_checks_load_from_a_module_or_a_file_and_fail_clearly(tmp_path: Path) -> None:
+    from loupe.train.rewards import load_check
+
+    assert load_check("os.path:basename")("a/b") == "b"
+    (tmp_path / "c.py").write_text("def one(completion):\n    return 1.0\n")
+    assert load_check("c.py:one", tmp_path)("x") == 1.0
+    for spec, message in [("nocolon", "file.py:function"), ("gone.py:f", "no reward file"),
+                          ("c.py:two", "no function")]:  # fmt: skip
+        with pytest.raises(TrainError, match=message):
+            load_check(spec, tmp_path)

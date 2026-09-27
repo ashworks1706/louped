@@ -7,7 +7,9 @@ per-sample differences, not of scores: a paired bootstrap, seeded, so the interv
 from __future__ import annotations
 
 import random
+from functools import lru_cache
 
+from loupe.stores import evals
 from loupe.stores.runs import list_samples
 from loupe.stores.types import Comparison, PairedScore
 
@@ -24,6 +26,11 @@ def _interval(diffs: list[float], seed: int = 0) -> tuple[float, float]:
 
 def compare(a: str, b: str) -> Comparison:
     """Every score both runs have, over the samples (id and epoch) both scored."""
+    return _compare(a, b, evals.log_mtime(a), evals.log_mtime(b))
+
+
+@lru_cache(maxsize=64)
+def _compare(a: str, b: str, _mtime_a: float | None, _mtime_b: float | None) -> Comparison:
     left = {(s.id, s.epoch): s.scores for s in list_samples(a)}
     right = {(s.id, s.epoch): s.scores for s in list_samples(b)}
     shared = [k for k in left if k in right]

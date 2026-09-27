@@ -63,7 +63,10 @@ def load(
 
 
 def _merged(model: str, adapter: str | Path, dtype: torch.dtype | str, device: str) -> Any:
-    from peft import PeftModel  # the train extra
+    try:
+        from peft import PeftModel
+    except ImportError as exc:
+        raise ImportError("loading an adapter needs the train extra: loupelab[train]") from exc
     from transformers import AutoModelForCausalLM
 
     base = AutoModelForCausalLM.from_pretrained(model, dtype=dtype, device_map=device)
@@ -102,9 +105,14 @@ def n_layers(lm: LanguageModel) -> int:
 
 
 def chat(lm: LanguageModel, user: str, system: str | None = None) -> str:
-    """A user turn rendered with the model's own chat template, ready for the assistant's reply."""
+    """A user turn rendered with the model's own chat template, ready for the assistant's reply.
+
+    Thinking is off for templates that have it (Qwen3), so replies start with the answer.
+    """
     messages = ([{"role": "system", "content": system}] if system else []) + [
         {"role": "user", "content": user}
     ]
-    text = lm.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    text = lm.tokenizer.apply_chat_template(
+        messages, tokenize=False, add_generation_prompt=True, enable_thinking=False
+    )
     return str(text)

@@ -11,9 +11,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
 
-from loupe.train.base import TrainConfig, TrainError, fit, read_rows
+from loupe.train.base import TrainConfig, fit, read_rows
 from loupe.train.base import load_config as _load_config
 from loupe.train.rewards import as_reward, load_check
 
@@ -21,13 +21,30 @@ from loupe.train.rewards import as_reward, load_check
 class GrpoConfig(TrainConfig):
     """A grpo YAML file."""
 
-    rewards: list[str]
+    rewards: list[str] = Field(min_length=1)
     num_generations: int = 8
     max_completion_length: int = 256
     temperature: float = 1.0
     beta: float = 0.0
-    #: Where rewards resolve relative paths; the YAML file's folder when loaded from one.
-    base_dir: Path | None = None
+    _base_dir: Path | None = PrivateAttr(None)
+
+    @model_validator(mode="after")
+    def _groups_fit(self) -> GrpoConfig:
+        batch = self.train.per_device_batch_size * self.train.gradient_accumulation
+        if batch % self.num_generations:
+            raise ValueError(
+                f"per_device_batch_size * gradient_accumulation ({batch}) must be a multiple of "
+                f"num_generations ({self.num_generations}): each prompt's group is one batch"
+            )
+        return self
+
+
+class GrpoPlan(BaseModel):
+    name: str
+    base_model: str
+    prompts: int
+    rewards: list[str]
+    num_generations: int
 
 
 class Prompt(BaseModel):
@@ -37,16 +54,19 @@ class Prompt(BaseModel):
 
 
 def load_config(path: Path) -> GrpoConfig:
+    """The config; rewards named by a relative file resolve against the YAML file's folder."""
     cfg = _load_config(path, GrpoConfig)
-    return cfg.model_copy(update={"base_dir": cfg.base_dir or path.parent})
+    cfg._base_dir = path.parent
+    return cfg
 
 
-def plan(cfg: GrpoConfig) -> dict[str, Any]:
+def plan(cfg: GrpoConfig) -> GrpoPlan:
     """What a run would do, without loading a model; also loads each reward, to fail early."""
     for spec in cfg.rewards:
-        load_check(spec, cfg.base_dir)
-    return {"name": cfg.name, "base_model": cfg.base_model, "prompts": len(read_rows(cfg, Prompt)),
-            "rewards": cfg.rewards, "num_generations": cfg.num_generations}  # fmt: skip
+        load_check(spec, cfg._base_dir)
+    return GrpoPlan(name=cfg.name, base_model=cfg.base_model,
+                    prompts=len(read_rows(cfg, Prompt)), rewards=cfg.rewards,
+                    num_generations=cfg.num_generations)  # fmt: skip
 
 
 def train(cfg: GrpoConfig) -> Path:
@@ -55,17 +75,13 @@ def train(cfg: GrpoConfig) -> Path:
     from trl.trainer.grpo_config import GRPOConfig
     from trl.trainer.grpo_trainer import GRPOTrainer
 
-    if not cfg.rewards:
-        raise TrainError("grpo needs at least one reward")
-    rewards: list[Any] = [as_reward(load_check(spec, cfg.base_dir)) for spec in cfg.rewards]
+    rewards: list[Any] = [as_reward(load_check(spec, cfg._base_dir)) for spec in cfg.rewards]
     rows = [p.model_dump() for p in read_rows(cfg, Prompt)]
 
     def make(model: Any, tok: Any, peft: Any, args: dict[str, Any]) -> Any:
-        batch = args["per_device_train_batch_size"] * args["gradient_accumulation_steps"]
         config = GRPOConfig(**args, beta=cfg.beta, num_generations=cfg.num_generations,
                             max_completion_length=cfg.max_completion_length,
-                            temperature=cfg.temperature,
-                            generation_batch_size=max(batch, cfg.num_generations))  # fmt: skip
+                            temperature=cfg.temperature)  # fmt: skip
         return GRPOTrainer(model=model, processing_class=tok, peft_config=peft,
                            reward_funcs=rewards, train_dataset=Dataset.from_list(rows),
                            args=config)  # fmt: skip

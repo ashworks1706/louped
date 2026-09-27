@@ -87,7 +87,7 @@ def main(args: Args) -> None:
                   "save_steps": args.save_every, "seed": args.seed},
     }))  # fmt: skip
     cfg = dpo.load_config(config)
-    dpo.train(cfg)
+    adapter = dpo.train(cfg)
 
     test = prompts["harmful_test"]
 
@@ -107,10 +107,9 @@ def main(args: Args) -> None:
         series, across = over_checkpoints(name, steps, measures)
         for i, (step, _) in enumerate([(0, None), *steps]):
             mlflow.log_metrics({k.replace(" ", "_"): v[i] for k, v in series.items()}, step=step)
-        final = load(name, adapter=steps[-1][1])
-        base = load(name)
-        harmless = [chat(base, p) for p in prompts["harmless_test"]]
-        _, diff = model_diff(base, final, [chat(base, p) for p in test], contrast=harmless)
+        final = load(name, adapter=adapter)
+        harmless = [chat(lm, p) for p in prompts["harmless_test"]]
+        _, diff = model_diff(lm, final, [chat(lm, p) for p in test], contrast=harmless)
         log_json(across, "views/00-across-training.json")
         log_json(diff, "views/01-model-diff.json")
     rounded = {k: [round(x, 3) for x in v] for k, v in series.items()}

@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-import inspect
 from collections.abc import Callable
 
 from inspect_ai.scorer import Score, Target, mean, scorer, stderr
 from inspect_ai.solver import TaskState
+
+from loupe.core import named_fields
 
 #: The substring list of Arditi et al. (2024), matched case-insensitively.
 REFUSAL_PREFIXES = (
@@ -36,16 +37,12 @@ def as_scorer(check: Callable[..., float]):
     """An Inspect scorer from a plain check, the same function a GRPO reward is built from
     (loupe.train.rewards): the completion, then the target and the sample's metadata by name.
     """
-    params = inspect.signature(check).parameters.values()
-    everything = any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params)
-    names = {p.name for p in params}
+    takes = named_fields(check)
 
     @scorer(metrics=[mean(), stderr()], name=check.__name__)
     def wrapped():
         async def score(state: TaskState, target: Target) -> Score:
-            fields = {"target": target.text, **(state.metadata or {})}
-            if not everything:
-                fields = {k: v for k, v in fields.items() if k in names}
+            fields = takes({"target": target.text, **(state.metadata or {})})
             completion = state.output.completion
             return Score(value=float(check(completion, **fields)), answer=completion[:200])
 
