@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.2.0
       - run: uv export --locked --all-extras --no-emit-project --format requirements-txt > requirements.txt
       - run: uvx pip-audit --strict -r requirements.txt
       - uses: actions/setup-node@v7
