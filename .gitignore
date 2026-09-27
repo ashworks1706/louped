@@ -1,0 +1,23 @@
+# python
+__pycache__/
+*.py[cod]
+.venv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# state loupe and the tools it drives write
+.loupe/
+mlruns/
+logs/
+*.safetensors
+
+# os / editors
+.DS_Store
+.idea/
+.vscode/
+.env
+.env.*
+!.env.example

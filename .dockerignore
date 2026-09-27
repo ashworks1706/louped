@@ -1,0 +1,7 @@
+.git
+.venv
+.loupe
+**/node_modules
+apps/web/.next
+apps/web/out
+apps/web/test-results

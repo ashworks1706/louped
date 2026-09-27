@@ -1,0 +1,12 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "packages": {
+    ".": {
+      "release-type": "python",
+      "package-name": "loupelab",
+      "include-component-in-tag": false,
+      "bump-minor-pre-major": true,
+      "extra-files": [{ "type": "json", "path": "apps/web/package.json", "jsonpath": "$.version" }]
+    }
+  }
+}

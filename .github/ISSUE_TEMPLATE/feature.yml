@@ -1,0 +1,14 @@
+name: Feature
+description: A capability loupe should have
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The research task it enables
+    validations: { required: true }
+  - type: textarea
+    id: prebuilt
+    attributes:
+      label: Existing tools that already do part of it
+      description: loupe composes existing tools; name what could be reused.

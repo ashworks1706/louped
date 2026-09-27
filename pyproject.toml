@@ -1,0 +1,72 @@
+[project]
+name = "loupelab"
+version = "0.0.0"
+description = "A research testbed for looking inside language models: interventions, evals, training and a UI over all of it"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+authors = [{ name = "ashworks1706" }]
+dependencies = [
+    "pydantic>=2.10",
+    "tyro>=0.9",
+]
+
+# One extra per capability. A module imports only its own extra's packages, so an install carries
+# only what it uses. Later phases add interp, evals, train, rl, vllm and cluster.
+[project.optional-dependencies]
+server = [
+    "fastapi>=0.115",
+    "uvicorn>=0.32",
+]
+
+[project.scripts]
+loupe = "loupe.cli:main"
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.13",
+    "import-linter>=2.1",
+    "pre-commit>=4.0",
+    "pyright>=1.1.390",
+    "pytest>=8.3",
+    "ruff>=0.8",
+]
+
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/loupe"]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+# The layer rule. A package imports only packages below it; nothing imports up.
+# Each later phase adds its layers here in the position ARCHITECTURE.md gives them.
+[tool.importlinter]
+root_package = "loupe"
+
+[[tool.importlinter.contracts]]
+name = "Layers"
+type = "layers"
+layers = [
+    "loupe.cli",
+    "loupe.server",
+    "loupe.core",
+]

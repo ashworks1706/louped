@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(just check:*)",
+      "Bash(just check-python:*)",
+      "Bash(just check-web:*)",
+      "Bash(just test-e2e:*)",
+      "Bash(just fmt:*)",
+      "Bash(just lock:*)",
+      "Bash(just web-build:*)",
+      "Bash(just new-experiment:*)",
+      "Bash(uv run:*)",
+      "Bash(uv sync:*)",
+      "Bash(uv lock:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm format:*)",
+      "Bash(pnpm test:e2e:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ],
+    "deny": [
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git push origin main:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git tag:*)",
+      "Read(.env)",
+      "Read(.env.*)"
+    ]
+  }
+}

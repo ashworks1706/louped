@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # Which halves of the gate a change needs. A manual run needs both.
+  changes:
+    name: Changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      python: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.python == 'true' }}
+      web: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.web == 'true' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            python:
+              - 'src/**'
+              - 'tests/**'
+              - 'experiments/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+              - '.python-version'
+              - 'justfile'
+              - '.github/workflows/ci.yml'
+            web:
+              - 'apps/web/**'
+              - 'justfile'
+              - '.github/workflows/ci.yml'
+
+  python:
+    name: Python
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+      - uses: extractions/setup-just@v4
+      - run: uv sync --locked --all-extras
+      - run: just check-python
+
+  web:
+    name: Web
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: corepack enable && pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+      # Screenshots of every page, desktop and mobile, for reviewing a UI change in the PR.
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: screenshots
+          path: |
+            apps/web/test-results/
+            apps/web/playwright-report/
+          retention-days: 14
+
+  # The one required check. It passes when every job that ran passed and the rest were skipped.
+  ci:
+    name: CI
+    if: always()
+    needs: [changes, python, web]
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          results='${{ toJSON(needs.*.result) }}'
+          echo "$results"
+          echo "$results" | grep -qE '"(failure|cancelled)"' && exit 1 || exit 0

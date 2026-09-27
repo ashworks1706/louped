@@ -1,0 +1,28 @@
+# The same recipes CI runs. Commit runs the fast half; push runs the whole gate.
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+      - id: ruff
+        name: ruff check
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+      - id: no-push-to-main
+        name: refuse direct pushes to main
+        entry: bash -c '[ "$(git rev-parse --abbrev-ref HEAD)" != main ] || { echo "open a pull request instead"; exit 1; }'
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true
+      - id: gate
+        name: just check
+        entry: just check
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true
