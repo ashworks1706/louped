@@ -46,7 +46,8 @@ src/loupe/       the Python package (distribution name: loupelab)
   models/        load a model into nnsight; a tiny offline Qwen2 for tests
   vectors/       directions as safetensors under <home>/vectors
   interventions/ Steer and Ablate specs, compiled to per-layer edits; batched generation
-  analysis/      activations, logit lens, patching; results as UI views (heatmap, line, table)
+  analysis/      activations, logit lens, exact and attribution patching, probes, attention,
+                 SAE features; results as UI views (heatmap, line, table)
   inspect_ext/   the loupe/ Inspect model provider and shared scorers
   data/          training sets from product traces: export, redact, verify, review, curate
   train/         post-training recipes (sft) on TRL and PEFT, logged to MLflow

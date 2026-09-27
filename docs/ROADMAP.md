@@ -28,6 +28,11 @@ with its UI view.
 - [x] Verified offline on a tiny model trained to refuse (`--tiny`): seed 0 goes 100% to 0% refusal
       on ablation and 0% to 100% on addition; across six seeds the single-direction effect holds
       on some and not others, so the toy checks mechanics, not the claim
+- [x] The standard toolkit in `analysis`: linear probes (scikit-learn), attention patterns,
+      attribution patching, SAE features (SAELens, `sae` extra); probe weights and SAE decoder rows
+      save as directions; attention has a layer and head selector in the Figures tab
+- [x] `experiments/interp-toolkit`, verified offline (`--tiny`): attribution patching correlates
+      0.99 with exact patching; every view renders on desktop and mobile
 - [ ] Acceptance: reproduce the refusal direction (Arditi et al. 2024) on a Qwen2.5 instruct model,
       read entirely in the UI
 

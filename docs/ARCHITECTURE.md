@@ -12,6 +12,7 @@ makes them share one model, one intervention spec and one data format.
 |---|---|
 | Hooks, caching, patching, steering on real HF models | nnsight |
 | SAEs; lens; attribution graphs | SAELens; tuned-lens; circuit-tracer |
+| Linear probes | scikit-learn |
 | Evals, multi-turn, agents, coding sandboxes | Inspect AI + inspect_evals |
 | Standard benchmarks | lm-evaluation-harness |
 | SFT, DPO, GRPO, LoRA; ReFT | TRL, PEFT, unsloth; pyreft |
@@ -49,7 +50,8 @@ cli
 server                           FastAPI, read-only over the stores; Playground generation
 train                            sft on TRL/PEFT or Unsloth, logged as MLflow training runs
 stores | tracking | analysis     views over Inspect logs and MLflow; start an MLflow run;
-  | inspect_ext                  lens and patching as UI views; loupe/ provider and scorers
+  | inspect_ext                  lens, patching, probes, attention, SAE features as UI views;
+                                 loupe/ provider and scorers
 interventions                    Steer and Ablate specs on nnsight, batched generation
 vectors                          directions as safetensors
 models | data                    load a model into nnsight; training sets from product traces
@@ -64,7 +66,12 @@ Today everything from `core` to `cli` exists; `rl_ext` (scorer to reward) joins 
 - Evals: Inspect `.eval` logs are the source of truth for transcripts and per-sample scores.
 - Everything else: an MLflow run with params, metrics and artifacts. Figures are data, not images:
   JSON under `views/` in one of three shapes (heatmap, line, table, `loupe.analysis.views`) that the
-  Run page's Figures tab draws.
+  Run page's Figures tab draws. A heatmap may carry named slices (attention: one per layer and
+  head) that the tab switches between.
+- SAEs: loaded by SAELens (`SAE.from_pretrained` or `load_from_disk`) in the `sae` extra, which
+  is heavy (SAELens pulls in TransformerLens and wandb) and imported only when an SAE is used.
+  loupe reads the residual at the SAE's hook with nnsight, so the model is never swapped for a
+  TransformerLens one; a feature's decoder row saves as a direction like any other.
 - Directions: one safetensors file each under `<LOUPE_HOME>/vectors`, provenance in the header. The
   server reads the header without torch, so `loupe serve` never needs the interp extra.
 - Every run writes `RunMeta`: commit and dirty flag, package versions, seed; later also model
