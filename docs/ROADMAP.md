@@ -133,5 +133,6 @@ The research questions of the ARC thesis, zipy, SparkyAI, piramid and Bijou, as 
 
 ## v1.0 Open source
 
-- [ ] Docs site, three worked examples, model support matrix, hosted read-only demo
+- [x] Docs site (apps/site) and a read-only demo image (deploy/app)
+- [ ] Three worked examples, model support matrix; the site and demo deployed
 - [ ] Acceptance: a fresh user runs an example from a clean clone

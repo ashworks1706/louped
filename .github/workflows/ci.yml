@@ -24,6 +24,7 @@ jobs:
     outputs:
       python: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.python == 'true' }}
       web: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.web == 'true' }}
+      site: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.site == 'true' }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
@@ -43,6 +44,10 @@ jobs:
               - 'apps/web/**'
               - 'src/loupe/server/**'
               - 'src/loupe/stores/**'
+              - 'justfile'
+              - '.github/workflows/ci.yml'
+            site:
+              - 'apps/site/**'
               - 'justfile'
               - '.github/workflows/ci.yml'
 
@@ -96,11 +101,25 @@ jobs:
             apps/web/playwright-report/
           retention-days: 14
 
+  site:
+    name: Site
+    needs: changes
+    if: needs.changes.outputs.site == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: extractions/setup-just@v4
+      - run: corepack enable && cd apps/site && pnpm install --frozen-lockfile
+      - run: just check-site
+
   # The one required check. It passes when every job that ran passed and the rest were skipped.
   ci:
     name: CI
     if: always()
-    needs: [changes, python, web]
+    needs: [changes, python, web, site]
     runs-on: ubuntu-latest
     steps:
       - run: |

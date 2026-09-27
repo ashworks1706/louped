@@ -1,5 +1,5 @@
-<p align="center"><b>loupe</b></p>
-<p align="center">a research testbed for looking inside language models</p>
+<p align="center"><img src="docs/brand/wordmark.svg" alt="loupe" height="48"></p>
+<p align="center">Look inside the model you're testing.</p>
 
 <p align="center">
   <a href="docs/ARCHITECTURE.md">Architecture</a> •

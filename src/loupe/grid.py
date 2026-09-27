@@ -14,6 +14,7 @@ interval includes zero or is above it), or both.
 
 from __future__ import annotations
 
+import json
 import uuid
 from typing import Any
 
@@ -52,8 +53,9 @@ def grid(
         raise ValueError(f"baseline {base!r} is not a condition")
     grid_id = uuid.uuid4().hex[:8]
     per: dict[tuple[str, str], tuple[Scores, Scores, list[str]]] = {}
-    params = {"model": model, "tasks": list(tasks), "conditions": conditions, "metric": metric,
-              "held": held, "seeds": seeds, "baseline": base, "grid": grid_id}  # fmt: skip
+    params = {"model": model, "tasks": list(tasks), "conditions": _plain(conditions),
+              "metric": metric, "held": held, "seeds": seeds, "baseline": base,
+              "grid": grid_id}  # fmt: skip
     with start_run(experiment, name=f"grid · {metric}", params=params) as run:
         for cond in names:
             for col, task in tasks.items():
@@ -81,7 +83,10 @@ def _cell(
     runs: list[str] = []
     for seed in seeds:
         [log] = eval(task, model=target, log_dir=str(logs_dir()), tags=tags, seed=seed,
-                     metadata={"condition": args}, display="none")  # fmt: skip
+                     metadata={"condition": _plain(args)}, display="none")  # fmt: skip
+        if log.status != "success":
+            reason = log.error.message if log.error else log.status
+            raise RuntimeError(f"{log.eval.task} failed under {_plain(args)}: {reason}")
         runs.append(f"e-{log.eval.eval_id}")
         scores |= sample_scores(log, metric, seed)
         if held:
@@ -138,12 +143,12 @@ def _views(
     deltas = [[paired(per[base, t][0], per[c, t][0]) for t in cols] for c in names]
     kept = [[paired(per[base, t][1], per[c, t][1]) if held else None for t in cols] for c in names]
     label = [[f"{m:.2f}" for m in row] for row in mean]
-    dlabel = [[f"{d:+.2f} [{lo:+.2f}, {hi:+.2f}]" for d, lo, hi in row] for row in deltas]
+    dlabel = [[f"{d:+.2f}{'*' if lo > 0 or hi < 0 else ''}" for d, lo, hi in row] for row in deltas]
     views = [
         heatmap(metric, mean, cols, names, "task", "condition", labels=label),
         heatmap(f"{metric} against {base}, 95% paired interval",
                 [[d[0] for d in r] for r in deltas], cols, names, "task", "condition",
-                labels=dlabel),
+                labels=dlabel, note="* the interval excludes zero; intervals in Cells"),
     ]  # fmt: skip
     if held:
         views.append(heatmap(f"{held} against {base}", [[k[0] if k else 0.0 for k in r]
@@ -162,6 +167,11 @@ def _views(
     note = "one eval run per seed; the first opens here"
     views.append(table("Cells", head, rows, links=links, note=note))
     return views
+
+
+def _plain(value: Any) -> Any:
+    """JSON data, with anything else (a scripted model's function) as its repr."""
+    return json.loads(json.dumps(value, default=repr))
 
 
 def _mean(scores: Scores) -> float:

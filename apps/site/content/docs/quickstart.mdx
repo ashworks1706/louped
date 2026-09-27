@@ -1,0 +1,34 @@
+---
+title: Quick start
+description: A result in the app in a few minutes, offline.
+---
+
+Every experiment has a `--tiny` mode: a small model trained to show the behaviour is built on your
+CPU, so the whole pipeline runs without a download. Its numbers mean nothing; it checks the path.
+
+```sh
+uv run --extra interp python experiments/refusal-direction/run.py --tiny
+uv run --extra interp python experiments/sycophancy-pushback/run.py --tiny
+just serve   # http://127.0.0.1:8000
+```
+
+Runs lists both. A run opens on its figures; an eval run's Samples tab opens every transcript;
+Compare puts two eval runs side by side with a paired interval.
+
+## On a real model
+
+Drop `--tiny`. The default is `Qwen/Qwen2.5-0.5B-Instruct`, which runs on a laptop; a GPU makes
+1.5B and up practical.
+
+```sh
+uv run --extra interp python experiments/sycophancy-pushback/run.py --model Qwen/Qwen2.5-1.5B-Instruct
+```
+
+## Your own question
+
+```sh
+just new-experiment my-question   # experiments/my-question/{README.md,run.py}
+```
+
+The README states the question, what would answer it and the result. `run.py` writes to MLflow and
+Inspect logs, never to stdout alone, so the app shows it.

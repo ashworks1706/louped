@@ -1,0 +1,14 @@
+{
+  "pages": [
+    "index",
+    "install",
+    "quickstart",
+    "---Concepts---",
+    "policies",
+    "grid",
+    "domains",
+    "---Reference---",
+    "cli",
+    "self-host"
+  ]
+}

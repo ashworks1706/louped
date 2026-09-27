@@ -7,6 +7,7 @@ export NEXT_TELEMETRY_DISABLED := "1"
 export MLFLOW_DISABLE_AGENT_HINT := "1"
 
 web := "apps/web"
+site := "apps/site"
 
 default:
     @just --list
@@ -19,9 +20,10 @@ bootstrap: setup
 setup:
     uv sync --locked --all-extras
     cd {{web}} && pnpm install --frozen-lockfile
+    cd {{site}} && pnpm install --frozen-lockfile
 
 # the gate: CI and the hooks run exactly this
-check: check-python check-web
+check: check-python check-web check-site
 
 # format, lint, types, layers, tests
 check-python:
@@ -35,6 +37,10 @@ check-python:
 check-web:
     cd {{web}} && pnpm format:check && pnpm lint && pnpm typecheck && pnpm build
 
+# format, lint, types, static build of the landing page and docs
+check-site:
+    cd {{site}} && pnpm format:check && pnpm lint && pnpm typecheck && pnpm build
+
 # browser tests against the built UI (run check-web first)
 test-e2e:
     cd {{web}} && pnpm test:e2e
@@ -44,6 +50,7 @@ fmt:
     uv run ruff format .
     uv run ruff check --fix .
     cd {{web}} && pnpm format
+    cd {{site}} && pnpm format
 
 # the API on :8000, serving the built UI when there is one
 serve *args:
@@ -56,6 +63,15 @@ web:
 # build the UI's static export into apps/web/out
 web-build:
     cd {{web}} && pnpm build
+
+# the landing page and docs on :3001
+site:
+    cd {{site}} && pnpm dev
+
+# the loupe image, and the public demo on top of it
+images:
+    docker build -t loupe .
+    docker build -f deploy/app/Dockerfile --build-arg BASE=loupe -t loupe-demo .
 
 # re-resolve uv.lock after changing pyproject.toml
 lock:

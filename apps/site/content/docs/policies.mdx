@@ -1,0 +1,29 @@
+---
+title: Policies and interventions
+description: One model plus interventions, valid in an eval, a training run, the Playground and an analysis.
+---
+
+```
+policy = model + interventions + adapters + generation settings
+```
+
+In an Inspect eval a policy is the `loupe/` model with model arguments:
+
+```sh
+inspect eval task.py --model loupe/Qwen/Qwen2.5-0.5B-Instruct \
+  -M interventions='{"kind": "ablate", "vector": "refusal.qwen2.5-0.5b-instruct"}'
+```
+
+| Argument        | Does                                                                                                  |
+| --------------- | ----------------------------------------------------------------------------------------------------- |
+| `interventions` | `steer` (add a saved direction), `ablate` (project it out), `inject` (add passages' state at a layer) |
+| `bank`          | load named LoRA adapters beside each other, all inactive                                              |
+| `adapters`      | make this subset of the bank live; their deltas add                                                   |
+| `merges`        | add PEFT merges of bank adapters (`linear`, `ties`, `dare_linear`, ...)                               |
+| `phases`        | change the live adapters along one generation: `[{"start": 0, "end": 0.5, "adapters": ["a"]}]`        |
+| `diffusion`     | serve a masked diffusion model (LLaDA, Dream, any masked LM) with its sampler settings                |
+| `inject`        | the layer and strength for passages a RAG task sends to the model's state                             |
+
+Directions live under `<home>/vectors`, adapters under `<home>/adapters`, saved models under
+`<home>/models`. `loupe train sft` can save an adapter by name (`export.adapter_as`) or a merged
+model (`export.merge_as`), and can train a soft prompt instead of LoRA (`soft_prompt: 20`).

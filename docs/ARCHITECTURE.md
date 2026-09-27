@@ -145,6 +145,10 @@ saved vector.
 
 Design rules live in `apps/web/AGENTS.md`.
 
+Two surfaces sit outside the package. `apps/site` is the landing page and docs (Fumadocs, static,
+GitHub Pages). `deploy/app` is the public demo: the image with scripted demo runs baked in and no
+model, so it has nothing to run and nothing to write.
+
 ## Product repositories
 
 zipy, SparkyAI, piramid and Bijou keep their own regression evals in their own CI; those test product

@@ -1,0 +1,33 @@
+---
+title: Install
+description: One package, one extra per capability.
+---
+
+The package is `loupelab`; the import and the command are `loupe`. Python 3.12 or newer.
+
+```sh
+pip install 'loupelab[server]'          # the app over your runs
+pip install 'loupelab[server,interp]'   # plus steering, ablation, analyses and the Playground
+pip install 'loupelab[train]'           # plus loupe data and loupe train
+pip install 'loupelab[rag]'             # plus retrieval and the classifier recipe
+```
+
+| Extra    | Brings                                                            |
+| -------- | ----------------------------------------------------------------- |
+| `server` | `loupe serve`: the API and the app                                |
+| `evals`  | Inspect and inspect_evals                                         |
+| `interp` | nnsight, transformers, torch, scikit-learn                        |
+| `train`  | TRL, PEFT, datasets; unsloth is used when installed on a CUDA GPU |
+| `rl`     | reasoning-gym and math-verify for GRPO tasks                      |
+| `rag`    | bm25s and sentence-transformers                                   |
+| `sae`    | SAELens, heavy, only for pretrained sparse autoencoders           |
+
+## From source
+
+Needs [just](https://just.systems), [uv](https://docs.astral.sh/uv) and Node 22 with pnpm.
+
+```sh
+git clone https://github.com/ashworks1706/loupe && cd loupe
+just bootstrap   # dependencies and git hooks
+just check       # lint, types, layers, tests, app build
+```

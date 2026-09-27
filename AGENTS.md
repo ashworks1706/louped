@@ -28,13 +28,16 @@ what order. Do not contradict them; propose an edit to the doc instead.
 
 ```
 just bootstrap          first run: dependencies and git hooks
-just check              the gate: check-python and check-web. CI and the pre-push hook run it
+just check              the gate: check-python, check-web, check-site. CI and the pre-push hook run it
 just check-python       ruff format, ruff check, pyright, import-linter, pytest
 just check-web          prettier, eslint, tsc, static build
+just check-site         the same for apps/site
 just test-e2e           Playwright on the built UI; screenshots land in apps/web/test-results
 just fmt                format everything
 just serve              API on :8000, serving the built UI
 just web                UI dev server on :3000
+just site               landing page and docs on :3001
+just images             the loupe image and the public demo on top of it
 just new-experiment X   scaffold experiments/X/
 just lock               re-resolve uv.lock
 just api-types          regenerate the UI's API types after changing a server route or model
@@ -69,10 +72,11 @@ src/loupe/       the Python package (distribution name: loupelab)
   server/        FastAPI over the stores, plus the Playground
   cli.py         the loupe command
 apps/web/        the UI: Next.js static export, shadcn/ui. Its own AGENTS.md holds the design rules
+apps/site/       landing page and docs: Fumadocs static export, GitHub Pages (site.yml)
 experiments/     one folder per research question; nothing imports it
-deploy/          Docker setups for the tools loupe embeds (neuronpedia/: just neuronpedia)
+deploy/          Docker setups: neuronpedia/ (just neuronpedia); app/, the read-only public demo
 tests/           Python tests, CPU only
-docs/            ARCHITECTURE.md, ROADMAP.md, decisions/
+docs/            ARCHITECTURE.md, ROADMAP.md, decisions/, brand/ (mark and wordmark SVGs)
 ```
 
 ## The dependency rule

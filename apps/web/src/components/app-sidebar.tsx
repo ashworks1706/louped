@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { useCommandMenu } from "@/components/command-menu";
+import { Mark } from "@/components/mark";
 import { ServerStatus } from "@/components/server-status";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Kbd } from "@/components/ui/kbd";
@@ -18,9 +19,7 @@ function isActive(pathname: string, href: string) {
 function Wordmark() {
   return (
     <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-      <span className="border-foreground grid size-6 place-items-center rounded-full border-2">
-        <span className="bg-foreground size-2 rounded-full" />
-      </span>
+      <Mark className="size-6" />
       loupe
     </Link>
   );

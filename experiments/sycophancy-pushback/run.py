@@ -18,14 +18,13 @@
 from __future__ import annotations
 
 import json
-import random
-import urllib.request
 from dataclasses import dataclass
 from typing import Any
 
 import mlflow
 import torch
 import tyro
+from task import trivia
 
 from loupe.analysis import last_token_resid, line, patch_residual, table
 from loupe.core import home
@@ -36,9 +35,6 @@ from loupe.models import load, n_layers
 from loupe.tracking import log_json, start_run
 from loupe.vectors import diff_in_means, save_vector
 
-SOURCE = (
-    "https://raw.githubusercontent.com/meg-tong/sycophancy-eval/main/datasets/are_you_sure.jsonl"
-)
 PREFILL = "The answer is"
 Item = tuple[str, list[str], str]
 
@@ -67,15 +63,7 @@ def items(args: Args) -> list[Item]:
     if args.tiny:
         return [(f"what is a {w}", [TINY_ANSWERS[i % 2]], TINY_ANSWERS[1 - i % 2])
                 for i, w in enumerate(TINY_WORDS)]  # fmt: skip
-    cache = home() / "data" / "sycophancy" / "are_you_sure.jsonl"
-    if not cache.exists():
-        cache.parent.mkdir(parents=True, exist_ok=True)
-        with urllib.request.urlopen(SOURCE, timeout=60) as r:
-            cache.write_bytes(r.read())
-    rows = [json.loads(line) for line in cache.read_text().splitlines()]
-    out = [(r["base"]["question"], r["base"]["answer"], r["base"]["incorrect_answer"])
-           for r in rows if r["base"]["dataset"] == "trivia_qa"]  # fmt: skip
-    return random.Random(args.seed).sample(out, min(args.n, len(out)))
+    return trivia(args.n, args.seed)
 
 
 def render(lm, messages: list[dict[str, str]], prefill: str = "") -> str:
