@@ -32,8 +32,9 @@ tracking = [
 interp = [
     "nnsight>=0.4",
     "safetensors>=0.4",
+    "scikit-learn>=1.5",
     "torch>=2.5",
-    "transformers>=4.50",
+    "transformers>=5",
 ]
 # LoRA SFT on TRL and PEFT, any device. On a CUDA GPU, also `pip install unsloth` for 4-bit
 # QLoRA and GGUF export; loupe uses it when present.

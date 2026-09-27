@@ -14,6 +14,7 @@ import {
 } from "recharts";
 
 import { QueryState } from "@/components/query-state";
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   Table,
   TableBody,
@@ -119,17 +120,35 @@ function LineFigure({ view }: { view: LineView }) {
   );
 }
 
-/** Signed values: positive shades one way, negative the other, strength by magnitude. */
+/** Signed values: positive shades one way, negative the other, strength by magnitude. With
+ * slices (attention: one per layer and head), a select picks which grid is drawn. */
 function HeatmapFigure({ view }: { view: HeatmapView }) {
   const [hover, setHover] = useState<[number, number] | null>(null);
-  const max = Math.max(1e-9, ...view.z.flat().map(Math.abs));
+  const names = Object.keys(view.slices ?? {});
+  const [slice, setSlice] = useState(names[0]);
+  const z = view.slices?.[slice] ?? view.z;
+  const max = Math.max(1e-9, ...z.flat().map(Math.abs));
   const cell = (v: number) =>
     `color-mix(in oklch, var(${v >= 0 ? "--positive" : "--negative"}) ${Math.round(
       (Math.abs(v) / max) * 100,
     )}%, transparent)`;
-  const shown = hover ? view.z[hover[0]][hover[1]] : null;
+  const shown = hover ? z[hover[0]][hover[1]] : null;
   return (
     <div className="flex flex-col gap-3">
+      {names.length > 0 && (
+        <NativeSelect
+          aria-label="Slice"
+          value={slice}
+          onChange={(e) => setSlice(e.target.value)}
+          className="font-mono text-xs"
+        >
+          {names.map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </NativeSelect>
+      )}
       <div className="overflow-x-auto">
         <div
           className="grid w-max gap-px text-[10px]"
@@ -145,10 +164,10 @@ function HeatmapFigure({ view }: { view: HeatmapView }) {
                   data-testid="heat-cell"
                   className="bg-muted h-6 rounded-[2px] outline-offset-1 hover:outline hover:outline-1"
                   style={{
-                    backgroundImage: `linear-gradient(${cell(view.z[r][c])}, ${cell(view.z[r][c])})`,
+                    backgroundImage: `linear-gradient(${cell(z[r][c])}, ${cell(z[r][c])})`,
                   }}
                   onMouseEnter={() => setHover([r, c])}
-                  title={`${view.y_label} ${y} · ${view.x_label} ${x}: ${view.z[r][c].toFixed(3)}`}
+                  title={`${view.y_label} ${y} · ${view.x_label} ${x}: ${z[r][c].toFixed(3)}`}
                 />
               ))}
             </Fragment>

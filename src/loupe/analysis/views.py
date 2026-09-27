@@ -1,8 +1,8 @@
 """The shapes the Run page's Figures tab renders. A run stores each as JSON under views/ in MLflow.
 
-Three kinds cover the standard figures: a heatmap (patching: layer by position), a line chart
-(anything by layer), and a table (logit lens tokens). Keeping them as data, not images, is what
-lets the UI hover, sort and link them.
+Three kinds cover the standard figures: a heatmap (patching: layer by position; attention: one
+slice per layer and head), a line chart (anything by layer), and a table (logit lens tokens).
+Keeping them as data, not images, is what lets the UI hover, sort and link them.
 """
 
 from __future__ import annotations
@@ -18,7 +18,9 @@ def heatmap(
     x_label: str,
     y_label: str,
     note: str | None = None,
+    slices: dict[str, list[list[float]]] | None = None,
 ) -> dict[str, Any]:
+    """With slices, named grids the UI switches between, the first shown first; z is that one."""
     return {
         "kind": "heatmap",
         "title": title,
@@ -28,6 +30,7 @@ def heatmap(
         "x_label": x_label,
         "y_label": y_label,
         "note": note,
+        "slices": slices,
     }
 
 

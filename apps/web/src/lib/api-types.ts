@@ -295,6 +295,10 @@ export interface components {
       y_label: string;
       /** Note */
       note?: string | null;
+      /** Slices */
+      slices?: {
+        [key: string]: number[][];
+      } | null;
     };
     /** LineView */
     LineView: {

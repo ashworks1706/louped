@@ -25,3 +25,9 @@ def last_token_resid(lm: LanguageModel, prompts: list[str], batch_size: int = 16
                 saved.append(layer.output[:, -1, :].save())
         out.append(torch.stack([s.float().cpu() for s in saved]))
     return torch.cat(out, dim=1)
+
+
+def positions(lm: LanguageModel, text: str) -> list[str]:
+    """Each token of text as "index:token", the axis every per-position view is labelled with."""
+    ids = lm.tokenizer(text)["input_ids"]
+    return [f"{i}:{lm.tokenizer.decode(t)}" for i, t in enumerate(ids)]

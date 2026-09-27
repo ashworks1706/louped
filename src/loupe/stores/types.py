@@ -94,6 +94,7 @@ class HeatmapView(BaseModel):
     x_label: str
     y_label: str
     note: str | None = None
+    slices: dict[str, list[list[float]]] | None = None
 
 
 class LineView(BaseModel):

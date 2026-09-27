@@ -172,3 +172,42 @@ def test_playground_generates_base_and_intervened(lm) -> None:
         client.post("/api/playground/generate", json={**ask, "interventions": missing}).status_code
         == 400
     )
+
+
+def test_attribution_patching_tracks_exact_patching(lm) -> None:
+    from loupe.analysis import attribution_patch
+
+    args = ("the cat is blue", "the dog is blue", "yes", "no")
+    exact = torch.tensor(patch_residual(lm, *args)["z"])
+    approx = torch.tensor(attribution_patch(lm, *args)["z"])
+    assert approx.shape == exact.shape
+    assert float(torch.corrcoef(torch.stack([exact.flatten(), approx.flatten()]))[0, 1]) > 0.5
+    assert all(p.grad is None for p in lm._model.parameters())
+
+
+def test_attention_patterns_are_causal_and_normalised(lm) -> None:
+    from loupe.analysis import attention_patterns
+
+    prompt = chat(lm, "write a poem")
+    before = lm._model.config._attn_implementation
+    pattern, view = attention_patterns(lm, prompt)
+    n = len(lm.tokenizer(prompt)["input_ids"])
+    assert pattern.shape == (n_layers(lm), lm._model.config.num_attention_heads, n, n)
+    assert torch.allclose(pattern.sum(-1), torch.ones(pattern.shape[:-1]), atol=1e-5)
+    assert float(pattern.triu(1).abs().max()) == 0.0  # no position attends to a later one
+    assert lm._model.config._attn_implementation == before
+    assert len(view["slices"]) == pattern.shape[0] * pattern.shape[1]
+    assert view["z"] == view["slices"]["layer 0 · head 0"] and len(view["x"]) == n
+
+
+def test_linear_probe_finds_a_planted_direction(lm) -> None:
+    from loupe.analysis import linear_probes
+
+    words = ["cat", "dog", "sky", "water", "fire", "cake", "song", "game", "poem", "story"]
+    prompts = [f"tell me about the {w} {t}" for w in words for t in ("yes", "no")]
+    labels = [int(p.endswith("yes")) for p in prompts]
+    accuracy, weights, view = linear_probes(lm, prompts, labels)
+    assert len(accuracy) == n_layers(lm) == weights.shape[0]
+    assert accuracy[-1] == 1.0  # the last token itself is the label
+    assert torch.allclose(weights.norm(dim=-1), torch.ones(n_layers(lm)))
+    assert view["kind"] == "line" and view["series"]["held-out accuracy"] == accuracy

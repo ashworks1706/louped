@@ -612,6 +612,26 @@
               }
             ],
             "title": "Note"
+          },
+          "slices": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slices"
           }
         },
         "type": "object",

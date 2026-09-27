@@ -2,7 +2,8 @@
 
 nnsight wraps the unmodified HF model, so numerics are the model's own. The only per-family
 knowledge loupe needs is where the decoder blocks are, whose outputs are the residual stream every
-intervention and analysis reads or writes, and where the final norm is, for the logit lens.
+intervention and analysis reads or writes, where the final norm is, for the logit lens, and where
+each block's attention is, for its weights.
 """
 
 from __future__ import annotations
@@ -19,6 +20,8 @@ from loupe.core import saved_model
 #: Phi (model.layers), GPT-2 (transformer.h) and GPT-NeoX/Pythia (gpt_neox.layers).
 BLOCK_PATHS = ("model.layers", "transformer.h", "gpt_neox.layers")
 NORM_PATHS = ("model.norm", "transformer.ln_f", "gpt_neox.final_layer_norm")
+#: A block's attention module, whose output[1] is the attention weights under eager attention.
+ATTN_PATHS = ("self_attn", "attn", "attention")
 
 
 def load(
@@ -52,9 +55,9 @@ def load(
     return lm
 
 
-def _first(lm: LanguageModel, paths: tuple[str, ...]) -> Any:
+def _first(obj: Any, paths: tuple[str, ...]) -> Any:
     for path in paths:
-        root: Any = lm
+        root: Any = obj
         try:
             for part in path.split("."):
                 root = getattr(root, part)
@@ -72,6 +75,11 @@ def blocks(lm: LanguageModel) -> Any:
 def final_norm(lm: LanguageModel) -> Any:
     """The norm applied to the last residual before the unembedding, as an nnsight envoy."""
     return _first(lm, NORM_PATHS)
+
+
+def attention(block: Any) -> Any:
+    """A decoder block's attention module, as an nnsight envoy."""
+    return _first(block, ATTN_PATHS)
 
 
 def n_layers(lm: LanguageModel) -> int:
