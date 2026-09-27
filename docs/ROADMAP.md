@@ -3,8 +3,8 @@
 loupe builds the joins between interventions, evals, training and interp, and links to existing
 tools for the rest (ARCHITECTURE.md). Out of scope, because other free tools do it: a training
 dashboard, cluster and vLLM scale-out (Transformer Lab, LLaMA-Factory, Oumi), SAE and graph
-browsing (Neuronpedia, circuit-tracer), ReFT (pyreft), a masked diffusion backend (Bijou keeps
-its phase-routing question).
+browsing (Neuronpedia, circuit-tracer), ReFT (pyreft). Also out: a masked diffusion backend;
+Bijou keeps its phase-routing question.
 
 Each phase ends with an acceptance test, most of them reproducing a published result: if loupe
 cannot reproduce a number someone else got, its own numbers cannot be trusted. Every phase ships
