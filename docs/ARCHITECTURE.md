@@ -48,8 +48,8 @@ only what it uses. A package imports only packages below it; `import-linter` enf
 experiments                      leaf, nothing imports it
 cli
 server                           FastAPI, read-only over the stores; Playground generation
-train | sweep                    sft on TRL/PEFT or Unsloth, logged as MLflow training runs;
-                                 steering sweeps of an Inspect task through loupe/
+train | sweep                    sft, dpo and grpo on TRL/PEFT or Unsloth, logged as MLflow
+                                 training runs; steering sweeps of an Inspect task through loupe/
 stores | tracking | analysis     views over Inspect logs and MLflow; start an MLflow run;
   | inspect_ext                  lens, patching, probes, attention, SAE features as UI views;
                                  loupe/ provider and scorers
@@ -59,7 +59,9 @@ models | data                    load a model into nnsight; training sets from p
 core                             run metadata, paths
 ```
 
-Today everything from `core` to `cli` exists; `rl_ext` (scorer to reward) joins `inspect_ext` in v0.5. Each phase adds its layers here and in the contract in
+Today everything from `core` to `cli` exists. The scorer-to-reward bridge needs no layer of its
+own: a check is a plain function, `inspect_ext.as_scorer` wraps it for Inspect and
+`train.rewards.as_reward` for TRL. Each phase adds its layers here and in the contract in
 `pyproject.toml`.
 
 ## Data

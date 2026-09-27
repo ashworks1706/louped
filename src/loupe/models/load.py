@@ -8,11 +8,12 @@ each block's attention is, for its weights.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import torch
 from nnsight import LanguageModel
-from transformers import PreTrainedTokenizerFast
+from transformers import AutoTokenizer, PreTrainedTokenizerFast
 
 from loupe.core import saved_model
 
@@ -30,8 +31,10 @@ def load(
     tokenizer: Any = None,
     dtype: torch.dtype | str = "auto",
     device: str | None = None,
+    adapter: str | Path | None = None,
 ) -> LanguageModel:
-    """A model saved under <home>/models by name, a Hub id or path, or a built HF model.
+    """A model saved under <home>/models by name, a Hub id or path, or a built HF model. With an
+    adapter (a LoRA directory, such as a training checkpoint), merged into the named model.
 
     Padding is set to the left so the last position of every row is its last real token, which is
     what generation needs and what last-token analyses read.
@@ -46,13 +49,25 @@ def load(
                 # tokenizer from model_type and drop a custom pre-tokenizer or decoder.
                 kwargs["tokenizer"] = PreTrainedTokenizerFast.from_pretrained(model)
         device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        lm = LanguageModel(model, device_map=device, dtype=dtype, dispatch=True, **kwargs)
+        if adapter is not None:
+            tok = kwargs.get("tokenizer") or AutoTokenizer.from_pretrained(model)
+            lm = LanguageModel(_merged(model, adapter, dtype, device), tokenizer=tok)
+        else:
+            lm = LanguageModel(model, device_map=device, dtype=dtype, dispatch=True, **kwargs)
     else:
         lm = LanguageModel(model, tokenizer=tokenizer)
     lm.tokenizer.padding_side = "left"
     if lm.tokenizer.pad_token is None:
         lm.tokenizer.pad_token = lm.tokenizer.eos_token
     return lm
+
+
+def _merged(model: str, adapter: str | Path, dtype: torch.dtype | str, device: str) -> Any:
+    from peft import PeftModel  # the train extra
+    from transformers import AutoModelForCausalLM
+
+    base = AutoModelForCausalLM.from_pretrained(model, dtype=dtype, device_map=device)
+    return PeftModel.from_pretrained(base, str(adapter)).merge_and_unload()
 
 
 def _first(obj: Any, paths: tuple[str, ...]) -> Any:

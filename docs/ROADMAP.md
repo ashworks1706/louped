@@ -42,8 +42,8 @@ with its UI view.
       projections onto the model's saved directions, base or under the intervention
 - [x] Verified offline (`--tiny`): the lens reads "I" at every layer on a harmful prompt and
       "sure" once the refusal direction is ablated; every view renders on desktop and mobile
-- [ ] Model diffing: per-layer cosine and norm change of a direction or of mean activations
-      between two checkpoints of one model
+- [x] Model diffing: per layer, residual cosine, norm change and the cosine of a contrast
+      direction between two models of one architecture
 - [ ] Attribution graphs with circuit-tracer and a graph view
 - [ ] Acceptance: reproduce the refusal direction (Arditi et al. 2024) on a Qwen2.5 instruct model,
       read entirely in the UI
@@ -71,11 +71,15 @@ with its UI view.
       (CUDA); loss on the reply only; MLflow training runs; merged model loadable as `loupe/<name>`
 - [x] Migrated post-training and curation from zipy and SparkyAI and removed them there; their
       product regression evals stay in their repos
-- [ ] `loupe train dpo` and `loupe train grpo` on TRL, same data format, runs and model saving as sft
-- [ ] Scorer-to-reward bridge: one plain function is an Inspect scorer and a GRPO reward
+- [x] `loupe train dpo` and `loupe train grpo` on TRL, sharing sft's config, backends, runs,
+      checkpoints and export
+- [x] One plain check is an Inspect scorer (`as_scorer`) and a GRPO reward (`file.py:function`)
+- [x] Training dynamics: any measure re-run on the base and every kept checkpoint, as a line
+      against step
+- [x] `experiments/refusal-finetuning`, verified offline (`--tiny`): DPO on the model's own ablated
+      replies; refusal and the direction's projection both collapse by step 5
+- [x] `experiments/gsm8k-grpo`: data, recipe and eval for the acceptance below (not yet run)
 - [ ] ReFT with pyreft: a trained intervention saved and applied like a Steer
-- [ ] Training dynamics: any analysis (probe accuracy, direction norm, eval score) re-run across
-      saved checkpoints and drawn as a line against step
 - [ ] Acceptance: GRPO on GSM8K on a small Qwen shows the known gain
 
 ## v0.6 Agentic and coding

@@ -2,6 +2,7 @@
 
 from loupe.analysis.activations import last_token_resid, positions, resid, token_strings
 from loupe.analysis.attention import attention_patterns
+from loupe.analysis.dynamics import checkpoints, model_diff, over_checkpoints
 from loupe.analysis.lens import logit_lens
 from loupe.analysis.patching import attribution_patch, patch_residual
 from loupe.analysis.probes import linear_probes
@@ -13,12 +14,15 @@ __all__ = [
     "along",
     "attention_patterns",
     "attribution_patch",
+    "checkpoints",
     "feature_examples",
     "heatmap",
     "last_token_resid",
     "line",
     "linear_probes",
     "logit_lens",
+    "model_diff",
+    "over_checkpoints",
     "patch_residual",
     "positions",
     "projection",

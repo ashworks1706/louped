@@ -1,0 +1,24 @@
+# loupe train grpo experiments/gsm8k-grpo/grpo.yaml   (after data.py)
+name: gsm8k-grpo
+experiment: gsm8k-grpo
+base_model: Qwen/Qwen2.5-0.5B-Instruct
+dataset: data/gsm8k-grpo/train.jsonl
+output_dir: checkpoints/gsm8k-grpo
+max_seq_length: 1024
+rewards: [checks.py:correct]
+num_generations: 8
+max_completion_length: 384
+temperature: 1.0
+lora:
+  r: 16
+  alpha: 32
+train:
+  max_steps: 500
+  per_device_batch_size: 8
+  gradient_accumulation: 2
+  learning_rate: 1.0e-5
+  logging_steps: 5
+  save_steps: 100
+  seed: 0
+export:
+  merge_as: qwen2.5-0.5b-gsm8k-grpo

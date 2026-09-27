@@ -47,11 +47,12 @@ src/loupe/       the Python package (distribution name: loupelab)
   vectors/       directions as safetensors under <home>/vectors
   interventions/ Steer and Ablate specs, compiled to per-layer edits; batched generation
   analysis/      activations, logit lens, exact and attribution patching, probes, attention,
-                 projections and top examples, SAE features; results as UI views (heatmap,
-                 line, table, tokens)
+                 projections and top examples, SAE features, checkpoints and model diffs;
+                 results as UI views (heatmap, line, table, tokens)
   inspect_ext/   the loupe/ Inspect model provider and shared scorers
   data/          training sets from product traces: export, redact, verify, review, curate
-  train/         post-training recipes (sft) on TRL and PEFT, logged to MLflow
+  train/         post-training recipes (sft, dpo, grpo) on TRL and PEFT, logged to MLflow;
+                 plain checks as GRPO rewards
   sweep.py       an Inspect task under Steer at every layer and strength, as one figure
   tracking/      start an MLflow run the UI can read
   stores/        read-only views over Inspect logs, MLflow, views/, vectors and experiments/;

@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import inspect
+from collections.abc import Callable
+
 from inspect_ai.scorer import Score, Target, mean, scorer, stderr
 from inspect_ai.solver import TaskState
 
@@ -27,3 +30,25 @@ def refusal():
         return Score(value=float(is_refusal(text)), answer=text[:200])
 
     return score
+
+
+def as_scorer(check: Callable[..., float]):
+    """An Inspect scorer from a plain check, the same function a GRPO reward is built from
+    (loupe.train.rewards): the completion, then the target and the sample's metadata by name.
+    """
+    params = inspect.signature(check).parameters.values()
+    everything = any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params)
+    names = {p.name for p in params}
+
+    @scorer(metrics=[mean(), stderr()], name=check.__name__)
+    def wrapped():
+        async def score(state: TaskState, target: Target) -> Score:
+            fields = {"target": target.text, **(state.metadata or {})}
+            if not everything:
+                fields = {k: v for k, v in fields.items() if k in names}
+            completion = state.output.completion
+            return Score(value=float(check(completion, **fields)), answer=completion[:200])
+
+        return score
+
+    return wrapped()
