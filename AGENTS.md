@@ -13,7 +13,7 @@ what order. Do not contradict them; propose an edit to the doc instead.
 - **Prebuilt first.** Before writing code, name the existing tool that does it. Own code is only
   the glue between tools. A new dependency must be free and permissively licensed (MIT, Apache,
   BSD, OFL) and justified in the PR.
-- **No bloat.** No module, option or abstraction without a caller today. Python stays under ~3k
+- **No bloat.** No module, option or abstraction without a caller today. Python stays under ~6k
   lines, the UI under ~6k lines of our own TSX.
 - **Reproducible numbers.** Anything that writes a result writes `loupe.core.RunMeta` next to it.
 - **A UI page is done only when it renders a real experiment's data**, not only fixtures.
