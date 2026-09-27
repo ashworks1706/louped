@@ -72,7 +72,7 @@ src/loupe/       the Python package (distribution name: loupelab)
   server/        FastAPI over the stores, plus the Playground
   cli.py         the loupe command
 apps/web/        the UI: Next.js static export, shadcn/ui. Its own AGENTS.md holds the design rules
-apps/site/       landing page and docs: Fumadocs static export, GitHub Pages (site.yml)
+apps/site/       landing page and docs: Next.js + Fumadocs, deployed on Vercel
 experiments/     one folder per research question; nothing imports it
 deploy/          Docker setups: neuronpedia/ (just neuronpedia); app/, the read-only public demo
 tests/           Python tests, CPU only

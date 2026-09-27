@@ -5,9 +5,7 @@ export const tagline = "Look inside the model you're testing.";
 export const docsRoute = "/docs";
 export const docsContentRoute = "/llms.mdx/docs";
 export const repoUrl = "https://github.com/ashworks1706/loupe";
-/** Set when the site is served under a path, such as a GitHub Pages project site. */
-export const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-/** The hosted read-only UI; unset until a demo is deployed, and then the App link appears. */
+/** The hosted read-only app (app.<domain>); unset until it is deployed, and then its links appear. */
 export const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
 const getContentUrl = createGetUrl(docsContentRoute);
