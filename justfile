@@ -2,6 +2,10 @@
 
 set dotenv-load := false
 
+# nothing phones home: no Next.js telemetry, no MLflow agent hints
+export NEXT_TELEMETRY_DISABLED := "1"
+export MLFLOW_DISABLE_AGENT_HINT := "1"
+
 web := "apps/web"
 
 default:

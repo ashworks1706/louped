@@ -17,8 +17,13 @@ It is glue, not a framework. The work is done by [nnsight](https://nnsight.net),
 [verifiers](https://github.com/willccbb/verifiers), [vLLM](https://github.com/vllm-project/vllm) and
 [MLflow](https://mlflow.org); loupe connects them and shows the results.
 
-> Status: early. The skeleton, the API server and the UI shell exist. See the
-> [roadmap](docs/ROADMAP.md) for what is being built in what order.
+Everything runs on your machine with no API keys: open-weight models from the Hugging Face Hub or
+a local path, results in files under `LOUPE_HOME`, and no step that calls a hosted model. A GPU
+makes the big models practical; every pipeline also runs on CPU with a tiny model for checking.
+
+> Status: v0.4, with v0.5 training underway. Interpretability (steering, ablation, lens,
+> patching), Inspect evals under interventions, a Playground, and LoRA SFT from product traces.
+> See the [roadmap](docs/ROADMAP.md).
 
 ## Quick start
 
@@ -34,8 +39,10 @@ just web           # UI dev server on :3000, against the API on :8000
 ## Install
 
 ```
-pip install 'loupelab[server]'
-loupe serve
+pip install 'loupelab[server]'           # the UI over your runs
+pip install 'loupelab[server,interp]'    # plus steering, ablation and the Playground
+pip install 'loupelab[train]'            # plus loupe data and loupe train
+loupe serve --model Qwen/Qwen2.5-0.5B-Instruct
 ```
 
 The package is `loupelab`; the import and the command are `loupe`.

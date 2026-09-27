@@ -47,11 +47,12 @@ only what it uses. A package imports only packages below it; `import-linter` enf
 experiments                      leaf, nothing imports it
 cli
 server                           FastAPI, read-only over the stores; Playground generation
+train                            sft on TRL/PEFT or Unsloth, logged as MLflow training runs
 stores                           views over Inspect logs, MLflow, experiments/
 inspect_ext | rl_ext             loupe/ Inspect model provider, shared scorers; scorer -> reward
 analysis                         activations, logit lens, patching; results as UI views
 interventions | vectors          Steer and Ablate specs on nnsight, batched generation; directions
-models                           load a model, module-path map per architecture family
+models | data                    load a model into nnsight; training sets from product traces
 tracking                         start an MLflow run with RunMeta attached
 core                             run metadata, paths
 ```

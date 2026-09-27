@@ -35,6 +35,21 @@ interp = [
     "torch>=2.5",
     "transformers>=4.50",
 ]
+# LoRA SFT on TRL and PEFT, any device. On a CUDA GPU, also `pip install unsloth` for 4-bit
+# QLoRA and GGUF export; loupe uses it when present.
+train = [
+    "loupelab[data,interp,tracking]",
+    "accelerate>=1.10",
+    "datasets>=4",
+    "peft>=0.17",
+    "trl>=0.24",
+]
+# Training sets from product traces: the Phoenix source needs httpx, review needs rich.
+data = [
+    "httpx>=0.28",
+    "pyyaml>=6",
+    "rich>=14",
+]
 
 [project.scripts]
 loupe = "loupe.cli:main"
@@ -88,9 +103,10 @@ type = "layers"
 layers = [
     "loupe.cli",
     "loupe.server",
+    "loupe.train",
     "loupe.stores | loupe.tracking | loupe.analysis | loupe.inspect_ext",
     "loupe.interventions",
     "loupe.vectors",
-    "loupe.models",
+    "loupe.models | loupe.data",
     "loupe.core",
 ]

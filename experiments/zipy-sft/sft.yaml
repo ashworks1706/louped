@@ -1,0 +1,21 @@
+# loupe train sft experiments/zipy-sft/sft.yaml
+# Relative paths are under LOUPE_HOME. dataset is what `loupe data curate --name zipy-sft` writes.
+name: zipy-sft
+base_model: unsloth/Qwen3-4B
+dataset: data/zipy-sft/sft.jsonl
+output_dir: checkpoints/zipy-sft
+max_seq_length: 8192
+load_in_4bit: true
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.0
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+train:
+  epochs: 2
+  per_device_batch_size: 1
+  gradient_accumulation: 8
+  learning_rate: 2.0e-4
+  warmup_ratio: 0.03
+  logging_steps: 5
+  seed: 3407

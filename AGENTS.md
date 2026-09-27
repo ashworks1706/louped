@@ -48,6 +48,8 @@ src/loupe/       the Python package (distribution name: loupelab)
   interventions/ Steer and Ablate specs, compiled to per-layer edits; batched generation
   analysis/      activations, logit lens, patching; results as UI views (heatmap, line, table)
   inspect_ext/   the loupe/ Inspect model provider and shared scorers
+  data/          training sets from product traces: export, redact, verify, review, curate
+  train/         post-training recipes (sft) on TRL and PEFT, logged to MLflow
   tracking/      start an MLflow run the UI can read
   stores/        read-only views over Inspect logs, MLflow, views/, vectors and experiments/
   server/        FastAPI over the stores, plus the Playground
@@ -66,12 +68,17 @@ contract is in `pyproject.toml`. New layers are added there in the position ARCH
 ```
 cli
 server
+train
 stores | tracking | analysis | inspect_ext
 interventions
 vectors
-models
+models | data
 core
 ```
+
+Everything runs locally with no API keys: models come from the Hugging Face Hub or a path, the
+stores are files under LOUPE_HOME, and no step calls a hosted model. Keep it that way; a model
+judge, if one is ever needed, is a local model through the loupe/ provider or vLLM.
 
 nnsight traces the source of the block it runs: keep trace bodies in files, use explicit loops
 (not comprehensions) inside them, and touch modules in execution order.

@@ -44,8 +44,12 @@ with its UI view.
 
 ## v0.5 Training
 
-- [ ] SFT, DPO, GRPO recipes on TRL and PEFT; pyreft; scorer-to-reward bridge
-- [ ] Migrate post-training and curation from zipy and SparkyAI, then remove them there
+- [x] `loupe data`: export (zipy traces, Phoenix spans), redact, verify, review ledger, curate
+- [x] `loupe train sft`: LoRA SFT on TRL and PEFT (any device) or Unsloth QLoRA with GGUF export
+      (CUDA); loss on the reply only; MLflow training runs; merged model loadable as `loupe/<name>`
+- [x] Migrated post-training and curation from zipy and SparkyAI and removed them there; their
+      product regression evals stay in their repos
+- [ ] DPO and GRPO recipes; pyreft; scorer-to-reward bridge
 - [ ] Acceptance: GRPO on GSM8K on a small Qwen shows the known gain
 
 ## v0.6 Agentic and coding
