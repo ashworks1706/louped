@@ -1,15 +1,17 @@
 """An Inspect ModelAPI over an nnsight model, with interventions given as model args.
 
-Weights are loaded once per process and model id; each provider instance only holds its compiled
-plan, so a base and an ablated eval in one process share the model. Generation is serialised with
-a lock because one nnsight model runs one trace at a time. Given tools, the prompt carries their
-schemas through the chat template and tool calls are parsed back with Inspect's own Hugging Face
-handler, chosen by the loaded model's family, so agent tasks run under interventions too.
+Weights are loaded once per process and model id (and adapter bank); each provider instance only
+holds its compiled plan and which of the bank's adapters are live, so a base and an ablated eval
+in one process share the model. Generation is serialised with a lock because one nnsight model
+runs one trace at a time. Given tools, the prompt carries their schemas through the chat template
+and tool calls are parsed back with Inspect's own Hugging Face handler, chosen by the loaded
+model's family, so agent tasks run under interventions too.
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
 import threading
 from typing import Any
 
@@ -30,19 +32,30 @@ from nnsight import LanguageModel
 from loupe.core import saved_model
 from loupe.interventions import compile, generate, parse
 from loupe.models import load
+from loupe.models.adapters import activate
 
 _MODELS: dict[str, LanguageModel] = {}
 _LOCK = threading.Lock()
 
 
-def shared_model(name: str) -> LanguageModel:
-    """The model the provider serves under this name, loaded once per process."""
+def shared_model(
+    name: str, bank: list[str] | None = None, merges: list[dict[str, Any]] | None = None
+) -> LanguageModel:
+    """The model the provider serves under this name (with this adapter bank), loaded once per
+    process."""
     local = saved_model(name)
     key = str(local) if local else name  # a saved model's name is only unique per home
+    key += json.dumps([bank or [], merges or []], sort_keys=True)
     with _LOCK:
         if key not in _MODELS:
-            _MODELS[key] = load(name)
+            _MODELS[key] = load(name, bank=bank, merges=merges)
         return _MODELS[key]
+
+
+def release() -> None:
+    """Drop every loaded model, for a grid that walks through more models than fit at once."""
+    with _LOCK:
+        _MODELS.clear()
 
 
 class LoupeAPI(ModelAPI):
@@ -53,11 +66,17 @@ class LoupeAPI(ModelAPI):
         api_key: str | None = None,
         config: GenerateConfig | None = None,
         interventions: Any = None,
+        bank: list[str] | None = None,
+        adapters: list[str] | None = None,
+        merges: list[dict[str, Any]] | None = None,
         **model_args: Any,
     ) -> None:
         super().__init__(model_name, base_url, api_key, [], config or GenerateConfig())
-        self.lm = shared_model(model_name)
+        if adapters and not bank:
+            bank = sorted(set(adapters))
+        self.lm = shared_model(model_name, bank, merges)
         self.plan = compile(self.lm, parse(interventions)) if interventions else None
+        self.adapters = list(adapters or []) if bank else None
 
     def max_connections(self) -> int:
         return 1
@@ -77,6 +96,8 @@ class LoupeAPI(ModelAPI):
 
         def run() -> str:
             with _LOCK:
+                if self.adapters is not None:
+                    activate(self.lm._model, self.adapters)
                 return generate(self.lm, [prompt], self.plan, max_new)[0]
 
         text = await asyncio.to_thread(run)

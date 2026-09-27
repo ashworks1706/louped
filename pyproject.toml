@@ -118,7 +118,7 @@ type = "layers"
 layers = [
     "loupe.cli",
     "loupe.server",
-    "loupe.train | loupe.sweep",
+    "loupe.train | loupe.sweep | loupe.grid",
     "loupe.stores | loupe.tracking | loupe.analysis | loupe.inspect_ext",
     "loupe.interventions",
     "loupe.vectors",

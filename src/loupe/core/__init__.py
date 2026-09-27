@@ -4,6 +4,7 @@ from loupe.core.direction import Direction
 from loupe.core.fields import named_fields
 from loupe.core.meta import RunMeta, capture
 from loupe.core.paths import (
+    adapters_dir,
     artifacts_dir,
     experiments_dir,
     graphs_dir,
@@ -17,6 +18,7 @@ from loupe.core.paths import (
 __all__ = [
     "Direction",
     "RunMeta",
+    "adapters_dir",
     "artifacts_dir",
     "capture",
     "experiments_dir",

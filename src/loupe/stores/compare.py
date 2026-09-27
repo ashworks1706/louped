@@ -16,7 +16,7 @@ from loupe.stores.types import Comparison, PairedScore
 RESAMPLES = 2000
 
 
-def _interval(diffs: list[float], seed: int = 0) -> tuple[float, float]:
+def interval(diffs: list[float], seed: int = 0) -> tuple[float, float]:
     """The 95% percentile bootstrap interval of the mean difference."""
     rng = random.Random(seed)
     n = len(diffs)
@@ -45,7 +45,7 @@ def _compare(a: str, b: str, _mtime_a: float | None, _mtime_b: float | None) -> 
         if not pairs:
             continue
         diffs = [y - x for x, y in pairs]
-        low, high = _interval(diffs)
+        low, high = interval(diffs)
         n = len(pairs)
         scores.append(
             PairedScore(

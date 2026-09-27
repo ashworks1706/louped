@@ -8,7 +8,11 @@ are there. Relative paths in the config are under LOUPE_HOME, so a config works 
 The run is an MLflow run of kind training: loss and rewards by step show on its Overview, the
 config in its Config tab. With `train.save_steps`, adapters are kept at checkpoint-<step> for
 analyses across training. With `export.merge_as`, the merged model is saved under <home>/models so
-the loupe/ Inspect provider and the Playground can load it by name.
+the loupe/ Inspect provider and the Playground can load it by name; with `export.adapter_as`, the
+adapter is kept under <home>/adapters for a bank. With `soft_prompt`, a learned prompt of that many
+virtual tokens (PEFT prompt tuning) is trained instead of LoRA: the matched-budget baseline an
+adapter or a steering vector has to beat. Merged, it becomes new
+tokens the chat template opens with.
 """
 
 from __future__ import annotations
@@ -57,6 +61,8 @@ class Schedule(_Strict):
 class Export(_Strict):
     #: Save the merged model as <home>/models/<merge_as>.
     merge_as: str | None = None
+    #: Keep the adapter as <home>/adapters/<adapter_as>, for loading into a bank by name.
+    adapter_as: str | None = None
     #: llama.cpp quantisation for a GGUF file; unsloth backend only.
     gguf_quant: str | None = None
 
@@ -73,6 +79,8 @@ class TrainConfig(_Strict):
     load_in_4bit: bool = True
     backend: Literal["auto", "unsloth", "trl"] = "auto"
     lora: Lora = Lora()
+    #: Train this many virtual tokens (prompt tuning) instead of LoRA; trl backend only.
+    soft_prompt: int | None = None
     train: Schedule = Schedule()
     export: Export = Export()
 
@@ -122,6 +130,8 @@ def model_path(name: str) -> str:
 
 def _load(cfg: TrainConfig, kind: str):
     if kind == "unsloth":
+        if cfg.soft_prompt:
+            raise TrainError("soft_prompt needs the trl backend")
         from unsloth import FastLanguageModel  # pyright: ignore[reportMissingImports]
 
         model, tok = FastLanguageModel.from_pretrained(
@@ -140,7 +150,7 @@ def _load(cfg: TrainConfig, kind: str):
         return model, tok, None
 
     import torch
-    from peft import LoraConfig
+    from peft import LoraConfig, PromptTuningConfig
     from transformers import AutoModelForCausalLM, BitsAndBytesConfig
 
     path = model_path(cfg.base_model)
@@ -149,6 +159,9 @@ def _load(cfg: TrainConfig, kind: str):
         quant = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.bfloat16)
     model = AutoModelForCausalLM.from_pretrained(path, quantization_config=quant, dtype="auto")
     tok = tokenizer(path)
+    if cfg.soft_prompt:
+        return model, tok, PromptTuningConfig(num_virtual_tokens=cfg.soft_prompt,
+                                              task_type="CAUSAL_LM")  # fmt: skip
     peft = LoraConfig(
         r=cfg.lora.r,
         lora_alpha=cfg.lora.alpha,
@@ -227,7 +240,7 @@ def fit(
         tuned: Any = trainer.model
         tuned.save_pretrained(str(adapter))
         tok.save_pretrained(str(adapter))
-        _export(cfg, kind, tuned, tok)
+        _export(cfg, kind, tuned, tok, adapter)
         if after is not None:
             after(cfg)
         import mlflow
@@ -239,17 +252,38 @@ def fit(
     return adapter
 
 
-def _export(cfg: TrainConfig, kind: str, model, tok) -> None:
+def _export(cfg: TrainConfig, kind: str, model, tok, adapter: Path) -> None:
     if cfg.export.gguf_quant:
         if kind != "unsloth":
             raise TrainError("gguf export needs the unsloth backend (a CUDA GPU and unsloth)")
         model.save_pretrained_gguf(str(cfg.output_dir / "gguf"), tok,
                                    quantization_method=cfg.export.gguf_quant)  # fmt: skip
+    if cfg.export.adapter_as:
+        from loupe.core import adapters_dir
+
+        shutil.copytree(adapter, adapters_dir() / cfg.export.adapter_as, dirs_exist_ok=True)
     if cfg.export.merge_as:
         target = home() / "models" / cfg.export.merge_as
-        merged = model.merge_and_unload()
+        merged = _bake_prompt(model, tok) if cfg.soft_prompt else model.merge_and_unload()
         merged.save_pretrained(str(target))
         tok.save_pretrained(str(target))
+
+
+def _bake_prompt(model, tok):
+    """The base model with the learned virtual tokens as new vocabulary rows, and the tokenizer's
+    chat template opening with them, so every rendered prompt carries the soft prompt."""
+    import torch
+
+    soft = model.get_prompt_embedding_to_save(adapter_name="default")
+    names = [f"<soft{i}>" for i in range(len(soft))]
+    tok.add_special_tokens({"additional_special_tokens": names})
+    base = model.base_model
+    base.resize_token_embeddings(len(tok))
+    ids = tok.convert_tokens_to_ids(names)
+    with torch.no_grad():
+        base.get_input_embeddings().weight[ids] = soft.to(base.dtype)
+    tok.chat_template = "".join(names) + (tok.chat_template or "")
+    return base
 
 
 def _flat(d: dict, prefix: str = "") -> dict[str, object]:

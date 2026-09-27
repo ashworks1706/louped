@@ -32,9 +32,13 @@ def load(
     dtype: torch.dtype | str = "auto",
     device: str | None = None,
     adapter: str | Path | None = None,
+    bank: list[str] | None = None,
+    merges: list[dict[str, Any]] | None = None,
 ) -> LanguageModel:
     """A model saved under <home>/models by name, a Hub id or path, or a built HF model. With an
-    adapter (a LoRA directory, such as a training checkpoint), merged into the named model.
+    adapter (a LoRA directory, such as a training checkpoint), merged into the named model. With a
+    bank, those named adapters loaded unmerged and inactive (loupe.models.adapters.activate), plus
+    each of merges ({"names": [...], "method": "ties", ...}) added as a merged adapter.
 
     Padding is set to the left so the last position of every row is its last real token, which is
     what generation needs and what last-token analyses read.
@@ -49,9 +53,14 @@ def load(
                 # tokenizer from model_type and drop a custom pre-tokenizer or decoder.
                 kwargs["tokenizer"] = PreTrainedTokenizerFast.from_pretrained(model)
         device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        if adapter is not None:
+        if adapter is not None or bank:
             tok = kwargs.get("tokenizer") or AutoTokenizer.from_pretrained(model)
-            lm = LanguageModel(_merged(model, adapter, dtype, device), tokenizer=tok)
+            built = (
+                _merged(model, adapter, dtype, device)
+                if adapter
+                else _banked(model, bank or [], merges or [], dtype, device)
+            )
+            lm = LanguageModel(built, tokenizer=tok)
         else:
             lm = LanguageModel(model, device_map=device, dtype=dtype, dispatch=True, **kwargs)
     else:
@@ -71,6 +80,25 @@ def _merged(model: str, adapter: str | Path, dtype: torch.dtype | str, device: s
 
     base = AutoModelForCausalLM.from_pretrained(model, dtype=dtype, device_map=device)
     return PeftModel.from_pretrained(base, str(adapter)).merge_and_unload()
+
+
+def _banked(
+    model: str,
+    names: list[str],
+    merges: list[dict[str, Any]],
+    dtype: torch.dtype | str,
+    device: str,
+) -> Any:
+    from transformers import AutoModelForCausalLM
+
+    from loupe.models.adapters import activate, bank, merge
+
+    base = AutoModelForCausalLM.from_pretrained(model, dtype=dtype, device_map=device)
+    peft = bank(base, names)
+    for spec in merges:
+        merge(peft, **spec)
+    activate(peft, [])
+    return peft.base_model.model  # the HF model, its LoRA layers injected in place
 
 
 def _first(obj: Any, paths: tuple[str, ...]) -> Any:

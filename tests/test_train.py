@@ -33,7 +33,7 @@ def config(tmp_path: Path, **over) -> Path:
             "logging_steps": 2,
             "seed": 0,
         },
-        "export": {"merge_as": "tiny-tuned"},
+        "export": {"merge_as": "tiny-tuned", "adapter_as": "t-sft"},
         **over,
     }
     path = tmp_path / "sft.yaml"
@@ -71,12 +71,32 @@ def test_sft_trains_logs_and_exports(tmp_path: Path) -> None:
 
     assert (adapter / "adapter_config.json").exists()
     assert (home() / "models" / "tiny-tuned" / "config.json").exists()
+    assert (home() / "adapters" / "t-sft" / "adapter_config.json").exists()
     (run,) = [r for r in stores.list_runs() if r.kind == "training"]
     detail = stores.get_run(run.id)
     assert (run.experiment, run.model) == ("t-sft", "tiny-base")
     loss = [p.value for p in detail.history["loss"]]
     assert len(loss) >= 3 and loss[-1] < loss[0]
     assert detail.tags["loupe.model"] == "tiny-tuned"
+
+
+def test_soft_prompt_trains_and_merges_into_new_tokens(tmp_path: Path) -> None:
+    from loupe.models import chat, load
+
+    save_base()
+    rows = [Example(id=str(i), messages=[{"role": "user", "content": "write a cake"}],
+                    reply="sure , the cake is here .") for i in range(8)]  # fmt: skip
+    write_jsonl(home() / "data/t-sft/sft.jsonl", rows)
+    train(load_config(config(tmp_path, soft_prompt=4, export={"merge_as": "tiny-soft"})))
+
+    soft, base = load("tiny-soft"), load("tiny-base")
+    prompt = chat(soft, "write a cake")
+    assert prompt.startswith("<soft0><soft1><soft2><soft3>")
+    ids = soft.tokenizer(prompt, return_tensors="pt")["input_ids"]
+    assert ids.shape[1] == base.tokenizer(chat(base, "write a cake"), return_tensors="pt")[
+        "input_ids"].shape[1] + 4  # fmt: skip
+    emb = soft._model.get_input_embeddings().weight  # pyright: ignore[reportCallIssue]
+    assert emb.shape[0] == len(base.tokenizer) + 4 and emb[-4:].abs().sum() > 0
 
 
 def save_base(name: str = "tiny-base") -> None:
