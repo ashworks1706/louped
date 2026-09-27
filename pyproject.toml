@@ -58,6 +58,12 @@ data = [
     "pyyaml>=6",
     "rich>=14",
 ]
+# Retrieval: BM25 and dense search, a cross-encoder reranker, NLI for faithfulness.
+rag = [
+    "loupelab[interp]",
+    "bm25s>=0.2",
+    "sentence-transformers>=5",
+]
 # Pretrained sparse autoencoders (Gemma Scope and the rest of SAELens's registry) for
 # loupe.analysis.sae. Heavy: SAELens pulls in TransformerLens, wandb and plotly, so it is its own
 # extra and nothing else imports it.
@@ -122,6 +128,6 @@ layers = [
     "loupe.stores | loupe.tracking | loupe.analysis | loupe.inspect_ext",
     "loupe.interventions",
     "loupe.vectors",
-    "loupe.models | loupe.data",
+    "loupe.models | loupe.data | loupe.retrieval",
     "loupe.core",
 ]

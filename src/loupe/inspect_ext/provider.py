@@ -10,6 +10,10 @@ model's family, so agent tasks run under interventions too.
 Adapters: bank loads named adapters beside each other, adapters makes a set of them live, phases
 changes the live set along one generation. diffusion serves a masked diffusion model through
 loupe.models.diffusion, with the sampler's arguments ({"length": 64, "steps": 64}).
+
+inject ({"layer": 6, "alpha": 1.0}) takes passages a solver sent as an INJECT system message and
+adds their state at that layer instead of rendering them. A conversation that ends on an assistant
+message is continued from it (a prefill).
 """
 
 from __future__ import annotations
@@ -33,7 +37,8 @@ from inspect_ai.tool import ToolChoice, ToolInfo
 from inspect_ai.util._json import JSON_SCHEMA_EXTENDED_FIELDS, json_schema_dump
 
 from loupe.core import saved_model
-from loupe.interventions import compile, generate, parse
+from loupe.interventions import INJECT, Inject, compile, generate, parse
+from loupe.interventions.specs import merge
 from loupe.models import load
 from loupe.models.adapters import activate, phase_hook
 from loupe.models.diffusion import Diffusion, load_diffusion
@@ -80,6 +85,7 @@ class LoupeAPI(ModelAPI):
         merges: list[dict[str, Any]] | None = None,
         phases: list[dict[str, Any]] | None = None,
         diffusion: dict[str, Any] | None = None,
+        inject: dict[str, Any] | None = None,
         **model_args: Any,
     ) -> None:
         super().__init__(model_name, base_url, api_key, [], config or GenerateConfig())
@@ -92,6 +98,7 @@ class LoupeAPI(ModelAPI):
         self.plan = compile(self.lm, parse(interventions)) if interventions else None
         self.adapters = list(adapters or []) if bank else None
         self.phases = phases
+        self.inject = inject
         self.tokenizer = self.lm.tokenizer
 
     def max_connections(self) -> int:
@@ -107,6 +114,11 @@ class LoupeAPI(ModelAPI):
         tool_choice: ToolChoice,
         config: GenerateConfig,
     ) -> ModelOutput:
+        passages = [p for m in input if m.role == "system" and m.text.startswith(INJECT)
+                    for p in json.loads(m.text.removeprefix(INJECT))]  # fmt: skip
+        input = [m for m in input if not (m.role == "system" and m.text.startswith(INJECT))]
+        if passages and not self.inject:
+            raise ValueError("passages to inject need the inject model arg: {'layer': ...}")
         prompt = self.render(input, tools)
         max_new = config.max_tokens or 256
 
@@ -118,7 +130,11 @@ class LoupeAPI(ModelAPI):
                 hook = phase_hook(model, self.phases) if self.phases else None
                 if isinstance(self.lm, Diffusion):
                     return denoise_all(self.lm, [prompt], hook, **(self.sampler or {}))[0]
-                return generate(self.lm, [prompt], self.plan, max_new, on_step=hook)[0]
+                plan = self.plan
+                if passages and self.inject:
+                    injected = compile(self.lm, [Inject(passages=passages, **self.inject)])
+                    plan = merge(plan or {}, injected)
+                return generate(self.lm, [prompt], plan, max_new, on_step=hook)[0]
 
         text = await asyncio.to_thread(run)
         if not tools:
@@ -143,9 +159,11 @@ class LoupeAPI(ModelAPI):
         schemas: list[Any] = [
             json_schema_dump(t, exclude=JSON_SCHEMA_EXTENDED_FIELDS) for t in tools
         ]
+        prefill = bool(input) and input[-1].role == "assistant"
         text = self.tokenizer.apply_chat_template(
             [hf_message(m) for m in input], tools=schemas or None, tokenize=False,
-            add_generation_prompt=True, enable_thinking=False,
+            add_generation_prompt=not prefill, continue_final_message=prefill,
+            enable_thinking=False,
         )  # fmt: skip
         return str(text)
 

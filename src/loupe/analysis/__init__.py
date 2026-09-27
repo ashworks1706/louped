@@ -8,6 +8,7 @@ from loupe.analysis.patching import attribution_patch, patch_residual
 from loupe.analysis.probes import linear_probes
 from loupe.analysis.project import along, projection, top_examples
 from loupe.analysis.sae import feature_examples, sae_features, save_feature
+from loupe.analysis.splice import splice_divergence
 from loupe.analysis.views import heatmap, line, table, token_row, tokens
 
 __all__ = [
@@ -29,6 +30,7 @@ __all__ = [
     "resid",
     "sae_features",
     "save_feature",
+    "splice_divergence",
     "table",
     "token_row",
     "token_strings",

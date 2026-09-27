@@ -1,4 +1,5 @@
-"""Steer adds a direction to the residual stream; Ablate removes a direction's component from it.
+"""Steer adds a direction to the residual stream; Ablate removes a direction's component from it;
+Inject adds the state of retrieved passages, so text reaches the model without entering its prompt.
 
 Both act on decoder block outputs, which is the residual stream after each layer. Edits are done
 in float32 and cast back, so a bf16 model is not steered by a rounded vector.
@@ -38,11 +39,24 @@ class Ablate(BaseModel):
     layers: list[int] | None = None
 
 
-Intervention = Annotated[Steer | Ablate, Field(discriminator="kind")]
+class Inject(BaseModel):
+    """Add alpha times the mean residual of the passages at one layer, at every position."""
+
+    kind: Literal["inject"] = "inject"
+    passages: list[str]
+    layer: int
+    alpha: float = 1.0
+
+
+#: A system message starting with this carries passages to inject (JSON list) rather than text.
+INJECT = "loupe:inject "
+
+Spec = Steer | Ablate | Inject
+Intervention = Annotated[Spec, Field(discriminator="kind")]
 _LIST = TypeAdapter(list[Intervention])
 
 
-def parse(value: Any) -> list[Steer | Ablate]:
+def parse(value: Any) -> list[Spec]:
     """Specs from JSON text, a dict, or a list of dicts; the shape model args and the API send."""
     if isinstance(value, str):
         return _LIST.validate_json(value if value.lstrip().startswith("[") else f"[{value}]")
@@ -88,11 +102,25 @@ def merge(*plans: Plan) -> Plan:
     return dict(out)
 
 
-def compile(lm: LanguageModel, specs: Sequence[Steer | Ablate]) -> Plan:
+def passage_state(lm: LanguageModel, passages: Sequence[str], layer: int) -> torch.Tensor:
+    """The residual after a layer, averaged over each passage's tokens, then over passages."""
+    means = []
+    for text in passages:
+        with torch.no_grad(), lm.trace(text):
+            h = blocks(lm)[layer].output.save()
+        means.append(h[0].float().mean(0))
+    return torch.stack(means).mean(0)
+
+
+def compile(lm: LanguageModel, specs: Sequence[Spec]) -> Plan:
     """Load the vectors and turn specs into per-layer edits. Call outside the trace."""
     total = n_layers(lm)
     plans: list[Plan] = []
     for spec in specs:
+        if isinstance(spec, Inject):
+            state = passage_state(lm, spec.passages, spec.layer)
+            plans.append(steer_plan(state, spec.layer, spec.alpha))
+            continue
         vector, meta = load_vector(spec.vector)
         if isinstance(spec, Steer):
             layer = meta.layer if spec.layer is None else spec.layer
