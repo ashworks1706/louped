@@ -1,5 +1,5 @@
 # loupe serve with the UI built in. GPU extras are not included; this image is for reading results.
-FROM node:22-slim AS web
+FROM node:26-slim AS web
 WORKDIR /web
 RUN corepack enable
 COPY apps/web/package.json apps/web/pnpm-lock.yaml apps/web/pnpm-workspace.yaml ./
