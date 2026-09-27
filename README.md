@@ -27,10 +27,11 @@ Everything runs on your machine with no API keys: open-weight models from the Hu
 a local path, results in files under `LOUPE_HOME`, and no step that calls a hosted model. A GPU
 makes the big models practical; every pipeline also runs on CPU with a tiny model for checking.
 
-> Status: v0.6. Interventions (steer, ablate) with lens, attention, projection, patching and
-> probes; Inspect evals under interventions with paired statistics and steering sweeps; SFT, DPO
-> and GRPO on TRL with one check as reward and scorer, multi-turn tool environments, and interp
-> across checkpoints; tool agents in Docker. See the [roadmap](docs/ROADMAP.md).
+> Status: v0.7. Interventions (steer, ablate, inject) with lens, attention, projection, patching
+> and probes; Inspect evals under interventions with paired statistics, steering sweeps and
+> condition grids over seeds; adapter banks with phase routing; masked diffusion models; RAG and
+> retrieval inside the model; SFT, soft prompts, DPO and GRPO on TRL, teacher distillation, and
+> interp across checkpoints; tool agents in Docker. See the [roadmap](docs/ROADMAP.md).
 
 ## Quick start
 
@@ -49,6 +50,7 @@ just web           # UI dev server on :3000, against the API on :8000
 pip install 'loupelab[server]'           # the UI over your runs
 pip install 'loupelab[server,interp]'    # plus steering, ablation and the Playground
 pip install 'loupelab[train]'            # plus loupe data and loupe train
+pip install 'loupelab[rag]'              # plus retrieval and the classifier recipe
 loupe serve --model Qwen/Qwen2.5-0.5B-Instruct
 ```
 

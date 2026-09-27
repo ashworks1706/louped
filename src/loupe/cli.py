@@ -54,6 +54,16 @@ class Sweep:
 
 
 @dataclass(frozen=True)
+class Grid:
+    """Run tasks under conditions over seeds, each condition against a baseline with paired
+    intervals; one figure. Needs the evals and tracking extras, and interp for loupe/ models."""
+
+    config: tyro.conf.Positional[Path]
+    """YAML with model, tasks (name: file.py@task), conditions (name: model args), metric, and
+    optionally seeds, baseline, held and experiment."""
+
+
+@dataclass(frozen=True)
 class Version:
     """Print the installed version."""
 
@@ -63,6 +73,7 @@ Command = (
     | Annotated[Data, tyro.conf.subcommand("data")]
     | Annotated[TrainCommand, tyro.conf.subcommand("train")]
     | Annotated[Sweep, tyro.conf.subcommand("sweep")]
+    | Annotated[Grid, tyro.conf.subcommand("grid")]
     | Annotated[Version, tyro.conf.subcommand("version")]
 )
 
@@ -103,5 +114,16 @@ def main() -> None:
 
             print(sweep(cmd.task, cmd.model, cmd.vector, cmd.layers, cmd.alphas, cmd.metric,
                         cmd.experiment))  # fmt: skip
+        case Grid() as cmd:
+            import inspect
+
+            import yaml
+
+            from loupe.grid import grid
+
+            spec = yaml.safe_load(cmd.config.read_text(encoding="utf-8"))
+            if unknown := set(spec) - set(inspect.signature(grid).parameters):
+                raise SystemExit(f"{cmd.config}: unknown keys {sorted(unknown)}")
+            print(grid(**spec))
         case Version():
             print(__version__)

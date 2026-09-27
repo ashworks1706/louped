@@ -108,24 +108,28 @@ with its UI view.
       every eval run, opened at the selected sample
 - [ ] Acceptance: an inspect_evals agentic task end to end in Docker
 
-## v0.7 Project tracks
+## v0.7 Research domains
 
-The research questions of zipy, SparkyAI, piramid and Bijou, run here. Product regression evals
-and performance numbers (latency, throughput) stay in each product's repo.
+The research questions of the ARC thesis, zipy, SparkyAI, piramid and Bijou, as reusable domains
+(ARCHITECTURE.md). Product regression evals and performance numbers stay in each product's repo.
 
-- [ ] Black box: an OpenAI-compatible endpoint (zipy, SparkyAI, piramid, Bijou's agent) as an
-      Inspect model (`openai-api/<name>/<model>` with its base URL), so paired stats, Compare and
-      the transcript views work on products; one experiment per product
-- [ ] RAG: retrieval tasks over a local corpus and scorers for recall@k, groundedness and
-      citation, as plain checks; used for SparkyAI and piramid
-- [ ] Retrieval as an intervention: retrieved passages' hidden states added at chosen layers
-      during generation, against retrieval-before-prefill at equal token budget (piramid v0.6)
-- [ ] Adapter bank: named PEFT LoRAs equipped per request and combined; the subset-by-eval matrix
-      against a tuned prompt, with damage to the other skills' evals (Bijou research 1 and 2)
-- [ ] Masked diffusion backend: a diffusion LM from the Hub (LLaDA, Dream) behind the same model
-      and intervention interfaces, with the denoising step as an axis; adapters switched by
-      phase, static against early/late and the reversed split (Bijou research 3)
-- [ ] Acceptance: one result per project read entirely in the UI
+- [x] Grid: conditions by tasks by seeds, each against a baseline with a paired bootstrap interval
+      and a moved/held verdict (`loupe grid`); a condition may be another Inspect model
+- [x] Mechanisms: `experiments/sycophancy-pushback` (caving direction, patching, mitigation
+      grid on Sharma et al.'s are_you_sure); run offline with `--tiny` only
+- [x] Conditioning: soft prompts (PEFT prompt tuning) trained by sft and merged as new tokens
+- [x] Adapters: a bank of named LoRAs live in any subset through the provider, PEFT merges,
+      per-site overlap; sft keeps an adapter by name for the bank
+- [x] Decoding: a per-step hook in both samplers; adapters switched by phase; masked diffusion
+      models (LLaDA, Dream, any masked LM) sampled, trained on their own objective and served
+- [x] Retrieval: BM25 and dense search fused by rank, reranking, a RAG task scored on recall,
+      EM, F1 and NLI faithfulness
+- [x] Retrieval inside the model: Inject at a layer through the provider, retrieval during
+      decoding, spliced KV divergence with and without the rotary phase error
+- [x] Small models and data: teacher collection, hashed splits, n-gram contamination, a
+      classifier recipe
+- [ ] Black box: one experiment per product through its OpenAI-compatible endpoint
+- [ ] Acceptance: one result per project read entirely in the UI, on a real model
 
 ## v1.0 Open source
 

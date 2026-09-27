@@ -15,8 +15,10 @@ what order. Do not contradict them; propose an edit to the doc instead.
 - **Prebuilt first.** Before writing code, name the existing tool that does it. Own code is only
   the glue between tools. A new dependency must be free and permissively licensed (MIT, Apache,
   BSD, OFL) and justified in the PR.
-- **No bloat.** No module, option or abstraction without a caller today. Python stays under ~6k
+- **No bloat.** No module, option or abstraction without a caller today. Python stays under ~7k
   lines, the UI under ~6k lines of our own TSX.
+- **Domains, not projects.** A capability serves a research domain (docs/ARCHITECTURE.md lists
+  them); a product's question is an experiment on it. Never copy a product's research code here.
 - **Reproducible numbers.** Anything that writes a result writes `loupe.core.RunMeta` next to it.
 - **A UI page is done only when it renders a real experiment's data**, not only fixtures.
 
@@ -45,17 +47,22 @@ A change is not done until `just check` passes.
 ```
 src/loupe/       the Python package (distribution name: loupelab)
   core/          run metadata, paths, the direction header
-  models/        load a model into nnsight; a tiny offline Qwen2 for tests
+  models/        load a model into nnsight; adapter banks and phase schedules; masked diffusion
+                 models and their sampler; tiny offline models for tests
   vectors/       directions as safetensors under <home>/vectors
-  interventions/ Steer and Ablate specs, compiled to per-layer edits; batched generation
+  interventions/ Steer, Ablate and Inject specs, compiled to per-layer edits; batched
+                 generation with a per-token hook
   analysis/      activations, logit lens, exact and attribution patching, probes, attention,
                  projections and top examples, SAE features, checkpoints and model diffs;
                  results as UI views (heatmap, line, table, tokens)
-  inspect_ext/   the loupe/ Inspect model provider and shared scorers
-  data/          training sets from product traces: export, redact, verify, review, curate
-  train/         post-training recipes (sft, dpo, grpo) on TRL and PEFT, logged to MLflow;
-                 plain checks as GRPO rewards
+  inspect_ext/   the loupe/ Inspect model provider, shared scorers, the pushback and RAG tasks
+  data/          training sets from product traces or a teacher: export, collect, redact,
+                 verify, review, curate; hashed splits and n-gram contamination checks
+  retrieval/     chunking, BM25 and dense search fused by rank, reranking, retrieval metrics
+  train/         post-training recipes (sft incl. soft prompts and masked diffusion, dpo, grpo,
+                 classify) on TRL, PEFT and scikit-learn, logged to MLflow
   sweep.py       an Inspect task under Steer at every layer and strength, as one figure
+  grid.py        tasks by conditions by seeds, against a baseline with paired intervals
   tracking/      start an MLflow run the UI can read
   stores/        read-only views over Inspect logs, MLflow, views/, vectors and experiments/;
                  paired comparison of two eval runs
@@ -76,11 +83,11 @@ contract is in `pyproject.toml`. New layers are added there in the position ARCH
 ```
 cli
 server
-train | sweep
+train | sweep | grid
 stores | tracking | analysis | inspect_ext
 interventions
 vectors
-models | data
+models | data | retrieval
 core
 ```
 

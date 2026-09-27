@@ -9,10 +9,12 @@ format.
 
 What loupe owns, because no existing tool joins them:
 
-- The `loupe/` Inspect provider: any open-weight model under Steer or Ablate, tool agents
-  included, so an intervention is one eval run.
-- Intervened against base, statistically: paired bootstrap differences and flips, and sweeps of
-  score against KL coherence cost over layer and strength.
+- The `loupe/` Inspect provider: any open-weight model under Steer, Ablate or Inject, with a bank
+  of adapters live in any subset or by generation phase, causal or masked diffusion, tool agents
+  included, so every condition is one eval run.
+- Intervened against base, statistically: paired bootstrap differences and flips, sweeps of
+  score against KL coherence cost over layer and strength, and grids of conditions by tasks by
+  seeds with a moved/held verdict.
 - One check as both the Inspect scorer and the GRPO reward, and interp across the checkpoints of a
   training run (a direction's projection, model diffing).
 - The Playground: base and intervened replies side by side, with the lens, attention and
@@ -42,6 +44,8 @@ What loupe leaves to others, and links to:
 | SFT, DPO, GRPO, LoRA | TRL, PEFT, unsloth |
 | Multi-turn RL environments | TRL environment_factory |
 | Verifiable tasks and answer checks | reasoning-gym, math-verify |
+| Adapter banks, merging, prompt tuning | PEFT |
+| Lexical and dense retrieval, reranking, NLI | bm25s, sentence-transformers |
 | Tracking | MLflow (self-hosted) and Inspect logs |
 | UI | Next.js static export, shadcn/ui, Tailwind, Geist, cmdk, TanStack Query, nuqs, Recharts |
 | API | FastAPI |
@@ -64,6 +68,22 @@ ablation" and "LoRA checkpoint" are therefore compared by one eval, one scorer a
 A task's scorer is a plain function wrapped once as an Inspect scorer and once as a reward, so an
 eval becomes an RL environment without a rewrite.
 
+## Research domains
+
+loupe is organised by research domain, not by the project that asks. Each product's research
+question is an experiment in `experiments/` on a domain's capabilities; no product code is copied.
+
+| Domain | Capabilities | Asked by |
+|---|---|---|
+| 0 Mechanisms | directions, patching, lens, probes, SAEs, circuits; the pushback task | ARC thesis (sycophancy) |
+| 1 Evaluation science | `grid`: seeds, paired intervals, moved/held; black-box endpoints; contamination checks | all |
+| 2 Conditioning | prompt text, steering vectors, soft prompts at matched budget | zipy, SparkyAI |
+| 3 Adapters | a bank of LoRA adapters live in any subset, merging (linear, TIES, DARE), overlap | Bijou |
+| 4 Decoding and model families | per-step hooks; phase-routed adapters; masked diffusion (LLaDA, Dream) | Bijou |
+| 5 Retrieval and grounding | BM25, dense, fusion, reranking; recall, nDCG, EM, F1, NLI faithfulness | SparkyAI, piramid |
+| 6 Retrieval inside the model | Inject at a layer; retrieval during decoding; spliced KV divergence | piramid |
+| 7 Small models and data | teacher collection, hashed splits, SFT, a small classifier | Bijou, zipy |
+
 ## Packages and layers
 
 One distribution (`loupelab`), import name `loupe`, one extra per capability so an install carries
@@ -73,14 +93,15 @@ only what it uses. A package imports only packages below it; `import-linter` enf
 experiments                      leaf, nothing imports it
 cli
 server                           FastAPI, read-only over the stores; Playground generation
-train | sweep                    sft, dpo and grpo on TRL/PEFT or Unsloth, logged as MLflow
-                                 training runs; steering sweeps of an Inspect task through loupe/
+train | sweep | grid             sft (LoRA, soft prompt, masked diffusion), dpo, grpo, classify,
+                                 logged as MLflow training runs; steering sweeps; condition grids
 stores | tracking | analysis     views over Inspect logs and MLflow; start an MLflow run;
-  | inspect_ext                  lens, patching, probes, attention, SAE features as UI views;
-                                 loupe/ provider and scorers
-interventions                    Steer and Ablate specs on nnsight, batched generation
+  | inspect_ext                  lens, patching, probes, attention, SAE features, KV splices as UI
+                                 views; loupe/ provider, scorers, pushback and RAG tasks
+interventions                    Steer, Ablate and Inject specs on nnsight, batched generation
 vectors                          directions as safetensors
-models | data                    load a model into nnsight; training sets from product traces
+models | data | retrieval        load a model into nnsight, adapter banks, masked diffusion;
+                                 training sets from traces or a teacher; search and its metrics
 core                             run metadata, paths
 ```
 
@@ -126,7 +147,7 @@ Design rules live in `apps/web/AGENTS.md`.
 
 ## Product repositories
 
-zipy, SparkyAI and piramid keep their own regression evals in their own CI; those test product
+zipy, SparkyAI, piramid and Bijou keep their own regression evals in their own CI; those test product
 behaviour and change with product code. What moves here: post-training and dataset curation (one
 copy instead of two), research experiments, and black-box benchmarking of the products through
 their OpenAI-compatible endpoints. The contract is a data format (Inspect logs or OpenAI-style
