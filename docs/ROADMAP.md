@@ -84,8 +84,13 @@ with its UI view.
 
 ## v0.6 Agentic and coding
 
-- [ ] Tool-call transcript view: calls, arguments, results and errors as their own blocks
-- [ ] Inspect sandboxes and tool agents, verifiers tool environments
+- [x] Tool-call transcript view: calls, arguments, results and errors as their own blocks
+- [x] The loupe/ provider takes tools: schemas through the chat template, calls parsed by
+      Inspect's Hugging Face handler, tokens counted by the model's tokenizer; so agents run under
+      interventions
+- [x] `experiments/agent-sandbox`: bash in a Docker sandbox, verified with the tiny model and
+      scripted calls
+- [ ] verifiers tool environments; GRPO over agent rollouts
 - [ ] Black-box benchmarking of zipy, SparkyAI and piramid through their endpoints
 - [ ] Acceptance: an inspect_evals agentic task end to end in Docker
 

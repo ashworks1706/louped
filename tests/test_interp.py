@@ -1,5 +1,7 @@
 """Interp mechanics on a tiny random model: what is added, removed and patched is exact."""
 
+import json
+
 import pytest
 import torch
 
@@ -371,3 +373,52 @@ def test_steering_sweep_logs_a_grid_whose_zero_cell_costs_nothing(lm) -> None:
     assert cost[0][0] == 0.0 and cost[1][0] == 0.0 and cost[1][1] > 0
     evals = [r for r in stores.list_runs() if r.kind == "eval"]
     assert len(evals) >= 4 and views[3]["links"][0][4].startswith("/run/?id=e-")
+
+
+def test_provider_runs_a_tool_agent_and_the_transcript_keeps_the_calls(lm, monkeypatch) -> None:
+    from inspect_ai import Task, eval
+    from inspect_ai.dataset import Sample
+    from inspect_ai.solver import generate as gen
+    from inspect_ai.solver import use_tools
+    from inspect_ai.tool import tool
+
+    from loupe import stores
+    from loupe.core import home, logs_dir
+    from loupe.inspect_ext import provider
+
+    @tool
+    def add():
+        async def execute(a: int, b: int) -> int:
+            """Add two numbers.
+
+            Args:
+                a: The first.
+                b: The second.
+            """
+            return a + b
+
+        return execute
+
+    saved = home() / "models" / "tiny-agent"
+    lm._model.save_pretrained(saved)
+    lm.tokenizer.save_pretrained(saved)
+    replies = iter(['<tool_call>\n{"name": "add", "arguments": {"a": 2, "b": 3}}\n</tool_call>',
+                    "the answer is 5"])  # fmt: skip
+    prompts: list[str] = []
+
+    def fake(model, batch, plan, max_new):
+        prompts.extend(batch)
+        return [next(replies)]
+
+    monkeypatch.setattr(provider, "generate", fake)
+    task = Task(dataset=[Sample(input="what is 2 + 3 ?", target="5")],
+                solver=[use_tools(add()), gen(tool_calls="loop")])  # fmt: skip
+    [log] = eval(task, model="loupe/tiny-agent", log_dir=str(logs_dir()), display="none")
+    assert log.status == "success" and len(prompts) == 2
+    assert "5" in prompts[1]  # the tool's result went back into the second prompt
+    run = next(r for r in stores.list_runs() if r.kind == "eval")
+    messages = stores.get_sample(run.id, "1").messages
+    call = messages[1].tool_calls[0]
+    assert (call.function, json.loads(call.arguments)) == ("add", {"a": 2, "b": 3})
+    assert (messages[2].role, messages[2].function, messages[2].text) == ("tool", "add", "5")
+    assert messages[2].tool_call_id == call.id and messages[3].text == "the answer is 5"

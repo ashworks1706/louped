@@ -51,14 +51,19 @@ class SampleSummary(BaseModel):
 
 
 class ToolCall(BaseModel):
+    id: str = ""
     function: str
-    arguments: str
+    arguments: str = Field(description="The arguments as indented JSON.")
+    parse_error: str | None = None
 
 
 class Message(BaseModel):
     role: str
     text: str
     tool_calls: list[ToolCall]
+    tool_call_id: str | None = Field(None, description="On a tool result: the call it answers.")
+    function: str | None = None
+    error: str | None = Field(None, description="On a tool result: the tool's error.")
 
 
 class Score(BaseModel):

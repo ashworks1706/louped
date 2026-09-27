@@ -33,8 +33,8 @@ registry (Inspect's registries and Python entry points already exist).
 Policy = model + [interventions] + generation params
 ```
 
-The same Policy is valid in an Inspect eval (through a loupe model provider), a TRL or verifiers
-training run, the UI Playground, and an activation analysis. "Base", "base + steering", "base +
+The same Policy is valid in an Inspect eval (through a loupe model provider, tool agents
+included), a TRL or verifiers training run, the UI Playground, and an activation analysis. "Base", "base + steering", "base +
 ablation" and "LoRA checkpoint" are therefore compared by one eval, one scorer and one UI view.
 A task's scorer is a plain function wrapped once as an Inspect scorer and once as a reward, so an
 eval becomes an RL environment without a rewrite.

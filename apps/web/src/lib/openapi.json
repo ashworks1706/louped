@@ -912,6 +912,41 @@
             },
             "type": "array",
             "title": "Tool Calls"
+          },
+          "tool_call_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Call Id",
+            "description": "On a tool result: the call it answers."
+          },
+          "function": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Function"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error",
+            "description": "On a tool result: the tool's error."
           }
         },
         "type": "object",
@@ -1595,13 +1630,30 @@
       },
       "ToolCall": {
         "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "default": ""
+          },
           "function": {
             "type": "string",
             "title": "Function"
           },
           "arguments": {
             "type": "string",
-            "title": "Arguments"
+            "title": "Arguments",
+            "description": "The arguments as indented JSON."
+          },
+          "parse_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parse Error"
           }
         },
         "type": "object",

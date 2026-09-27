@@ -413,6 +413,18 @@ export interface components {
       text: string;
       /** Tool Calls */
       tool_calls: components["schemas"]["ToolCall"][];
+      /**
+       * Tool Call Id
+       * @description On a tool result: the call it answers.
+       */
+      tool_call_id?: string | null;
+      /** Function */
+      function?: string | null;
+      /**
+       * Error
+       * @description On a tool result: the tool's error.
+       */
+      error?: string | null;
     };
     /** MetricPoint */
     MetricPoint: {
@@ -640,10 +652,20 @@ export interface components {
     };
     /** ToolCall */
     ToolCall: {
+      /**
+       * Id
+       * @default
+       */
+      id: string;
       /** Function */
       function: string;
-      /** Arguments */
+      /**
+       * Arguments
+       * @description The arguments as indented JSON.
+       */
       arguments: string;
+      /** Parse Error */
+      parse_error?: string | null;
     };
     /** ValidationError */
     ValidationError: {

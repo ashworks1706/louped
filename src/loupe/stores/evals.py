@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -147,12 +148,16 @@ def list_samples(run_id: str) -> list[SampleSummary] | None:
 
 
 def _message(m: Any) -> Message:
-    calls = (
-        [ToolCall(function=c.function, arguments=str(c.arguments)) for c in (m.tool_calls or [])]
-        if getattr(m, "tool_calls", None)
-        else []
-    )
-    return Message(role=m.role, text=m.text, tool_calls=calls)
+    calls = [
+        ToolCall(id=c.id, function=c.function, parse_error=c.parse_error,
+                 arguments=json.dumps(c.arguments, indent=2, default=str))
+        for c in getattr(m, "tool_calls", None) or []
+    ]  # fmt: skip
+    error = getattr(m, "error", None)
+    return Message(role=m.role, text=m.text, tool_calls=calls,
+                   tool_call_id=getattr(m, "tool_call_id", None),
+                   function=getattr(m, "function", None),
+                   error=f"{error.type}: {error.message}" if error else None)  # fmt: skip
 
 
 def get_sample(run_id: str, sample_id: str, epoch: int) -> SampleDetail | None:
