@@ -71,7 +71,12 @@ class InspectResponse(BaseModel):
     views: list[View]
 
 
-def router(model: str | None, bank: list[str] | None = None, diffusion: bool = False) -> APIRouter:
+def router(
+    model: str | None,
+    bank: list[str] | None = None,
+    diffusion: bool = False,
+    attn: str | None = None,
+) -> APIRouter:
     api = APIRouter(prefix="/api/playground")
     state: dict[str, Any] = {}
     lock = threading.Lock()  # one trace at a time on one model
@@ -89,7 +94,7 @@ def router(model: str | None, bank: list[str] | None = None, diffusion: bool = F
                 else:
                     from loupe.models import load
 
-                    state["lm"] = load(model, bank=bank)
+                    state["lm"] = load(model, bank=bank, attn=attn)
         return state["lm"]
 
     @api.get("")

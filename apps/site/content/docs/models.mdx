@@ -51,6 +51,10 @@ downloads there.
   `hook_resid_post`), read with nnsight on the unmodified model. Tested with a random SAE on the tiny
   Qwen2; a pretrained SAE exists only for some models, such as Gemma Scope for Gemma 2 and
   `gpt2-small-res-jb` for GPT-2.
+- **Attention kernels**: `-M attn=sdpa` (or `eager`, `flash_attention_2`, `flex_attention`, any
+  name registered with transformers' `AttentionInterface`, or `file.py:function` to register one)
+  picks the kernel, for the provider, `load(attn=...)` and `loupe serve --attn`. Only eager returns
+  attention weights; attention views switch to it for their trace, head edits work under any kernel.
 - **Gemma 3 4B and up** load as a vision model whose decoder blocks sit at a path loupe does not
   look up yet, so it generates through the provider but takes no edit or analysis; the error names
   the paths it tried.

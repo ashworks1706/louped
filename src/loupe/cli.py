@@ -30,6 +30,9 @@ class Serve:
     diffusion: bool = False
     """The model is a masked diffusion model (LLaDA, Dream, a masked LM), saved under
     <home>/models or at a path."""
+    attn: str | None = None
+    """The attention kernel: eager, sdpa, flash_attention_2, flex_attention, a registered name, or
+    file.py:function. Attention views run eager for their own trace."""
     expose: bool = False
     """Allow a host other than this machine. There is no auth: whoever reaches the port reads
     every run, log and transcript."""
@@ -101,7 +104,7 @@ def serve(cmd: Serve) -> None:
             raise SystemExit(f"--host {cmd.host} serves every log without auth; add --expose")
         hosts = ["*"] if cmd.host in ("0.0.0.0", "::") else [*LOOPBACK, cmd.host]
     uvicorn.run(
-        create_app(cmd.web_dir, cmd.model, hosts, cmd.bank, cmd.diffusion),
+        create_app(cmd.web_dir, cmd.model, hosts, cmd.bank, cmd.diffusion, cmd.attn),
         host=cmd.host,
         port=cmd.port,
     )

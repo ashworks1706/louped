@@ -41,12 +41,18 @@ def load(
     bank: list[str] | None = None,
     merges: list[dict[str, Any]] | None = None,
     revision: str | None = None,
+    attn: str | None = None,
 ) -> LanguageModel:
     """A model saved under <home>/models by name, a Hub id or path, or a built HF model; a Hub id
     at revision (a commit, branch or tag) when one is given. With an adapter (a LoRA directory,
     such as a training checkpoint), merged into the named model. With a bank, those named adapters
     loaded unmerged and inactive (loupe.models.adapters.activate), plus each of merges
     ({"names": [...], "method": "ties", ...}) added as a merged adapter.
+
+    attn picks the attention kernel (attn_implementation): eager, sdpa, flash_attention_2,
+    flex_attention, a name registered with transformers' AttentionInterface, or file.py:function to
+    register that function first (attention_kernel). Only eager returns attention weights; the
+    attention views switch to it for their own trace, and head edits work under any kernel.
 
     Padding is set to the left so the last position of every row is its last real token, which is
     what generation needs and what last-token analyses read.
@@ -61,17 +67,19 @@ def load(
                 # tokenizer from model_type and drop a custom pre-tokenizer or decoder.
                 kwargs["tokenizer"] = PreTrainedTokenizerFast.from_pretrained(model)
         device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        hf: dict[str, Any] = {"dtype": dtype, "device_map": device, "revision": revision}
+        if attn:
+            hf["attn_implementation"] = attention_kernel(attn)
         if adapter is not None or bank:
             tok = kwargs.get("tokenizer") or AutoTokenizer.from_pretrained(model, revision=revision)
             built = (
-                _merged(model, adapter, dtype, device, revision)
+                _merged(model, adapter, hf)
                 if adapter
-                else _banked(model, bank or [], merges or [], dtype, device, revision)
+                else _banked(model, bank or [], merges or [], hf)
             )
             lm = LanguageModel(built, tokenizer=tok)
         else:
-            lm = LanguageModel(model, device_map=device, dtype=dtype, dispatch=True,
-                               revision=revision, **kwargs)  # fmt: skip
+            lm = LanguageModel(model, dispatch=True, **hf, **kwargs)
     else:
         lm = LanguageModel(model, tokenizer=tokenizer)
     lm.tokenizer.padding_side = "left"
@@ -88,34 +96,45 @@ def tokenizer(path: str, revision: str | None = None) -> Any:
     return AutoTokenizer.from_pretrained(path, revision=revision)
 
 
-def _merged(
-    model: str, adapter: str | Path, dtype: torch.dtype | str, device: str, revision: str | None
-) -> Any:
+def attention_kernel(attn: str) -> str:
+    """The attn_implementation name for attn. A file.py:function spec imports that file and
+    registers the function with AttentionInterface under the function's name, with the eager mask
+    (additive float, [batch, 1, query, key]) as its mask; any other name passes through."""
+    path, _, name = attn.rpartition(":")
+    if not path.endswith(".py"):
+        return attn
+    import importlib.util
+
+    from transformers import AttentionInterface
+    from transformers.masking_utils import AttentionMaskInterface, eager_mask
+
+    spec = importlib.util.spec_from_file_location(f"loupe_kernel_{Path(path).stem}", path)
+    if spec is None or spec.loader is None:
+        raise ValueError(f"cannot import {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    AttentionInterface.register(name, getattr(module, name))
+    AttentionMaskInterface.register(name, eager_mask)
+    return name
+
+
+def _merged(model: str, adapter: str | Path, hf: dict[str, Any]) -> Any:
     try:
         from peft import PeftModel
     except ImportError as exc:
         raise ImportError("loading an adapter needs the train extra: loupelab[train]") from exc
     from transformers import AutoModelForCausalLM
 
-    base = AutoModelForCausalLM.from_pretrained(model, dtype=dtype, device_map=device,
-                                                revision=revision)  # fmt: skip
+    base = AutoModelForCausalLM.from_pretrained(model, **hf)
     return PeftModel.from_pretrained(base, str(adapter)).merge_and_unload()
 
 
-def _banked(
-    model: str,
-    names: list[str],
-    merges: list[dict[str, Any]],
-    dtype: torch.dtype | str,
-    device: str,
-    revision: str | None,
-) -> Any:
+def _banked(model: str, names: list[str], merges: list[dict[str, Any]], hf: dict[str, Any]) -> Any:
     from transformers import AutoModelForCausalLM
 
     from loupe.models.adapters import activate, bank, merge
 
-    base = AutoModelForCausalLM.from_pretrained(model, dtype=dtype, device_map=device,
-                                                revision=revision)  # fmt: skip
+    base = AutoModelForCausalLM.from_pretrained(model, **hf)
     peft = bank(base, names)
     for spec in merges:
         merge(peft, **spec)

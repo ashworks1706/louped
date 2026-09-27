@@ -165,3 +165,31 @@ def test_inference_scorers_read_the_provider_calls(trained) -> None:
     tps = usage.output_tokens / float(scores["latency"].as_float())
     assert abs(scores["tokens_per_second"].as_float() - tps) < 1e-6 * tps
     assert scores["peak_memory"].as_float() == 0.0 or torch.cuda.is_available()
+
+
+def test_attn_conditions_load_distinct_models_and_a_file_kernel_runs(lm, tmp_path) -> None:
+    from loupe.inspect_ext.provider import shared_model
+
+    saved = home() / "models" / "tiny-kernels"
+    lm._model.save_pretrained(saved)
+    lm.tokenizer.save_pretrained(saved)
+    kernel = tmp_path / "kernels.py"
+    kernel.write_text(
+        "from transformers.integrations.sdpa_attention import sdpa_attention_forward\n"
+        "CALLS = []\n"
+        "def counted(module, query, key, value, attention_mask, **kwargs):\n"
+        "    CALLS.append(query.shape)\n"
+        "    return sdpa_attention_forward(module, query, key, value, attention_mask, **kwargs)\n"
+    )
+    eager = shared_model("tiny-kernels", attn="eager")
+    custom = shared_model("tiny-kernels", attn=f"{kernel}:counted")
+    assert eager is not custom and shared_model("tiny-kernels", attn="eager") is eager
+    assert custom._model.config._attn_implementation == "counted"
+    from transformers import AttentionInterface
+
+    calls = AttentionInterface._global_mapping["counted"].__globals__["CALLS"]
+    ids = lm.tokenizer(PROMPT, return_tensors="pt")
+    with torch.no_grad():
+        a, b = eager._model(**ids).logits, custom._model(**ids).logits
+    assert len(calls) == n_layers(custom)
+    torch.testing.assert_close(a, b, atol=1e-5, rtol=1e-4)

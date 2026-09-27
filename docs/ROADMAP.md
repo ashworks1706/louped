@@ -140,6 +140,8 @@ The research questions of the ARC thesis, zipy (which now includes Bijou), Spark
       (`experiments/{sparky,zipy,piramid}-blackbox`), verified against mocks and a local stub
 - [x] Attention: a Heads spec (zero or mean ablation), per-head patching, attention mass on a span;
       latency, tokens per second and peak memory as grid metrics (`experiments/attention-heads`)
+- [x] Attention kernels: `attn` on load, the provider and `loupe serve` (eager, sdpa, flash, flex,
+      or a file.py:function registered with AttentionInterface); `experiments/attention-kernels`
 - [x] Diffusion: the denoising trajectory as a view; `experiments/diffusion-adapters` (skills,
       merged, phase-routed) run offline with `--tiny`
 - [ ] Acceptance: one result per project read entirely in the UI, on a real model

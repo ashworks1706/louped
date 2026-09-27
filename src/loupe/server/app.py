@@ -52,10 +52,11 @@ def create_app(
     hosts: list[str] | None = None,
     bank: list[str] | None = None,
     diffusion: bool = False,
+    attn: str | None = None,
 ) -> FastAPI:
     """The app. With web_dir, the static UI export is served at /; with model, the Playground,
-    with bank's adapters loaded beside it, or run as a masked diffusion model. hosts are the Host
-    headers it answers, loopback by default."""
+    with bank's adapters loaded beside it, under the attention kernel attn, or run as a masked
+    diffusion model. hosts are the Host headers it answers, loopback by default."""
     app = FastAPI(
         title="loupe",
         version=__version__,
@@ -121,7 +122,7 @@ def create_app(
     def experiments() -> list[Experiment]:
         return stores.list_experiments()
 
-    app.include_router(playground.router(model, bank, diffusion))
+    app.include_router(playground.router(model, bank, diffusion, attn))
     graphs.mount(app)
     inspect_view.mount(app)
 

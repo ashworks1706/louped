@@ -76,7 +76,7 @@ question is an experiment in `experiments/` on a domain's capabilities; no produ
 | Domain | Capabilities | Asked by |
 |---|---|---|
 | 0 Mechanisms | directions, patching (residual and per head), lens, probes, SAEs, circuits; head ablation; the pushback task | ARC thesis (sycophancy) |
-| 1 Evaluation science | `grid`: seeds, paired intervals, moved/held; black-box endpoints; contamination checks; latency, tokens per second, memory; tool-use scorers | all |
+| 1 Evaluation science | `grid`: seeds, paired intervals, moved/held; black-box endpoints; contamination checks; latency, tokens per second, memory; attention kernels as conditions (`attn`); tool-use scorers | all |
 | 2 Conditioning | prompt text, steering vectors, soft prompts at matched budget | zipy, SparkyAI |
 | 3 Adapters | a bank of LoRA adapters live in any subset, merging (linear, TIES, DARE), overlap | zipy |
 | 4 Decoding and model families | per-step hooks; phase-routed adapters; masked diffusion (LLaDA, Dream) and its denoising trajectory | zipy |
