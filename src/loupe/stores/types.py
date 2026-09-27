@@ -39,6 +39,8 @@ class RunDetail(RunSummary):
     artifacts: list[Artifact]
     scorers: list[str]
     error: str | None
+    #: An eval run's log, relative to the log directory, as Inspect View addresses it.
+    log: str | None = None
 
 
 class SampleSummary(BaseModel):
@@ -120,6 +122,8 @@ class TableView(BaseModel):
     rows: list[list[str | float | int | bool | None]]
     note: str | None = None
     links: list[list[str | None]] | None = None
+    #: Links are Neuronpedia feature pages, opened embedded beside the table.
+    embed: Literal["neuronpedia"] | None = None
 
 
 class TokenRow(BaseModel):

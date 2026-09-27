@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useTheme } from "next-themes";
 import { parseAsString, useQueryState } from "nuqs";
 
 import { HistoryCharts } from "@/components/history-chart";
@@ -87,6 +88,7 @@ function RunTabs({ run }: { run: RunDetail }) {
         <TabsTrigger value="overview">Overview</TabsTrigger>
         {hasFigures && <TabsTrigger value="figures">Figures</TabsTrigger>}
         {isEval && <TabsTrigger value="samples">Samples</TabsTrigger>}
+        {run.log && <TabsTrigger value="inspect">Inspect</TabsTrigger>}
         {!isEval && <TabsTrigger value="artifacts">Artifacts</TabsTrigger>}
         <TabsTrigger value="config">Config</TabsTrigger>
       </TabsList>
@@ -101,6 +103,11 @@ function RunTabs({ run }: { run: RunDetail }) {
       {isEval && (
         <TabsContent value="samples">
           <Samples id={run.id} />
+        </TabsContent>
+      )}
+      {run.log && (
+        <TabsContent value="inspect">
+          <InspectFrame log={run.log} />
         </TabsContent>
       )}
       {!isEval && (
@@ -140,6 +147,20 @@ function Overview({ run }: { run: RunDetail }) {
       )}
       <HistoryCharts history={run.history} />
     </div>
+  );
+}
+
+/** Inspect View, served by loupe at /inspect, open at this run's log or at the selected sample. */
+function InspectFrame({ log }: { log: string }) {
+  const [sample] = useQueryState("sample", parseAsString);
+  const { resolvedTheme } = useTheme();
+  const path = `/logs/${log}/samples/${sample ? `sample/${encodeURIComponent(sample)}/1/` : ""}`;
+  return (
+    <iframe
+      title="Inspect View"
+      src={`${API}/inspect/?inspectLogviewThemeCategory=${resolvedTheme ?? "light"}#${path}`}
+      className="h-[calc(100svh-14rem)] min-h-96 w-full rounded-xl border"
+    />
   );
 }
 

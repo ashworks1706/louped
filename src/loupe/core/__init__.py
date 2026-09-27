@@ -6,6 +6,7 @@ from loupe.core.meta import RunMeta, capture
 from loupe.core.paths import (
     artifacts_dir,
     experiments_dir,
+    graphs_dir,
     home,
     logs_dir,
     saved_model,
@@ -19,6 +20,7 @@ __all__ = [
     "artifacts_dir",
     "capture",
     "experiments_dir",
+    "graphs_dir",
     "home",
     "logs_dir",
     "named_fields",

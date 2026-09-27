@@ -49,8 +49,10 @@ with its UI view.
       "sure" once the refusal direction is ablated; every view renders on desktop and mobile
 - [x] Model diffing: per layer, residual cosine, norm change and the cosine of a contrast
       direction between two models of one architecture
-- [x] Attribution graphs are circuit-tracer's, in its own environment and viewer (`just circuit`);
-      loupe does not draw graphs (see ARCHITECTURE.md, what loupe leaves to others)
+- [x] Attribution graphs: circuit-tracer runs in its own environment (`just circuit`); its viewer
+      is served by loupe on the Circuits page
+- [x] SAE features link to Neuronpedia's dashboard, embedded beside the table (`LOUPE_NEURONPEDIA`
+      for a self-hosted one)
 - [ ] Acceptance: reproduce the refusal direction (Arditi et al. 2024) on a Qwen2.5 instruct model,
       read entirely in the UI
 
@@ -102,7 +104,8 @@ with its UI view.
       math-verify, as plain checks (`loupe.train.tasks`), so reward and scorer stay one function
 - [x] `experiments/tool-rl`: calculator and submit tools over reasoning-gym arithmetic, reward
       from the environment (not yet run)
-- [x] Transcripts in depth open in Inspect View (`just inspect-view`); loupe keeps comparison
+- [x] Inspect View served by loupe at /inspect, read-only over its logs, as an Inspect tab on
+      every eval run, opened at the selected sample
 - [ ] Black-box benchmarking of zipy, SparkyAI and piramid through their endpoints
 - [ ] Acceptance: an inspect_evals agentic task end to end in Docker
 

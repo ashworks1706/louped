@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { PanelsTopLeft } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 
@@ -113,13 +114,15 @@ export function SamplesTable({ runId, samples }: { runId: string; samples: Sampl
 
 function SampleSheetBody({ runId, sampleId }: { runId: string; sampleId: string }) {
   const query = useQuery(q.sample(runId, sampleId));
+  const [, setTab] = useQueryState("tab", parseAsString);
   return (
     <>
-      <div className="border-b px-6 py-4">
+      <div className="flex items-center justify-between gap-4 border-b px-6 py-4 pr-12">
         <SheetTitle className="font-semibold">Sample {sampleId}</SheetTitle>
-        <SheetDescription className="text-muted-foreground text-sm">
-          The full conversation and how each scorer judged it.
-        </SheetDescription>
+        <SheetDescription className="sr-only">Conversation and scores</SheetDescription>
+        <Button variant="ghost" size="sm" onClick={() => void setTab("inspect")}>
+          <PanelsTopLeft /> Inspect
+        </Button>
       </div>
       <div className="flex-1 overflow-y-auto px-6 py-5">
         <QueryState query={query}>{(s) => <Transcript sample={s} />}</QueryState>

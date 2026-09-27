@@ -65,10 +65,12 @@ def table(
     rows: list[list[Any]],
     note: str | None = None,
     links: list[list[str | None]] | None = None,
+    embed: str | None = None,
 ) -> dict[str, Any]:
-    """A table; `links`, shaped like `rows`, turns a cell into a link to that URL."""
+    """A table; `links`, shaped like `rows`, turns a cell into a link to that URL. With
+    embed="neuronpedia" the links are feature pages the UI opens embedded."""
     return {"kind": "table", "title": title, "columns": columns, "rows": rows, "note": note,
-            "links": links}  # fmt: skip
+            "links": links, "embed": embed}  # fmt: skip
 
 
 def token_row(

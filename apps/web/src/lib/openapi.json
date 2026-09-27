@@ -459,6 +459,102 @@
           }
         }
       }
+    },
+    "/api/graphs": {
+      "get": {
+        "summary": "Graphs",
+        "operationId": "graphs_api_graphs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Graph"
+                  },
+                  "type": "array",
+                  "title": "Response Graphs Api Graphs Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/circuit/data/{name}": {
+      "get": {
+        "summary": "Metadata",
+        "operationId": "metadata_circuit_data__name__get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/circuit/graph_data/{name}": {
+      "get": {
+        "summary": "Graph",
+        "operationId": "graph_circuit_graph_data__name__get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -642,6 +738,32 @@
         "type": "object",
         "required": ["text"],
         "title": "GenerateResponse"
+      },
+      "Graph": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "scan": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan"
+          }
+        },
+        "type": "object",
+        "required": ["slug", "prompt"],
+        "title": "Graph"
       },
       "HTTPValidationError": {
         "properties": {
@@ -1162,6 +1284,17 @@
               }
             ],
             "title": "Error"
+          },
+          "log": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Log"
           }
         },
         "type": "object",
@@ -1533,6 +1666,18 @@
               }
             ],
             "title": "Links"
+          },
+          "embed": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "neuronpedia"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Embed"
           }
         },
         "type": "object",

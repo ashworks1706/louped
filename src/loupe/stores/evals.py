@@ -112,7 +112,7 @@ def get_run(run_id: str) -> RunDetail | None:
     found = _find(run_id)
     if found is None:
         return None
-    _, log = found
+    path, log = found
     params = {f"task.{k}": v for k, v in _stringify(log.eval.task_args).items()}
     params |= {f"model.{k}": v for k, v in _stringify(log.eval.model_args).items()}
     params |= {
@@ -127,6 +127,7 @@ def get_run(run_id: str) -> RunDetail | None:
         artifacts=[],
         scorers=[s.name for s in log.results.scores] if log.results else [],
         error=log.error.message if log.error else None,
+        log=path.relative_to(logs_dir()).as_posix(),
     )
 
 

@@ -39,6 +39,11 @@ def vectors_dir() -> Path:
     return home() / "vectors"
 
 
+def graphs_dir() -> Path:
+    """circuit-tracer's attribution graphs and, under viewer/, its frontend (just circuit)."""
+    return home() / "graphs"
+
+
 def experiments_dir() -> Path:
     """The research questions: LOUPE_EXPERIMENTS when set, else ./experiments."""
     return Path(os.environ.get("LOUPE_EXPERIMENTS", "experiments")).resolve()

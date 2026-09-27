@@ -225,6 +225,57 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/graphs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Graphs */
+    get: operations["graphs_api_graphs_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/circuit/data/{name}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Metadata */
+    get: operations["metadata_circuit_data__name__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/circuit/graph_data/{name}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Graph */
+    get: operations["graph_circuit_graph_data__name__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -306,6 +357,15 @@ export interface components {
     GenerateResponse: {
       /** Text */
       text: string;
+    };
+    /** Graph */
+    Graph: {
+      /** Slug */
+      slug: string;
+      /** Prompt */
+      prompt: string;
+      /** Scan */
+      scan?: string | null;
     };
     /** HTTPValidationError */
     HTTPValidationError: {
@@ -513,6 +573,8 @@ export interface components {
       scorers: string[];
       /** Error */
       error: string | null;
+      /** Log */
+      log?: string | null;
     };
     /** RunSummary */
     RunSummary: {
@@ -620,6 +682,8 @@ export interface components {
       note?: string | null;
       /** Links */
       links?: (string | null)[][] | null;
+      /** Embed */
+      embed?: "neuronpedia" | null;
     };
     /** TokenRow */
     TokenRow: {
@@ -1033,6 +1097,88 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["InspectResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  graphs_api_graphs_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Graph"][];
+        };
+      };
+    };
+  };
+  metadata_circuit_data__name__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  graph_circuit_graph_data__name__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
         };
       };
       /** @description Validation Error */

@@ -6,6 +6,7 @@ const PAGES = [
   ["/runs/", "Runs"],
   ["/compare/", "Compare"],
   ["/vectors/", "Vectors"],
+  ["/circuits/", "Circuits"],
   ["/playground/", "Playground"],
 ] as const;
 

@@ -1,0 +1,84 @@
+import { expect, test } from "@playwright/test";
+
+// Mocked API: the viewers loupe embeds (Inspect View, Neuronpedia, circuit-tracer) as iframes.
+const run = {
+  id: "e-1",
+  kind: "eval",
+  name: "task",
+  experiment: null,
+  status: "success",
+  created: null,
+  model: "loupe/tiny",
+  metrics: {},
+  samples: 1,
+  params: {},
+  tags: {},
+  history: {},
+  artifacts: [{ path: "views/sae.json", size: 1 }],
+  scorers: [],
+  error: null,
+  log: "2026_task.eval",
+};
+
+test("an eval run opens its log in Inspect View, at the sample", async ({ page }) => {
+  await page.route("**/api/runs/e-1", (r) => r.fulfill({ json: run }));
+  await page.route("**/api/runs/e-1/samples", (r) =>
+    r.fulfill({ json: [{ id: "7", epoch: 1, input: "hi", target: "", scores: {}, error: null }] }),
+  );
+  await page.route("**/api/runs/e-1/samples/7*", (r) =>
+    r.fulfill({
+      json: { id: "7", epoch: 1, target: "", messages: [], scores: [], metadata: {}, error: null },
+    }),
+  );
+  await page.route("**/inspect/**", (r) => r.fulfill({ body: "<title>Inspect View</title>" }));
+  await page.goto("/run/?id=e-1&tab=samples&sample=7");
+  await page.getByRole("button", { name: "Inspect" }).click();
+  const frame = page.getByTitle("Inspect View");
+  await expect(frame).toBeVisible();
+  await expect(frame).toHaveAttribute("src", /#\/logs\/2026_task\.eval\/samples\/sample\/7\/1\/$/);
+});
+
+test("a Neuronpedia feature opens embedded beside the table", async ({ page }) => {
+  const table = {
+    kind: "table",
+    title: "SAE features",
+    columns: ["token", "top 1"],
+    rows: [["hi", "#12 3.0"]],
+    links: [[null, "https://neuronpedia.org/gemma-2-2b/20-gemmascope-res-16k/12"]],
+    embed: "neuronpedia",
+  };
+  await page.route("**/api/runs/e-1", (r) => r.fulfill({ json: run }));
+  await page.route("**/api/runs/e-1/views", (r) =>
+    r.fulfill({ json: [{ path: "views/sae.json", view: table }] }),
+  );
+  await page.route("https://neuronpedia.org/**", (r) => r.fulfill({ body: "feature" }));
+  await page.goto("/run/?id=e-1&tab=figures");
+  await page.getByRole("button", { name: "#12 3.0" }).click();
+  await expect(page.getByTitle("Neuronpedia")).toHaveAttribute("src", /\/12\?embed=true$/);
+  await expect(page.getByRole("link", { name: "Open in a new tab" })).toHaveAttribute(
+    "href",
+    table.links[0][1] as string,
+  );
+});
+
+test("circuits shows the latest graph in circuit-tracer's viewer", async ({ page }) => {
+  await page.route("**/api/graphs", (r) =>
+    r.fulfill({
+      json: [
+        { slug: "a", prompt: "first", scan: null },
+        { slug: "capital", prompt: "The capital of France is", scan: null },
+      ],
+    }),
+  );
+  await page.route("**/circuit/**", (r) =>
+    r.fulfill({ body: "<title>Attribution Graphs</title>" }),
+  );
+  await page.goto("/circuits/");
+  await expect(page.getByTitle("Attribution graph capital")).toHaveAttribute(
+    "src",
+    /\/circuit\/\?slug=capital$/,
+  );
+  await page.getByLabel("Graph").selectOption("a");
+  await expect(page).toHaveURL(/slug=a/);
+  await expect(page.getByTitle("Attribution graph a")).toBeVisible();
+});

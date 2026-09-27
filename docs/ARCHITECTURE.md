@@ -24,9 +24,9 @@ What loupe leaves to others, and links to:
 
 | Need | Tool | Why not in loupe |
 |---|---|---|
-| SAE feature dashboards, autointerp, steering chat | Neuronpedia (self-hostable) | A complete, maintained UI |
-| Attribution graphs over transcoders | circuit-tracer, its own UI or Neuronpedia's | Pins transformers 4.57; runs in its own environment |
-| Reading transcripts and tool calls in depth | Inspect View (`inspect view`) | Inspect's own viewer; loupe keeps comparison screens |
+| SAE feature dashboards, autointerp, steering chat | Neuronpedia, embedded beside SAE figures (LOUPE_NEURONPEDIA for a self-hosted one) | A complete, maintained UI |
+| Attribution graphs over transcoders | circuit-tracer (`just circuit`), its viewer served on the Circuits page | Pins transformers 4.57; runs in its own environment |
+| Reading transcripts and tool calls in depth | Inspect View, served at /inspect and shown as a Run tab | Inspect's own viewer; loupe keeps comparison screens |
 | Training dashboards, clusters, sweeps of hyperparameters | Transformer Lab, LLaMA-Factory, Oumi | Full training products; loupe drives TRL from a YAML |
 | Fast steered serving | EasySteer | A vLLM fork, not a library |
 | ReFT | pyreft, in its own environment | Pins transformers 4.45 |
@@ -111,10 +111,12 @@ own: a check is a plain function, `inspect_ext.as_scorer` wraps it for Inspect a
 The UI is the product. `apps/web` is a static Next.js export served by `loupe serve` next to the
 API, so there is no Node server in production. The server owns no database and no auth. Its
 only computing routes are the Playground's, which run the model given to `loupe serve --model`:
-generate, and inspect, which returns a prompt's views in the same shapes a run logs.
+generate, and inspect, which returns a prompt's views in the same shapes a run logs. It also serves two
+viewers it does not own: Inspect View at /inspect, whose API mounts under /api behind loupe's
+routes, read-only; and circuit-tracer's graph viewer at /circuit over <home>/graphs.
 
-Pages: Home, Experiments, Run (Overview, Figures, Samples, Transcripts, Artifacts, Config), Compare,
-Vectors, Playground. Principles: one question per screen, every number links to the samples behind
+Pages: Home, Experiments, Run (Overview, Figures, Samples, Inspect, Artifacts, Config), Compare,
+Vectors, Circuits, Playground. Principles: one question per screen, every number links to the samples behind
 it, compare is first-class, empty states show the command that fills them, keyboard-first (⌘K and
 `G` jumps), view state in the URL. Neuronpedia and Inspect View are linked from it, not rebuilt in
 it: an SAE feature with a Neuronpedia id links to its dashboard from the Figures table and from its

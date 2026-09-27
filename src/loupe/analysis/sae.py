@@ -7,6 +7,7 @@ and saves a feature's decoder row as a direction, so Steer and Ablate work on fe
 
 from __future__ import annotations
 
+import os
 import re
 from typing import TYPE_CHECKING, Any
 
@@ -24,7 +25,8 @@ from loupe.vectors import save_vector
 if TYPE_CHECKING:
     from sae_lens import SAE
 
-NEURONPEDIA = "https://neuronpedia.org"
+#: Neuronpedia's origin; LOUPE_NEURONPEDIA points at a self-hosted one.
+NEURONPEDIA = os.environ.get("LOUPE_NEURONPEDIA", "https://neuronpedia.org").rstrip("/")
 _HOOK = re.compile(r"^blocks\.(\d+)\.hook_resid_(pre|post)$")
 
 
@@ -77,7 +79,8 @@ def sae_features(
     if has_links:
         note += "; a feature opens its Neuronpedia dashboard"
     view_table = table(f"SAE features per token at {hook}", columns, rows, note=note,
-                       links=links if has_links else None)  # fmt: skip
+                       links=links if has_links else None,
+                       embed="neuronpedia" if has_links else None)  # fmt: skip
     peak = acts.max(0).values.topk(min(k, acts.shape[1])).indices.tolist()
     view_heat = heatmap(f"Top SAE features over positions at {hook}",
                         [acts[:, f].tolist() for f in peak], x=labels, y=[f"#{f}" for f in peak],

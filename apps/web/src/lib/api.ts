@@ -17,6 +17,7 @@ export type TableView = Schemas["TableView"];
 export type TokensView = Schemas["TokensView"];
 export type View = RunView["view"];
 export type Direction = Schemas["Direction"];
+type Graph = Schemas["Graph"];
 type Comparison = Schemas["Comparison"];
 export type PlaygroundInfo = Schemas["PlaygroundInfo"];
 type GenerateRequest = Schemas["GenerateRequest"];
@@ -95,6 +96,7 @@ export const q = {
       get<Comparison>(`/compare?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`),
   }),
   vectors: () => ({ queryKey: ["vectors"], queryFn: () => get<Direction[]>("/vectors") }),
+  graphs: () => ({ queryKey: ["graphs"], queryFn: () => get<Graph[]>("/graphs") }),
   experiments: () => ({
     queryKey: ["experiments"],
     queryFn: () => get<Experiment[]>("/experiments"),

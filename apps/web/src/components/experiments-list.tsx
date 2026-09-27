@@ -20,7 +20,7 @@ export function ExperimentsList() {
           <EmptyState
             icon={FlaskConical}
             title="No experiments yet"
-            body="Each folder under experiments/ becomes a card here, with its question and the runs that answer it."
+            body="One card per folder under experiments/."
             command="just new-experiment my-question"
           />
         ) : (

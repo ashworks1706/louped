@@ -1,4 +1,5 @@
-"""The FastAPI app: the API under /api, and the built UI at / when there is one.
+"""The FastAPI app: the API under /api, Inspect View at /inspect, circuit-tracer's graph viewer at
+/circuit, and the built UI at / when there is one.
 
 The server owns no database. Every route reads a store another tool already writes (MLflow,
 Inspect logs, artifact files, experiments/), so deleting the server loses nothing.
@@ -17,7 +18,7 @@ from pydantic import BaseModel
 
 from loupe import __version__, stores
 from loupe.core import Direction, home
-from loupe.server import playground
+from loupe.server import graphs, inspect_view, playground
 from loupe.stores.runs import read_artifact
 from loupe.stores.types import (
     Comparison,
@@ -102,6 +103,8 @@ def create_app(web_dir: Path | None = None, model: str | None = None) -> FastAPI
         return stores.list_experiments()
 
     app.include_router(playground.router(model))
+    graphs.mount(app)
+    inspect_view.mount(app)
 
     if web_dir is not None and web_dir.is_dir():
         app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")

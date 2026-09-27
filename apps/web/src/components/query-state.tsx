@@ -38,7 +38,7 @@ export function QueryState<T>({
       <EmptyState
         icon={ServerOff}
         title="Can't reach the API"
-        body="The UI reads everything from loupe's API. Start it, and this page fills in."
+        body="Start the API and this page fills in."
         command="just serve"
       />
     );

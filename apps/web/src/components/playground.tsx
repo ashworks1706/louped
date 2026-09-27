@@ -38,7 +38,7 @@ export function Playground() {
           <EmptyState
             icon={MessageSquareText}
             title="No model loaded"
-            body="Start the server with a model to compare its replies with and without an intervention."
+            body="Start the server with a model."
             command="loupe serve --model Qwen/Qwen2.5-0.5B-Instruct"
           />
         ) : (

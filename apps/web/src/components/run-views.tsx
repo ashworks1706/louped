@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { ExternalLink } from "lucide-react";
 import { Fragment, useState } from "react";
 import {
   CartesianGrid,
@@ -15,6 +16,7 @@ import {
 
 import { QueryState } from "@/components/query-state";
 import { NativeSelect } from "@/components/ui/native-select";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import {
   Table,
   TableBody,
@@ -344,48 +346,86 @@ function TokensFigure({ view }: { view: TokensView }) {
 }
 
 function TableFigure({ view }: { view: TableView }) {
+  const [embedded, setEmbedded] = useState<string | null>(null);
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          {view.columns.map((c) => (
-            <TableHead key={c}>{c}</TableHead>
-          ))}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {view.rows.map((row, i) => (
-          <TableRow key={i}>
-            {row.map((v, j) => {
-              const href = view.links?.[i]?.[j];
-              const text = v === null ? "—" : typeof v === "number" ? num(v) : String(v);
-              return (
-                <TableCell
-                  key={j}
-                  className={
-                    typeof v === "number"
-                      ? "text-right font-mono tabular-nums"
-                      : "max-w-md align-top text-sm whitespace-pre-wrap"
-                  }
-                >
-                  {href ? (
-                    <a
-                      href={href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="underline-offset-4 hover:underline"
-                    >
-                      {text}
-                    </a>
-                  ) : (
-                    text
-                  )}
-                </TableCell>
-              );
-            })}
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            {view.columns.map((c) => (
+              <TableHead key={c}>{c}</TableHead>
+            ))}
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {view.rows.map((row, i) => (
+            <TableRow key={i}>
+              {row.map((v, j) => {
+                const href = view.links?.[i]?.[j];
+                const text = v === null ? "—" : typeof v === "number" ? num(v) : String(v);
+                return (
+                  <TableCell
+                    key={j}
+                    className={
+                      typeof v === "number"
+                        ? "text-right font-mono tabular-nums"
+                        : "max-w-md align-top text-sm whitespace-pre-wrap"
+                    }
+                  >
+                    {href && view.embed ? (
+                      <button
+                        type="button"
+                        onClick={() => setEmbedded(href)}
+                        className="underline-offset-4 hover:underline"
+                      >
+                        {text}
+                      </button>
+                    ) : href ? (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline-offset-4 hover:underline"
+                      >
+                        {text}
+                      </a>
+                    ) : (
+                      text
+                    )}
+                  </TableCell>
+                );
+              })}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <Sheet open={embedded !== null} onOpenChange={(o) => !o && setEmbedded(null)}>
+        <SheetContent>{embedded && <EmbeddedPage href={embedded} />}</SheetContent>
+      </Sheet>
+    </>
+  );
+}
+
+/** A Neuronpedia feature page in its embed mode, with a way out to the full page. */
+function EmbeddedPage({ href }: { href: string }) {
+  const url = new URL(href);
+  url.searchParams.set("embed", "true");
+  return (
+    <>
+      <div className="flex items-center gap-2 border-b px-6 py-4 pr-12">
+        <SheetTitle className="truncate font-mono text-sm">{new URL(href).pathname}</SheetTitle>
+        <SheetDescription className="sr-only">Neuronpedia feature dashboard</SheetDescription>
+        <a
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Open in a new tab"
+          className="text-muted-foreground hover:text-foreground ml-auto"
+        >
+          <ExternalLink className="size-4" />
+        </a>
+      </div>
+      <iframe title="Neuronpedia" src={url.toString()} className="w-full flex-1" />
+    </>
   );
 }
