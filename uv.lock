@@ -1524,7 +1524,6 @@ tracking = [
     { name = "sqlalchemy" },
 ]
 train = [
-    { name = "accelerate" },
     { name = "alembic" },
     { name = "datasets" },
     { name = "httpx" },
@@ -1552,7 +1551,6 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "accelerate", marker = "extra == 'train'", specifier = ">=1.10" },
     { name = "alembic", marker = "extra == 'tracking'", specifier = ">=1.13" },
     { name = "datasets", marker = "extra == 'train'", specifier = ">=4" },
     { name = "fastapi", marker = "extra == 'server'", specifier = ">=0.115" },

@@ -23,12 +23,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { q, type HeatmapView, type LineView, type RunView, type TableView } from "@/lib/api";
+import { num } from "@/lib/format";
 
 /** Every figure a run logged under views/, in file order. */
 export function RunViews({ id }: { id: string }) {
   const views = useQuery(q.views(id));
   return (
-    <QueryState query={views} rows={4}>
+    <QueryState query={views}>
       {(all) => (
         <div className="flex flex-col gap-6">
           {all.map((v) => (
@@ -211,7 +212,7 @@ function TableFigure({ view }: { view: TableView }) {
                     : "max-w-md align-top text-sm whitespace-pre-wrap"
                 }
               >
-                {v === null ? "—" : typeof v === "number" ? fmt(v) : String(v)}
+                {v === null ? "—" : typeof v === "number" ? num(v) : String(v)}
               </TableCell>
             ))}
           </TableRow>
@@ -220,5 +221,3 @@ function TableFigure({ view }: { view: TableView }) {
     </Table>
   );
 }
-
-const fmt = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(3));

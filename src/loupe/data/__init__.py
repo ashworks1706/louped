@@ -6,7 +6,6 @@ Phoenix source needs httpx and review needs rich (the data extra).
 """
 
 from loupe.data.example import (
-    Decision,
     Example,
     conversation,
     fingerprint,
@@ -16,7 +15,6 @@ from loupe.data.example import (
 )
 
 __all__ = [
-    "Decision",
     "Example",
     "conversation",
     "fingerprint",

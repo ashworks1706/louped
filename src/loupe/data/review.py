@@ -6,7 +6,6 @@ question that was asked, the tools the reply called for, and the reply itself.
 
 from __future__ import annotations
 
-import json
 import os
 import shlex
 import subprocess
@@ -110,11 +109,6 @@ def answer(console: Console, reply: str) -> Answer:
             return ANSWERS[key]
         console.print(f"[yellow]{PROMPT}[/yellow]")
         reply = console.input("> ")
-
-
-def as_json(example: Example) -> str:
-    """One example as the JSON a reviewer reads when they want all of it."""
-    return json.dumps(example.model_dump(mode="json"), indent=2)
 
 
 def loop(examples: list[Example], ledger_path: Path, by: str, limit: int = 0) -> None:

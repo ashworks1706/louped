@@ -23,6 +23,12 @@ def tracking_uri() -> str:
     return os.environ.get("MLFLOW_TRACKING_URI", f"sqlite:///{home() / 'mlflow.db'}")
 
 
+def saved_model(name: str) -> Path | None:
+    """The model saved as <home>/models/<name> (a fine-tune, a test model), or None."""
+    local = home() / "models" / name
+    return local if (local / "config.json").exists() else None
+
+
 def artifacts_dir() -> Path:
     """Where MLflow runs started by loupe put their artifacts."""
     return home() / "artifacts"

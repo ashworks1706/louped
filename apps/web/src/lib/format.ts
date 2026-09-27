@@ -1,12 +1,15 @@
+/** The standard error logged next to a scorer/metric key, if any. */
+export function stderr(metrics: Record<string, number>, key: string): number | null {
+  return key.includes("/")
+    ? (metrics[`${key.slice(0, key.lastIndexOf("/"))}/stderr`] ?? null)
+    : null;
+}
+
 /** Headline metrics: everything except the error bars, which are shown next to their metric. */
 export function headline(metrics: Record<string, number>): [string, number, number | null][] {
   return Object.entries(metrics)
     .filter(([k]) => !k.endsWith("/stderr") && !k.endsWith("/std"))
-    .map(([k, v]) => {
-      const base = k.includes("/") ? k.slice(0, k.lastIndexOf("/")) : null;
-      const err = base ? (metrics[`${base}/stderr`] ?? null) : null;
-      return [k, v, err];
-    });
+    .map(([k, v]) => [k, v, stderr(metrics, k)]);
 }
 
 export function num(v: number | null | undefined, digits = 3): string {

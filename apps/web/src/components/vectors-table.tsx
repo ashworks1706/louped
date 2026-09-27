@@ -21,7 +21,7 @@ import { ago } from "@/lib/format";
 export function VectorsTable() {
   const vectors = useQuery(q.vectors());
   return (
-    <QueryState query={vectors} rows={4}>
+    <QueryState query={vectors}>
       {(all) =>
         all.length === 0 ? (
           <EmptyState

@@ -9,15 +9,15 @@ export type RunSummary = Schemas["RunSummary"];
 export type RunDetail = Schemas["RunDetail"];
 export type SampleSummary = Schemas["SampleSummary"];
 export type SampleDetail = Schemas["SampleDetail"];
-export type Experiment = Schemas["Experiment"];
+type Experiment = Schemas["Experiment"];
 export type RunView = Schemas["RunView"];
 export type HeatmapView = Schemas["HeatmapView"];
 export type LineView = Schemas["LineView"];
 export type TableView = Schemas["TableView"];
 export type Direction = Schemas["Direction"];
 export type PlaygroundInfo = Schemas["PlaygroundInfo"];
-export type GenerateRequest = Schemas["GenerateRequest"];
-export type GenerateResponse = Schemas["GenerateResponse"];
+type GenerateRequest = Schemas["GenerateRequest"];
+type GenerateResponse = Schemas["GenerateResponse"];
 
 export class ApiError extends Error {
   constructor(
@@ -28,13 +28,13 @@ export class ApiError extends Error {
   }
 }
 
-export async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
+async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
   const res = await fetch(`${API}/api${path}`, { signal });
   if (!res.ok) throw new ApiError(res.status, `${res.status} ${path}`);
   return res.json() as Promise<T>;
 }
 
-export async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
   const res = await fetch(`${API}/api${path}`, {
     method: "POST",
     headers: { "content-type": "application/json" },

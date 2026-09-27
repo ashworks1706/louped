@@ -1,4 +1,4 @@
-"""Figures a run logged as JSON under views/, which the Interp tab draws.
+"""Figures a run logged as JSON under views/, which the Figures tab draws.
 
 A file that does not parse as a view is skipped, not an error: views/ is a convention, and one bad
 file should not hide the rest.
@@ -18,8 +18,7 @@ _VIEW: TypeAdapter[View] = TypeAdapter(View)
 
 
 def list_views(run_id: str) -> list[RunView] | None:
-    if not run_id.startswith(mlflow_runs.PREFIX):
-        return []
+    """The views of an MLflow run; None when the run does not exist."""
     paths = mlflow_runs.list_artifact_paths(run_id, DIR)
     if paths is None:
         return None

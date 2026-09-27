@@ -1,7 +1,8 @@
 """A direction is one safetensors file under <home>/vectors, its provenance in the file's header.
 
 One file per direction means a vector can be copied between machines or attached to a paper
-without a database, and the Vectors page, the Playground and an eval all load it by name.
+without a database, and the Vectors page, the Playground and an eval all load it by name. Listing
+them is `loupe.stores.list_vectors`, which reads the headers without torch.
 """
 
 from __future__ import annotations
@@ -18,14 +19,10 @@ from loupe.core import Direction, vectors_dir
 _NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
 
-def _dir():
-    return vectors_dir()
-
-
 def _path(name: str):
     if not _NAME.match(name):
         raise ValueError(f"bad vector name {name!r}: letters, digits, . _ - only")
-    return _dir() / f"{name}.safetensors"
+    return vectors_dir() / f"{name}.safetensors"
 
 
 def diff_in_means(positive: torch.Tensor, negative: torch.Tensor) -> torch.Tensor:
@@ -64,17 +61,7 @@ def save_vector(
 def load_vector(name: str) -> tuple[torch.Tensor, Direction]:
     path = _path(name)
     if not path.exists():
-        raise FileNotFoundError(f"no vector named {name!r} in {_dir()}")
+        raise FileNotFoundError(f"no vector named {name!r} in {vectors_dir()}")
     with safe_open(str(path), framework="pt") as f:
         meta = Direction.model_validate_json(f.metadata()["loupe"])
         return f.get_tensor("vector"), meta
-
-
-def list_vectors() -> list[Direction]:
-    found: list[Direction] = []
-    for path in sorted(_dir().glob("*.safetensors")) if _dir().is_dir() else []:
-        with safe_open(str(path), framework="pt") as f:
-            header = f.metadata() or {}
-        if "loupe" in header:
-            found.append(Direction.model_validate_json(header["loupe"]))
-    return sorted(found, key=lambda d: d.created, reverse=True)

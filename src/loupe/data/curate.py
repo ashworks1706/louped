@@ -36,9 +36,9 @@ class Ledger(BaseModel):
 
 def load(path: Path) -> Ledger:
     """The ledger at a path. A missing file is an empty ledger."""
-    if not path.exists():
-        return Ledger()
     ledger = Ledger()
+    if not path.exists():
+        return ledger
     for line in path.read_text(encoding="utf-8").splitlines():
         if line.strip():
             ledger.record(Decision.model_validate_json(line))

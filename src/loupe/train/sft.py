@@ -18,7 +18,7 @@ from typing import Any, Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from loupe.core import home
+from loupe.core import home, saved_model
 from loupe.data import Example, conversation, read_jsonl
 
 
@@ -134,8 +134,7 @@ def plan(cfg: SftConfig) -> SftPlan:
 
 
 def _model_path(name: str) -> str:
-    local = home() / "models" / name
-    return str(local) if (local / "config.json").exists() else name
+    return str(saved_model(name) or name)
 
 
 def _load(cfg: SftConfig, kind: str):

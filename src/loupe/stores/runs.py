@@ -54,7 +54,12 @@ def read_artifact(run_id: str, path: str) -> bytes:
 
 
 def list_views(run_id: str) -> list[RunView]:
-    found = views.list_views(run_id) if run_id.startswith(("e-", "m-")) else None
-    if found is None or (run_id.startswith(evals.PREFIX) and evals.get_run(run_id) is None):
+    if run_id.startswith(evals.PREFIX):
+        found = [] if evals.get_run(run_id) is not None else None  # eval logs log no views
+    elif run_id.startswith(mlflow_runs.PREFIX):
+        found = views.list_views(run_id)
+    else:
+        found = None
+    if found is None:
         raise NotFound(run_id)
     return found

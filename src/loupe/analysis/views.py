@@ -1,4 +1,4 @@
-"""The shapes the UI's Interp tab renders. A run stores each as JSON under views/ in MLflow.
+"""The shapes the Run page's Figures tab renders. A run stores each as JSON under views/ in MLflow.
 
 Three kinds cover the standard figures: a heatmap (patching: layer by position), a line chart
 (anything by layer), and a table (logit lens tokens). Keeping them as data, not images, is what

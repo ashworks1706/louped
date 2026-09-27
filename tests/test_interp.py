@@ -7,7 +7,8 @@ from loupe.analysis import last_token_resid, logit_lens, patch_residual
 from loupe.interventions import Ablate, Steer, apply, compile, parse
 from loupe.models import blocks, chat, n_layers
 from loupe.models.tiny import tiny
-from loupe.vectors import diff_in_means, list_vectors, load_vector, save_vector
+from loupe.stores import list_vectors
+from loupe.vectors import diff_in_means, load_vector, save_vector
 
 
 @pytest.fixture(scope="module")

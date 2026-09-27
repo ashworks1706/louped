@@ -6,6 +6,7 @@ import Link from "next/link";
 import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
 import { useMemo } from "react";
 
+import { EmptyState } from "@/components/empty-state";
 import { Delta, MetricValue, ScoreCell } from "@/components/metric";
 import { QueryState } from "@/components/query-state";
 import { runHref } from "@/components/runs-table";
@@ -21,9 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { q, type RunDetail, type SampleSummary } from "@/lib/api";
-import { headline, metricLabel } from "@/lib/format";
-
-import { EmptyState } from "./empty-state";
+import { headline, metricLabel, stderr } from "@/lib/format";
 
 export function CompareView() {
   const [a] = useQueryState("a", parseAsString);
@@ -94,10 +93,6 @@ function Heads({ a, b }: { a: RunDetail; b: RunDetail }) {
 function Metrics({ a, b }: { a: RunDetail; b: RunDetail }) {
   const keys = [...new Set([...headline(a.metrics), ...headline(b.metrics)].map(([k]) => k))];
   if (keys.length === 0) return null;
-  const err = (r: RunDetail, k: string) => {
-    const base = k.slice(0, k.lastIndexOf("/"));
-    return r.metrics[`${base}/stderr`] ?? null;
-  };
   return (
     <div>
       <h2 className="text-muted-foreground mb-3 text-sm font-medium">Metrics</h2>
@@ -118,10 +113,10 @@ function Metrics({ a, b }: { a: RunDetail; b: RunDetail }) {
               <TableRow key={k}>
                 <TableCell>{metricLabel(k)}</TableCell>
                 <TableCell className="text-right">
-                  <MetricValue value={va} err={err(a, k)} />
+                  <MetricValue value={va} err={stderr(a.metrics, k)} />
                 </TableCell>
                 <TableCell className="text-right">
-                  <MetricValue value={vb} err={err(b, k)} />
+                  <MetricValue value={vb} err={stderr(b.metrics, k)} />
                 </TableCell>
                 <TableCell className="text-right">
                   {va != null && vb != null ? <Delta value={vb - va} /> : "—"}

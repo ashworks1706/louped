@@ -15,7 +15,7 @@ from inspect_ai.model import ChatMessage, GenerateConfig, ModelAPI, ModelOutput
 from inspect_ai.tool import ToolChoice, ToolInfo
 from nnsight import LanguageModel
 
-from loupe.core import home
+from loupe.core import saved_model
 from loupe.interventions import compile, generate, parse
 from loupe.models import load
 
@@ -24,8 +24,8 @@ _LOCK = threading.Lock()
 
 
 def _model(name: str) -> LanguageModel:
-    local = home() / "models" / name
-    key = str(local) if local.exists() else name  # a saved model's name is only unique per home
+    local = saved_model(name)
+    key = str(local) if local else name  # a saved model's name is only unique per home
     with _LOCK:
         if key not in _MODELS:
             _MODELS[key] = load(name)
@@ -44,8 +44,7 @@ class LoupeAPI(ModelAPI):
     ) -> None:
         super().__init__(model_name, base_url, api_key, [], config or GenerateConfig())
         self.lm = _model(model_name)
-        self.specs = parse(interventions) if interventions else []
-        self.plan = compile(self.lm, self.specs) if self.specs else None
+        self.plan = compile(self.lm, parse(interventions)) if interventions else None
 
     def max_connections(self) -> int:
         return 1

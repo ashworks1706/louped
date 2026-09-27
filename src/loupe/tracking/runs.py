@@ -19,16 +19,13 @@ from mlflow.entities import Run
 from loupe.core import artifacts_dir, capture, tracking_uri
 
 
-def client() -> MlflowClient:
-    return MlflowClient(tracking_uri=tracking_uri())
-
-
 def _experiment_id(name: str) -> str:
-    found = client().get_experiment_by_name(name)
+    client = MlflowClient(tracking_uri=tracking_uri())
+    found = client.get_experiment_by_name(name)
     if found is not None:
         return found.experiment_id
     location = (artifacts_dir() / name).as_uri()
-    return client().create_experiment(name, artifact_location=location)
+    return client.create_experiment(name, artifact_location=location)
 
 
 @contextmanager

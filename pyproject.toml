@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 # One extra per capability. A module imports only its own extra's packages, so an install carries
-# only what it uses. Later phases add interp, evals, train, rl, vllm and cluster.
+# only what it uses. Later phases add rl, vllm and cluster.
 [project.optional-dependencies]
 # Reading and serving results. Pulls in the readers for both stores it serves.
 server = [
@@ -39,7 +39,6 @@ interp = [
 # QLoRA and GGUF export; loupe uses it when present.
 train = [
     "loupelab[data,interp,tracking]",
-    "accelerate>=1.10",
     "datasets>=4",
     "peft>=0.17",
     "trl>=0.24",

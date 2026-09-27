@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import tempfile
 from datetime import UTC, datetime
 
 from mlflow import MlflowClient
@@ -93,11 +94,12 @@ def list_artifact_paths(run_id: str, path: str) -> list[str] | None:
     client = _client()
     if client is None:
         return None
+    run_id = run_id.removeprefix(PREFIX)
     try:
-        client.get_run(run_id.removeprefix(PREFIX))
+        client.get_run(run_id)
     except Exception:
         return None
-    return [a.path for a in _walk(client, run_id.removeprefix(PREFIX), path)]
+    return [a.path for a in _walk(client, run_id, path)]
 
 
 def read_artifact(run_id: str, path: str) -> bytes | None:
@@ -105,8 +107,6 @@ def read_artifact(run_id: str, path: str) -> bytes | None:
     client = _client()
     if client is None:
         return None
-    import tempfile
-
     try:
         with tempfile.TemporaryDirectory() as tmp:
             local = client.download_artifacts(run_id.removeprefix(PREFIX), path, tmp)

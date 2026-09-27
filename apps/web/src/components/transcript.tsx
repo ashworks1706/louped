@@ -1,8 +1,7 @@
+import { ScoreCell } from "@/components/metric";
 import { Badge } from "@/components/ui/badge";
 import type { SampleDetail } from "@/lib/api";
 import { cn } from "@/lib/utils";
-
-import { ScoreCell } from "./metric";
 
 const ROLE_STYLE: Record<string, string> = {
   user: "bg-muted/60 border",

@@ -7,6 +7,7 @@ from loupe.core.paths import (
     experiments_dir,
     home,
     logs_dir,
+    saved_model,
     tracking_uri,
     vectors_dir,
 )
@@ -19,6 +20,7 @@ __all__ = [
     "experiments_dir",
     "home",
     "logs_dir",
+    "saved_model",
     "tracking_uri",
     "vectors_dir",
 ]

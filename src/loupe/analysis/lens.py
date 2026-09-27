@@ -8,19 +8,7 @@ import torch
 from nnsight import LanguageModel
 
 from loupe.analysis.views import table
-from loupe.models import blocks
-
-
-def _final_norm(lm: LanguageModel):
-    for path in ("model.norm", "transformer.ln_f", "gpt_neox.final_layer_norm"):
-        root = lm
-        try:
-            for part in path.split("."):
-                root = getattr(root, part)
-            return root
-        except AttributeError:
-            continue
-    raise ValueError("no final norm found for this family")
+from loupe.models import blocks, final_norm
 
 
 @torch.no_grad()
@@ -31,7 +19,7 @@ def logit_lens(lm: LanguageModel, prompt: str, k: int = 5) -> dict[str, Any]:
     with lm.trace(prompt):
         for layer in layers:
             resid.append(layer.output[:, -1, :].save())
-    norm, head = _final_norm(lm)._module, lm.lm_head._module
+    norm, head = final_norm(lm)._module, lm.lm_head._module
     rows: list[list[Any]] = []
     for i, h in enumerate(resid):
         probs = head(norm(h)).float().softmax(-1)[0]
