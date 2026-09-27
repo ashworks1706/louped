@@ -3,8 +3,7 @@
 loupe builds the joins between interventions, evals, training and interp, and links to existing
 tools for the rest (ARCHITECTURE.md). Out of scope, because other free tools do it: a training
 dashboard, cluster and vLLM scale-out (Transformer Lab, LLaMA-Factory, Oumi), SAE and graph
-browsing (Neuronpedia, circuit-tracer), ReFT (pyreft). Also out: a masked diffusion backend;
-Bijou keeps its phase-routing question.
+browsing (Neuronpedia, circuit-tracer), ReFT (pyreft).
 
 Each phase ends with an acceptance test, most of them reproducing a published result: if loupe
 cannot reproduce a number someone else got, its own numbers cannot be trusted. Every phase ships
@@ -123,6 +122,9 @@ and performance numbers (latency, throughput) stay in each product's repo.
       during generation, against retrieval-before-prefill at equal token budget (piramid v0.6)
 - [ ] Adapter bank: named PEFT LoRAs equipped per request and combined; the subset-by-eval matrix
       against a tuned prompt, with damage to the other skills' evals (Bijou research 1 and 2)
+- [ ] Masked diffusion backend: a diffusion LM from the Hub (LLaDA, Dream) behind the same model
+      and intervention interfaces, with the denoising step as an axis; adapters switched by
+      phase, static against early/late and the reversed split (Bijou research 3)
 - [ ] Acceptance: one result per project read entirely in the UI
 
 ## v1.0 Open source
