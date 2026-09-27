@@ -91,3 +91,11 @@ The UI talks to the server over HTTP only.
 commit titles (`feat:`, `fix:`, `docs:`, `chore:`), because release-please builds the changelog and
 the version from them. The one required check is `CI`. Never force-push to `main`, move a tag or
 publish a release unless asked.
+
+## Agent tooling
+
+`.claude/skills/` holds the workflows (`check`, `new-experiment`, `roadmap`, `code-quality`, and
+vendored debugging, TDD, verification and security skills; see its README). `.claude/agents/` holds
+the reviewers: run `loupe-reviewer` before opening a pull request and `web-reviewer` after any
+change under `apps/web`. `.claude/settings.json` denies force-pushes, pushes to `main`, tags and
+reading `.env`.
