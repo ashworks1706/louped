@@ -47,12 +47,15 @@ src/loupe/       the Python package (distribution name: loupelab)
   vectors/       directions as safetensors under <home>/vectors
   interventions/ Steer and Ablate specs, compiled to per-layer edits; batched generation
   analysis/      activations, logit lens, exact and attribution patching, probes, attention,
-                 SAE features; results as UI views (heatmap, line, table)
+                 projections and top examples, SAE features; results as UI views (heatmap,
+                 line, table, tokens)
   inspect_ext/   the loupe/ Inspect model provider and shared scorers
   data/          training sets from product traces: export, redact, verify, review, curate
   train/         post-training recipes (sft) on TRL and PEFT, logged to MLflow
+  sweep.py       an Inspect task under Steer at every layer and strength, as one figure
   tracking/      start an MLflow run the UI can read
-  stores/        read-only views over Inspect logs, MLflow, views/, vectors and experiments/
+  stores/        read-only views over Inspect logs, MLflow, views/, vectors and experiments/;
+                 paired comparison of two eval runs
   server/        FastAPI over the stores, plus the Playground
   cli.py         the loupe command
 apps/web/        the UI: Next.js static export, shadcn/ui. Its own AGENTS.md holds the design rules
@@ -69,7 +72,7 @@ contract is in `pyproject.toml`. New layers are added there in the position ARCH
 ```
 cli
 server
-train
+train | sweep
 stores | tracking | analysis | inspect_ext
 interventions
 vectors

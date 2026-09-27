@@ -23,7 +23,8 @@ _MODELS: dict[str, LanguageModel] = {}
 _LOCK = threading.Lock()
 
 
-def _model(name: str) -> LanguageModel:
+def shared_model(name: str) -> LanguageModel:
+    """The model the provider serves under this name, loaded once per process."""
     local = saved_model(name)
     key = str(local) if local else name  # a saved model's name is only unique per home
     with _LOCK:
@@ -43,7 +44,7 @@ class LoupeAPI(ModelAPI):
         **model_args: Any,
     ) -> None:
         super().__init__(model_name, base_url, api_key, [], config or GenerateConfig())
-        self.lm = _model(model_name)
+        self.lm = shared_model(model_name)
         self.plan = compile(self.lm, parse(interventions)) if interventions else None
 
     def max_connections(self) -> int:

@@ -6,10 +6,13 @@ argument, sent from the UI Playground, or recorded in a run's parameters.
 
 from loupe.interventions.generate import generate, next_token_logprobs
 from loupe.interventions.specs import (
+    EMBED,
     Ablate,
+    Plan,
     Steer,
     ablate_plan,
     apply,
+    apply_at,
     compile,
     everywhere,
     parse,
@@ -17,10 +20,13 @@ from loupe.interventions.specs import (
 )
 
 __all__ = [
+    "EMBED",
     "Ablate",
+    "Plan",
     "Steer",
     "ablate_plan",
     "apply",
+    "apply_at",
     "compile",
     "everywhere",
     "generate",

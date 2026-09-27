@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from run import Args as RunArgs
 from run import data
 
+from loupe.core import logs_dir
 from loupe.inspect_ext import refusal
 
 
@@ -69,6 +70,7 @@ def main(args: Args) -> None:
         eval(
             refusal_direction(condition, prompts, args.max_tokens),
             model=model,
+            log_dir=str(logs_dir()),
             tags=["experiment:refusal-direction", f"condition:{condition}"],
             metadata={"condition": condition, "interventions": spec},
             display="none",

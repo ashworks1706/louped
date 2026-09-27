@@ -1,16 +1,19 @@
 """Analyses over a model's activations. Each returns plain data and UI views."""
 
-from loupe.analysis.activations import last_token_resid, positions
+from loupe.analysis.activations import last_token_resid, positions, resid, token_strings
 from loupe.analysis.attention import attention_patterns
 from loupe.analysis.lens import logit_lens
 from loupe.analysis.patching import attribution_patch, patch_residual
 from loupe.analysis.probes import linear_probes
-from loupe.analysis.sae import sae_features, save_feature
-from loupe.analysis.views import heatmap, line, table
+from loupe.analysis.project import along, projection, top_examples
+from loupe.analysis.sae import feature_examples, sae_features, save_feature
+from loupe.analysis.views import heatmap, line, table, token_row, tokens
 
 __all__ = [
+    "along",
     "attention_patterns",
     "attribution_patch",
+    "feature_examples",
     "heatmap",
     "last_token_resid",
     "line",
@@ -18,7 +21,13 @@ __all__ = [
     "logit_lens",
     "patch_residual",
     "positions",
+    "projection",
+    "resid",
     "sae_features",
     "save_feature",
     "table",
+    "token_row",
+    "token_strings",
+    "tokens",
+    "top_examples",
 ]

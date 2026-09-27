@@ -13,7 +13,7 @@ harmless requests, and do the tools agree?
 3. Residual patching, exact and by attribution, harmful into harmless; their agreement is logged.
 4. SAE features at the SAE's layer on the same request (skipped on a real model without an SAE;
    `--tiny` uses a random SAE, so its features are noise). The top feature at the last token is
-   saved as a direction.
+   saved as a direction, and its top examples over all prompts form a local dashboard.
 
 The prompts and the `--tiny` planted-refusal model are refusal-direction's, so the two agree.
 """
@@ -34,6 +34,7 @@ import tyro
 from loupe.analysis import (
     attention_patterns,
     attribution_patch,
+    feature_examples,
     last_token_resid,
     linear_probes,
     patch_residual,
@@ -132,7 +133,7 @@ def main(args: Args) -> None:
             mlflow.log_metric("probe/accuracy", acc, step=layer)
         views.append(("probes", view))
 
-        _, view = attention_patterns(lm, harmful[0] if not args.tiny else chat(lm, harmful[0]))
+        _, view = attention_patterns(lm, chat(lm, harmful[0]))
         views.append(("attention", view))
 
         pair = refusal.patching_pair(lm, args.tiny)
@@ -148,7 +149,8 @@ def main(args: Args) -> None:
             save_feature(sae, feature, f"sae.{short}.f{feature}", model=model_name, run=run_id)
             mlflow.log_metrics({"sae/l0_mean": float((acts > 0).sum(-1).float().mean()),
                                 "sae/top_feature_last_token": feature})  # fmt: skip
-            views += [("sae-features", top), ("sae-positions", over)]
+            _, dashboard = feature_examples(lm, sae, feature, prompts)
+            views += [("sae-features", top), ("sae-positions", over), ("sae-examples", dashboard)]
 
         for i, (slug, view) in enumerate(views):
             log_json(view, f"views/{i:02d}-{slug}.json")

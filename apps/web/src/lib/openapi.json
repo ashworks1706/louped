@@ -274,6 +274,54 @@
         }
       }
     },
+    "/api/compare": {
+      "get": {
+        "summary": "Compare",
+        "operationId": "compare_api_compare_get",
+        "parameters": [
+          {
+            "name": "a",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "A"
+            }
+          },
+          {
+            "name": "b",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "B"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Comparison"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/vectors": {
       "get": {
         "summary": "Vectors",
@@ -373,6 +421,44 @@
           }
         }
       }
+    },
+    "/api/playground/inspect": {
+      "post": {
+        "summary": "Inspect",
+        "operationId": "inspect_api_playground_inspect_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -398,6 +484,36 @@
         "type": "object",
         "required": ["path", "size"],
         "title": "Artifact"
+      },
+      "Comparison": {
+        "properties": {
+          "a": {
+            "type": "string",
+            "title": "A"
+          },
+          "b": {
+            "type": "string",
+            "title": "B"
+          },
+          "only_a": {
+            "type": "integer",
+            "title": "Only A"
+          },
+          "only_b": {
+            "type": "integer",
+            "title": "Only B"
+          },
+          "scores": {
+            "items": {
+              "$ref": "#/components/schemas/PairedScore"
+            },
+            "type": "array",
+            "title": "Scores"
+          }
+        },
+        "type": "object",
+        "required": ["a", "b", "only_a", "only_b", "scores"],
+        "title": "Comparison"
       },
       "Direction": {
         "properties": {
@@ -632,11 +748,101 @@
               }
             ],
             "title": "Slices"
+          },
+          "labels": {
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Labels"
           }
         },
         "type": "object",
         "required": ["kind", "title", "x", "y", "z", "x_label", "y_label"],
         "title": "HeatmapView"
+      },
+      "InspectRequest": {
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Prompt"
+          },
+          "interventions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Interventions",
+            "default": []
+          },
+          "vectors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Vectors",
+            "description": "Saved directions to read, each at its own layer.",
+            "default": []
+          },
+          "chat": {
+            "type": "boolean",
+            "title": "Chat",
+            "description": "Wrap the prompt in the model's chat template.",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": ["prompt"],
+        "title": "InspectRequest"
+      },
+      "InspectResponse": {
+        "properties": {
+          "views": {
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/HeatmapView"
+                },
+                {
+                  "$ref": "#/components/schemas/LineView"
+                },
+                {
+                  "$ref": "#/components/schemas/TableView"
+                },
+                {
+                  "$ref": "#/components/schemas/TokensView"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "kind",
+                "mapping": {
+                  "heatmap": "#/components/schemas/HeatmapView",
+                  "line": "#/components/schemas/LineView",
+                  "table": "#/components/schemas/TableView",
+                  "tokens": "#/components/schemas/TokensView"
+                }
+              }
+            },
+            "type": "array",
+            "title": "Views"
+          }
+        },
+        "type": "object",
+        "required": ["views"],
+        "title": "InspectResponse"
       },
       "LineView": {
         "properties": {
@@ -726,6 +932,52 @@
         "type": "object",
         "required": ["step", "value"],
         "title": "MetricPoint"
+      },
+      "PairedScore": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "n": {
+            "type": "integer",
+            "title": "N"
+          },
+          "mean_a": {
+            "type": "number",
+            "title": "Mean A"
+          },
+          "mean_b": {
+            "type": "number",
+            "title": "Mean B"
+          },
+          "diff": {
+            "type": "number",
+            "title": "Diff",
+            "description": "Mean of B minus A over paired samples."
+          },
+          "low": {
+            "type": "number",
+            "title": "Low",
+            "description": "95% paired bootstrap interval of diff."
+          },
+          "high": {
+            "type": "number",
+            "title": "High"
+          },
+          "up": {
+            "type": "integer",
+            "title": "Up",
+            "description": "Samples where B scored higher."
+          },
+          "down": {
+            "type": "integer",
+            "title": "Down"
+          }
+        },
+        "type": "object",
+        "required": ["name", "n", "mean_a", "mean_b", "diff", "low", "high", "up", "down"],
+        "title": "PairedScore"
       },
       "PlaygroundInfo": {
         "properties": {
@@ -999,6 +1251,9 @@
               },
               {
                 "$ref": "#/components/schemas/TableView"
+              },
+              {
+                "$ref": "#/components/schemas/TokensView"
               }
             ],
             "title": "View",
@@ -1007,7 +1262,8 @@
               "mapping": {
                 "heatmap": "#/components/schemas/HeatmapView",
                 "line": "#/components/schemas/LineView",
-                "table": "#/components/schemas/TableView"
+                "table": "#/components/schemas/TableView",
+                "tokens": "#/components/schemas/TokensView"
               }
             }
           }
@@ -1247,6 +1503,95 @@
         "type": "object",
         "required": ["kind", "title", "columns", "rows"],
         "title": "TableView"
+      },
+      "TokenRow": {
+        "properties": {
+          "tokens": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tokens"
+          },
+          "values": {
+            "additionalProperties": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Values"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": ["tokens", "values"],
+        "title": "TokenRow"
+      },
+      "TokensView": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "tokens",
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/TokenRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "pairs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "items": {
+                      "type": "number"
+                    },
+                    "type": "array"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pairs"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": ["kind", "title", "rows"],
+        "title": "TokensView"
       },
       "ToolCall": {
         "properties": {

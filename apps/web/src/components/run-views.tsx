@@ -23,8 +23,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { q, type HeatmapView, type LineView, type RunView, type TableView } from "@/lib/api";
+import {
+  q,
+  type HeatmapView,
+  type LineView,
+  type TableView,
+  type TokensView,
+  type View,
+} from "@/lib/api";
 import { num } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 /** Every figure a run logged under views/, in file order. */
 export function RunViews({ id }: { id: string }) {
@@ -34,7 +42,7 @@ export function RunViews({ id }: { id: string }) {
       {(all) => (
         <div className="flex flex-col gap-6">
           {all.map((v) => (
-            <ViewCard key={v.path} item={v} />
+            <Figure key={v.path} view={v.view} />
           ))}
         </div>
       )}
@@ -42,8 +50,8 @@ export function RunViews({ id }: { id: string }) {
   );
 }
 
-function ViewCard({ item }: { item: RunView }) {
-  const { view } = item;
+/** One figure of any kind, with its title and note. */
+export function Figure({ view }: { view: View }) {
   return (
     <figure className="rounded-xl border">
       <figcaption className="flex flex-wrap items-baseline justify-between gap-2 border-b px-4 py-3">
@@ -54,6 +62,7 @@ function ViewCard({ item }: { item: RunView }) {
         {view.kind === "line" && <LineFigure view={view} />}
         {view.kind === "heatmap" && <HeatmapFigure view={view} />}
         {view.kind === "table" && <TableFigure view={view} />}
+        {view.kind === "tokens" && <TokensFigure view={view} />}
       </div>
     </figure>
   );
@@ -120,6 +129,57 @@ function LineFigure({ view }: { view: LineView }) {
   );
 }
 
+/** A signed colour: positive shades one way, negative the other, strength by magnitude. */
+function shade(v: number, max: number) {
+  const c = `color-mix(in oklch, var(${v >= 0 ? "--positive" : "--negative"}) ${Math.round(
+    Math.min(1, Math.abs(v) / max) * 100,
+  )}%, transparent)`;
+  return `linear-gradient(${c}, ${c})`;
+}
+
+function Scale({ max }: { max: number }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span className="font-mono">−{max.toFixed(2)}</span>
+      <span
+        className="h-2 w-24 rounded-full"
+        style={{
+          background: "linear-gradient(to right, var(--negative), transparent, var(--positive))",
+        }}
+      />
+      <span className="font-mono">+{max.toFixed(2)}</span>
+    </span>
+  );
+}
+
+function SeriesSelect({
+  label,
+  names,
+  value,
+  onChange,
+}: {
+  label: string;
+  names: string[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  if (names.length < 2) return null;
+  return (
+    <NativeSelect
+      aria-label={label}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="font-mono text-xs"
+    >
+      {names.map((n) => (
+        <option key={n} value={n}>
+          {n}
+        </option>
+      ))}
+    </NativeSelect>
+  );
+}
+
 /** Signed values: positive shades one way, negative the other, strength by magnitude. With
  * slices (attention: one per layer and head), a select picks which grid is drawn. */
 function HeatmapFigure({ view }: { view: HeatmapView }) {
@@ -127,32 +187,19 @@ function HeatmapFigure({ view }: { view: HeatmapView }) {
   const names = Object.keys(view.slices ?? {});
   const [slice, setSlice] = useState(names[0]);
   const z = view.slices?.[slice] ?? view.z;
+  const labels = view.labels;
   const max = Math.max(1e-9, ...z.flat().map(Math.abs));
-  const cell = (v: number) =>
-    `color-mix(in oklch, var(${v >= 0 ? "--positive" : "--negative"}) ${Math.round(
-      (Math.abs(v) / max) * 100,
-    )}%, transparent)`;
-  const shown = hover ? z[hover[0]][hover[1]] : null;
+  const at = (r: number, c: number) =>
+    `${view.y_label} ${view.y[r]}, ${view.x[c]}: ${labels ? `${JSON.stringify(labels[r][c])} ` : ""}${z[r][c].toFixed(3)}`;
   return (
     <div className="flex flex-col gap-3">
-      {names.length > 0 && (
-        <NativeSelect
-          aria-label="Slice"
-          value={slice}
-          onChange={(e) => setSlice(e.target.value)}
-          className="font-mono text-xs"
-        >
-          {names.map((n) => (
-            <option key={n} value={n}>
-              {n}
-            </option>
-          ))}
-        </NativeSelect>
-      )}
+      <SeriesSelect label="Slice" names={names} value={slice} onChange={setSlice} />
       <div className="overflow-x-auto">
         <div
           className="grid w-max gap-px text-[10px]"
-          style={{ gridTemplateColumns: `auto repeat(${view.x.length}, minmax(28px, 1fr))` }}
+          style={{
+            gridTemplateColumns: `auto repeat(${view.x.length}, minmax(${labels ? 48 : 28}px, 1fr))`,
+          }}
           onMouseLeave={() => setHover(null)}
         >
           {view.y.map((y, r) => (
@@ -162,13 +209,13 @@ function HeatmapFigure({ view }: { view: HeatmapView }) {
                 <span
                   key={x}
                   data-testid="heat-cell"
-                  className="bg-muted h-6 rounded-[2px] outline-offset-1 hover:outline hover:outline-1"
-                  style={{
-                    backgroundImage: `linear-gradient(${cell(z[r][c])}, ${cell(z[r][c])})`,
-                  }}
+                  className="bg-muted h-6 max-w-24 truncate rounded-[2px] px-1 font-mono leading-6 whitespace-pre outline-offset-1 hover:outline hover:outline-1"
+                  style={{ backgroundImage: shade(z[r][c], max) }}
                   onMouseEnter={() => setHover([r, c])}
-                  title={`${view.y_label} ${y} · ${view.x_label} ${x}: ${z[r][c].toFixed(3)}`}
-                />
+                  title={at(r, c)}
+                >
+                  {labels?.[r][c]}
+                </span>
               ))}
             </Fragment>
           ))}
@@ -188,23 +235,110 @@ function HeatmapFigure({ view }: { view: HeatmapView }) {
         <span>
           rows {view.y_label} · columns {view.x_label}
         </span>
-        <span className="flex items-center gap-1.5">
-          <span className="font-mono">−{max.toFixed(2)}</span>
-          <span
-            className="h-2 w-24 rounded-full"
-            style={{
-              background:
-                "linear-gradient(to right, var(--negative), transparent, var(--positive))",
-            }}
-          />
-          <span className="font-mono">+{max.toFixed(2)}</span>
-        </span>
+        <Scale max={max} />
         <span className="text-foreground font-mono tabular-nums" aria-live="polite">
-          {hover && shown !== null
-            ? `${view.y_label} ${view.y[hover[0]]}, ${view.x[hover[1]]}: ${shown.toFixed(3)}`
-            : " "}
+          {hover ? at(hover[0], hover[1]) : " "}
         </span>
       </div>
+    </div>
+  );
+}
+
+/** Text coloured per token by the chosen series; each text takes focus, and arrow keys move a
+ * cursor that reads out the token under it. With pairs (attention), the colour is the query
+ * token's row of the chosen grid (the hovered token, a picked one, or the last) and the grid
+ * itself is drawn below. */
+function TokensFigure({ view }: { view: TokensView }) {
+  const names = Object.keys(view.rows[0]?.values ?? {});
+  const [picked, setSeries] = useState(names[0]);
+  const series = names.includes(picked) ? picked : names[0];
+  const [hover, setHover] = useState<[number, number] | null>(null);
+  const [lockedAt, setLocked] = useState<number | null>(null);
+  const grid = view.pairs?.[series];
+  const locked = grid && lockedAt !== null && lockedAt < grid.length ? lockedAt : null;
+  const query = grid ? (locked ?? hover?.[1] ?? grid.length - 1) : null;
+  const values = (r: number) =>
+    grid && query !== null ? grid[query] : view.rows[r].values[series];
+  const max = Math.max(1e-9, ...view.rows.flatMap((_, r) => values(r).map(Math.abs)));
+  const token = (r: number, i: number) => `${i} ${JSON.stringify(view.rows[r].tokens[i])}`;
+  const toggle = (i: number) => setLocked(locked === i ? null : i);
+  const readout = !hover
+    ? grid && locked !== null
+      ? `query ${token(0, locked)} picked; pick it again to release`
+      : " "
+    : grid && locked === null
+      ? `query ${token(0, hover[1])}; click or press Enter to pick`
+      : `${token(hover[0], hover[1])}: ${values(hover[0])[hover[1]].toFixed(3)}`;
+  const keys = (r: number) => (e: React.KeyboardEvent) => {
+    const n = view.rows[r].tokens.length;
+    const at = hover?.[0] === r ? hover[1] : n - 1;
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      e.preventDefault();
+      setHover([r, Math.min(n - 1, Math.max(0, at + (e.key === "ArrowLeft" ? -1 : 1)))]);
+    } else if (grid && (e.key === "Enter" || e.key === " ")) {
+      e.preventDefault();
+      toggle(at);
+    }
+  };
+  return (
+    <div className="flex flex-col gap-3">
+      <SeriesSelect label="Series" names={names} value={series} onChange={setSeries} />
+      <div className="flex flex-col gap-2" onMouseLeave={() => setHover(null)}>
+        {view.rows.map((row, r) => (
+          <div key={r} className="flex flex-col gap-1">
+            {row.label && (
+              <span className="text-muted-foreground font-mono text-[11px]">{row.label}</span>
+            )}
+            <p
+              tabIndex={0}
+              aria-label={`${row.label ?? "text"}: arrow keys move between tokens`}
+              onKeyDown={keys(r)}
+              onFocus={() => setHover([r, row.tokens.length - 1])}
+              onBlur={() => setHover(null)}
+              className="focus-visible:ring-ring/40 rounded-sm font-mono text-xs leading-6 break-all whitespace-pre-wrap outline-none focus-visible:ring-2"
+            >
+              {row.tokens.map((t, i) => (
+                <span
+                  key={i}
+                  data-testid="token"
+                  className={cn(
+                    "bg-muted/40 mr-px rounded-[2px] py-0.5",
+                    (query === i || (hover?.[0] === r && hover[1] === i)) &&
+                      "outline-foreground outline",
+                    grid && "cursor-pointer",
+                  )}
+                  style={{ backgroundImage: shade(values(r)[i], max) }}
+                  onMouseEnter={() => setHover([r, i])}
+                  onClick={grid ? () => toggle(i) : undefined}
+                  title={`${i} ${JSON.stringify(t)}: ${values(r)[i].toFixed(3)}`}
+                >
+                  {t.replaceAll("\n", "↵\n")}
+                </span>
+              ))}
+            </p>
+          </div>
+        ))}
+      </div>
+      <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+        <Scale max={max} />
+        <span className="text-foreground font-mono tabular-nums" aria-live="polite">
+          {readout}
+        </span>
+      </div>
+      {grid && (
+        <HeatmapFigure
+          key={series}
+          view={{
+            kind: "heatmap",
+            title: series,
+            z: grid,
+            x: view.rows[0].tokens.map((t, i) => `${i}:${t}`),
+            y: view.rows[0].tokens.map((t, i) => `${i}:${t}`),
+            x_label: "key",
+            y_label: "query",
+          }}
+        />
+      )}
     </div>
   );
 }

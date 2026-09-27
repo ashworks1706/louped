@@ -123,6 +123,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/compare": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Compare */
+    get: operations["compare_api_compare_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/vectors": {
     parameters: {
       query?: never;
@@ -191,6 +208,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/playground/inspect": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Inspect */
+    post: operations["inspect_api_playground_inspect_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -201,6 +235,19 @@ export interface components {
       path: string;
       /** Size */
       size: number | null;
+    };
+    /** Comparison */
+    Comparison: {
+      /** A */
+      a: string;
+      /** B */
+      b: string;
+      /** Only A */
+      only_a: number;
+      /** Only B */
+      only_b: number;
+      /** Scores */
+      scores: components["schemas"]["PairedScore"][];
     };
     /**
      * Direction
@@ -299,6 +346,42 @@ export interface components {
       slices?: {
         [key: string]: number[][];
       } | null;
+      /** Labels */
+      labels?: string[][] | null;
+    };
+    /** InspectRequest */
+    InspectRequest: {
+      /** Prompt */
+      prompt: string;
+      /**
+       * Interventions
+       * @default []
+       */
+      interventions: {
+        [key: string]: unknown;
+      }[];
+      /**
+       * Vectors
+       * @description Saved directions to read, each at its own layer.
+       * @default []
+       */
+      vectors: string[];
+      /**
+       * Chat
+       * @description Wrap the prompt in the model's chat template.
+       * @default true
+       */
+      chat: boolean;
+    };
+    /** InspectResponse */
+    InspectResponse: {
+      /** Views */
+      views: (
+        | components["schemas"]["HeatmapView"]
+        | components["schemas"]["LineView"]
+        | components["schemas"]["TableView"]
+        | components["schemas"]["TokensView"]
+      )[];
     };
     /** LineView */
     LineView: {
@@ -337,6 +420,36 @@ export interface components {
       step: number;
       /** Value */
       value: number;
+    };
+    /** PairedScore */
+    PairedScore: {
+      /** Name */
+      name: string;
+      /** N */
+      n: number;
+      /** Mean A */
+      mean_a: number;
+      /** Mean B */
+      mean_b: number;
+      /**
+       * Diff
+       * @description Mean of B minus A over paired samples.
+       */
+      diff: number;
+      /**
+       * Low
+       * @description 95% paired bootstrap interval of diff.
+       */
+      low: number;
+      /** High */
+      high: number;
+      /**
+       * Up
+       * @description Samples where B scored higher.
+       */
+      up: number;
+      /** Down */
+      down: number;
     };
     /** PlaygroundInfo */
     PlaygroundInfo: {
@@ -426,7 +539,8 @@ export interface components {
       view:
         | components["schemas"]["HeatmapView"]
         | components["schemas"]["LineView"]
-        | components["schemas"]["TableView"];
+        | components["schemas"]["TableView"]
+        | components["schemas"]["TokensView"];
     };
     /** SampleDetail */
     SampleDetail: {
@@ -494,6 +608,35 @@ export interface components {
       note?: string | null;
       /** Links */
       links?: (string | null)[][] | null;
+    };
+    /** TokenRow */
+    TokenRow: {
+      /** Tokens */
+      tokens: string[];
+      /** Values */
+      values: {
+        [key: string]: number[];
+      };
+      /** Label */
+      label?: string | null;
+    };
+    /** TokensView */
+    TokensView: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      kind: "tokens";
+      /** Title */
+      title: string;
+      /** Rows */
+      rows: components["schemas"]["TokenRow"][];
+      /** Pairs */
+      pairs?: {
+        [key: string]: number[][];
+      } | null;
+      /** Note */
+      note?: string | null;
     };
     /** ToolCall */
     ToolCall: {
@@ -723,6 +866,38 @@ export interface operations {
       };
     };
   };
+  compare_api_compare_get: {
+    parameters: {
+      query: {
+        a: string;
+        b: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Comparison"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   vectors_api_vectors_get: {
     parameters: {
       query?: never;
@@ -803,6 +978,39 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["GenerateResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  inspect_api_playground_inspect_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InspectRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InspectResponse"];
         };
       };
       /** @description Validation Error */

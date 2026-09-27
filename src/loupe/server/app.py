@@ -20,6 +20,7 @@ from loupe.core import Direction, home
 from loupe.server import playground
 from loupe.stores.runs import read_artifact
 from loupe.stores.types import (
+    Comparison,
     Experiment,
     RunDetail,
     RunSummary,
@@ -87,6 +88,10 @@ def create_app(web_dir: Path | None = None, model: str | None = None) -> FastAPI
     @app.get("/api/runs/{run_id}/views")
     def views(run_id: str) -> list[RunView]:
         return stores.list_views(run_id)
+
+    @app.get("/api/compare")
+    def compare(a: str, b: str) -> Comparison:
+        return stores.compare(a, b)
 
     @app.get("/api/vectors")
     def vectors() -> list[Direction]:

@@ -4,6 +4,7 @@ Each view is empty until its tool has written something, so the server answers w
 exists. Needs the server extra, which installs both readers.
 """
 
+from loupe.stores.compare import compare
 from loupe.stores.experiments import list_experiments
 from loupe.stores.runs import (
     NotFound,
@@ -17,6 +18,7 @@ from loupe.stores.vectors import list_vectors
 
 __all__ = [
     "NotFound",
+    "compare",
     "get_run",
     "get_sample",
     "list_experiments",

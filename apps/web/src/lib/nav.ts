@@ -56,7 +56,7 @@ export const NAV: NavItem[] = [
   {
     href: "/playground/",
     title: "Playground",
-    description: "Chat with a model, with and without an intervention, side by side.",
+    description: "Run a prompt and look inside, with and without an intervention.",
     icon: MessageSquareText,
     shortcut: "G P",
   },

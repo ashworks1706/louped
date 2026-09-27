@@ -14,9 +14,10 @@ import torch
 from nnsight import LanguageModel
 
 from loupe.analysis.activations import positions
+from loupe.analysis.project import top_examples
 from loupe.analysis.views import heatmap, table
 from loupe.core import Direction
-from loupe.interventions.specs import EMBED
+from loupe.interventions.specs import EMBED, Plan
 from loupe.models import blocks
 from loupe.vectors import save_vector
 
@@ -82,6 +83,24 @@ def sae_features(
                         [acts[:, f].tolist() for f in peak], x=labels, y=[f"#{f}" for f in peak],
                         x_label="position", y_label="feature")  # fmt: skip
     return acts, view_table, view_heat
+
+
+@torch.no_grad()
+def feature_examples(
+    lm: LanguageModel,
+    sae: SAE,
+    feature: int,
+    prompts: list[str],
+    k: int = 10,
+    plan: Plan | None = None,
+) -> tuple[torch.Tensor, dict[str, Any]]:
+    """A local dashboard for one feature: its peak per prompt and the k texts it fires on most."""
+
+    def score(h: torch.Tensor) -> torch.Tensor:
+        return sae.encode(h.to(sae.W_dec))[..., feature]
+
+    title = f"Feature #{feature} at {sae.cfg.metadata.hook_name}: top examples"
+    return top_examples(lm, prompts, _layer(sae), score, title, k, plan)
 
 
 def save_feature(

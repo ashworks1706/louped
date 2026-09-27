@@ -95,6 +95,7 @@ class HeatmapView(BaseModel):
     y_label: str
     note: str | None = None
     slices: dict[str, list[list[float]]] | None = None
+    labels: list[list[str]] | None = None
 
 
 class LineView(BaseModel):
@@ -116,7 +117,21 @@ class TableView(BaseModel):
     links: list[list[str | None]] | None = None
 
 
-View = Annotated[HeatmapView | LineView | TableView, Field(discriminator="kind")]
+class TokenRow(BaseModel):
+    tokens: list[str]
+    values: dict[str, list[float]]
+    label: str | None = None
+
+
+class TokensView(BaseModel):
+    kind: Literal["tokens"]
+    title: str
+    rows: list[TokenRow]
+    pairs: dict[str, list[list[float]]] | None = None
+    note: str | None = None
+
+
+View = Annotated[HeatmapView | LineView | TableView | TokensView, Field(discriminator="kind")]
 
 
 class RunView(BaseModel):
@@ -124,3 +139,23 @@ class RunView(BaseModel):
 
     path: str
     view: View
+
+
+class PairedScore(BaseModel):
+    name: str
+    n: int
+    mean_a: float
+    mean_b: float
+    diff: float = Field(description="Mean of B minus A over paired samples.")
+    low: float = Field(description="95% paired bootstrap interval of diff.")
+    high: float
+    up: int = Field(description="Samples where B scored higher.")
+    down: int
+
+
+class Comparison(BaseModel):
+    a: str
+    b: str
+    only_a: int
+    only_b: int
+    scores: list[PairedScore]

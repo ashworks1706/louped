@@ -34,6 +34,23 @@ class Data:
 
 
 @dataclass(frozen=True)
+class Sweep:
+    """Run an Inspect task under Steer at every layer and strength; one figure of score and
+    coherence cost. Needs the evals, interp and tracking extras."""
+
+    task: str
+    """An Inspect task: file.py@name, or a registered name."""
+    model: str
+    """A Hub id, a path, or a name under <home>/models, served through loupe/."""
+    vector: str
+    layers: list[int]
+    alphas: list[float]
+    metric: str
+    """scorer/metric, as the Run page shows it (refusal/mean)."""
+    experiment: str = "steering-sweep"
+
+
+@dataclass(frozen=True)
 class Version:
     """Print the installed version."""
 
@@ -42,6 +59,7 @@ Command = (
     Annotated[Serve, tyro.conf.subcommand("serve")]
     | Annotated[Data, tyro.conf.subcommand("data")]
     | Annotated[TrainCommand, tyro.conf.subcommand("train")]
+    | Annotated[Sweep, tyro.conf.subcommand("sweep")]
     | Annotated[Version, tyro.conf.subcommand("version")]
 )
 
@@ -70,5 +88,10 @@ def main() -> None:
             from loupe.train.cli import run as run_train
 
             run_train(cmd)
+        case Sweep() as cmd:
+            from loupe.sweep import sweep
+
+            print(sweep(cmd.task, cmd.model, cmd.vector, cmd.layers, cmd.alphas, cmd.metric,
+                        cmd.experiment))  # fmt: skip
         case Version():
             print(__version__)

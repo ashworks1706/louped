@@ -113,17 +113,29 @@ def apply(lm: LanguageModel, plan: Plan) -> None:
     Call inside `lm.trace(...)`, or inside `for _ in tracer.iter[:]:` of `lm.generate(...)` so every
     generated token is edited too. Layers are visited in order, as nnsight requires.
     """
+    for layer in sorted(plan):
+        apply_at(lm, plan, layer)
+
+
+def apply_at(lm: LanguageModel, plan: Plan | None, layer: int) -> None:
+    """Apply the plan's edits at one layer, if any; for traces that also read each layer.
+
+    A trace that reads layer outputs calls this for EMBED first, then for each layer before
+    reading it, so edits and reads stay in execution order.
+    """
+    if not plan or layer not in plan:
+        return
+    edits = plan[layer]
     layers = blocks(lm)
-    for layer, edits in sorted(plan.items()):
-        if layer == EMBED:
-            x = layers[0].input
-            h = x.float()
-            for edit in edits:
-                h = edit(h)
-            layers[0].input[:] = h.to(x.dtype)
-            continue
-        out = layers[layer].output
-        h = out.float()
+    if layer == EMBED:
+        x = layers[0].input
+        h = x.float()
         for edit in edits:
             h = edit(h)
-        layers[layer].output[:] = h.to(out.dtype)
+        layers[0].input[:] = h.to(x.dtype)
+        return
+    out = layers[layer].output
+    h = out.float()
+    for edit in edits:
+        h = edit(h)
+    layers[layer].output[:] = h.to(out.dtype)

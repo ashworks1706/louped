@@ -48,7 +48,8 @@ only what it uses. A package imports only packages below it; `import-linter` enf
 experiments                      leaf, nothing imports it
 cli
 server                           FastAPI, read-only over the stores; Playground generation
-train                            sft on TRL/PEFT or Unsloth, logged as MLflow training runs
+train | sweep                    sft on TRL/PEFT or Unsloth, logged as MLflow training runs;
+                                 steering sweeps of an Inspect task through loupe/
 stores | tracking | analysis     views over Inspect logs and MLflow; start an MLflow run;
   | inspect_ext                  lens, patching, probes, attention, SAE features as UI views;
                                  loupe/ provider and scorers
@@ -65,9 +66,10 @@ Today everything from `core` to `cli` exists; `rl_ext` (scorer to reward) joins 
 
 - Evals: Inspect `.eval` logs are the source of truth for transcripts and per-sample scores.
 - Everything else: an MLflow run with params, metrics and artifacts. Figures are data, not images:
-  JSON under `views/` in one of three shapes (heatmap, line, table, `loupe.analysis.views`) that the
-  Run page's Figures tab draws. A heatmap may carry named slices (attention: one per layer and
-  head) that the tab switches between.
+  JSON under `views/` in one of four shapes (heatmap, line, table, tokens; `loupe.analysis.views`)
+  that the Run page's Figures tab draws. A heatmap may carry named slices (attention: one per
+  layer and head) and a label per cell (the logit lens's tokens). A tokens view colours texts per
+  token by a series the tab picks; with pairs (attention), by the hovered token's row.
 - SAEs: loaded by SAELens (`SAE.from_pretrained` or `load_from_disk`) in the `sae` extra, which
   is heavy (SAELens pulls in TransformerLens and wandb) and imported only when an SAE is used.
   loupe reads the residual at the SAE's hook with nnsight, so the model is never swapped for a
@@ -81,7 +83,8 @@ Today everything from `core` to `cli` exists; `rl_ext` (scorer to reward) joins 
 
 The UI is the product. `apps/web` is a static Next.js export served by `loupe serve` next to the
 API, so there is no Node server in production. The server owns no database and no auth. Its
-one computing route is the Playground, which runs the model given to `loupe serve --model`.
+only computing routes are the Playground's, which run the model given to `loupe serve --model`:
+generate, and inspect, which returns a prompt's views in the same shapes a run logs.
 
 Pages: Home, Experiments, Run (Overview, Figures, Samples, Transcripts, Artifacts, Config), Compare,
 Vectors, Playground. Principles: one question per screen, every number links to the samples behind

@@ -14,15 +14,19 @@ import { useEffect, useState } from "react";
 import { CopyButton } from "@/components/copy-button";
 import { EmptyState } from "@/components/empty-state";
 import { QueryState } from "@/components/query-state";
+import { Figure } from "@/components/run-views";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
-import { generate, q, type Direction, type PlaygroundInfo } from "@/lib/api";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { generate, inspect, q, type Direction, type PlaygroundInfo } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const MODES = ["steer", "ablate"] as const;
 type Mode = (typeof MODES)[number];
+const TABS = ["reply", "inspect"] as const;
+const SIDES = ["base", "intervention"] as const;
 
 export function Playground() {
   const info = useQuery(q.playground());
@@ -65,6 +69,8 @@ function Loaded({
     alpha: parseAsFloat.withDefault(1),
     layer: parseAsInteger,
     tokens: parseAsInteger.withDefault(64),
+    tab: parseAsStringLiteral(TABS).withDefault("reply"),
+    side: parseAsStringLiteral(SIDES).withDefault("base"),
   });
   const [draft, setDraft] = useState(s.prompt);
   const layers = info.layers ?? 1;
@@ -79,14 +85,25 @@ function Loaded({
 
   const base = useMutation({ mutationFn: generate });
   const edited = useMutation({ mutationFn: generate });
+  const looked = useMutation({ mutationFn: inspect });
+  const lookedEdited = useMutation({ mutationFn: inspect });
   const run = () => {
     const prompt = draft.trim();
     if (!prompt) return;
     void set({ prompt });
-    base.mutate({ prompt, interventions: [], max_new_tokens: s.tokens });
-    if (spec) edited.mutate({ prompt, interventions: [spec], max_new_tokens: s.tokens });
-    else edited.reset();
+    if (s.tab === "reply") {
+      base.mutate({ prompt, interventions: [], max_new_tokens: s.tokens });
+      if (spec) edited.mutate({ prompt, interventions: [spec], max_new_tokens: s.tokens });
+      else edited.reset();
+      return;
+    }
+    const read = { prompt, vectors: vectors.map((v) => v.name), chat: true };
+    looked.mutate({ ...read, interventions: [] });
+    if (spec) lookedEdited.mutate({ ...read, interventions: [spec] });
+    else lookedEdited.reset();
   };
+  const pending = s.tab === "reply" ? base.isPending : looked.isPending;
+  const shown = s.side === "intervention" && spec ? lookedEdited : looked;
 
   useEffect(() => {
     if (!vectors.length || s.vector) return;
@@ -220,27 +237,72 @@ function Loaded({
           />
           <div className="flex items-center justify-between border-t px-3 py-2">
             <span className="text-muted-foreground text-xs">
-              Greedy. The same prompt goes to both.
+              {s.tab === "reply"
+                ? "Greedy. The same prompt goes to both."
+                : "Logit lens, projections onto this model's vectors, and attention."}
             </span>
-            <Button type="submit" size="sm" disabled={!draft.trim() || base.isPending}>
+            <Button type="submit" size="sm" disabled={!draft.trim() || pending}>
               Run <Kbd>⌘</Kbd>
               <CornerDownLeft className="size-3.5" />
             </Button>
           </div>
         </form>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Reply title="Base" state={base} />
-          <Reply
-            title="With intervention"
-            badge={
-              <Badge variant="intervention" className="block max-w-full min-w-0 shrink truncate">
-                {label}
-              </Badge>
-            }
-            state={edited}
-            intervention
-          />
-        </div>
+        <Tabs
+          value={s.tab}
+          onValueChange={(tab) => void set({ tab: tab as (typeof TABS)[number] })}
+        >
+          <TabsList>
+            <TabsTrigger value="reply">Reply</TabsTrigger>
+            <TabsTrigger value="inspect">Inspect</TabsTrigger>
+          </TabsList>
+          <TabsContent value="reply" className="pt-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <Reply title="Base" state={base} />
+              <Reply
+                title="With intervention"
+                badge={
+                  <Badge
+                    variant="intervention"
+                    className="block max-w-full min-w-0 shrink truncate"
+                  >
+                    {label}
+                  </Badge>
+                }
+                state={edited}
+                intervention
+              />
+            </div>
+          </TabsContent>
+          <TabsContent value="inspect" className="flex flex-col gap-4 pt-4">
+            {spec && (
+              <Tabs
+                value={s.side}
+                onValueChange={(side) => void set({ side: side as (typeof SIDES)[number] })}
+              >
+                <TabsList aria-label="Which stream to read">
+                  <TabsTrigger value="base">Base</TabsTrigger>
+                  <TabsTrigger
+                    value="intervention"
+                    className="data-[state=active]:text-intervention min-w-0 truncate"
+                  >
+                    {label}
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            )}
+            {shown.isPending ? (
+              <span className="text-muted-foreground animate-pulse text-sm">Reading…</span>
+            ) : shown.error ? (
+              <span className="text-negative text-sm">{shown.error.message}</span>
+            ) : shown.data ? (
+              shown.data.views.map((v, i) => <Figure key={`${shown.submittedAt}-${i}`} view={v} />)
+            ) : (
+              <span className="text-muted-foreground text-sm">
+                Run a prompt to read its layers.
+              </span>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
