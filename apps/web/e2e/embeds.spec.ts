@@ -62,7 +62,7 @@ test("a Neuronpedia feature opens embedded beside the table", async ({ page }, i
     "href",
     table.links[0][1] as string,
   );
-  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Close" }).click();
   await expect(cell).toBeFocused();
 });
 
