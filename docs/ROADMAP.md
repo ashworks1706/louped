@@ -3,7 +3,8 @@
 loupe builds the joins between interventions, evals, training and interp, and links to existing
 tools for the rest (ARCHITECTURE.md). Out of scope, because other free tools do it: a training
 dashboard, cluster and vLLM scale-out (Transformer Lab, LLaMA-Factory, Oumi), SAE and graph
-browsing (Neuronpedia, circuit-tracer), ReFT (pyreft).
+browsing (Neuronpedia, circuit-tracer), ReFT (pyreft), a masked diffusion backend (Bijou keeps
+its phase-routing question).
 
 Each phase ends with an acceptance test, most of them reproducing a published result: if loupe
 cannot reproduce a number someone else got, its own numbers cannot be trusted. Every phase ships
@@ -106,8 +107,23 @@ with its UI view.
       from the environment (not yet run)
 - [x] Inspect View served by loupe at /inspect, read-only over its logs, as an Inspect tab on
       every eval run, opened at the selected sample
-- [ ] Black-box benchmarking of zipy, SparkyAI and piramid through their endpoints
 - [ ] Acceptance: an inspect_evals agentic task end to end in Docker
+
+## v0.7 Project tracks
+
+The research questions of zipy, SparkyAI, piramid and Bijou, run here. Product regression evals
+and performance numbers (latency, throughput) stay in each product's repo.
+
+- [ ] Black box: an OpenAI-compatible endpoint (zipy, SparkyAI, piramid, Bijou's agent) as an
+      Inspect model (`openai-api/<name>/<model>` with its base URL), so paired stats, Compare and
+      the transcript views work on products; one experiment per product
+- [ ] RAG: retrieval tasks over a local corpus and scorers for recall@k, groundedness and
+      citation, as plain checks; used for SparkyAI and piramid
+- [ ] Retrieval as an intervention: retrieved passages' hidden states added at chosen layers
+      during generation, against retrieval-before-prefill at equal token budget (piramid v0.6)
+- [ ] Adapter bank: named PEFT LoRAs equipped per request and combined; the subset-by-eval matrix
+      against a tuned prompt, with damage to the other skills' evals (Bijou research 1 and 2)
+- [ ] Acceptance: one result per project read entirely in the UI
 
 ## v1.0 Open source
 
