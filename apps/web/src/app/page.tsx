@@ -1,23 +1,18 @@
-import { ArrowUpRight, BookOpen, ListTree } from "lucide-react";
+import { ArrowUpRight, BookOpen } from "lucide-react";
 import Link from "next/link";
 
-import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
+import { RunsList } from "@/components/runs-list";
 import { NAV, navItem } from "@/lib/nav";
 
 export default function Home() {
   return (
     <>
       <PageHeader item={navItem("/")} />
-      <section className="mx-auto flex max-w-5xl flex-col gap-10 px-6 py-8">
+      <section className="mx-auto flex max-w-6xl flex-col gap-10 px-6 py-8">
         <div>
           <h2 className="text-muted-foreground mb-3 text-sm font-medium">Recent runs</h2>
-          <EmptyState
-            icon={ListTree}
-            title="Nothing has run yet"
-            body="Start the API next to this page, then run an eval. Its results land here."
-            command="just serve"
-          />
+          <RunsList limit={5} compact />
         </div>
         <div>
           <h2 className="text-muted-foreground mb-3 text-sm font-medium">Everything in loupe</h2>

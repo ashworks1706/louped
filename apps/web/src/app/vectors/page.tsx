@@ -11,7 +11,7 @@ export default function Page() {
   return (
     <>
       <PageHeader item={navItem("/vectors/")} phase={3} />
-      <section className="mx-auto max-w-5xl px-6 py-8">
+      <section className="mx-auto max-w-6xl px-6 py-8">
         <EmptyState
           icon={Move3d}
           title="No vectors saved"

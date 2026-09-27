@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { CommandMenu } from "@/components/command-menu";
+import { Providers } from "@/components/providers";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
@@ -21,12 +22,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body>
         <ThemeProvider>
-          <CommandMenu>
-            <div className="flex min-h-dvh flex-col md:flex-row">
-              <AppSidebar />
-              <main className="min-w-0 flex-1">{children}</main>
-            </div>
-          </CommandMenu>
+          <Providers>
+            <CommandMenu>
+              <div className="flex min-h-dvh flex-col md:flex-row">
+                <AppSidebar />
+                <main className="min-w-0 flex-1">{children}</main>
+              </div>
+            </CommandMenu>
+          </Providers>
         </ThemeProvider>
       </body>
     </html>

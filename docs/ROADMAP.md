@@ -15,9 +15,10 @@ with its UI view.
 
 ## v0.2 UI on real logs
 
-- [ ] Server: runs from MLflow, eval logs and samples from Inspect logs
-- [ ] OpenAPI types generated into the UI
-- [ ] Runs, Run, Samples, Transcripts, Compare pages
+- [x] Server: runs from MLflow, eval logs and samples from Inspect logs
+- [x] OpenAPI types generated into the UI, checked in CI
+- [x] Runs, Run, Samples, Transcripts, Compare, Experiments pages
+- [x] Verified in a browser against real Inspect and MLflow runs (a scripted mock model)
 - [ ] Acceptance: a new user explains a run from the UI alone
 
 ## v0.3 Interp core

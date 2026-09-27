@@ -33,6 +33,7 @@ just serve              API on :8000, serving the built UI
 just web                UI dev server on :3000
 just new-experiment X   scaffold experiments/X/
 just lock               re-resolve uv.lock
+just api-types          regenerate the UI's API types after changing a server route or model
 ```
 
 A change is not done until `just check` passes.
@@ -42,7 +43,9 @@ A change is not done until `just check` passes.
 ```
 src/loupe/       the Python package (distribution name: loupelab)
   core/          run metadata, paths
-  server/        FastAPI, read-only over existing stores
+  tracking/      start an MLflow run the UI can read
+  stores/        read-only views over Inspect logs, MLflow and experiments/
+  server/        FastAPI over the stores
   cli.py         the loupe command
 apps/web/        the UI: Next.js static export, shadcn/ui. Its own AGENTS.md holds the design rules
 experiments/     one folder per research question; nothing imports it
@@ -58,6 +61,7 @@ contract is in `pyproject.toml`. New layers are added there in the position ARCH
 ```
 cli
 server
+stores | tracking
 core
 ```
 

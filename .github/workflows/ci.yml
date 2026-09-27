@@ -41,6 +41,8 @@ jobs:
               - '.github/workflows/ci.yml'
             web:
               - 'apps/web/**'
+              - 'src/loupe/server/**'
+              - 'src/loupe/stores/**'
               - 'justfile'
               - '.github/workflows/ci.yml'
 
@@ -72,6 +74,10 @@ jobs:
         with:
           node-version: 22
       - run: corepack enable && pnpm install --frozen-lockfile
+      # The UI's API types must match the server's schema.
+      - uses: astral-sh/setup-uv@v10
+      - uses: extractions/setup-just@v4
+      - run: uv sync --locked --extra server && just api-types && git diff --exit-code src/lib/
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck

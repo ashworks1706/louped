@@ -19,7 +19,7 @@ makes them share one model, one intervention spec and one data format.
 | Fast generation | vLLM |
 | Tracking | MLflow (self-hosted) and Inspect logs |
 | Cluster and cloud | submitit (Slurm), SkyPilot |
-| UI | Next.js static export, shadcn/ui, Tailwind, Geist, cmdk, TanStack, Recharts, visx |
+| UI | Next.js static export, shadcn/ui, Tailwind, Geist, cmdk, TanStack Query, nuqs, Recharts |
 | API | FastAPI |
 
 Rejected: TransformerLens (reimplements architectures, lags new models), Hydra (each tool keeps its
@@ -46,15 +46,17 @@ only what it uses. A package imports only packages below it; `import-linter` enf
 ```
 experiments                      leaf, nothing imports it
 cli
-server                           FastAPI, read-only over MLflow, Inspect logs, artifacts
+server                           FastAPI, read-only over the stores
+stores                           views over Inspect logs, MLflow, experiments/
 inspect_ext | rl_ext             Policy as an Inspect model provider; scorer -> reward
 analysis | viz                   patching, lens, probes as DataFrames; standard figures
 interventions | vectors          Steer, Ablate, Patch, Clamp specs on nnsight; directions
 models                           load a model, module-path map per architecture family
+tracking                         start an MLflow run with RunMeta attached
 core                             run metadata, paths
 ```
 
-Today only `cli`, `server` and `core` exist. Each phase adds its layers here and in the contract in
+Today `cli`, `server`, `stores`, `tracking` and `core` exist. Each phase adds its layers here and in the contract in
 `pyproject.toml`.
 
 ## Data

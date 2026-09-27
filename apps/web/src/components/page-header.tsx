@@ -4,7 +4,7 @@ import type { NavItem } from "@/lib/nav";
 export function PageHeader({ item, phase }: { item: NavItem; phase?: number }) {
   return (
     <header className="border-b">
-      <div className="mx-auto flex max-w-5xl flex-col gap-1 px-6 py-8">
+      <div className="mx-auto flex max-w-6xl flex-col gap-1 px-6 py-8">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">{item.title}</h1>
           {phase !== undefined && (

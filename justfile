@@ -67,3 +67,8 @@ new-experiment name:
     printf '# %s\n\n## Question\n\n## What would answer it\n\n## Result\n' "{{name}}" > "$dir/README.md"
     printf '"""%s: writes its result under .loupe/, never prints it."""\n' "{{name}}" > "$dir/run.py"
     echo "created $dir"
+
+# regenerate the UI's API types from the server's OpenAPI schema
+api-types:
+    uv run python -c "import json; from loupe.server import create_app; print(json.dumps(create_app().openapi(), indent=2))" > apps/web/src/lib/openapi.json
+    cd {{web}} && pnpm exec openapi-typescript src/lib/openapi.json -o src/lib/api-types.ts && pnpm exec prettier --write src/lib/api-types.ts src/lib/openapi.json > /dev/null

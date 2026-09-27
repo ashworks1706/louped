@@ -1,0 +1,28 @@
+from collections.abc import Iterator
+from pathlib import Path
+
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
+    """Every test gets its own state directory, and no store env var leaks in."""
+    home = tmp_path / "home"
+    monkeypatch.setenv("LOUPE_HOME", str(home))
+    monkeypatch.setenv("LOUPE_EXPERIMENTS", str(tmp_path / "experiments"))
+    for var in ("INSPECT_LOG_DIR", "MLFLOW_TRACKING_URI"):
+        monkeypatch.delenv(var, raising=False)
+    yield home
+
+
+@pytest.fixture(autouse=True)
+def offline_token_count(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Inspect estimates tokens with tiktoken, which downloads its encoding; count words instead."""
+    import inspect_ai.model._model as model
+    import inspect_ai.model._tokens as tokens
+
+    def words(text: str) -> int:
+        return max(1, len(text.split()))
+
+    monkeypatch.setattr(tokens, "count_text_tokens", words)
+    monkeypatch.setattr(model, "count_text_tokens", words)

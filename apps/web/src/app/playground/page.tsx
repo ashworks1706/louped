@@ -11,7 +11,7 @@ export default function Page() {
   return (
     <>
       <PageHeader item={navItem("/playground/")} phase={4} />
-      <section className="mx-auto max-w-5xl px-6 py-8">
+      <section className="mx-auto max-w-6xl px-6 py-8">
         <EmptyState
           icon={MessageSquareText}
           title="No model loaded"

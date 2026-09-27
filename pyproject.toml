@@ -14,9 +14,20 @@ dependencies = [
 # One extra per capability. A module imports only its own extra's packages, so an install carries
 # only what it uses. Later phases add interp, evals, train, rl, vllm and cluster.
 [project.optional-dependencies]
+# Reading and serving results. Pulls in the readers for both stores it serves.
 server = [
     "fastapi>=0.115",
     "uvicorn>=0.32",
+    "loupelab[evals,tracking]",
+]
+evals = [
+    "inspect-ai>=0.3.200",
+]
+# MLflow on a SQLite file; the file store is in maintenance mode in MLflow 3.
+tracking = [
+    "mlflow-skinny>=3.0",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
 ]
 
 [project.scripts]
@@ -68,5 +79,6 @@ type = "layers"
 layers = [
     "loupe.cli",
     "loupe.server",
+    "loupe.stores | loupe.tracking",
     "loupe.core",
 ]
