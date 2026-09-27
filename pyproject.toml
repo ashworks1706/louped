@@ -50,6 +50,13 @@ data = [
     "pyyaml>=6",
     "rich>=14",
 ]
+# Pretrained sparse autoencoders (Gemma Scope and the rest of SAELens's registry) for
+# loupe.analysis.sae. Heavy: SAELens pulls in TransformerLens, wandb and plotly, so it is its own
+# extra and nothing else imports it.
+sae = [
+    "loupelab[interp]",
+    "sae-lens>=6",
+]
 
 [project.scripts]
 loupe = "loupe.cli:main"

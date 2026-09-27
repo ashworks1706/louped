@@ -211,3 +211,31 @@ def test_linear_probe_finds_a_planted_direction(lm) -> None:
     assert accuracy[-1] == 1.0  # the last token itself is the label
     assert torch.allclose(weights.norm(dim=-1), torch.ones(n_layers(lm)))
     assert view["kind"] == "line" and view["series"]["held-out accuracy"] == accuracy
+
+
+def test_sae_features_and_steering_a_feature(lm) -> None:
+    from sae_lens import StandardSAE, StandardSAEConfig
+    from sae_lens.saes.sae import SAEMetadata
+
+    from loupe.analysis import sae_features, save_feature
+
+    cfg = StandardSAEConfig(d_in=hidden(lm), d_sae=64)
+    cfg.metadata = SAEMetadata(hook_name="blocks.1.hook_resid_post")
+    torch.manual_seed(0)
+    sae = StandardSAE(cfg)
+    prompt = chat(lm, "write a poem")
+    acts, top, over = sae_features(lm, sae, prompt, k=3)
+    with lm.trace(prompt):
+        resid = blocks(lm)[1].output[0].save()
+    assert torch.allclose(acts, sae.encode(resid).detach(), atol=1e-6)
+    assert len(top["rows"]) == acts.shape[0] and len(top["columns"]) == 5
+    assert len(over["z"]) == 3 and len(over["z"][0]) == acts.shape[0]
+
+    meta = save_feature(sae, 7, "feat7", model="tiny")
+    assert meta.layer == 1 and meta.method == "sae-decoder"
+    with lm.trace(prompt):
+        base = blocks(lm)[1].output.save()
+    with lm.trace(prompt):
+        apply(lm, compile(lm, [Steer(vector="feat7", alpha=3.0)]))
+        steered = blocks(lm)[1].output.save()
+    assert torch.allclose(steered - base, 3 * sae.W_dec[7].detach().expand_as(base), atol=1e-5)

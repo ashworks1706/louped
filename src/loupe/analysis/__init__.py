@@ -5,6 +5,7 @@ from loupe.analysis.attention import attention_patterns
 from loupe.analysis.lens import logit_lens
 from loupe.analysis.patching import attribution_patch, patch_residual
 from loupe.analysis.probes import linear_probes
+from loupe.analysis.sae import sae_features, save_feature
 from loupe.analysis.views import heatmap, line, table
 
 __all__ = [
@@ -17,5 +18,7 @@ __all__ = [
     "logit_lens",
     "patch_residual",
     "positions",
+    "sae_features",
+    "save_feature",
     "table",
 ]
