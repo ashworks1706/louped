@@ -22,7 +22,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { q, type RunDetail, type SampleSummary } from "@/lib/api";
-import { headline, metricLabel, stderr } from "@/lib/format";
+import { headline, metricLabel, num, stderr } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 export function CompareView() {
   const [a] = useQueryState("a", parseAsString);
@@ -33,8 +34,7 @@ export function CompareView() {
         <EmptyState
           icon={GitCompareArrows}
           title="Pick two runs to compare"
-          body="On Runs, tick two rows and press Compare. Metrics, flipped samples and transcripts line up here."
-          command="open Runs, tick two rows, press Compare"
+          command="Runs → tick two → Compare"
         />
       </section>
     );
@@ -52,7 +52,10 @@ function Loaded({ a, b }: { a: string; b: string }) {
           <Heads a={ra.data} b={rb.data} />
           <Metrics a={ra.data} b={rb.data} />
           {ra.data.kind === "eval" && rb.data.kind === "eval" && (
-            <Samples a={ra.data} b={rb.data} />
+            <>
+              <Paired a={a} b={b} />
+              <Samples a={ra.data} b={rb.data} />
+            </>
           )}
         </>
       ) : (
@@ -130,12 +133,81 @@ function Metrics({ a, b }: { a: RunDetail; b: RunDetail }) {
   );
 }
 
+/** Per score, B minus A over the samples both runs scored, with a paired bootstrap interval. An
+ * interval that excludes zero is a difference the samples support. */
+function Paired({ a, b }: { a: string; b: string }) {
+  const cmp = useQuery(q.compare(a, b));
+  const [, setFlip] = useQueryState("flip", parseAsString);
+  if (cmp.error) return <p className="text-negative text-sm">{cmp.error.message}</p>;
+  if (!cmp.data || cmp.data.scores.length === 0) return null;
+  const { scores, only_a, only_b } = cmp.data;
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <h2 className="text-muted-foreground text-sm font-medium">Paired by sample</h2>
+        <span className="text-muted-foreground text-xs">
+          95% paired bootstrap interval of B − A
+          {only_a + only_b > 0 && ` · ${only_a} samples only in A, ${only_b} only in B`}
+        </span>
+      </div>
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead>Score</TableHead>
+            <TableHead className="text-right">n</TableHead>
+            <TableHead className="text-right">B − A</TableHead>
+            <TableHead className="text-right">95% interval</TableHead>
+            <TableHead className="text-right">B higher</TableHead>
+            <TableHead className="text-right">B lower</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {scores.map((s) => {
+            const sure = s.low > 0 || s.high < 0;
+            return (
+              <TableRow key={s.name}>
+                <TableCell>{s.name}</TableCell>
+                <TableCell className="text-right font-mono tabular-nums">{s.n}</TableCell>
+                <TableCell className="text-right">
+                  <Delta value={s.diff} />
+                </TableCell>
+                <TableCell
+                  className={cn(
+                    "text-right font-mono tabular-nums",
+                    !sure && "text-muted-foreground",
+                  )}
+                  title={sure ? "excludes zero" : "includes zero"}
+                >
+                  [{num(s.low)}, {num(s.high)}]
+                </TableCell>
+                {(["up", "down"] as const).map((dir) => (
+                  <TableCell key={dir} className="text-right font-mono tabular-nums">
+                    <button
+                      className="underline-offset-4 hover:underline disabled:no-underline"
+                      disabled={s[dir] === 0}
+                      onClick={() => void setFlip(`${dir}:${s.name}`)}
+                      aria-label={`Show the ${s[dir]} samples where B scored ${dir === "up" ? "higher" : "lower"} on ${s.name}`}
+                    >
+                      {s[dir]}
+                    </button>
+                  </TableCell>
+                ))}
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
 type Pair = { id: string; input: string; a?: SampleSummary; b?: SampleSummary; changed: boolean };
 
 function Samples({ a, b }: { a: RunDetail; b: RunDetail }) {
   const [sa, sb] = useQueries({ queries: [q.samples(a.id), q.samples(b.id)] });
   const [changedOnly, setChangedOnly] = useQueryState("changed", parseAsBoolean.withDefault(true));
   const [open, setOpen] = useQueryState("sample", parseAsString);
+  const [flip, setFlip] = useQueryState("flip", parseAsString);
 
   const names = useMemo(() => [...new Set([...a.scorers, ...b.scorers])], [a, b]);
   const pairs = useMemo<Pair[]>(() => {
@@ -154,7 +226,15 @@ function Samples({ a, b }: { a: RunDetail; b: RunDetail }) {
   }, [sa.data, sb.data, names]);
 
   if (sa.isPending || sb.isPending) return null;
-  const rows = changedOnly ? pairs.filter((p) => p.changed) : pairs;
+  const [dir, score] = flip
+    ? [flip.slice(0, flip.indexOf(":")), flip.slice(flip.indexOf(":") + 1)]
+    : [];
+  const moved = (p: Pair) => {
+    const x = p.a?.scores[score!];
+    const y = p.b?.scores[score!];
+    return x != null && y != null && (dir === "up" ? y > x : y < x);
+  };
+  const rows = flip ? pairs.filter(moved) : changedOnly ? pairs.filter((p) => p.changed) : pairs;
   const changed = pairs.filter((p) => p.changed).length;
 
   return (
@@ -164,14 +244,20 @@ function Samples({ a, b }: { a: RunDetail; b: RunDetail }) {
         <span className="text-muted-foreground text-xs">
           {changed} of {pairs.length} changed
         </span>
-        <Button
-          className="ml-auto"
-          size="sm"
-          variant="outline"
-          onClick={() => setChangedOnly(!changedOnly)}
-        >
-          {changedOnly ? "Show all" : "Changed only"}
-        </Button>
+        {flip ? (
+          <Button className="ml-auto" size="sm" variant="outline" onClick={() => setFlip(null)}>
+            B {dir === "up" ? "higher" : "lower"} on {score} · clear
+          </Button>
+        ) : (
+          <Button
+            className="ml-auto"
+            size="sm"
+            variant="outline"
+            onClick={() => setChangedOnly(!changedOnly)}
+          >
+            {changedOnly ? "Show all" : "Changed only"}
+          </Button>
+        )}
       </div>
       <Table>
         <TableHeader>

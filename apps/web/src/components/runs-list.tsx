@@ -17,7 +17,7 @@ export function RunsList({ limit, compact = false }: { limit?: number; compact?:
           <EmptyState
             icon={ListTree}
             title="No runs yet"
-            body="Eval logs, analyses and training runs appear here as soon as they are written."
+            body="Evals, analyses and training runs appear as they are written."
             command="python experiments/demo-pressure-mock/run.py"
           />
         ) : (

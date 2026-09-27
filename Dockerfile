@@ -17,4 +17,4 @@ COPY --from=web /web/out /app/web
 ENV LOUPE_HOME=/data
 VOLUME /data
 EXPOSE 8000
-CMD ["uv", "run", "--no-sync", "loupe", "serve", "--host", "0.0.0.0", "--web-dir", "/app/web"]
+CMD ["/app/.venv/bin/loupe", "serve", "--host", "0.0.0.0", "--expose", "--web-dir", "/app/web"]

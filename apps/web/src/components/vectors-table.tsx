@@ -27,7 +27,7 @@ export function VectorsTable() {
           <EmptyState
             icon={Move3d}
             title="No vectors saved"
-            body="Directions computed from activations, with the run that produced each one."
+            body="Directions from activations, with the run behind each."
             command="uv run --extra interp python experiments/refusal-direction/run.py --tiny"
           />
         ) : (

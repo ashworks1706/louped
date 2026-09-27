@@ -45,13 +45,13 @@ def tiny(
     layers: int = 4,
     hidden: int = 32,
     seed: int = 0,
-    train: list[tuple[str, str]] | None = None,
+    train: list[tuple[str | list[dict[str, str]], str]] | None = None,
     steps: int = 300,
 ):
     """A LanguageModel over a Qwen2 small enough to run anywhere in milliseconds.
 
-    Random by default. With `train`, (user message, reply) pairs, it is first fit to give those
-    replies, which plants a known behaviour for checking that an analysis finds it.
+    Random by default. With `train`, (user message or conversation, reply) pairs, it is first fit to
+    give those replies, which plants a known behaviour for checking that an analysis finds it.
     """
     tok = tokenizer()
     cfg = Qwen2Config(
@@ -73,12 +73,12 @@ def tiny(
     return load(model.eval(), tokenizer=tok)
 
 
-def _fit(model, tok, pairs: list[tuple[str, str]], steps: int) -> None:
+def _fit(model, tok, pairs: list[tuple[str | list[dict[str, str]], str]], steps: int) -> None:
     """Full-batch AdamW on the reply tokens only."""
     ids, labels = [], []
     for user, reply in pairs:
-        prompt = tok.apply_chat_template([{"role": "user", "content": user}], tokenize=False,
-                                         add_generation_prompt=True)  # fmt: skip
+        messages = [{"role": "user", "content": user}] if isinstance(user, str) else user
+        prompt = tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         p = tok.encode(str(prompt), add_special_tokens=False)
         r = tok.encode(f"{reply} <eos>", add_special_tokens=False)
         ids.append(p + r)
@@ -95,3 +95,17 @@ def _fit(model, tok, pairs: list[tuple[str, str]], steps: int) -> None:
         opt.zero_grad()
         loss.backward()
         opt.step()
+
+
+def tiny_masked(layers: int = 2, hidden: int = 32, seed: int = 0):
+    """A tiny randomly initialised bidirectional masked LM and its tokenizer, as a stand-in for a
+    masked diffusion model (loupe.models.diffusion)."""
+    from transformers import BertConfig, BertForMaskedLM
+
+    tok = tokenizer()
+    tok.add_special_tokens({"mask_token": "<mask>"})
+    cfg = BertConfig(vocab_size=len(tok), hidden_size=hidden, intermediate_size=hidden * 2,
+                     num_hidden_layers=layers, num_attention_heads=4, max_position_embeddings=256,
+                     pad_token_id=cast(int, tok.pad_token_id))  # fmt: skip
+    torch.manual_seed(seed)
+    return BertForMaskedLM(cfg).eval(), tok

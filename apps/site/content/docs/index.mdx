@@ -1,0 +1,24 @@
+---
+title: Introduction
+description: A local-first lab where an intervention on a language model is evaluated, trained against and looked inside.
+---
+
+loupe makes an intervention a first-class object. A steered, ablated, adapted or retrieval-augmented
+model is one **policy**: an Inspect eval scores it, a paired test says whether it changed anything
+beyond seed and sample variance, a trainer can train against it, and the same UI shows what changed
+inside the model.
+
+It is glue, not a framework. [nnsight](https://nnsight.net) does interpretability,
+[Inspect](https://inspect.aisi.org.uk) does evals and agents, [TRL](https://github.com/huggingface/trl)
+does training and [MLflow](https://mlflow.org) does tracking. loupe gives them one model, one
+intervention spec and one data format, and a UI over all of it.
+
+Everything runs on your machine with no API keys: open-weight models from the Hugging Face Hub or a
+local path, results in files under `LOUPE_HOME`, and no step that calls a hosted model.
+
+<Cards>
+  <Card title="Install" href="/docs/install" />
+  <Card title="Quick start" href="/docs/quickstart" />
+  <Card title="Research domains" href="/docs/domains" />
+  <Card title="Self-host the app" href="/docs/self-host" />
+</Cards>

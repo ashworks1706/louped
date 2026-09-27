@@ -6,6 +6,7 @@ const PAGES = [
   ["/runs/", "Runs"],
   ["/compare/", "Compare"],
   ["/vectors/", "Vectors"],
+  ["/circuits/", "Circuits"],
   ["/playground/", "Playground"],
 ] as const;
 
@@ -20,6 +21,7 @@ for (const [path, title] of PAGES) {
     });
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+    await expect(page.locator(".animate-pulse")).toHaveCount(0); // settled: data, empty or offline
     await page.screenshot({ path: info.outputPath(`${title.toLowerCase()}.png`), fullPage: true });
     expect(errors).toEqual([]);
   });

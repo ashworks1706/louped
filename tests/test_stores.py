@@ -87,7 +87,7 @@ def test_question_parsing() -> None:
 
 def test_api_404s_and_samples() -> None:
     run_eval(["yes"])
-    client = TestClient(create_app())
+    client = TestClient(create_app(), base_url="http://localhost")
     [run] = client.get("/api/runs").json()
     assert client.get(f"/api/runs/{run['id']}/samples").json()[0]["scores"] == {"includes": 1.0}
     assert client.get("/api/runs/e-missing").status_code == 404
@@ -107,7 +107,7 @@ def test_views_skip_bad_files_and_vectors_read_without_torch() -> None:
         log_json({"kind": "pie"}, "views/2.json")
     save_vector("dir", torch.ones(3), model="m", layer=2, method="diff-in-means")
 
-    client = TestClient(create_app())
+    client = TestClient(create_app(), base_url="http://localhost")
     views = client.get(f"/api/runs/m-{run.info.run_id}/views").json()
     assert [v["view"]["kind"] for v in views] == ["line", "heatmap"]
     detail = client.get(f"/api/runs/m-{run.info.run_id}").json()
@@ -115,3 +115,19 @@ def test_views_skip_bad_files_and_vectors_read_without_torch() -> None:
     (vector,) = client.get("/api/vectors").json()
     assert (vector["name"], vector["layer"], vector["dim"]) == ("dir", 2, 3)
     assert client.get("/api/runs/m-missing/views").status_code == 404
+
+
+def test_paired_comparison_counts_flips_and_brackets_the_difference() -> None:
+    run_eval(["yes", "no", "no", "no", "yes", "no"], tags=["side:a"])
+    run_eval(["yes", "yes", "yes", "no", "no", "yes"], tags=["side:b"])
+    first, second = sorted(stores.list_runs(), key=lambda r: list(stores.get_run(r.id).tags))
+    result = stores.compare(first.id, second.id)
+    [score] = result.scores
+    assert (score.name, score.n, score.up, score.down) == ("includes", 6, 3, 1)
+    assert abs(score.diff - 2 / 6) < 1e-9 and abs(score.mean_b - score.mean_a - score.diff) < 1e-9
+    assert score.low <= score.diff <= score.high
+    assert result == stores.compare(first.id, second.id)  # seeded
+    client = TestClient(create_app(), base_url="http://localhost")
+    body = client.get("/api/compare", params={"a": first.id, "b": second.id}).json()
+    assert body["scores"][0]["up"] == 3
+    assert client.get("/api/compare", params={"a": first.id, "b": "e-nope"}).status_code == 404

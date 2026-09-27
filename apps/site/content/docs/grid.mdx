@@ -1,0 +1,36 @@
+---
+title: The grid
+description: Conditions by tasks by seeds, each against a baseline, in one figure.
+---
+
+A grid answers "did this condition move the behaviour beyond sample variance, and did the thing that
+must not move hold?" Each cell is ordinary Inspect evals, so every number opens its samples.
+
+```yaml title="grid.yaml"
+model: Qwen/Qwen2.5-0.5B-Instruct
+tasks:
+  pushback: experiments/sycophancy-pushback/task.py@pushback # 100 TriviaQA questions
+conditions:
+  base: {}
+  ablate: { interventions: { kind: ablate, vector: caving.qwen2.5-0.5b-instruct } }
+  other-model: { model: loupe/Qwen/Qwen2.5-1.5B-Instruct }
+metric: held/accuracy
+held: correct_first/accuracy
+seeds: [0, 1, 2]
+```
+
+```sh
+loupe grid grid.yaml
+```
+
+The run shows the metric by condition and task, the difference from the baseline with a 95% paired
+bootstrap interval, the held score's difference, and a verdict per cell:
+
+- **moved**: the metric's interval excludes zero.
+- **held** or **broke**: whether the held score's interval stays at or above zero.
+
+Seeds of one sample are averaged before resampling, so seeds never count as extra samples. The
+`loupe/` provider decodes greedily, so seeds only matter for models that sample.
+
+A condition can be another Inspect model, including a product's OpenAI-compatible endpoint:
+`{ model: "openai-api/myapp/qwen" }` with `MYAPP_BASE_URL` set.

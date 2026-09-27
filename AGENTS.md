@@ -1,9 +1,11 @@
 # loupe: agent guide
 
-A research testbed for looking inside language models. loupe is **glue, not a framework**: nnsight
-does interpretability, Inspect does evals and agents, TRL does training, verifiers does RL
-environments, vLLM does fast generation, MLflow does tracking. loupe gives them one model, one
-intervention spec and one data format, and a UI over all of it. The UI is the product.
+A research testbed where an intervention on a language model is something you evaluate, train
+against and look inside. loupe is **glue, not a framework**: nnsight does interpretability, Inspect
+does evals and agents, TRL does training and RL environments, MLflow does tracking. loupe gives
+them one model, one intervention spec and one data format, and a UI over all of it. The UI is the
+product. It builds only the joins; what Neuronpedia, circuit-tracer, Inspect View or a training
+product already does is linked, not rebuilt (docs/ARCHITECTURE.md lists them).
 
 Read `docs/ARCHITECTURE.md` for the layers and the design, `docs/ROADMAP.md` for what is built in
 what order. Do not contradict them; propose an edit to the doc instead.
@@ -13,8 +15,10 @@ what order. Do not contradict them; propose an edit to the doc instead.
 - **Prebuilt first.** Before writing code, name the existing tool that does it. Own code is only
   the glue between tools. A new dependency must be free and permissively licensed (MIT, Apache,
   BSD, OFL) and justified in the PR.
-- **No bloat.** No module, option or abstraction without a caller today. Python stays under ~3k
+- **No bloat.** No module, option or abstraction without a caller today. Python stays under ~7k
   lines, the UI under ~6k lines of our own TSX.
+- **Domains, not projects.** A capability serves a research domain (docs/ARCHITECTURE.md lists
+  them); a product's question is an experiment on it. Never copy a product's research code here.
 - **Reproducible numbers.** Anything that writes a result writes `loupe.core.RunMeta` next to it.
 - **A UI page is done only when it renders a real experiment's data**, not only fixtures.
 
@@ -24,13 +28,16 @@ what order. Do not contradict them; propose an edit to the doc instead.
 
 ```
 just bootstrap          first run: dependencies and git hooks
-just check              the gate: check-python and check-web. CI and the pre-push hook run it
+just check              the gate: check-python, check-web, check-site. CI and the pre-push hook run it
 just check-python       ruff format, ruff check, pyright, import-linter, pytest
 just check-web          prettier, eslint, tsc, static build
+just check-site         the same for apps/site
 just test-e2e           Playwright on the built UI; screenshots land in apps/web/test-results
 just fmt                format everything
 just serve              API on :8000, serving the built UI
 just web                UI dev server on :3000
+just site               landing page and docs on :3001
+just images             the loupe image and the public demo on top of it
 just new-experiment X   scaffold experiments/X/
 just lock               re-resolve uv.lock
 just api-types          regenerate the UI's API types after changing a server route or model
@@ -43,21 +50,33 @@ A change is not done until `just check` passes.
 ```
 src/loupe/       the Python package (distribution name: loupelab)
   core/          run metadata, paths, the direction header
-  models/        load a model into nnsight; a tiny offline Qwen2 for tests
+  models/        load a model into nnsight; adapter banks and phase schedules; masked diffusion
+                 models and their sampler; tiny offline models for tests
   vectors/       directions as safetensors under <home>/vectors
-  interventions/ Steer and Ablate specs, compiled to per-layer edits; batched generation
-  analysis/      activations, logit lens, patching; results as UI views (heatmap, line, table)
-  inspect_ext/   the loupe/ Inspect model provider and shared scorers
-  data/          training sets from product traces: export, redact, verify, review, curate
-  train/         post-training recipes (sft) on TRL and PEFT, logged to MLflow
+  interventions/ Steer, Ablate and Inject specs, compiled to per-layer edits; batched
+                 generation with a per-token hook
+  analysis/      activations, logit lens, exact and attribution patching, probes, attention,
+                 projections and top examples, SAE features, checkpoints and model diffs;
+                 results as UI views (heatmap, line, table, tokens)
+  inspect_ext/   the loupe/ Inspect model provider, shared scorers, the pushback and RAG tasks
+  data/          training sets from product traces or a teacher: export, collect, redact,
+                 verify, review, curate; hashed splits and n-gram contamination checks
+  retrieval/     chunking, BM25 and dense search fused by rank, reranking, retrieval metrics
+  train/         post-training recipes (sft incl. soft prompts and masked diffusion, dpo, grpo,
+                 classify) on TRL, PEFT and scikit-learn, logged to MLflow
+  sweep.py       an Inspect task under Steer at every layer and strength, as one figure
+  grid.py        tasks by conditions by seeds, against a baseline with paired intervals
   tracking/      start an MLflow run the UI can read
-  stores/        read-only views over Inspect logs, MLflow, views/, vectors and experiments/
+  stores/        read-only views over Inspect logs, MLflow, views/, vectors and experiments/;
+                 paired comparison of two eval runs
   server/        FastAPI over the stores, plus the Playground
   cli.py         the loupe command
 apps/web/        the UI: Next.js static export, shadcn/ui. Its own AGENTS.md holds the design rules
+apps/site/       landing page and docs: Next.js + Fumadocs, deployed on Vercel
 experiments/     one folder per research question; nothing imports it
+deploy/          Docker setups: neuronpedia/ (just neuronpedia); app/, the read-only public demo
 tests/           Python tests, CPU only
-docs/            ARCHITECTURE.md, ROADMAP.md, decisions/
+docs/            ARCHITECTURE.md, ROADMAP.md, decisions/, brand/ (mark and wordmark SVGs)
 ```
 
 ## The dependency rule
@@ -68,17 +87,17 @@ contract is in `pyproject.toml`. New layers are added there in the position ARCH
 ```
 cli
 server
-train
+train | sweep | grid
 stores | tracking | analysis | inspect_ext
 interventions
 vectors
-models | data
+models | data | retrieval
 core
 ```
 
 Everything runs locally with no API keys: models come from the Hugging Face Hub or a path, the
 stores are files under LOUPE_HOME, and no step calls a hosted model. Keep it that way; a model
-judge, if one is ever needed, is a local model through the loupe/ provider or vLLM.
+judge, if one is ever needed, is a local model through the loupe/ provider.
 
 nnsight traces the source of the block it runs: keep trace bodies in files, use explicit loops
 (not comprehensions) inside them, and touch modules in execution order.

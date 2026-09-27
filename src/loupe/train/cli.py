@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -11,18 +12,19 @@ import tyro
 
 @dataclass(frozen=True)
 class Command:
-    """Post-training recipes. sft: LoRA SFT on a curated set, logged as an MLflow training run."""
+    """Post-training recipes, each logged as an MLflow training run. sft: LoRA SFT on a curated
+    set. dpo: preference pairs. grpo: prompts and reward functions. classify: a small text
+    classifier on a sentence encoder."""
 
-    recipe: tyro.conf.Positional[Literal["sft"]]
+    recipe: tyro.conf.Positional[Literal["sft", "dpo", "grpo", "classify"]]
     config: tyro.conf.Positional[Path]
     dry_run: bool = False
     """Print what would run, without loading a model."""
 
 
 def run(cmd: Command) -> None:
-    from loupe.train.sft import load_config, plan, train
-
-    cfg = load_config(cmd.config)
-    print(plan(cfg).model_dump_json(indent=2))
+    recipe = importlib.import_module(f"loupe.train.{cmd.recipe}")
+    cfg = recipe.load_config(cmd.config)
+    print(recipe.plan(cfg).model_dump_json(indent=2))
     if not cmd.dry_run:
-        train(cfg)
+        recipe.train(cfg)

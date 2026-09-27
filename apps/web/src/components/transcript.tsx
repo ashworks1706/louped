@@ -23,23 +23,40 @@ export function Transcript({
       <ol className="flex flex-col gap-4">
         {sample.messages.map((m, i) => (
           <li key={i} className="flex flex-col gap-1.5">
-            <span className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
+            <span className="text-muted-foreground flex items-baseline gap-1.5 text-[11px] font-medium tracking-wide uppercase">
               {m.role}
+              {m.function && (
+                <span className="font-mono tracking-normal normal-case">· {m.function}</span>
+              )}
             </span>
             <div
               className={cn(
                 "rounded-lg text-sm leading-relaxed whitespace-pre-wrap",
                 m.role === "assistant" ? "px-0.5" : "px-3 py-2",
                 ROLE_STYLE[m.role] ?? "border px-3 py-2",
+                m.error && "border-negative/40",
               )}
             >
-              {m.text || <span className="text-muted-foreground italic">(no text)</span>}
+              {m.error ? (
+                <span className="text-negative">{m.error}</span>
+              ) : (
+                m.text ||
+                (m.tool_calls.length === 0 && (
+                  <span className="text-muted-foreground italic">(no text)</span>
+                ))
+              )}
               {m.tool_calls.map((c, j) => (
                 <div
                   key={j}
-                  className="bg-muted/40 mt-2 rounded-md border px-2 py-1 font-mono text-xs"
+                  data-testid="tool-call"
+                  className="bg-muted/40 mt-2 flex flex-col gap-1 rounded-md border px-3 py-2 font-mono text-xs first:mt-0"
                 >
-                  {c.function}({c.arguments})
+                  <span className="text-foreground font-medium">{c.function}</span>
+                  {c.parse_error ? (
+                    <span className="text-negative whitespace-pre-wrap">{c.parse_error}</span>
+                  ) : (
+                    <pre className="text-muted-foreground overflow-x-auto">{c.arguments}</pre>
+                  )}
                 </div>
               ))}
             </div>

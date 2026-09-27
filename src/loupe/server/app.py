@@ -1,4 +1,5 @@
-"""The FastAPI app: the API under /api, and the built UI at / when there is one.
+"""The FastAPI app: the API under /api, Inspect View at /inspect, circuit-tracer's graph viewer at
+/circuit, and the built UI at / when there is one.
 
 The server owns no database. Every route reads a store another tool already writes (MLflow,
 Inspect logs, artifact files, experiments/), so deleting the server loses nothing.
@@ -11,16 +12,19 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from loupe import __version__, stores
 from loupe.core import Direction, home
-from loupe.server import playground
+from loupe.server import graphs, inspect_view, playground
 from loupe.stores.runs import read_artifact
 from loupe.stores.types import (
+    Comparison,
     Experiment,
+    Graph,
     RunDetail,
     RunSummary,
     RunView,
@@ -31,6 +35,10 @@ from loupe.stores.types import (
 #: Where the UI's dev server runs; allowed to call the API during development only.
 DEV_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
+#: The Host headers answered by default: this machine only, so a page on another site cannot
+#: reach the API through a rebound DNS name.
+LOOPBACK = ["localhost", "127.0.0.1", "::1", "[::1]"]
+
 
 class Health(BaseModel):
     status: str
@@ -38,14 +46,18 @@ class Health(BaseModel):
     home: str
 
 
-def create_app(web_dir: Path | None = None, model: str | None = None) -> FastAPI:
-    """The app. With web_dir, the static UI export is served at /; with model, the Playground."""
+def create_app(
+    web_dir: Path | None = None, model: str | None = None, hosts: list[str] | None = None
+) -> FastAPI:
+    """The app. With web_dir, the static UI export is served at /; with model, the Playground.
+    hosts are the Host headers it answers, loopback by default."""
     app = FastAPI(
         title="loupe",
         version=__version__,
         docs_url="/api/docs",
         openapi_url="/api/openapi.json",
     )
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=hosts or LOOPBACK)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=DEV_ORIGINS,
@@ -88,15 +100,25 @@ def create_app(web_dir: Path | None = None, model: str | None = None) -> FastAPI
     def views(run_id: str) -> list[RunView]:
         return stores.list_views(run_id)
 
+    @app.get("/api/compare")
+    def compare(a: str, b: str) -> Comparison:
+        return stores.compare(a, b)
+
     @app.get("/api/vectors")
     def vectors() -> list[Direction]:
         return stores.list_vectors()
+
+    @app.get("/api/graphs")
+    def graph_list() -> list[Graph]:
+        return stores.list_graphs()
 
     @app.get("/api/experiments")
     def experiments() -> list[Experiment]:
         return stores.list_experiments()
 
     app.include_router(playground.router(model))
+    graphs.mount(app)
+    inspect_view.mount(app)
 
     if web_dir is not None and web_dir.is_dir():
         app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")

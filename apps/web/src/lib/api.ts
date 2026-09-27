@@ -14,10 +14,16 @@ export type RunView = Schemas["RunView"];
 export type HeatmapView = Schemas["HeatmapView"];
 export type LineView = Schemas["LineView"];
 export type TableView = Schemas["TableView"];
+export type TokensView = Schemas["TokensView"];
+export type View = RunView["view"];
 export type Direction = Schemas["Direction"];
+type Graph = Schemas["Graph"];
+type Comparison = Schemas["Comparison"];
 export type PlaygroundInfo = Schemas["PlaygroundInfo"];
 type GenerateRequest = Schemas["GenerateRequest"];
 type GenerateResponse = Schemas["GenerateResponse"];
+type InspectRequest = Schemas["InspectRequest"];
+type InspectResponse = Schemas["InspectResponse"];
 
 export class ApiError extends Error {
   constructor(
@@ -54,6 +60,8 @@ async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promi
 export const generate = (req: GenerateRequest) =>
   post<GenerateResponse>("/playground/generate", req);
 
+export const inspect = (req: InspectRequest) => post<InspectResponse>("/playground/inspect", req);
+
 export const health = (signal?: AbortSignal) => get<Health>("/health", signal);
 
 /** Query keys and fetchers, one per endpoint, so pages never build URLs by hand. */
@@ -82,7 +90,13 @@ export const q = {
     queryKey: ["playground"],
     queryFn: () => get<PlaygroundInfo>("/playground"),
   }),
+  compare: (a: string, b: string) => ({
+    queryKey: ["compare", a, b],
+    queryFn: () =>
+      get<Comparison>(`/compare?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`),
+  }),
   vectors: () => ({ queryKey: ["vectors"], queryFn: () => get<Direction[]>("/vectors") }),
+  graphs: () => ({ queryKey: ["graphs"], queryFn: () => get<Graph[]>("/graphs") }),
   experiments: () => ({
     queryKey: ["experiments"],
     queryFn: () => get<Experiment[]>("/experiments"),

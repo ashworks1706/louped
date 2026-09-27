@@ -10,8 +10,9 @@
 3. Generate greedily on test prompts: harmful with and without the ablation, harmless with and
    without the addition. Refusal is judged by the paper's substring list.
 
-The run logs refusal rates, per-layer scores (as metric history and a line view), examples, a
-logit lens and a patching heatmap, and saves the direction to the vector store.
+The run logs refusal rates, per-layer scores (as metric history and a line view), examples, the
+logit lens with and without the ablation, the direction read per token and its top examples over
+the test prompts, a patching heatmap, and saves the direction to the vector store.
 """
 
 from __future__ import annotations
@@ -26,7 +27,16 @@ import mlflow
 import torch
 import tyro
 
-from loupe.analysis import last_token_resid, line, logit_lens, patch_residual, table
+from loupe.analysis import (
+    along,
+    last_token_resid,
+    line,
+    logit_lens,
+    patch_residual,
+    projection,
+    table,
+    top_examples,
+)
 from loupe.core import home
 from loupe.inspect_ext import is_refusal
 from loupe.interventions import ablate_plan, everywhere, generate, next_token_logprobs, steer_plan
@@ -174,12 +184,10 @@ def main(args: Args) -> None:
                     run=f"m-{run.info.run_id}",
                     notes="harmful minus harmless, last token (Arditi et al., 2024)")  # fmt: skip
 
+        ablation = ablate_plan(direction, everywhere(lm))
         texts = {
             "harmful_base": generate(lm, prompts["harmful_test"], None, args.max_new_tokens),
-            "harmful_ablated": generate(
-                lm, prompts["harmful_test"], ablate_plan(direction, everywhere(lm)),
-                args.max_new_tokens,
-            ),
+            "harmful_ablated": generate(lm, prompts["harmful_test"], ablation, args.max_new_tokens),
             "harmless_base": generate(lm, prompts["harmless_test"], None, args.max_new_tokens),
             "harmless_added": generate(
                 lm, prompts["harmless_test"], steer_plan(direction, best), args.max_new_tokens
@@ -216,8 +224,18 @@ def main(args: Args) -> None:
                 note=f"refusal {rates['refusal_rate/harmless_base']:.0%} -> "
                 f"{rates['refusal_rate/harmless_added']:.0%}",
             )),
-            ("lens", logit_lens(lm, prompts["harmful_test"][0])),
         ]  # fmt: skip
+        first = prompts["harmful_test"][0]
+        _, lens = logit_lens(lm, first)
+        _, lens_ablated = logit_lens(lm, first, ablation, f"Logit lens, ablated: {first[-60:]!r}")
+        reads = [(f"layer {i}", direction, i) for i in range(total)]
+        reads.insert(0, reads.pop(best))
+        _, per_token = projection(lm, first, reads)
+        tests = prompts["harmful_test"] + prompts["harmless_test"]
+        title = "Test prompts where the direction peaks"
+        _, examples = top_examples(lm, tests, best, along(direction), title)
+        views += [("lens", lens), ("lens-ablated", lens_ablated), ("per-token", per_token),
+                  ("examples", examples)]  # fmt: skip
         pair = patching_pair(lm, args.tiny)
         if pair:
             views.append(("patching", patch_residual(lm, *pair)))

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -97,6 +98,12 @@ def _find(run_id: str) -> tuple[Path, EvalLog] | None:
     return next(((p, log) for p, log in _logs() if log.eval.eval_id == eval_id), None)
 
 
+def log_mtime(run_id: str) -> float | None:
+    """When the run's log last changed, None for an unknown run: a cache key for derived results."""
+    found = _find(run_id)
+    return found[0].stat().st_mtime if found else None
+
+
 def _stringify(values: dict[str, Any] | None) -> dict[str, str]:
     return {k: str(v) for k, v in (values or {}).items()}
 
@@ -105,7 +112,7 @@ def get_run(run_id: str) -> RunDetail | None:
     found = _find(run_id)
     if found is None:
         return None
-    _, log = found
+    path, log = found
     params = {f"task.{k}": v for k, v in _stringify(log.eval.task_args).items()}
     params |= {f"model.{k}": v for k, v in _stringify(log.eval.model_args).items()}
     params |= {
@@ -120,6 +127,7 @@ def get_run(run_id: str) -> RunDetail | None:
         artifacts=[],
         scorers=[s.name for s in log.results.scores] if log.results else [],
         error=log.error.message if log.error else None,
+        log=path.relative_to(logs_dir()).as_posix(),
     )
 
 
@@ -147,12 +155,16 @@ def list_samples(run_id: str) -> list[SampleSummary] | None:
 
 
 def _message(m: Any) -> Message:
-    calls = (
-        [ToolCall(function=c.function, arguments=str(c.arguments)) for c in (m.tool_calls or [])]
-        if getattr(m, "tool_calls", None)
-        else []
-    )
-    return Message(role=m.role, text=m.text, tool_calls=calls)
+    calls = [
+        ToolCall(id=c.id, function=c.function, parse_error=c.parse_error,
+                 arguments=json.dumps(c.arguments, indent=2, default=str))
+        for c in getattr(m, "tool_calls", None) or []
+    ]  # fmt: skip
+    error = getattr(m, "error", None)
+    return Message(role=m.role, text=m.text, tool_calls=calls,
+                   tool_call_id=getattr(m, "tool_call_id", None),
+                   function=getattr(m, "function", None),
+                   error=f"{error.type}: {error.message}" if error else None)  # fmt: skip
 
 
 def get_sample(run_id: str, sample_id: str, epoch: int) -> SampleDetail | None:

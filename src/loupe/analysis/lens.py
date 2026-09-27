@@ -7,26 +7,36 @@ from typing import Any
 import torch
 from nnsight import LanguageModel
 
-from loupe.analysis.views import table
-from loupe.models import blocks, final_norm
+from loupe.analysis.activations import positions, resid
+from loupe.analysis.views import heatmap
+from loupe.interventions import Plan
+from loupe.models import final_norm
 
 
 @torch.no_grad()
-def logit_lens(lm: LanguageModel, prompt: str, k: int = 5) -> dict[str, Any]:
-    """A table: per layer, the top-k next tokens and their probabilities at the last position."""
-    layers = blocks(lm)
-    resid: list[torch.Tensor] = []
-    with lm.trace(prompt):
-        for layer in layers:
-            resid.append(layer.output[:, -1, :].save())
+def logit_lens(
+    lm: LanguageModel, prompt: str, plan: Plan | None = None, title: str | None = None
+) -> tuple[torch.Tensor, dict[str, Any]]:
+    """The top next token at every position, read from the embeddings and after every layer:
+    token ids [1 + layers, positions], and a heatmap of their probabilities, each cell labelled
+    with its token.
+    """
+    stream = resid(lm, prompt, plan)
     norm, head = final_norm(lm)._module, lm.lm_head._module
-    rows: list[list[Any]] = []
-    for i, h in enumerate(resid):
-        probs = head(norm(h)).float().softmax(-1)[0]
-        top = probs.topk(k)
-        tokens = [lm.tokenizer.decode(int(t)) for t in top.indices]
-        rows.append(
-            [i, *[f"{t!r} {p:.2f}" for t, p in zip(tokens, top.values.tolist(), strict=True)]]
-        )
-    columns = ["layer", *[f"top {j + 1}" for j in range(k)]]
-    return table(f"Logit lens: {prompt[-60:]!r}", columns, rows)
+    param = next(head.parameters())
+    ids: list[torch.Tensor] = []
+    probs: list[torch.Tensor] = []
+    for h in stream:
+        p = head(norm(h.to(param))).float().softmax(-1)
+        top = p.max(-1)
+        ids.append(top.indices.cpu())
+        probs.append(top.values.cpu())
+    top_ids = torch.stack(ids)
+    labels = [[str(lm.tokenizer.decode(int(t))) for t in row] for row in top_ids]
+    view = heatmap(title or f"Logit lens: {prompt[-60:]!r}",
+                   torch.stack(probs).round(decimals=4).tolist(), x=positions(lm, prompt),
+                   y=["emb", *[str(i) for i in range(len(stream) - 1)]],
+                   x_label="position", y_label="layer",
+                   note="each cell: the layer's top next token and its probability",
+                   labels=labels)  # fmt: skip
+    return top_ids, view

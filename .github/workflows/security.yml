@@ -11,10 +11,13 @@ permissions:
   contents: read
 
 jobs:
+  # Code scanning and dependency review need GitHub Advanced Security, free on public repositories.
   codeql:
     name: CodeQL
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       security-events: write
     strategy:
       fail-fast: false
@@ -32,9 +35,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.2.0
       - run: uv export --locked --all-extras --no-emit-project --format requirements-txt > requirements.txt
-      - run: uvx pip-audit --strict -r requirements.txt
+      # PYSEC-2026-3740: nltk (via sae-lens) model-path sandbox bypass; no fix released, and loupe
+      # calls no nltk parser or tagger.
+      - run: uvx pip-audit --strict -r requirements.txt --ignore-vuln PYSEC-2026-3740
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -43,7 +48,7 @@ jobs:
 
   review:
     name: Dependency review
-    if: github.event_name == 'pull_request'
+    if: ${{ github.event_name == 'pull_request' && !github.event.repository.private }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
