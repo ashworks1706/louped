@@ -11,6 +11,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+# anyio rejects a TypedAttributeSet class defined after nnsight mounts save on every object.
+import anyio._backends._asyncio
+import anyio.streams.file
+import anyio.streams.tls  # noqa: F401
 import torch
 from nnsight import LanguageModel
 from transformers import AutoTokenizer, PreTrainedTokenizerFast
