@@ -106,6 +106,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/runs/{run_id}/views": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Views */
+    get: operations["views_api_runs__run_id__views_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/vectors": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Vectors */
+    get: operations["vectors_api_vectors_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/experiments": {
     parameters: {
       query?: never;
@@ -134,6 +168,33 @@ export interface components {
       /** Size */
       size: number | null;
     };
+    /**
+     * Direction
+     * @description Where a direction came from and what it is, stored alongside its values.
+     */
+    Direction: {
+      /** Name */
+      name: string;
+      /** Model */
+      model: string;
+      /** Layer */
+      layer: number;
+      /** Method */
+      method: string;
+      /** Norm */
+      norm: number;
+      /** Dim */
+      dim: number;
+      /**
+       * Created
+       * Format: date-time
+       */
+      created: string;
+      /** Run */
+      run?: string | null;
+      /** Notes */
+      notes?: string | null;
+    };
     /** Experiment */
     Experiment: {
       /** Name */
@@ -156,6 +217,50 @@ export interface components {
       version: string;
       /** Home */
       home: string;
+    };
+    /** HeatmapView */
+    HeatmapView: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      kind: "heatmap";
+      /** Title */
+      title: string;
+      /** X */
+      x: string[];
+      /** Y */
+      y: string[];
+      /** Z */
+      z: number[][];
+      /** X Label */
+      x_label: string;
+      /** Y Label */
+      y_label: string;
+      /** Note */
+      note?: string | null;
+    };
+    /** LineView */
+    LineView: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      kind: "line";
+      /** Title */
+      title: string;
+      /** X */
+      x: number[];
+      /** Series */
+      series: {
+        [key: string]: number[];
+      };
+      /** X Label */
+      x_label: string;
+      /** Y Label */
+      y_label: string;
+      /** Note */
+      note?: string | null;
     };
     /** Message */
     Message: {
@@ -243,6 +348,19 @@ export interface components {
       /** Samples */
       samples: number | null;
     };
+    /**
+     * RunView
+     * @description A figure a run logged under views/, addressed by its artifact path.
+     */
+    RunView: {
+      /** Path */
+      path: string;
+      /** View */
+      view:
+        | components["schemas"]["HeatmapView"]
+        | components["schemas"]["LineView"]
+        | components["schemas"]["TableView"];
+    };
     /** SampleDetail */
     SampleDetail: {
       /** Id */
@@ -291,6 +409,22 @@ export interface components {
       answer: string | null;
       /** Explanation */
       explanation: string | null;
+    };
+    /** TableView */
+    TableView: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      kind: "table";
+      /** Title */
+      title: string;
+      /** Columns */
+      columns: string[];
+      /** Rows */
+      rows: (string | number | boolean | null)[][];
+      /** Note */
+      note?: string | null;
     };
     /** ToolCall */
     ToolCall: {
@@ -485,6 +619,57 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  views_api_runs__run_id__views_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RunView"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  vectors_api_vectors_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Direction"][];
         };
       };
     };

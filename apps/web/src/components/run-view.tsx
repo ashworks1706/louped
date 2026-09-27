@@ -9,6 +9,7 @@ import { HistoryCharts } from "@/components/history-chart";
 import { MetricValue } from "@/components/metric";
 import { QueryState } from "@/components/query-state";
 import { KindBadge, StatusDot } from "@/components/run-badges";
+import { RunViews } from "@/components/run-views";
 import { SamplesTable } from "@/components/samples-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { API, q, type RunDetail } from "@/lib/api";
@@ -79,10 +80,12 @@ function RunHeader({ run }: { run: RunDetail }) {
 function RunTabs({ run }: { run: RunDetail }) {
   const [tab, setTab] = useQueryState("tab", parseAsString.withDefault("overview"));
   const isEval = run.kind === "eval";
+  const hasFigures = run.artifacts.some((a) => a.path.startsWith("views/"));
   return (
     <Tabs value={tab} onValueChange={setTab}>
       <TabsList>
         <TabsTrigger value="overview">Overview</TabsTrigger>
+        {hasFigures && <TabsTrigger value="figures">Figures</TabsTrigger>}
         {isEval && <TabsTrigger value="samples">Samples</TabsTrigger>}
         {!isEval && <TabsTrigger value="artifacts">Artifacts</TabsTrigger>}
         <TabsTrigger value="config">Config</TabsTrigger>
@@ -90,6 +93,11 @@ function RunTabs({ run }: { run: RunDetail }) {
       <TabsContent value="overview">
         <Overview run={run} />
       </TabsContent>
+      {hasFigures && (
+        <TabsContent value="figures">
+          <RunViews id={run.id} />
+        </TabsContent>
+      )}
       {isEval && (
         <TabsContent value="samples">
           <Samples id={run.id} />

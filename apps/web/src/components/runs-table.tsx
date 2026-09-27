@@ -21,7 +21,8 @@ import {
 import type { RunSummary } from "@/lib/api";
 import { ago, headline, metricLabel } from "@/lib/format";
 
-export const runHref = (id: string) => `/run/?id=${encodeURIComponent(id)}`;
+export const runHref = (id: string, tab?: string) =>
+  `/run/?id=${encodeURIComponent(id)}${tab ? `&tab=${tab}` : ""}`;
 
 type SortKey = "name" | "metric" | "created";
 type Sort = { key: SortKey; desc: boolean };

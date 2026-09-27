@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 RunKind = Literal["eval", "analysis", "training"]
 
@@ -83,3 +83,42 @@ class Experiment(BaseModel):
     name: str
     question: str | None
     runs: list[RunSummary]
+
+
+class HeatmapView(BaseModel):
+    kind: Literal["heatmap"]
+    title: str
+    x: list[str]
+    y: list[str]
+    z: list[list[float]]
+    x_label: str
+    y_label: str
+    note: str | None = None
+
+
+class LineView(BaseModel):
+    kind: Literal["line"]
+    title: str
+    x: list[float]
+    series: dict[str, list[float]]
+    x_label: str
+    y_label: str
+    note: str | None = None
+
+
+class TableView(BaseModel):
+    kind: Literal["table"]
+    title: str
+    columns: list[str]
+    rows: list[list[str | float | int | bool | None]]
+    note: str | None = None
+
+
+View = Annotated[HeatmapView | LineView | TableView, Field(discriminator="kind")]
+
+
+class RunView(BaseModel):
+    """A figure a run logged under views/, addressed by its artifact path."""
+
+    path: str
+    view: View

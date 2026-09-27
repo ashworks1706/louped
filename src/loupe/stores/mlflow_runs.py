@@ -13,6 +13,9 @@ from loupe.stores.types import Artifact, MetricPoint, RunDetail, RunSummary
 
 PREFIX = "m-"
 
+# The server reads artifacts per request; MLflow's download progress bars would fill its log.
+os.environ.setdefault("MLFLOW_ENABLE_ARTIFACTS_PROGRESS_BAR", "false")
+
 
 def _client() -> MlflowClient | None:
     uri = tracking_uri()
@@ -64,11 +67,7 @@ def get_run(run_id: str) -> RunDetail | None:
         ]
         for key in run.data.metrics
     }
-    artifacts = [
-        Artifact(path=a.path, size=a.file_size)
-        for a in client.list_artifacts(run.info.run_id)
-        if not a.is_dir
-    ]
+    artifacts = _walk(client, run.info.run_id, None)
     return RunDetail(
         **_summary(run, experiment).model_dump(),
         params=dict(run.data.params),
@@ -78,6 +77,27 @@ def get_run(run_id: str) -> RunDetail | None:
         scorers=[],
         error=None,
     )
+
+
+def _walk(client: MlflowClient, run_id: str, path: str | None) -> list[Artifact]:
+    out: list[Artifact] = []
+    for a in client.list_artifacts(run_id, path):
+        out.extend(
+            _walk(client, run_id, a.path) if a.is_dir else [Artifact(path=a.path, size=a.file_size)]
+        )
+    return out
+
+
+def list_artifact_paths(run_id: str, path: str) -> list[str] | None:
+    """Every file under path, recursively; None when the run does not exist."""
+    client = _client()
+    if client is None:
+        return None
+    try:
+        client.get_run(run_id.removeprefix(PREFIX))
+    except Exception:
+        return None
+    return [a.path for a in _walk(client, run_id.removeprefix(PREFIX), path)]
 
 
 def read_artifact(run_id: str, path: str) -> bytes | None:

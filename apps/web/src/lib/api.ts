@@ -10,6 +10,11 @@ export type RunDetail = Schemas["RunDetail"];
 export type SampleSummary = Schemas["SampleSummary"];
 export type SampleDetail = Schemas["SampleDetail"];
 export type Experiment = Schemas["Experiment"];
+export type RunView = Schemas["RunView"];
+export type HeatmapView = Schemas["HeatmapView"];
+export type LineView = Schemas["LineView"];
+export type TableView = Schemas["TableView"];
+export type Direction = Schemas["Direction"];
 
 export class ApiError extends Error {
   constructor(
@@ -46,6 +51,11 @@ export const q = {
         `/runs/${encodeURIComponent(id)}/samples/${encodeURIComponent(sample)}?epoch=${epoch}`,
       ),
   }),
+  views: (id: string) => ({
+    queryKey: ["views", id],
+    queryFn: () => get<RunView[]>(`/runs/${encodeURIComponent(id)}/views`),
+  }),
+  vectors: () => ({ queryKey: ["vectors"], queryFn: () => get<Direction[]>("/vectors") }),
   experiments: () => ({
     queryKey: ["experiments"],
     queryFn: () => get<Experiment[]>("/experiments"),

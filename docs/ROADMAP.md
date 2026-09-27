@@ -23,7 +23,11 @@ with its UI view.
 
 ## v0.3 Interp core
 
-- [ ] `models`, `interventions`, `vectors`, `analysis` on nnsight; Interp tab; Vectors page
+- [x] `models`, `interventions`, `vectors`, `analysis` on nnsight; Figures tab; Vectors page
+- [x] `experiments/refusal-direction`: selection, ablation, addition, lens, patching, saved vector
+- [x] Verified offline on a tiny model trained to refuse (`--tiny`): seed 0 goes 100% to 0% refusal
+      on ablation and 0% to 100% on addition; across six seeds the single-direction effect holds
+      on some and not others, so the toy checks mechanics, not the claim
 - [ ] Acceptance: reproduce the refusal direction (Arditi et al. 2024) on a Qwen2.5 instruct model,
       read entirely in the UI
 

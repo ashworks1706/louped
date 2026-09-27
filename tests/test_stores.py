@@ -92,3 +92,26 @@ def test_api_404s_and_samples() -> None:
     assert client.get(f"/api/runs/{run['id']}/samples").json()[0]["scores"] == {"includes": 1.0}
     assert client.get("/api/runs/e-missing").status_code == 404
     assert client.get(f"/api/runs/{run['id']}/samples/99").status_code == 404
+
+
+def test_views_skip_bad_files_and_vectors_read_without_torch() -> None:
+    import torch
+
+    from loupe.analysis import heatmap, line
+    from loupe.tracking import log_json
+    from loupe.vectors import save_vector
+
+    with start_run("interp", name="views") as run:
+        log_json(line("scores", [0.0, 1.0], {"a": [1.0, 2.0]}, "layer", "score"), "views/0.json")
+        log_json(heatmap("patch", [[0.5]], ["p"], ["0"], "pos", "layer"), "views/1.json")
+        log_json({"kind": "pie"}, "views/2.json")
+    save_vector("dir", torch.ones(3), model="m", layer=2, method="diff-in-means")
+
+    client = TestClient(create_app())
+    views = client.get(f"/api/runs/m-{run.info.run_id}/views").json()
+    assert [v["view"]["kind"] for v in views] == ["line", "heatmap"]
+    detail = client.get(f"/api/runs/m-{run.info.run_id}").json()
+    assert "views/1.json" in [a["path"] for a in detail["artifacts"]]
+    (vector,) = client.get("/api/vectors").json()
+    assert (vector["name"], vector["layer"], vector["dim"]) == ("dir", 2, 3)
+    assert client.get("/api/runs/m-missing/views").status_code == 404

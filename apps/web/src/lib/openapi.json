@@ -231,6 +231,71 @@
         }
       }
     },
+    "/api/runs/{run_id}/views": {
+      "get": {
+        "summary": "Views",
+        "operationId": "views_api_runs__run_id__views_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RunView"
+                  },
+                  "title": "Response Views Api Runs  Run Id  Views Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/vectors": {
+      "get": {
+        "summary": "Vectors",
+        "operationId": "vectors_api_vectors_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Direction"
+                  },
+                  "type": "array",
+                  "title": "Response Vectors Api Vectors Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/experiments": {
       "get": {
         "summary": "Experiments",
@@ -277,6 +342,65 @@
         "type": "object",
         "required": ["path", "size"],
         "title": "Artifact"
+      },
+      "Direction": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "layer": {
+            "type": "integer",
+            "title": "Layer"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method"
+          },
+          "norm": {
+            "type": "number",
+            "title": "Norm"
+          },
+          "dim": {
+            "type": "integer",
+            "title": "Dim"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created"
+          },
+          "run": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": ["name", "model", "layer", "method", "norm", "dim", "created"],
+        "title": "Direction",
+        "description": "Where a direction came from and what it is, stored alongside its values."
       },
       "Experiment": {
         "properties": {
@@ -338,6 +462,117 @@
         "type": "object",
         "required": ["status", "version", "home"],
         "title": "Health"
+      },
+      "HeatmapView": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "heatmap",
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "x": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "X"
+          },
+          "y": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Y"
+          },
+          "z": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Z"
+          },
+          "x_label": {
+            "type": "string",
+            "title": "X Label"
+          },
+          "y_label": {
+            "type": "string",
+            "title": "Y Label"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": ["kind", "title", "x", "y", "z", "x_label", "y_label"],
+        "title": "HeatmapView"
+      },
+      "LineView": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "line",
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "x": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "X"
+          },
+          "series": {
+            "additionalProperties": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Series"
+          },
+          "x_label": {
+            "type": "string",
+            "title": "X Label"
+          },
+          "y_label": {
+            "type": "string",
+            "title": "Y Label"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": ["kind", "title", "x", "series", "x_label", "y_label"],
+        "title": "LineView"
       },
       "Message": {
         "properties": {
@@ -603,6 +838,40 @@
         ],
         "title": "RunSummary"
       },
+      "RunView": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "view": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/HeatmapView"
+              },
+              {
+                "$ref": "#/components/schemas/LineView"
+              },
+              {
+                "$ref": "#/components/schemas/TableView"
+              }
+            ],
+            "title": "View",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "heatmap": "#/components/schemas/HeatmapView",
+                "line": "#/components/schemas/LineView",
+                "table": "#/components/schemas/TableView"
+              }
+            }
+          }
+        },
+        "type": "object",
+        "required": ["path", "view"],
+        "title": "RunView",
+        "description": "A figure a run logged under views/, addressed by its artifact path."
+      },
       "SampleDetail": {
         "properties": {
           "id": {
@@ -749,6 +1018,66 @@
         "type": "object",
         "required": ["name", "value", "raw", "answer", "explanation"],
         "title": "Score"
+      },
+      "TableView": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "table",
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "rows": {
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": ["kind", "title", "columns", "rows"],
+        "title": "TableView"
       },
       "ToolCall": {
         "properties": {

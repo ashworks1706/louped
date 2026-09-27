@@ -49,21 +49,24 @@ cli
 server                           FastAPI, read-only over the stores
 stores                           views over Inspect logs, MLflow, experiments/
 inspect_ext | rl_ext             Policy as an Inspect model provider; scorer -> reward
-analysis | viz                   patching, lens, probes as DataFrames; standard figures
-interventions | vectors          Steer, Ablate, Patch, Clamp specs on nnsight; directions
+analysis                         activations, logit lens, patching; results as UI views
+interventions | vectors          Steer and Ablate specs on nnsight, batched generation; directions
 models                           load a model, module-path map per architecture family
 tracking                         start an MLflow run with RunMeta attached
 core                             run metadata, paths
 ```
 
-Today `cli`, `server`, `stores`, `tracking` and `core` exist. Each phase adds its layers here and in the contract in
+Today everything from `core` to `cli` exists except `inspect_ext` and `rl_ext`. Each phase adds its layers here and in the contract in
 `pyproject.toml`.
 
 ## Data
 
 - Evals: Inspect `.eval` logs are the source of truth for transcripts and per-sample scores.
-- Everything else: an MLflow run with params, metrics and artifacts (vectors as safetensors,
-  tables as parquet, figures).
+- Everything else: an MLflow run with params, metrics and artifacts. Figures are data, not images:
+  JSON under `views/` in one of three shapes (heatmap, line, table, `loupe.analysis.views`) that the
+  Run page's Figures tab draws.
+- Directions: one safetensors file each under `<LOUPE_HOME>/vectors`, provenance in the header. The
+  server reads the header without torch, so `loupe serve` never needs the interp extra.
 - Every run writes `RunMeta`: commit and dirty flag, package versions, seed; later also model
   revision, dataset fingerprint and chat-template hash.
 
@@ -72,7 +75,7 @@ Today `cli`, `server`, `stores`, `tracking` and `core` exist. Each phase adds it
 The UI is the product. `apps/web` is a static Next.js export served by `loupe serve` next to the
 API, so there is no Node server in production. The server owns no database and no auth.
 
-Pages: Home, Experiments, Run (Overview, Samples, Transcripts, Interp, Artifacts, Config), Compare,
+Pages: Home, Experiments, Run (Overview, Figures, Samples, Transcripts, Artifacts, Config), Compare,
 Vectors, Playground. Principles: one question per screen, every number links to the samples behind
 it, compare is first-class, empty states show the command that fills them, keyboard-first (⌘K and
 `G` jumps), view state in the URL. Neuronpedia and Docent are linked from it, not replacements for it.

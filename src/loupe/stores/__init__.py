@@ -5,6 +5,23 @@ exists. Needs the server extra, which installs both readers.
 """
 
 from loupe.stores.experiments import list_experiments
-from loupe.stores.runs import NotFound, get_run, get_sample, list_runs, list_samples
+from loupe.stores.runs import (
+    NotFound,
+    get_run,
+    get_sample,
+    list_runs,
+    list_samples,
+    list_views,
+)
+from loupe.stores.vectors import list_vectors
 
-__all__ = ["NotFound", "get_run", "get_sample", "list_experiments", "list_runs", "list_samples"]
+__all__ = [
+    "NotFound",
+    "get_run",
+    "get_sample",
+    "list_experiments",
+    "list_runs",
+    "list_samples",
+    "list_vectors",
+    "list_views",
+]

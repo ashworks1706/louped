@@ -28,6 +28,11 @@ def artifacts_dir() -> Path:
     return home() / "artifacts"
 
 
+def vectors_dir() -> Path:
+    """Saved directions, one safetensors file each."""
+    return home() / "vectors"
+
+
 def experiments_dir() -> Path:
     """The research questions: LOUPE_EXPERIMENTS when set, else ./experiments."""
     return Path(os.environ.get("LOUPE_EXPERIMENTS", "experiments")).resolve()

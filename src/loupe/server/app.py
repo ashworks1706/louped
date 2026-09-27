@@ -16,9 +16,16 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from loupe import __version__, stores
-from loupe.core import home
+from loupe.core import Direction, home
 from loupe.stores.runs import read_artifact
-from loupe.stores.types import Experiment, RunDetail, RunSummary, SampleDetail, SampleSummary
+from loupe.stores.types import (
+    Experiment,
+    RunDetail,
+    RunSummary,
+    RunView,
+    SampleDetail,
+    SampleSummary,
+)
 
 #: Where the UI's dev server runs; allowed to call the API during development only.
 DEV_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
@@ -75,6 +82,14 @@ def create_app(web_dir: Path | None = None) -> FastAPI:
             raise HTTPException(400, "bad path")
         media = mimetypes.guess_type(path)[0] or "application/octet-stream"
         return Response(read_artifact(run_id, path), media_type=media)
+
+    @app.get("/api/runs/{run_id}/views")
+    def views(run_id: str) -> list[RunView]:
+        return stores.list_views(run_id)
+
+    @app.get("/api/vectors")
+    def vectors() -> list[Direction]:
+        return stores.list_vectors()
 
     @app.get("/api/experiments")
     def experiments() -> list[Experiment]:

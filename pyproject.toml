@@ -29,6 +29,12 @@ tracking = [
     "sqlalchemy>=2.0",
     "alembic>=1.13",
 ]
+interp = [
+    "nnsight>=0.4",
+    "safetensors>=0.4",
+    "torch>=2.5",
+    "transformers>=4.50",
+]
 
 [project.scripts]
 loupe = "loupe.cli:main"
@@ -79,6 +85,9 @@ type = "layers"
 layers = [
     "loupe.cli",
     "loupe.server",
-    "loupe.stores | loupe.tracking",
+    "loupe.stores | loupe.tracking | loupe.analysis",
+    "loupe.interventions",
+    "loupe.vectors",
+    "loupe.models",
     "loupe.core",
 ]
