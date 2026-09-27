@@ -106,6 +106,16 @@ def transfers(masked: int, steps: int) -> list[int]:
     return [per + (1 if i < extra else 0) for i in range(steps)]
 
 
+def schedule(length: int, block: int | None = None, steps: int | None = None) -> tuple[int, int]:
+    """The block size and step count the sampler runs, defaults filled in; a ValueError unless
+    length is whole blocks and steps a multiple of the block count."""
+    block = block or length
+    steps = steps or length
+    if length % block or steps % (length // block):
+        raise ValueError("length must be whole blocks and steps a multiple of the block count")
+    return block, steps
+
+
 @torch.no_grad()
 def denoise(
     d: Diffusion,
@@ -115,12 +125,12 @@ def denoise(
     steps: int | None = None,
     temperature: float = 0.0,
     on_step: Callable[[int, int], None] | None = None,
+    record: list[tuple[torch.Tensor, torch.Tensor]] | None = None,
 ) -> torch.Tensor:
-    """The prompt ids [batch, p] followed by length generated ids."""
-    block = block or length
-    steps = steps or length
-    if length % block or steps % (length // block):
-        raise ValueError("length must be whole blocks and steps a multiple of the block count")
+    """The prompt ids [batch, p] followed by length generated ids. With record, each step appends
+    the reply ids after it and the confidence of what it committed, zero elsewhere, [batch, length].
+    """
+    block, steps = schedule(length, block, steps)
     n_blocks, batch, p = length // block, prompt.shape[0], prompt.shape[1]
     x = torch.full((batch, p + length), d.mask_id, dtype=torch.long, device=prompt.device)
     x[:, :p] = prompt
@@ -143,6 +153,10 @@ def denoise(
             conf = torch.where(masked, conf, float("-inf"))
             commit = torch.zeros_like(masked).scatter_(1, conf.topk(k, dim=1).indices, True)
             x[:, s0:s1] = torch.where(commit & masked, pred, x[:, s0:s1])
+            if record is not None:
+                c = torch.zeros(batch, length, device=x.device)
+                c[:, s0 - p : s1 - p] = torch.where(commit & masked, conf, 0.0)
+                record.append((x[:, p:].clone(), c))
     return x
 
 
@@ -150,16 +164,25 @@ def generate(
     d: Diffusion, prompts: list[str], on_step: Callable[[int, int], None] | None = None, **sampler
 ) -> list[str]:
     """Each prompt's reply, cut at the first end of sequence. sampler is denoise's arguments."""
-    out = []
-    eos = d.tokenizer.eos_token_id
+    return [reply(d, text, on_step, **sampler) for text in prompts]
+
+
+def reply(
+    d: Diffusion,
+    prompt: str,
+    on_step: Callable[[int, int], None] | None = None,
+    record: list[tuple[torch.Tensor, torch.Tensor]] | None = None,
+    **sampler: Any,
+) -> str:
+    """One prompt's reply, cut at the first end of sequence; record is denoise's."""
     device = next(d.model.parameters()).device
-    for text in prompts:
-        ids = d.tokenizer(text, return_tensors="pt", add_special_tokens=False)["input_ids"]
-        reply = denoise(d, ids.to(device), on_step=on_step, **sampler)[0, ids.shape[1] :].tolist()
-        if eos in reply:
-            reply = reply[: reply.index(eos)]
-        out.append(d.tokenizer.decode(reply, skip_special_tokens=True).strip())
-    return out
+    ids = d.tokenizer(prompt, return_tensors="pt", add_special_tokens=False)["input_ids"]
+    out = denoise(d, ids.to(device), on_step=on_step, record=record, **sampler)
+    tokens = out[0, ids.shape[1] :].tolist()
+    eos = d.tokenizer.eos_token_id
+    if eos in tokens:
+        tokens = tokens[: tokens.index(eos)]
+    return d.tokenizer.decode(tokens, skip_special_tokens=True).strip()
 
 
 def loss(d: Diffusion, ids: torch.Tensor, prompt_len: torch.Tensor, eps: float = 1e-3):

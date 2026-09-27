@@ -1,6 +1,7 @@
 """GSM8K test accuracy of the base and the GRPO model, scored by the same check as the reward.
 
-    uv run --all-extras python experiments/gsm8k-grpo/eval.py --limit 500
+    uv run --all-extras python experiments/gsm8k-grpo/eval.py              # all 1319 test samples
+    uv run --all-extras python experiments/gsm8k-grpo/eval.py --limit 50   # a smoke run
 
 Both go through the loupe/ provider, greedy; select the two runs under Runs and Compare them for
 the paired difference.
@@ -26,11 +27,12 @@ from loupe.train.tasks import math_equal
 class Args:
     base: str = "Qwen/Qwen2.5-0.5B-Instruct"
     tuned: str = "qwen2.5-0.5b-gsm8k-grpo"
-    limit: int = 500
+    limit: int | None = None
+    """Test samples; None is all 1319, which a gain of about five points needs to clear noise."""
     max_tokens: int = 384
 
 
-def task(limit: int, max_tokens: int) -> Task:
+def task(limit: int | None, max_tokens: int) -> Task:
     lines = (home() / "data" / "gsm8k-grpo" / "test.jsonl").read_text().splitlines()[:limit]
     samples = []
     for i, line in enumerate(lines):

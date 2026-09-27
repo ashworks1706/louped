@@ -1,21 +1,24 @@
 """Steer adds a direction to the residual stream; Ablate removes a direction's component from it;
-Inject adds the state of retrieved passages, so text reaches the model without entering its prompt.
+Inject adds the state of retrieved passages, so text reaches the model without entering its prompt;
+Heads zeroes chosen attention heads' outputs or replaces them with their mean.
 
-Both act on decoder block outputs, which is the residual stream after each layer. Edits are done
-in float32 and cast back, so a bf16 model is not steered by a rounded vector.
+Steer, Ablate and Inject act on decoder block outputs, which is the residual stream after each
+layer; Heads acts on the input of a block's attention output projection, the heads side by side.
+Edits are done in float32 and cast back, so a bf16 model is not steered by a rounded vector.
 """
 
 from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Callable, Sequence
+from functools import partial
 from typing import Annotated, Any, Literal
 
 import torch
 from nnsight import LanguageModel
-from pydantic import BaseModel, Field, TypeAdapter
+from pydantic import BaseModel, Field, TypeAdapter, model_validator
 
-from loupe.models import blocks, n_layers
+from loupe.models import attention, blocks, n_heads, n_layers, out_proj
 from loupe.vectors import load_vector
 
 
@@ -48,10 +51,27 @@ class Inject(BaseModel):
     alpha: float = 1.0
 
 
+class Heads(BaseModel):
+    """Ablate attention heads at the given layers: zero their outputs, or with mode mean replace
+    them by their mean over the tokens of the texts in over."""
+
+    kind: Literal["heads"] = "heads"
+    layers: list[int]
+    heads: list[int]
+    mode: Literal["zero", "mean"] = "zero"
+    over: list[str] | None = None
+
+    @model_validator(mode="after")
+    def _texts(self) -> Heads:
+        if self.mode == "mean" and not self.over:
+            raise ValueError("mode mean needs texts in over to take the mean from")
+        return self
+
+
 #: A system message starting with this carries passages to inject (JSON list) rather than text.
 INJECT = "loupe:inject "
 
-Spec = Steer | Ablate | Inject
+Spec = Steer | Ablate | Inject | Heads
 Intervention = Annotated[Spec, Field(discriminator="kind")]
 _LIST = TypeAdapter(list[Intervention])
 
@@ -89,6 +109,66 @@ def ablate_plan(v: torch.Tensor, layers: range | list[int]) -> Plan:
     return {layer: [edit] for layer in layers}
 
 
+def head_means(
+    lm: LanguageModel, texts: Sequence[str], layers: list[int]
+) -> dict[int, torch.Tensor]:
+    """The input of each layer's attention output projection, averaged over every token of the
+    texts."""
+    order = sorted(set(layers))
+    rows: dict[int, list[torch.Tensor]] = {layer: [] for layer in order}
+    for text in texts:
+        saved: list[torch.Tensor] = []
+        with torch.no_grad(), lm.trace(text):
+            for layer in order:
+                saved.append(out_proj(attention(blocks(lm)[layer])).input.save())
+        for layer, x in zip(order, saved, strict=True):
+            rows[layer].append(x[0].float())
+    return {layer: torch.cat(xs).mean(0) for layer, xs in rows.items()}
+
+
+def heads_plan(lm: LanguageModel, spec: Heads, means: dict[int, torch.Tensor]) -> Plan:
+    """Zero the spec's heads at each of its layers, or with mode mean fill them from means."""
+    n, total = n_heads(lm), n_layers(lm)
+    if not spec.heads or not all(0 <= h < n for h in spec.heads):
+        raise ValueError(f"heads {spec.heads} out of range for {n} heads")
+    if not all(0 <= layer < total for layer in spec.layers):
+        raise ValueError(f"layers {spec.layers} out of range for a {total}-layer model")
+    fill = means if spec.mode == "mean" else {}
+    heads = list(spec.heads)
+    return {layer: [partial(_fill_heads, n=n, heads=heads, fill=fill.get(layer))]
+            for layer in spec.layers}  # fmt: skip
+
+
+def _means(
+    lm: LanguageModel, specs: Sequence[Spec]
+) -> dict[tuple[str, ...], dict[int, torch.Tensor]]:
+    """Head means for the mean-mode Heads specs, one pass over each distinct set of texts."""
+    layers: dict[tuple[str, ...], set[int]] = defaultdict(set)
+    for spec in specs:
+        if isinstance(spec, Heads) and spec.mode == "mean":
+            layers[tuple(spec.over or [])].update(spec.layers)
+    total = n_layers(lm)
+    out: dict[tuple[str, ...], dict[int, torch.Tensor]] = {}
+    for over, wanted in layers.items():
+        if not all(0 <= layer < total for layer in wanted):
+            raise ValueError(f"layers {sorted(wanted)} out of range for a {total}-layer model")
+        out[over] = head_means(lm, over, sorted(wanted))
+    return out
+
+
+def _is_heads(edit: Edit) -> bool:
+    """Whether an edit acts on a block's heads rather than on its residual output."""
+    return isinstance(edit, partial) and edit.func is _fill_heads
+
+
+def _fill_heads(
+    x: torch.Tensor, n: int, heads: list[int], fill: torch.Tensor | None
+) -> torch.Tensor:
+    h = x.unflatten(-1, (n, -1)).clone()
+    h[..., heads, :] = 0.0 if fill is None else fill.to(x.device).view(n, -1)[heads]
+    return h.flatten(-2)
+
+
 def everywhere(lm: LanguageModel) -> list[int]:
     """The embeddings and every block: the whole residual stream."""
     return [EMBED, *range(n_layers(lm))]
@@ -115,11 +195,15 @@ def passage_state(lm: LanguageModel, passages: Sequence[str], layer: int) -> tor
 def compile(lm: LanguageModel, specs: Sequence[Spec]) -> Plan:
     """Load the vectors and turn specs into per-layer edits. Call outside the trace."""
     total = n_layers(lm)
+    means = _means(lm, specs)
     plans: list[Plan] = []
     for spec in specs:
         if isinstance(spec, Inject):
             state = passage_state(lm, spec.passages, spec.layer)
             plans.append(steer_plan(state, spec.layer, spec.alpha))
+            continue
+        if isinstance(spec, Heads):
+            plans.append(heads_plan(lm, spec, means.get(tuple(spec.over or []), {})))
             continue
         vector, meta = load_vector(spec.vector)
         if isinstance(spec, Steer):
@@ -145,25 +229,39 @@ def apply(lm: LanguageModel, plan: Plan) -> None:
         apply_at(lm, plan, layer)
 
 
-def apply_at(lm: LanguageModel, plan: Plan | None, layer: int) -> None:
+def apply_at(lm: LanguageModel, plan: Plan | None, layer: int, heads: bool = True) -> None:
     """Apply the plan's edits at one layer, if any; for traces that also read each layer.
 
     A trace that reads layer outputs calls this for EMBED first, then for each layer before
-    reading it, so edits and reads stay in execution order.
+    reading it, so edits and reads stay in execution order. A trace that reads a block's attention
+    calls apply_heads before the read and this with heads=False after it.
     """
-    if not plan or layer not in plan:
+    if heads:
+        apply_heads(lm, plan, layer)
+    edits = [e for e in (plan or {}).get(layer, []) if not _is_heads(e)]
+    if not edits:
         return
-    edits = plan[layer]
     layers = blocks(lm)
     if layer == EMBED:
         x = layers[0].input
-        h = x.float()
-        for edit in edits:
-            h = edit(h)
-        layers[0].input[:] = h.to(x.dtype)
+        layers[0].input[:] = _edited(x, edits)
         return
     out = layers[layer].output
-    h = out.float()
+    layers[layer].output[:] = _edited(out, edits)
+
+
+def apply_heads(lm: LanguageModel, plan: Plan | None, layer: int) -> None:
+    """Apply the plan's head edits at one layer, if any, at its attention output projection."""
+    edits = [e for e in (plan or {}).get(layer, []) if _is_heads(e)]
+    if not edits:
+        return
+    proj = out_proj(attention(blocks(lm)[layer]))
+    x = proj.input
+    proj.input[:] = _edited(x, edits)
+
+
+def _edited(x: torch.Tensor, edits: list[Edit]) -> torch.Tensor:
+    h = x.float()
     for edit in edits:
         h = edit(h)
-    layers[layer].output[:] = h.to(out.dtype)
+    return h.to(x.dtype)

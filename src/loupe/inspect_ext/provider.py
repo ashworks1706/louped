@@ -9,12 +9,15 @@ model's family, so agent tasks run under interventions too.
 
 Adapters: bank loads named adapters beside each other, adapters makes a set of them live, phases
 changes the live set along one generation. diffusion serves a masked diffusion model through
-loupe.models.diffusion, with the sampler's arguments ({"length": 64, "steps": 64}) and, for
-LLaDA or Dream from the Hub, the pinned revision their code runs at.
+loupe.models.diffusion, with the sampler's arguments ({"length": 64, "steps": 64}). revision pins
+a Hub model to a commit; LLaDA and Dream from the Hub need one, since they run their own code.
 
 inject ({"layer": 6, "alpha": 1.0}) takes passages a solver sent as an INJECT system message and
 adds their state at that layer instead of rendering them. A conversation that ends on an assistant
-message is continued from it (a prefill).
+message is continued from it (a prefill). Specs that run the model to compile (inject, heads with
+mode mean) are compiled at the first call, under the lock with the adapters live. Each output
+carries its usage, counted with the model's tokenizer, and on CUDA the call's peak memory, which
+loupe.inspect_ext.inference scores.
 """
 
 from __future__ import annotations
@@ -24,6 +27,7 @@ import json
 import threading
 from typing import Any
 
+import torch
 from inspect_ai.model import (
     ChatCompletionChoice,
     ChatMessage,
@@ -32,13 +36,14 @@ from inspect_ai.model import (
     GenerateConfig,
     ModelAPI,
     ModelOutput,
+    ModelUsage,
 )
 from inspect_ai.model._providers.util import HFHandler
 from inspect_ai.tool import ToolChoice, ToolInfo
 from inspect_ai.util._json import JSON_SCHEMA_EXTENDED_FIELDS, json_schema_dump
 
 from loupe.core import saved_model
-from loupe.interventions import INJECT, Inject, compile, generate, parse
+from loupe.interventions import INJECT, Heads, Inject, compile, generate, parse
 from loupe.interventions.specs import merge
 from loupe.models import load
 from loupe.models.adapters import activate, phase_hook
@@ -66,7 +71,7 @@ def shared_model(
             if diffusion:
                 _MODELS[key] = load_diffusion(name, bank, merges, revision=revision)
             else:
-                _MODELS[key] = load(name, bank=bank, merges=merges)
+                _MODELS[key] = load(name, bank=bank, merges=merges, revision=revision)
         return _MODELS[key]
 
 
@@ -84,18 +89,19 @@ class LoupeAPI(ModelAPI):
         phases: list[dict[str, Any]] | None = None,
         diffusion: dict[str, Any] | None = None,
         inject: dict[str, Any] | None = None,
+        revision: str | None = None,
         **model_args: Any,
     ) -> None:
         super().__init__(model_name, base_url, api_key, [], config or GenerateConfig())
         named = set(adapters or []) | {a for p in phases or [] for a in p["adapters"]}
         bank = bank or (sorted(named) if named else None)
-        sampler = dict(diffusion or {})
-        revision = sampler.pop("revision", None)
         self.lm = shared_model(model_name, bank, merges, diffusion is not None, revision)
-        self.sampler = sampler
+        self.sampler = dict(diffusion or {})
         if (interventions or inject) and diffusion is not None:
             raise ValueError("interventions act on causal LMs; a diffusion model takes none")
-        self.plan = compile(self.lm, parse(interventions)) if interventions else None
+        specs = parse(interventions) if interventions else []
+        self.plan = compile(self.lm, [s for s in specs if not _reads_model(s)]) if specs else {}
+        self.lazy = [s for s in specs if _reads_model(s)]
         self.adapters = list(adapters or []) if bank else None
         self.phases = phases
         self.inject = inject
@@ -122,36 +128,50 @@ class LoupeAPI(ModelAPI):
         prompt = self.render(input, tools)
         prefill = bool(input) and input[-1].role == "assistant"
         max_new = config.max_tokens or 256
+        cuda = torch.cuda.is_available()
 
-        def run() -> str:
+        def run() -> tuple[str, float | None]:
             with _LOCK:
+                if cuda:
+                    torch.cuda.reset_peak_memory_stats()
                 model = self.lm.model if isinstance(self.lm, Diffusion) else self.lm._model
                 if self.adapters is not None:
                     activate(model, self.adapters)
                 hook = phase_hook(model, self.phases) if self.phases else None
                 if isinstance(self.lm, Diffusion):
-                    return denoise_all(self.lm, [prompt], hook, **self.sampler)[0]
-                plan = self.plan
-                if passages and self.inject:
-                    injected = compile(self.lm, [Inject(passages=passages, **self.inject)])
-                    plan = merge(plan or {}, injected)
-                return generate(self.lm, [prompt], plan, max_new, on_step=hook, strip=not prefill)[
-                    0
-                ]
+                    text = denoise_all(self.lm, [prompt], hook, **self.sampler)[0]
+                else:
+                    if self.lazy:
+                        self.plan = merge(self.plan, compile(self.lm, self.lazy))
+                        self.lazy = []
+                    plan = self.plan
+                    if passages and self.inject:
+                        injected = compile(self.lm, [Inject(passages=passages, **self.inject)])
+                        plan = merge(plan, injected)
+                    text = generate(self.lm, [prompt], plan, max_new, on_step=hook,
+                                    strip=not prefill)[0]  # fmt: skip
+                return text, torch.cuda.max_memory_allocated() / 2**20 if cuda else None
 
-        text = await asyncio.to_thread(run)
+        text, peak = await asyncio.to_thread(run)
         if not tools:
-            return ModelOutput.from_content(model=self.model_name, content=text)
-        model = self.lm.model if isinstance(self.lm, Diffusion) else self.lm._model
-        family = str(getattr(model.config, "model_type", self.model_name))
-        message = HFHandler(self.model_name, family).parse_assistant_response(text, tools)
-        stop = "tool_calls" if message.tool_calls else "stop"
-        choice = ChatCompletionChoice(message=message, stop_reason=stop)
-        return ModelOutput(model=self.model_name, choices=[choice])
+            output = ModelOutput.from_content(model=self.model_name, content=text)
+        else:
+            model = self.lm.model if isinstance(self.lm, Diffusion) else self.lm._model
+            family = str(getattr(model.config, "model_type", self.model_name))
+            message = HFHandler(self.model_name, family).parse_assistant_response(text, tools)
+            stop = "tool_calls" if message.tool_calls else "stop"
+            choice = ChatCompletionChoice(message=message, stop_reason=stop)
+            output = ModelOutput(model=self.model_name, choices=[choice])
+        n_in, n_out = await self.count_text_tokens(prompt), await self.count_text_tokens(text)
+        output.usage = ModelUsage(input_tokens=n_in, output_tokens=n_out, total_tokens=n_in + n_out)
+        if peak is not None:
+            output.metadata = {"peak_cuda_mib": peak}
+        return output
 
     async def count_text_tokens(self, text: str) -> int:
-        """Tokens by the model's own tokenizer, for Inspect's message and token limits."""
-        return len(self.tokenizer(text)["input_ids"])
+        """Tokens of the text by the model's own tokenizer, no special tokens added, for usage and
+        for Inspect's message and token limits."""
+        return len(self.tokenizer(text, add_special_tokens=False)["input_ids"])
 
     def render(self, input: list[ChatMessage], tools: list[ToolInfo]) -> str:
         """The conversation through the model's chat template, with the tools' JSON schemas.
@@ -169,6 +189,11 @@ class LoupeAPI(ModelAPI):
             enable_thinking=False,
         )  # fmt: skip
         return str(text)
+
+
+def _reads_model(spec: Any) -> bool:
+    """Whether compiling the spec runs the model, so its result depends on the live adapters."""
+    return isinstance(spec, Inject) or (isinstance(spec, Heads) and spec.mode == "mean")
 
 
 def hf_message(m: ChatMessage) -> dict[str, Any]:

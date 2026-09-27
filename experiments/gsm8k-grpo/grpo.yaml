@@ -5,6 +5,7 @@ base_model: Qwen/Qwen2.5-0.5B-Instruct
 dataset: data/gsm8k-grpo/train.jsonl
 output_dir: checkpoints/gsm8k-grpo
 max_seq_length: 1024
+load_in_4bit: false  # a 0.5B model fits in bf16; merging into 4-bit weights would degrade them
 rewards: [loupe.train.tasks:math_equal]
 num_generations: 8
 max_completion_length: 384

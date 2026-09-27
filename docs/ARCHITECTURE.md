@@ -75,14 +75,14 @@ question is an experiment in `experiments/` on a domain's capabilities; no produ
 
 | Domain | Capabilities | Asked by |
 |---|---|---|
-| 0 Mechanisms | directions, patching, lens, probes, SAEs, circuits; the pushback task | ARC thesis (sycophancy) |
-| 1 Evaluation science | `grid`: seeds, paired intervals, moved/held; black-box endpoints; contamination checks | all |
+| 0 Mechanisms | directions, patching (residual and per head), lens, probes, SAEs, circuits; head ablation; the pushback task | ARC thesis (sycophancy) |
+| 1 Evaluation science | `grid`: seeds, paired intervals, moved/held; black-box endpoints; contamination checks; latency, tokens per second, memory; tool-use scorers | all |
 | 2 Conditioning | prompt text, steering vectors, soft prompts at matched budget | zipy, SparkyAI |
-| 3 Adapters | a bank of LoRA adapters live in any subset, merging (linear, TIES, DARE), overlap | Bijou |
-| 4 Decoding and model families | per-step hooks; phase-routed adapters; masked diffusion (LLaDA, Dream) | Bijou |
+| 3 Adapters | a bank of LoRA adapters live in any subset, merging (linear, TIES, DARE), overlap | zipy |
+| 4 Decoding and model families | per-step hooks; phase-routed adapters; masked diffusion (LLaDA, Dream) and its denoising trajectory | zipy |
 | 5 Retrieval and grounding | BM25, dense, fusion, reranking; recall@k, EM, F1, NLI faithfulness | SparkyAI, piramid |
-| 6 Retrieval inside the model | Inject at a layer; retrieval during decoding; spliced KV divergence | piramid |
-| 7 Small models and data | teacher collection, hashed splits, SFT, a small classifier | Bijou, zipy |
+| 6 Retrieval inside the model | Inject at a layer; retrieval during decoding; spliced KV divergence; attention mass on a passage | piramid |
+| 7 Small models and data | teacher collection, hashed splits, SFT, a small classifier | zipy |
 
 ## Packages and layers
 
@@ -131,12 +131,13 @@ own: a check is a plain function, `inspect_ext.as_scorer` wraps it for Inspect a
 
 The UI is the product. `apps/web` is a static Next.js export served by `loupe serve` next to the
 API, so there is no Node server in production. The server owns no database and no auth. Its
-only computing routes are the Playground's, which run the model given to `loupe serve --model`:
-generate, and inspect, which returns a prompt's views in the same shapes a run logs. It also serves two
+only computing routes are the Playground's, which run the model given to `loupe serve --model`
+(with `--bank` adapters, or `--diffusion` for a masked diffusion model): generate, which streams
+plain text, and inspect, which returns a prompt's views in the same shapes a run logs. It also serves two
 viewers it does not own: Inspect View at /inspect, whose API mounts under /api behind loupe's
 routes, read-only; and circuit-tracer's graph viewer at /circuit over <home>/graphs.
 
-Pages: Home, Experiments, Run (Overview, Figures, Samples, Inspect, Artifacts, Config), Compare,
+Pages: Home, Experiments, Run (Overview, Figures, Samples, Log, Artifacts, Config), Compare,
 Vectors, Circuits, Playground. Principles: one question per screen, every number links to the samples behind
 it, compare is first-class, empty states show the command that fills them, keyboard-first (⌘K and
 `G` jumps), view state in the URL. Neuronpedia and Inspect View are linked from it, not rebuilt in
@@ -151,7 +152,7 @@ model, so it has nothing to run and nothing to write.
 
 ## Product repositories
 
-zipy, SparkyAI, piramid and Bijou keep their own regression evals in their own CI; those test product
+zipy (which now includes Bijou), SparkyAI and piramid keep their own regression evals in their own CI; those test product
 behaviour and change with product code. What moves here: post-training and dataset curation (one
 copy instead of two), research experiments, and black-box benchmarking of the products through
 their OpenAI-compatible endpoints. The contract is a data format (Inspect logs or OpenAI-style

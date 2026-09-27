@@ -37,8 +37,12 @@ const views = [
   },
 ];
 
-async function mockApi(page: Page) {
-  await page.route("**/api/playground", (r) => r.fulfill({ json: { model: "tiny", layers: 1 } }));
+async function mockApi(page: Page, info: object = {}) {
+  await page.route("**/api/playground", (r) =>
+    r.fulfill({
+      json: { model: "tiny", layers: 1, heads: 4, bank: [], diffusion: false, ...info },
+    }),
+  );
   await page.route("**/api/vectors", (r) =>
     r.fulfill({
       json: [
@@ -85,4 +89,83 @@ test("Inspect tab draws the lens, projections and attention", async ({ page }, i
   await expect(page).toHaveURL(/side=intervention/);
   await page.screenshot({ path: info.outputPath("inspect.png"), fullPage: true });
   expect(errors).toEqual([]);
+});
+
+test("Reply tab shows both streamed replies", async ({ page }) => {
+  await mockApi(page);
+  await page.route("**/api/playground/generate", (r) =>
+    r.fulfill({
+      contentType: "text/plain",
+      body: r.request().postDataJSON().interventions.length ? " steered reply" : " base reply",
+    }),
+  );
+  await page.goto("/playground/");
+  await page.getByLabel("Prompt").fill("hi");
+  await page.getByRole("button", { name: /Run/ }).click();
+  await expect(page.getByTestId("reply-base")).toContainText("base reply");
+  await expect(page.getByTestId("reply-intervention")).toContainText("steered reply");
+  await expect(page.getByRole("button", { name: /Run/ })).toBeEnabled();
+});
+
+test("Adapters and heads go to the intervened side and into the model args", async ({
+  page,
+}, info) => {
+  await mockApi(page, { layers: 2, bank: ["formal", "terse"] });
+  const sent: { adapters: string[]; interventions: { kind: string; heads: number[] }[] }[] = [];
+  await page.route("**/api/playground/generate", (r) => {
+    sent.push(r.request().postDataJSON());
+    r.fulfill({
+      contentType: "text/plain",
+      body: sent.at(-1)!.adapters.length ? " terse" : " base",
+    });
+  });
+  await page.goto("/playground/");
+  await page.getByRole("checkbox", { name: "terse" }).click();
+  await page.getByRole("radio", { name: "heads" }).click();
+  await page.getByLabel("Heads").fill("1, 3, 9");
+  await expect(page.getByText(`-M adapters='["terse"]'`)).toBeVisible();
+  await page.getByLabel("Prompt").fill("hi");
+  await page.getByRole("button", { name: /Run/ }).click();
+  await expect(page.getByTestId("reply-intervention")).toContainText("terse");
+  const edited = sent.find((b) => b.adapters.length)!;
+  expect(edited.adapters).toEqual(["terse"]);
+  expect(edited.interventions[0]).toMatchObject({ kind: "heads", heads: [1, 3] });
+  await page.screenshot({ path: info.outputPath("bank.png"), fullPage: true });
+});
+
+test("A diffusion model denoises and shows its trajectory", async ({ page }, info) => {
+  await mockApi(page, { heads: null, bank: ["skill"], diffusion: true });
+  await page.route("**/api/playground/generate", (r) =>
+    r.fulfill({ contentType: "text/plain", body: "the sky is blue" }),
+  );
+  const trajectory = {
+    kind: "heatmap",
+    title: "Denoising trajectory",
+    x: ["0", "1"],
+    y: ["0", "1"],
+    z: [
+      [0, 0.9],
+      [0.4, 0],
+    ],
+    x_label: "reply position",
+    y_label: "step",
+    labels: [
+      ["", "blue"],
+      ["sky", "blue"],
+    ],
+  };
+  await page.route("**/api/playground/inspect", (r) =>
+    r.fulfill({ json: { views: [trajectory] } }),
+  );
+  await page.goto("/playground/");
+  await expect(page.getByRole("radiogroup")).toHaveCount(0);
+  await page.getByLabel("Steps").fill("8");
+  await expect(page.getByText(`-M diffusion='{"length":64,"steps":8}'`)).toBeVisible();
+  await page.getByLabel("Prompt").fill("what is the sky");
+  await page.getByRole("button", { name: /Run/ }).click();
+  await expect(page.getByTestId("reply-base")).toContainText("the sky is blue");
+  await page.getByRole("tab", { name: "Inspect" }).click();
+  await page.getByRole("button", { name: /Run/ }).click();
+  await expect(page.getByTestId("heat-cell").filter({ hasText: "sky" })).toBeVisible();
+  await page.screenshot({ path: info.outputPath("diffusion.png"), fullPage: true });
 });

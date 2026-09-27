@@ -2,30 +2,44 @@
 
 ## Question
 
-Does GRPO with a correctness reward raise a small instruct model's GSM8K test accuracy, as
-reported for Qwen2.5 models (a gain of several points within a few hundred steps)?
+Does GRPO with a correctness reward raise a small instruct model's GSM8K test accuracy by the
+gain others report for Qwen2.5-0.5B-Instruct?
 
 ## What would answer it
 
-Greedy test accuracy, base against GRPO, on the same samples: the paired difference and its
-bootstrap interval in Compare. A gain whose interval excludes zero reproduces; one inside noise
-does not. The reward and the scorer are the same function, math-verify's symbolic answer check
-(`loupe.train.tasks:math_equal`).
+Greedy test accuracy, base against GRPO, on the same 1319 test samples: the paired difference and
+its bootstrap interval in Compare. A gain whose interval excludes zero and sits near the reference
+reproduces; one inside noise does not. The reward and the scorer are the same function,
+math-verify's symbolic answer check (`loupe.train.tasks:math_equal`).
+
+Expected, from verl's algorithm baselines (`docs/algo/baseline.md` in volcengine/verl, GSM8K test
+score): Qwen2.5-0.5B-Instruct 49.6 as released, 54.3 after GRPO with LoRA (+4.7 points; PPO
+reaches 56.7). The same table has Qwen2.5-1.5B-Instruct 73.2 to 77.9. Their prompt and answer
+format differ from this recipe's, so compare the gain, not the absolute accuracy.
 
 ## Run
 
-Needs a GPU for reasonable time; everything is local.
+Needs a CUDA GPU for reasonable time; everything else is local. `data.py` downloads openai/gsm8k
+from the Hub once.
 
 ```sh
 uv run --all-extras python experiments/gsm8k-grpo/data.py
-loupe train grpo experiments/gsm8k-grpo/grpo.yaml --dry-run
-loupe train grpo experiments/gsm8k-grpo/grpo.yaml
+uv run --all-extras loupe train grpo experiments/gsm8k-grpo/grpo.yaml --dry-run
+uv run --all-extras loupe train grpo experiments/gsm8k-grpo/grpo.yaml
 uv run --all-extras python experiments/gsm8k-grpo/eval.py
 ```
 
-The training run shows loss and `rewards/math_equal` by step; the two evals compare under Compare.
+Training runs 500 steps of 2 prompts by 8 completions and saves the merged model as
+`qwen2.5-0.5b-gsm8k-grpo` under LOUPE_HOME; `eval.py` then scores `loupe/Qwen/Qwen2.5-0.5B-Instruct`
+and `loupe/qwen2.5-0.5b-gsm8k-grpo` on the whole test split (`--limit 50` for a smoke run). The
+training run shows loss and `rewards/math_equal` by step and a Rollouts figure; select the two eval
+runs under Runs and Compare them for the paired difference.
+
+The reference trained with 64 prompts per step and LoRA rank 32. If the gain lands inside noise,
+raise `train.gradient_accumulation` (prompts per step) before anything else.
 
 ## Result
 
 Not yet run: this environment cannot reach huggingface.co. The recipe itself is covered by the
-CPU test in `tests/test_train.py` (GRPO on the tiny model with a check loaded from a file).
+CPU test in `tests/test_train.py` (GRPO on the tiny model with a check loaded from a file); this
+config, reward, merge and eval were run end to end on the tiny model with GSM8K rows, 2 steps.

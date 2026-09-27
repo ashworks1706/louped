@@ -20,7 +20,7 @@ layer: residual cosine, and the cosine between their harmful-minus-harmless dire
 ```sh
 uv run --all-extras python experiments/refusal-direction/run.py          # saves the direction
 uv run --all-extras python experiments/refusal-finetuning/run.py
-uv run --all-extras python experiments/refusal-finetuning/run.py --tiny  # offline, about a minute
+uv run --all-extras python experiments/refusal-finetuning/run.py --tiny --steps 20 --save-every 5  # offline, the run quoted below
 ```
 
 The preference pairs are the model's own replies: chosen with the direction ablated, rejected

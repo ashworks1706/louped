@@ -3,11 +3,14 @@
     "index",
     "install",
     "quickstart",
+    "---Examples---",
+    "...examples",
     "---Concepts---",
     "policies",
     "grid",
     "domains",
     "---Reference---",
+    "models",
     "cli",
     "self-host"
   ]

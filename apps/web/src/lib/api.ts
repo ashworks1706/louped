@@ -21,7 +21,6 @@ type Graph = Schemas["Graph"];
 type Comparison = Schemas["Comparison"];
 export type PlaygroundInfo = Schemas["PlaygroundInfo"];
 type GenerateRequest = Schemas["GenerateRequest"];
-type GenerateResponse = Schemas["GenerateResponse"];
 type InspectRequest = Schemas["InspectRequest"];
 type InspectResponse = Schemas["InspectResponse"];
 
@@ -40,7 +39,7 @@ async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+async function send(path: string, body: unknown, signal?: AbortSignal): Promise<Response> {
   const res = await fetch(`${API}/api${path}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -54,11 +53,23 @@ async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promi
       .catch(() => null);
     throw new ApiError(res.status, typeof detail === "string" ? detail : `${res.status} ${path}`);
   }
-  return res.json() as Promise<T>;
+  return res;
 }
 
-export const generate = (req: GenerateRequest) =>
-  post<GenerateResponse>("/playground/generate", req);
+async function post<T>(path: string, body: unknown): Promise<T> {
+  return (await send(path, body)).json() as Promise<T>;
+}
+
+/** Streams a reply: onText gets each piece as the model writes it. Abort the signal to stop. */
+export async function generate(
+  req: GenerateRequest,
+  onText: (text: string) => void,
+  signal: AbortSignal,
+): Promise<void> {
+  const res = await send("/playground/generate", req, signal);
+  const reader = res.body!.pipeThrough(new TextDecoderStream()).getReader();
+  for (let r = await reader.read(); !r.done; r = await reader.read()) onText(r.value);
+}
 
 export const inspect = (req: InspectRequest) => post<InspectResponse>("/playground/inspect", req);
 

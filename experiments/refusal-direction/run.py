@@ -1,9 +1,11 @@
 """Refusal is mediated by a single direction (Arditi et al., 2024), reproduced.
 
-    uv run --extra interp python experiments/refusal-direction/run.py   # Qwen2.5-0.5B-Instruct
-    uv run --extra interp python experiments/refusal-direction/run.py --tiny   # offline check
+    uv run --all-extras python experiments/refusal-direction/run.py   # Qwen2.5-0.5B-Instruct
+    uv run --all-extras python experiments/refusal-direction/run.py --tiny   # offline check
 
-1. Difference in means of the last-token residual, harmful minus harmless, at every layer.
+1. Keep the train and val prompts the model already treats as their kind (harmful ones it
+   refuses, harmless ones it does not), as the paper does. Difference in means of the last-token
+   residual, harmful minus harmless, at every layer.
 2. For each candidate layer (the first 80%), score the direction on held-out prompts: ablating it
    everywhere should lower the refusal score of harmful prompts, adding it at its layer should
    raise that of harmless ones. Keep the layer that bypasses best while still inducing refusal.
@@ -44,7 +46,7 @@ from loupe.models import chat, load, n_layers
 from loupe.tracking import log_json, start_run
 from loupe.vectors import diff_in_means, save_vector
 
-SPLITS = "https://raw.githubusercontent.com/andyrdt/refusal_direction/main/dataset/splits"
+DATASET = "https://raw.githubusercontent.com/andyrdt/refusal_direction/main/dataset"
 REFUSAL_TOKENS = ("I", "As", "Sorry")
 
 # Tiny mode: prompts inside the tiny tokenizer's vocabulary, and a tiny model first trained to
@@ -73,18 +75,20 @@ class Args:
     """Offline check: a tiny model trained to refuse the harmful prompts, then analysed as usual."""
     n_train: int = 128
     n_val: int = 32
-    n_test: int = 32
+    n_test: int = 100
+    """Test prompts of each kind: harmful from JailbreakBench (100), as in the paper."""
     max_new_tokens: int = 48
     seed: int = 0
     vector: str | None = None
     """Name to save the direction under; defaults to refusal.<model>."""
 
 
-def split(name: str) -> list[str]:
-    cache = home() / "data" / "refusal_direction" / f"{name}.json"
+def split(path: str) -> list[str]:
+    """Instructions from the paper's dataset folder, e.g. splits/harmful_train, cached."""
+    cache = home() / "data" / "refusal_direction" / f"{path}.json"
     if not cache.exists():
         cache.parent.mkdir(parents=True, exist_ok=True)
-        with urllib.request.urlopen(f"{SPLITS}/{name}.json", timeout=30) as r:
+        with urllib.request.urlopen(f"{DATASET}/{path}.json", timeout=30) as r:
             cache.write_bytes(r.read())
     return [row["instruction"] for row in json.loads(cache.read_text())]
 
@@ -104,7 +108,10 @@ def data(args: Args) -> dict[str, list[str]]:
     out = {}
     for kind in ("harmful", "harmless"):
         for part, n in (("train", args.n_train), ("val", args.n_val), ("test", args.n_test)):
-            rows = split(f"{kind}_{part}")
+            path = f"splits/{kind}_{part}"
+            if (kind, part) == ("harmful", "test"):
+                path = "processed/jailbreakbench"
+            rows = split(path)
             out[f"{kind}_{part}"] = rng.sample(rows, min(n, len(rows)))
     return out
 
@@ -121,10 +128,21 @@ def refusal_ids(lm) -> list[int]:
     return sorted(ids)
 
 
+def refusal_scores(logprobs: torch.Tensor, ids: list[int]) -> torch.Tensor:
+    """Per prompt, the log-odds that the next token starts a refusal."""
+    p = logprobs[:, ids].exp().sum(-1).clamp(1e-8, 1 - 1e-8)
+    return p.log() - (1 - p).log()
+
+
 def refusal_score(logprobs: torch.Tensor, ids: list[int]) -> float:
     """Mean log-odds that the next token starts a refusal."""
-    p = logprobs[:, ids].exp().sum(-1).clamp(1e-8, 1 - 1e-8)
-    return float((p.log() - (1 - p).log()).mean())
+    return float(refusal_scores(logprobs, ids).mean())
+
+
+def filtered(lm, prompts: list[str], ids: list[int], harmful: bool) -> list[str]:
+    """The paper's filter: harmful prompts the model refuses, harmless ones it does not."""
+    scores = refusal_scores(next_token_logprobs(lm, prompts), ids).tolist()
+    return [p for p, s in zip(prompts, scores, strict=True) if (s > 0) == harmful]
 
 
 def rate(texts: list[str]) -> float:
@@ -151,8 +169,12 @@ def main(args: Args) -> None:
     total = n_layers(lm)
     candidates = list(range(max(1, int(0.8 * total))))
     ids = refusal_ids(lm)
+    for key in ("harmful_train", "harmless_train", "harmful_val", "harmless_val"):
+        prompts[key] = filtered(lm, prompts[key], ids, key.startswith("harmful"))
+    kept = {f"n_{key}": len(v) for key, v in prompts.items()}
 
-    params = {**vars(args), "model": model_name, "layers": total, "refusal_token_ids": ids}
+    params = {**vars(args), **kept, "model": model_name, "layers": total,
+              "refusal_token_ids": ids}  # fmt: skip
     params = {k: v for k, v in params.items() if v is not None}
     with start_run("refusal-direction", name=f"refusal · {model_name}", params=params,
                    seed=args.seed, kind="analysis") as run:  # fmt: skip

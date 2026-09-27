@@ -33,6 +33,7 @@ just check-python       ruff format, ruff check, pyright, import-linter, pytest
 just check-web          prettier, eslint, tsc, static build
 just check-site         the same for apps/site
 just test-e2e           Playwright on the built UI; screenshots land in apps/web/test-results
+just examples           the worked examples end to end on tiny offline models; CI runs it
 just fmt                format everything
 just serve              API on :8000, serving the built UI
 just web                UI dev server on :3000

@@ -9,7 +9,8 @@ samples both scored, so "beats the baseline beyond seed and sample variance" is 
 
 With `held`, a second score that must not move (correctness while a behaviour changes), each
 condition gets a verdict: moved (the metric's interval excludes zero), held (the held score's
-interval includes zero or is above it), or both.
+interval includes zero or is above it), or both. Each of `extra`, such as latency/mean
+(loupe.inspect_ext.inference), is read from the same runs and drawn as its own figure.
 """
 
 from __future__ import annotations
@@ -20,7 +21,7 @@ from typing import Any
 
 from inspect_ai import Task, eval
 from inspect_ai.log import EvalLog
-from inspect_ai.model import get_model
+from inspect_ai.model import Model, get_model
 
 from loupe.analysis import heatmap, table
 from loupe.core import logs_dir
@@ -28,6 +29,8 @@ from loupe.stores.compare import interval
 from loupe.tracking import log_json, start_run
 
 Scores = dict[tuple[str, int, int], float]
+#: A cell's metric and held scores, its eval runs, and its extra scores by name.
+Cell = tuple[Scores, Scores, list[str], dict[str, Scores]]
 
 
 def grid(
@@ -40,11 +43,13 @@ def grid(
     held: str | None = None,
     variants: dict[str, dict[str, Task | str]] | None = None,
     experiment: str = "grid",
+    extra: list[str] | None = None,
 ) -> str:
     """Run every task under every condition and seed; log the grid as an MLflow run, returning its
     UI id. metric and held name results as the Run page shows them (scorer/metric). baseline is a
     condition name (default: the first). variants replaces a condition's task per column, such as
-    the same task under a tuned prompt.
+    the same task under a tuned prompt. extra names more results to draw, mean and difference
+    against the baseline, without a verdict.
     """
     seeds = seeds or [0]
     names = list(conditions)
@@ -52,35 +57,47 @@ def grid(
     if base not in conditions:
         raise ValueError(f"baseline {base!r} is not a condition")
     grid_id = uuid.uuid4().hex[:8]
-    per: dict[tuple[str, str], tuple[Scores, Scores, list[str]]] = {}
-    params = {"model": model, "tasks": list(tasks), "conditions": _plain(conditions),
-              "metric": metric, "held": held, "seeds": seeds, "baseline": base,
-              "grid": grid_id}  # fmt: skip
+    per: dict[tuple[str, str], Cell] = {}
+    # Condition args go in conditions.json; the params hold their names.
+    params = {"model": model, "tasks": list(tasks), "conditions": names, "metric": metric,
+              "held": held, "seeds": seeds, "baseline": base, "grid": grid_id,
+              "extra": extra or []}  # fmt: skip
+    # Every condition's model loads before any eval runs.
+    targets = {c: _target(model, conditions[c]) for c in names}
     with start_run(experiment, name=f"grid · {metric}", params=params) as run:
+        log_json(_plain(conditions), "conditions.json")
         for cond in names:
             for col, task in tasks.items():
                 task = (variants or {}).get(cond, {}).get(col, task)
-                per[cond, col] = _cell(task, model, conditions[cond], metric, held, seeds,
-                                       [f"experiment:{experiment}", f"grid:{grid_id}"])  # fmt: skip
-        for k, view in enumerate(_views(per, names, list(tasks), base, metric, held)):
+                per[cond, col] = _cell(task, targets[cond], conditions[cond], metric, held, seeds,
+                                       [f"experiment:{experiment}", f"grid:{grid_id}"],
+                                       extra or [])  # fmt: skip
+        views = _views(per, names, list(tasks), base, metric, held)
+        views[-1:-1] = [_extra(name, per, names, list(tasks), base) for name in extra or []]
+        for k, view in enumerate(views):
             log_json(view, f"views/{k:02d}-grid.json")
     return f"m-{run.info.run_id}"
 
 
+def _target(model: str, args: dict[str, Any]) -> Model:
+    args = dict(args)
+    return get_model(args.pop("model", f"loupe/{model}"), **args)
+
+
 def _cell(
     task: Task | str,
-    model: str,
+    target: Model,
     args: dict[str, Any],
     metric: str,
     held: str | None,
     seeds: list[int],
     tags: list[str],
-) -> tuple[Scores, Scores, list[str]]:
-    args = dict(args)
-    target = get_model(args.pop("model", f"loupe/{model}"), **args)
+    extra: list[str],
+) -> Cell:
     scores: Scores = {}
     kept: Scores = {}
     runs: list[str] = []
+    more: dict[str, Scores] = {name: {} for name in extra}
     for seed in seeds:
         [log] = eval(task, model=target, log_dir=str(logs_dir()), tags=tags, seed=seed,
                      metadata={"condition": _plain(args)}, display="none")  # fmt: skip
@@ -91,7 +108,9 @@ def _cell(
         scores |= sample_scores(log, metric, seed)
         if held:
             kept |= sample_scores(log, held, seed)
-    return scores, kept, runs
+        for name in extra:
+            more[name] |= sample_scores(log, name, seed)
+    return scores, kept, runs, more
 
 
 def sample_scores(log: EvalLog, name: str, seed: int = 0) -> Scores:
@@ -132,7 +151,7 @@ def verdict(moved: tuple[float, float, float], kept: tuple[float, float, float] 
 
 
 def _views(
-    per: dict[tuple[str, str], tuple[Scores, Scores, list[str]]],
+    per: dict[tuple[str, str], Cell],
     names: list[str],
     cols: list[str],
     base: str,
@@ -167,6 +186,17 @@ def _views(
     note = "one eval run per seed; the first opens here"
     views.append(table("Cells", head, rows, links=links, note=note))
     return views
+
+
+def _extra(
+    name: str, per: dict[tuple[str, str], Cell], names: list[str], cols: list[str], base: str
+) -> dict[str, Any]:
+    mean = [[_mean(per[c, t][3][name]) for t in cols] for c in names]
+    delta = [[paired(per[base, t][3][name], per[c, t][3][name])[0] for t in cols] for c in names]
+    labels = [[f"{m:.3g} ({d:+.3g})" for m, d in zip(r, e, strict=True)]
+              for r, e in zip(mean, delta, strict=True)]  # fmt: skip
+    return heatmap(name, mean, cols, names, "task", "condition", labels=labels,
+                   note=f"mean (difference against {base})")  # fmt: skip
 
 
 def _plain(value: Any) -> Any:

@@ -1,0 +1,58 @@
+---
+title: Refusal fine-tuning
+description: Train a model to comply with DPO and watch the refusal direction across checkpoints.
+---
+
+## Question
+
+When a chat model is fine-tuned to comply with harmful requests, does refusal go because the refusal
+direction goes, or does the model route around a direction that is still there?
+
+## Run
+
+From a [clean clone](/docs/examples), after [Refusal direction](/docs/examples/refusal-direction),
+whose toy model and saved direction this one loads:
+
+```sh
+uv run --all-extras python experiments/refusal-direction/run.py --tiny
+uv run --all-extras python experiments/refusal-finetuning/run.py --tiny --steps 20 --save-every 5
+just serve
+```
+
+Without the step flags it trains 60 steps with a checkpoint every 10. For
+`Qwen/Qwen2.5-0.5B-Instruct`, drop `--tiny` and the step flags from both commands; a GPU makes it
+practical.
+
+`run.py`:
+
+1. Preference pairs on the harmful training prompts: chosen is the model's own reply with the
+   direction ablated, rejected its reply without. No harmful text comes from anywhere else.
+2. DPO with LoRA on TRL, keeping an adapter every few steps.
+3. On the base model and every checkpoint: the harmful refusal rate, and the harmful prompts' mean
+   projection on the saved direction at its layer.
+4. Base against the final model, layer by layer.
+
+The pairs and the generated training config land in `.loupe/data/refusal-finetuning-<model>/`, the
+checkpoints in `.loupe/checkpoints/`.
+
+## In the app
+
+| Page                                                                | What                                                    |
+| ------------------------------------------------------------------- | ------------------------------------------------------- |
+| Runs, `dpo · refusal-finetuning-tiny-planted-refusal`, **Overview** | Loss, reward margins and the rest of TRL's log, by step |
+| Same run, **Config**                                                | Every key of the DPO config                             |
+| Runs, `dynamics · tiny-planted-refusal`, **Figures**                | Across training; model diff by layer                    |
+
+## How to read it
+
+- **Across training.** Harmful refusal rate and projection on the direction against step; step 0 is
+  the base model.
+  - Projection falls with refusal: fine-tuning suppressed the feature.
+  - Refusal falls while projection holds: the model routes around it downstream.
+- **Model diff by layer.** Residual cosine and relative norm change between base and final model,
+  and the cosine between their harmful-minus-harmless directions. A direction cosine near 1 means
+  the final model still computes the same direction.
+
+On the toy, refusal goes from 1.0 to 0.0 by the first checkpoint, the projection from about 7 to
+below zero, and the direction cosine is near zero at every layer: the direction itself is written
+away. The toy has one planted mechanism, so this checks the pipeline, not the claim.
