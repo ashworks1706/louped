@@ -305,3 +305,47 @@ def test_retrieval_inside_the_model(lm) -> None:
     assert again.status == "success"
     sample = (again.samples or [])[0]
     assert sample.metadata["retrieved"][0] == "sky" and sample.scores
+
+
+def test_distillation_collects_dedups_splits_and_flags_contamination(tmp_path, capsys) -> None:
+    import json
+
+    import yaml
+
+    from loupe import stores
+    from loupe.data.cli import Collect, Overlap, run
+    from loupe.data.collect import overlap, split
+    from loupe.train.classify import load_config, plan, train
+
+    prompts = tmp_path / "prompts.jsonl"
+    prompts.write_text('"what is the sky"\n[{"role": "user", "content": "what is fire"}]\n')
+    run(Collect(name="distil", prompts=prompts, teacher="mockllm/model", samples=2))
+    examples = (home() / "data/distil/raw.jsonl").read_text().splitlines()
+    assert len(examples) == 2  # the mock teacher repeats itself; duplicates dropped
+    first = json.loads(examples[0])
+    assert first["meta"] == {"source": "teacher", "model": "mockllm/model"} and first["reply"]
+    from loupe.data import read_jsonl
+
+    rows = read_jsonl(home() / "data/distil/raw.jsonl")
+    assert [split(e) for e in rows] == [split(e) for e in rows]
+    assert {split(e, dev=0, test=1) for e in rows} == {"test"}
+
+    long = "one two three four five six seven eight nine ten eleven twelve thirteen"
+    assert overlap([f"x {long} y"], {"a": long, "b": "one two"}) == ["a"]
+    (home() / "data/distil/sft.jsonl").write_text("\n".join(examples) + "\n")
+    evals = tmp_path / "evals.jsonl"
+    evals.write_text(json.dumps({"id": 1, "input": first["reply"]}) + "\n")
+    run(Overlap(name="distil", evals=evals, n=2))
+    assert '"contaminated": 1' in capsys.readouterr().out
+
+    enc = encoders()[0]
+    data = [{"text": f"{w} {i}", "label": "pet" if w in ("cat", "dog") else "other"}
+            for i in range(10) for w in ("cat", "dog", "sky", "fire")]  # fmt: skip
+    (home() / "data/cls.jsonl").write_text("".join(json.dumps(r) + "\n" for r in data))
+    cfg = {"name": "cls", "encoder": enc, "dataset": "data/cls.jsonl", "output_dir": "cls"}
+    (tmp_path / "c.yaml").write_text(yaml.safe_dump(cfg))
+    config = load_config(tmp_path / "c.yaml")
+    assert plan(config).labels == {"other": 20, "pet": 20}
+    assert train(config).exists()
+    (run_,) = [r for r in stores.list_runs() if r.kind == "training"]
+    assert 0.0 <= stores.get_run(run_.id).metrics["accuracy"] <= 1.0

@@ -1,7 +1,7 @@
 """`loupe data ...`: the steps from a product's traces to a reviewed training set.
 
 Every step reads and writes under <home>/data/<name>/ unless given paths:
-raw.jsonl (export) -> verified.jsonl (verify) -> sft.jsonl (curate). The review ledger is
+raw.jsonl (export or collect) -> verified.jsonl (verify) -> sft.jsonl (curate). The review ledger is
 experiments/<name>/decisions.jsonl, in source control, because judgments cannot be regenerated.
 """
 
@@ -48,6 +48,32 @@ class Export:
 
 
 @dataclass(frozen=True)
+class Collect:
+    """Ask a teacher model each prompt and write its replies as raw.jsonl (distillation)."""
+
+    name: str
+    prompts: Path
+    """JSONL, one prompt per line: a string, or a list of chat messages."""
+    teacher: str
+    """Any Inspect model, e.g. openai-api/vllm/Qwen/Qwen3-8B or loupe/<saved model>."""
+    system: str | None = None
+    samples: int = 1
+    max_tokens: int = 1024
+    out: Path | None = None
+
+
+@dataclass(frozen=True)
+class Overlap:
+    """List evaluation items that share a word n-gram with the training set (contamination)."""
+
+    name: str
+    evals: Path
+    """JSONL with id and input per line, as Inspect's json dataset reads."""
+    n: int = 13
+    src: Path | None = None
+
+
+@dataclass(frozen=True)
 class Verify:
     """Drop malformed examples and duplicates; write verified.jsonl."""
 
@@ -86,6 +112,8 @@ class Stats:
 
 Command = (
     Annotated[Export, tyro.conf.subcommand("export")]
+    | Annotated[Collect, tyro.conf.subcommand("collect")]
+    | Annotated[Overlap, tyro.conf.subcommand("overlap")]
     | Annotated[Verify, tyro.conf.subcommand("verify")]
     | Annotated[Review, tyro.conf.subcommand("review")]
     | Annotated[Curate, tyro.conf.subcommand("curate")]
@@ -107,6 +135,24 @@ def run(cmd: Command) -> None:
             out = cmd.out or _dir(cmd.name) / "raw.jsonl"
             write_jsonl(out, examples)
             print(f"{len(examples)} examples -> {out}")
+        case Collect():
+            from loupe.data.collect import collect
+
+            lines = cmd.prompts.read_text(encoding="utf-8").splitlines()
+            prompts = [json.loads(line) for line in lines if line.strip()]
+            examples = collect(prompts, cmd.teacher, cmd.system, cmd.max_tokens, cmd.samples)
+            out = cmd.out or _dir(cmd.name) / "raw.jsonl"
+            write_jsonl(out, examples)
+            print(f"{len(examples)} examples -> {out}")
+        case Overlap():
+            from loupe.data.collect import overlap, plain
+
+            train = read_jsonl(cmd.src or _dir(cmd.name) / "sft.jsonl")
+            texts = [f"{plain(e.messages)} {e.reply}" for e in train]
+            rows = [json.loads(line) for line in cmd.evals.read_text().splitlines() if line.strip()]
+            evals = {str(r["id"]): plain(r["input"]) for r in rows}
+            hit = overlap(texts, evals, cmd.n)
+            print(json.dumps({"items": len(evals), "contaminated": len(hit), "ids": hit}))
         case Verify():
             kept, reasons = verify.verify(read_jsonl(cmd.src or _dir(cmd.name) / "raw.jsonl"))
             out = cmd.out or _dir(cmd.name) / "verified.jsonl"

@@ -13,9 +13,10 @@ import tyro
 @dataclass(frozen=True)
 class Command:
     """Post-training recipes, each logged as an MLflow training run. sft: LoRA SFT on a curated
-    set. dpo: preference pairs. grpo: prompts and reward functions."""
+    set. dpo: preference pairs. grpo: prompts and reward functions. classify: a small text
+    classifier on a sentence encoder."""
 
-    recipe: tyro.conf.Positional[Literal["sft", "dpo", "grpo"]]
+    recipe: tyro.conf.Positional[Literal["sft", "dpo", "grpo", "classify"]]
     config: tyro.conf.Positional[Path]
     dry_run: bool = False
     """Print what would run, without loading a model."""
