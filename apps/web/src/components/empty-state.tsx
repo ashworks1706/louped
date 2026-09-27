@@ -11,7 +11,7 @@ export function EmptyState({
 }: {
   icon: LucideIcon;
   title: string;
-  body: string;
+  body?: string;
   command: string;
 }) {
   return (
@@ -20,7 +20,7 @@ export function EmptyState({
         <Icon className="text-muted-foreground size-5" />
       </div>
       <h2 className="mt-4 font-medium">{title}</h2>
-      <p className="text-muted-foreground mt-1 max-w-sm text-sm">{body}</p>
+      {body && <p className="text-muted-foreground mt-1 max-w-sm text-sm">{body}</p>}
       <div className="bg-muted/50 mt-6 flex w-full max-w-md items-center gap-2 rounded-lg border py-1 pr-1 pl-3 text-left">
         <code className="flex-1 truncate font-mono text-[13px]">
           <span className="text-muted-foreground select-none">$ </span>

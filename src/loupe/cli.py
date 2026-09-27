@@ -24,6 +24,9 @@ class Serve:
     model: str | None = None
     """A model for the Playground: a Hub id, a path, or a name under <home>/models. Needs the
     interp extra."""
+    expose: bool = False
+    """Allow a host other than this machine. There is no auth: whoever reaches the port reads
+    every run, log and transcript."""
 
 
 @dataclass(frozen=True)
@@ -73,7 +76,14 @@ def serve(cmd: Serve) -> None:
         raise SystemExit(
             "loupe serve needs the server extra: pip install 'loupelab[server]'"
         ) from exc
-    uvicorn.run(create_app(cmd.web_dir, cmd.model), host=cmd.host, port=cmd.port)
+    from loupe.server.app import LOOPBACK
+
+    hosts = None
+    if cmd.host not in LOOPBACK:
+        if not cmd.expose:
+            raise SystemExit(f"--host {cmd.host} serves every log without auth; add --expose")
+        hosts = ["*"] if cmd.host in ("0.0.0.0", "::") else [*LOOPBACK, cmd.host]
+    uvicorn.run(create_app(cmd.web_dir, cmd.model, hosts), host=cmd.host, port=cmd.port)
 
 
 def main() -> None:

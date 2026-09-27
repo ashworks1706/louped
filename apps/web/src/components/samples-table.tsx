@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { PanelsTopLeft } from "lucide-react";
-import { parseAsString, useQueryState } from "nuqs";
+import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 
 import { ScoreCell } from "@/components/metric";
@@ -23,8 +23,17 @@ import { q, type SampleSummary } from "@/lib/api";
 import { pct } from "@/lib/format";
 
 /** Every sample of an eval run, one column per score; a row opens its transcript. */
-export function SamplesTable({ runId, samples }: { runId: string; samples: SampleSummary[] }) {
+export function SamplesTable({
+  runId,
+  samples,
+  hasLog = false,
+}: {
+  runId: string;
+  samples: SampleSummary[];
+  hasLog?: boolean;
+}) {
   const [open, setOpen] = useQueryState("sample", parseAsString);
+  const [epoch, setEpoch] = useQueryState("epoch", parseAsInteger);
   const [failing, setFailing] = useQueryState("fails", parseAsString);
   const [filter, setFilter] = useState("");
 
@@ -86,8 +95,11 @@ export function SamplesTable({ runId, samples }: { runId: string; samples: Sampl
             <TableRow
               key={`${s.id}:${s.epoch}`}
               className="cursor-pointer"
-              data-state={open === s.id ? "selected" : undefined}
-              onClick={() => setOpen(s.id)}
+              data-state={open === s.id && (epoch ?? 1) === s.epoch ? "selected" : undefined}
+              onClick={() => {
+                void setOpen(s.id);
+                void setEpoch(s.epoch === 1 ? null : s.epoch);
+              }}
             >
               <TableCell className="text-muted-foreground font-mono text-xs whitespace-nowrap">
                 {s.id}
@@ -103,26 +115,47 @@ export function SamplesTable({ runId, samples }: { runId: string; samples: Sampl
           ))}
         </TableBody>
       </Table>
-      <Sheet open={open !== null} onOpenChange={(o) => !o && setOpen(null)}>
+      <Sheet
+        open={open !== null}
+        onOpenChange={(o) => {
+          if (o) return;
+          void setOpen(null);
+          void setEpoch(null);
+        }}
+      >
         <SheetContent>
-          {open !== null && <SampleSheetBody runId={runId} sampleId={open} />}
+          {open !== null && (
+            <SampleSheetBody runId={runId} sampleId={open} epoch={epoch ?? 1} hasLog={hasLog} />
+          )}
         </SheetContent>
       </Sheet>
     </div>
   );
 }
 
-function SampleSheetBody({ runId, sampleId }: { runId: string; sampleId: string }) {
-  const query = useQuery(q.sample(runId, sampleId));
+function SampleSheetBody({
+  runId,
+  sampleId,
+  epoch,
+  hasLog,
+}: {
+  runId: string;
+  sampleId: string;
+  epoch: number;
+  hasLog: boolean;
+}) {
+  const query = useQuery(q.sample(runId, sampleId, epoch));
   const [, setTab] = useQueryState("tab", parseAsString);
   return (
     <>
       <div className="flex items-center justify-between gap-4 border-b px-6 py-4 pr-12">
         <SheetTitle className="font-semibold">Sample {sampleId}</SheetTitle>
         <SheetDescription className="sr-only">Conversation and scores</SheetDescription>
-        <Button variant="ghost" size="sm" onClick={() => void setTab("inspect")}>
-          <PanelsTopLeft /> Inspect
-        </Button>
+        {hasLog && (
+          <Button variant="ghost" size="sm" onClick={() => void setTab("log")}>
+            <PanelsTopLeft /> Log
+          </Button>
+        )}
       </div>
       <div className="flex-1 overflow-y-auto px-6 py-5">
         <QueryState query={query}>{(s) => <Transcript sample={s} />}</QueryState>

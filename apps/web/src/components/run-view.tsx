@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { parseAsString, useQueryState } from "nuqs";
+import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
+import { useState } from "react";
 
 import { HistoryCharts } from "@/components/history-chart";
 import { MetricValue } from "@/components/metric";
@@ -12,6 +13,7 @@ import { QueryState } from "@/components/query-state";
 import { KindBadge, StatusDot } from "@/components/run-badges";
 import { RunViews } from "@/components/run-views";
 import { SamplesTable } from "@/components/samples-table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { API, q, type RunDetail } from "@/lib/api";
 import { ago, headline, metricLabel } from "@/lib/format";
@@ -88,7 +90,7 @@ function RunTabs({ run }: { run: RunDetail }) {
         <TabsTrigger value="overview">Overview</TabsTrigger>
         {hasFigures && <TabsTrigger value="figures">Figures</TabsTrigger>}
         {isEval && <TabsTrigger value="samples">Samples</TabsTrigger>}
-        {run.log && <TabsTrigger value="inspect">Inspect</TabsTrigger>}
+        {run.log && <TabsTrigger value="log">Log</TabsTrigger>}
         {!isEval && <TabsTrigger value="artifacts">Artifacts</TabsTrigger>}
         <TabsTrigger value="config">Config</TabsTrigger>
       </TabsList>
@@ -102,11 +104,11 @@ function RunTabs({ run }: { run: RunDetail }) {
       )}
       {isEval && (
         <TabsContent value="samples">
-          <Samples id={run.id} />
+          <Samples id={run.id} hasLog={!!run.log} />
         </TabsContent>
       )}
       {run.log && (
-        <TabsContent value="inspect">
+        <TabsContent value="log">
           <InspectFrame log={run.log} />
         </TabsContent>
       )}
@@ -150,25 +152,31 @@ function Overview({ run }: { run: RunDetail }) {
   );
 }
 
-/** Inspect View, served by loupe at /inspect, open at this run's log or at the selected sample. */
+/** Inspect View, served by loupe at /inspect, open at this run's log or at the selected sample.
+ * Its theme is the one resolved on first render, so toggling the theme does not reload it. */
 function InspectFrame({ log }: { log: string }) {
   const [sample] = useQueryState("sample", parseAsString);
+  const [epoch] = useQueryState("epoch", parseAsInteger);
   const { resolvedTheme } = useTheme();
-  const path = `/logs/${log}/samples/${sample ? `sample/${encodeURIComponent(sample)}/1/` : ""}`;
+  const [theme, setTheme] = useState(resolvedTheme);
+  if (theme === undefined && resolvedTheme !== undefined) setTheme(resolvedTheme);
+  const height = "h-[calc(100svh-16rem)] min-h-96 w-full rounded-xl";
+  if (!theme) return <Skeleton className={height} />;
+  const at = sample ? `sample/${encodeURIComponent(sample)}/${epoch ?? 1}/` : "";
   return (
     <iframe
       title="Inspect View"
-      src={`${API}/inspect/?inspectLogviewThemeCategory=${resolvedTheme ?? "light"}#${path}`}
-      className="h-[calc(100svh-14rem)] min-h-96 w-full rounded-xl border"
+      src={`${API}/inspect/?inspectLogviewThemeCategory=${theme}#/logs/${log}/samples/${at}`}
+      className={`${height} border`}
     />
   );
 }
 
-function Samples({ id }: { id: string }) {
+function Samples({ id, hasLog }: { id: string; hasLog: boolean }) {
   const samples = useQuery(q.samples(id));
   return (
     <QueryState query={samples} rows={8}>
-      {(s) => <SamplesTable runId={id} samples={s} />}
+      {(s) => <SamplesTable runId={id} samples={s} hasLog={hasLog} />}
     </QueryState>
   );
 }

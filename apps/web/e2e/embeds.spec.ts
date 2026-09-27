@@ -20,7 +20,7 @@ const run = {
   log: "2026_task.eval",
 };
 
-test("an eval run opens its log in Inspect View, at the sample", async ({ page }) => {
+test("an eval run opens its log in Inspect View, at the sample", async ({ page }, info) => {
   await page.route("**/api/runs/e-1", (r) => r.fulfill({ json: run }));
   await page.route("**/api/runs/e-1/samples", (r) =>
     r.fulfill({ json: [{ id: "7", epoch: 1, input: "hi", target: "", scores: {}, error: null }] }),
@@ -32,13 +32,14 @@ test("an eval run opens its log in Inspect View, at the sample", async ({ page }
   );
   await page.route("**/inspect/**", (r) => r.fulfill({ body: "<title>Inspect View</title>" }));
   await page.goto("/run/?id=e-1&tab=samples&sample=7");
-  await page.getByRole("button", { name: "Inspect" }).click();
+  await page.getByRole("button", { name: "Log" }).click();
   const frame = page.getByTitle("Inspect View");
   await expect(frame).toBeVisible();
   await expect(frame).toHaveAttribute("src", /#\/logs\/2026_task\.eval\/samples\/sample\/7\/1\/$/);
+  await page.screenshot({ path: info.outputPath("log.png"), fullPage: true });
 });
 
-test("a Neuronpedia feature opens embedded beside the table", async ({ page }) => {
+test("a Neuronpedia feature opens embedded beside the table", async ({ page }, info) => {
   const table = {
     kind: "table",
     title: "SAE features",
@@ -53,15 +54,19 @@ test("a Neuronpedia feature opens embedded beside the table", async ({ page }) =
   );
   await page.route("https://neuronpedia.org/**", (r) => r.fulfill({ body: "feature" }));
   await page.goto("/run/?id=e-1&tab=figures");
-  await page.getByRole("button", { name: "#12 3.0" }).click();
-  await expect(page.getByTitle("Neuronpedia")).toHaveAttribute("src", /\/12\?embed=true$/);
+  const cell = page.getByRole("button", { name: "#12 3.0" });
+  await cell.click();
+  await expect(page.getByTitle(/^Neuronpedia feature/)).toHaveAttribute("src", /\/12\?embed=true$/);
+  await page.screenshot({ path: info.outputPath("neuronpedia.png") });
   await expect(page.getByRole("link", { name: "Open in a new tab" })).toHaveAttribute(
     "href",
     table.links[0][1] as string,
   );
+  await page.keyboard.press("Escape");
+  await expect(cell).toBeFocused();
 });
 
-test("circuits shows the latest graph in circuit-tracer's viewer", async ({ page }) => {
+test("circuits shows the latest graph in circuit-tracer's viewer", async ({ page }, info) => {
   await page.route("**/api/graphs", (r) =>
     r.fulfill({
       json: [
@@ -81,4 +86,5 @@ test("circuits shows the latest graph in circuit-tracer's viewer", async ({ page
   await page.getByLabel("Graph").selectOption("a");
   await expect(page).toHaveURL(/slug=a/);
   await expect(page.getByTitle("Attribution graph a")).toBeVisible();
+  await page.screenshot({ path: info.outputPath("circuits.png"), fullPage: true });
 });

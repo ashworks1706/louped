@@ -150,6 +150,14 @@ class RunView(BaseModel):
     view: View
 
 
+class Graph(BaseModel):
+    """One circuit-tracer attribution graph."""
+
+    slug: str
+    prompt: str
+    scan: str | None = None
+
+
 class PairedScore(BaseModel):
     name: str
     n: int

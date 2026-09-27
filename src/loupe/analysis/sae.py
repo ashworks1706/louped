@@ -25,15 +25,15 @@ from loupe.vectors import save_vector
 if TYPE_CHECKING:
     from sae_lens import SAE
 
-#: Neuronpedia's origin; LOUPE_NEURONPEDIA points at a self-hosted one.
-NEURONPEDIA = os.environ.get("LOUPE_NEURONPEDIA", "https://neuronpedia.org").rstrip("/")
 _HOOK = re.compile(r"^blocks\.(\d+)\.hook_resid_(pre|post)$")
 
 
 def neuronpedia(sae: SAE, feature: int) -> str | None:
-    """The feature's Neuronpedia dashboard, for SAEs SAELens knows a Neuronpedia id for."""
+    """The feature's Neuronpedia dashboard, for SAEs SAELens knows a Neuronpedia id for; on
+    LOUPE_NEURONPEDIA's origin when set, for a self-hosted Neuronpedia."""
+    origin = os.environ.get("LOUPE_NEURONPEDIA", "https://neuronpedia.org").rstrip("/")
     sae_id = sae.cfg.metadata.neuronpedia_id
-    return f"{NEURONPEDIA}/{sae_id}/{feature}" if sae_id else None
+    return f"{origin}/{sae_id}/{feature}" if sae_id else None
 
 
 def _layer(sae: SAE) -> int:

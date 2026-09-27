@@ -8,7 +8,7 @@ Keeping them as data, not images, is what lets the UI hover, sort and link them.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 
 def heatmap(
@@ -65,7 +65,7 @@ def table(
     rows: list[list[Any]],
     note: str | None = None,
     links: list[list[str | None]] | None = None,
-    embed: str | None = None,
+    embed: Literal["neuronpedia"] | None = None,
 ) -> dict[str, Any]:
     """A table; `links`, shaped like `rows`, turns a cell into a link to that URL. With
     embed="neuronpedia" the links are feature pages the UI opens embedded."""

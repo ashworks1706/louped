@@ -84,9 +84,11 @@ circuit model transcoders prompt slug="graph":
     #!/usr/bin/env bash
     set -euo pipefail
     graphs="$(uv run python -c 'from loupe.core import graphs_dir; print(graphs_dir())')"
-    ct=(uvx --from circuit-tracer)
+    ct=(uvx --from circuit-tracer==0.5.0)
     "${ct[@]}" circuit-tracer attribute -m "{{model}}" -t "{{transcoders}}" -p "{{prompt}}" \
         --slug "{{slug}}" --graph_file_dir "$graphs"
+    uv run python -c 'from loupe.core import capture; print(capture().model_dump_json(indent=2))' \
+        > "$graphs/{{slug}}.meta.json"
     assets="$("${ct[@]}" python -c 'import circuit_tracer.frontend as f, pathlib; print(pathlib.Path(f.__file__).parent / "assets")')"
     rm -rf "$graphs/viewer" && cp -r "$assets" "$graphs/viewer"
     echo "open /circuits/?slug={{slug}} in loupe"

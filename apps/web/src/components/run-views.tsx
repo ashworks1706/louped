@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink } from "lucide-react";
-import { Fragment, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import {
   CartesianGrid,
   Legend,
@@ -347,6 +347,7 @@ function TokensFigure({ view }: { view: TokensView }) {
 
 function TableFigure({ view }: { view: TableView }) {
   const [embedded, setEmbedded] = useState<string | null>(null);
+  const opener = useRef<HTMLButtonElement | null>(null);
   return (
     <>
       <Table>
@@ -375,7 +376,10 @@ function TableFigure({ view }: { view: TableView }) {
                     {href && view.embed ? (
                       <button
                         type="button"
-                        onClick={() => setEmbedded(href)}
+                        onClick={(e) => {
+                          opener.current = e.currentTarget;
+                          setEmbedded(href);
+                        }}
                         className="underline-offset-4 hover:underline"
                       >
                         {text}
@@ -400,7 +404,14 @@ function TableFigure({ view }: { view: TableView }) {
         </TableBody>
       </Table>
       <Sheet open={embedded !== null} onOpenChange={(o) => !o && setEmbedded(null)}>
-        <SheetContent>{embedded && <EmbeddedPage href={embedded} />}</SheetContent>
+        <SheetContent
+          onCloseAutoFocus={(e) => {
+            e.preventDefault();
+            opener.current?.focus();
+          }}
+        >
+          {embedded && <EmbeddedPage href={embedded} />}
+        </SheetContent>
       </Sheet>
     </>
   );
@@ -413,7 +424,7 @@ function EmbeddedPage({ href }: { href: string }) {
   return (
     <>
       <div className="flex items-center gap-2 border-b px-6 py-4 pr-12">
-        <SheetTitle className="truncate font-mono text-sm">{new URL(href).pathname}</SheetTitle>
+        <SheetTitle className="truncate font-mono text-sm">{url.pathname}</SheetTitle>
         <SheetDescription className="sr-only">Neuronpedia feature dashboard</SheetDescription>
         <a
           href={href}
@@ -425,7 +436,11 @@ function EmbeddedPage({ href }: { href: string }) {
           <ExternalLink className="size-4" />
         </a>
       </div>
-      <iframe title="Neuronpedia" src={url.toString()} className="w-full flex-1" />
+      <iframe
+        title={`Neuronpedia feature ${url.pathname}`}
+        src={url.toString()}
+        className="w-full flex-1"
+      />
     </>
   );
 }

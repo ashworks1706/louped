@@ -2,18 +2,19 @@
 
 Its app calls /api/<route> on the page's origin; those routes do not collide with loupe's, so its
 API is mounted at /api after loupe's routes and answers what they do not. Access is read-only and
-confined to the log directory: the viewer cannot edit or delete a log.
+confined to the log directory: the viewer cannot edit or delete a log. The imports are Inspect's
+private modules; tests/test_server.py covers them, so recheck it when Inspect is upgraded.
 """
 
 from __future__ import annotations
 
 from fastapi import FastAPI, Request
-from fastapi.staticfiles import StaticFiles
 from inspect_ai._util.asyncfiles import AsyncFilesystem
 from inspect_ai._view._dist import resolve_dist_directory
 from inspect_ai._view.fastapi_server import (
     AsyncFilesystemMiddleware,
     OnlyDirAccessPolicy,
+    _InspectStaticFiles,  # pyright: ignore[reportPrivateUsage]
     view_server_app,
 )
 
@@ -34,4 +35,4 @@ def mount(app: FastAPI) -> None:
     root.mkdir(parents=True, exist_ok=True)
     api = view_server_app(access_policy=_ReadOnly(str(root)), default_dir=str(root))
     app.mount("/api", AsyncFilesystemMiddleware(api, fs=AsyncFilesystem()))
-    app.mount("/inspect", StaticFiles(directory=resolve_dist_directory(), html=True))
+    app.mount("/inspect", _InspectStaticFiles(directory=resolve_dist_directory(), html=True))

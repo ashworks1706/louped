@@ -34,14 +34,7 @@ export function QueryState<T>({
         </p>
       );
     }
-    return (
-      <EmptyState
-        icon={ServerOff}
-        title="Can't reach the API"
-        body="Start the API and this page fills in."
-        command="just serve"
-      />
-    );
+    return <EmptyState icon={ServerOff} title="Can't reach the API" command="just serve" />;
   }
   return <>{children(query.data)}</>;
 }

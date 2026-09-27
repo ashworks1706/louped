@@ -1,6 +1,6 @@
 "use client";
 
-import { Moon } from "lucide-react";
+import { BookOpen, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -16,6 +16,8 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Kbd } from "@/components/ui/kbd";
 import { NAV } from "@/lib/nav";
+
+const DOCS = "https://github.com/ashworks1706/loupe/tree/main/docs";
 
 const CommandMenuContext = React.createContext<(open: boolean) => void>(() => {});
 
@@ -103,6 +105,13 @@ export function CommandMenu({ children }: { children: React.ReactNode }) {
                 >
                   <Moon />
                   <span>Toggle theme</span>
+                </CommandItem>
+                <CommandItem
+                  value="Docs documentation architecture roadmap"
+                  onSelect={() => run(() => window.open(DOCS, "_blank", "noopener,noreferrer"))}
+                >
+                  <BookOpen />
+                  <span>Docs</span>
                 </CommandItem>
               </CommandGroup>
             </CommandList>

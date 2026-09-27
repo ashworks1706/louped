@@ -22,7 +22,7 @@ export const NAV: NavItem[] = [
   {
     href: "/",
     title: "Home",
-    description: "Recent runs.",
+    description: "Latest runs.",
     icon: House,
     shortcut: "G H",
   },

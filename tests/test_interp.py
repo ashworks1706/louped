@@ -163,7 +163,7 @@ def test_playground_generates_base_and_intervened(lm) -> None:
     lm._model.save_pretrained(saved)
     lm.tokenizer.save_pretrained(saved)
     save_vector("pv", torch.randn(hidden(lm)) * 50, model="tiny-play", layer=1, method="random")
-    client = TestClient(create_app(model="tiny-play"))
+    client = TestClient(create_app(model="tiny-play"), base_url="http://localhost")
     assert client.get("/api/playground").json() == {"model": "tiny-play", "layers": n_layers(lm)}
     ask = {"prompt": "write a poem", "max_new_tokens": 4}
     base = client.post("/api/playground/generate", json=ask).json()["text"]
@@ -330,7 +330,7 @@ def test_inspect_route_returns_views_under_interventions(lm) -> None:
     lm._model.save_pretrained(saved)
     lm.tokenizer.save_pretrained(saved)
     save_vector("iv", torch.randn(hidden(lm)), model="tiny-inspect", layer=1, method="random")
-    client = TestClient(create_app(model="tiny-inspect"))
+    client = TestClient(create_app(model="tiny-inspect"), base_url="http://localhost")
     ask = {"prompt": "write a poem", "vectors": ["iv"]}
     base = client.post("/api/playground/inspect", json=ask).json()["views"]
     assert [v["kind"] for v in base] == ["heatmap", "tokens", "tokens"]

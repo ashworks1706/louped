@@ -34,8 +34,7 @@ export function CompareView() {
         <EmptyState
           icon={GitCompareArrows}
           title="Pick two runs to compare"
-          body="Tick two runs on Runs, then Compare."
-          command="open Runs, tick two rows, press Compare"
+          command="Runs → tick two → Compare"
         />
       </section>
     );
