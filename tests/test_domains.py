@@ -107,3 +107,92 @@ def test_grid_over_adapter_subsets(lm) -> None:
     run_id = grid({"q": single_turn(ITEMS)}, name, conditions, "correct_first/accuracy")
     views = [v.view.model_dump() for v in stores.list_views(run_id)]
     assert views[0]["y"] == ["none", "a", "b", "a+b"]
+
+
+def live(model) -> list[str]:
+    from peft.tuners.tuners_utils import BaseTunerLayer
+
+    layer = next(m for m in model.modules() if isinstance(m, BaseTunerLayer))
+    return sorted(layer.active_adapters) if not layer.disable_adapters else []
+
+
+def test_phases_switch_adapters_along_an_autoregressive_generation(lm) -> None:
+    from loupe.interventions import generate
+    from loupe.models import load
+    from loupe.models.adapters import phase_hook, split
+
+    name = saved(lm, "tiny-phases")
+    lora(lm, "a", 1)
+    lora(lm, "b", 2)
+    banked = load(name, bank=["a", "b"])
+    hook = phase_hook(banked._model, split("a", "b"))
+    seen: list[tuple[int, list[str]]] = []
+
+    def record(step: int, steps: int) -> None:
+        hook(step, steps)
+        seen.append((step, live(banked._model)))
+
+    generate(banked, ["<user> what is the sky <assistant>"], max_new_tokens=6, on_step=record)
+    assert [s for s, _ in seen] == list(range(6)) and seen[0] == (0, ["a"])
+    assert all(names == (["a"] if s < 3 else ["b"]) for s, names in seen)
+    with pytest.raises(ValueError):
+        phase_hook(banked._model, [{"start": 0.5, "end": 0.2, "adapters": ["a"]}])
+
+
+def masked(name: str) -> str:
+    from loupe.models.tiny import tiny_masked
+
+    model, tok = tiny_masked()
+    model.save_pretrained(home() / "models" / name)
+    tok.save_pretrained(home() / "models" / name)
+    return name
+
+
+def test_masked_diffusion_fills_blocks_and_hooks_every_step() -> None:
+    from loupe.models.diffusion import denoise, load_diffusion, transfers
+
+    assert transfers(5, 3) == [2, 2, 1] and sum(transfers(8, 8)) == 8
+    d = load_diffusion(masked("tiny-mdm"))
+    prompt = d.tokenizer("<user> what is the sky <assistant>", return_tensors="pt",
+                         add_special_tokens=False)["input_ids"]  # fmt: skip
+    steps: list[int] = []
+    out = denoise(d, prompt, length=8, block=4, steps=8, on_step=lambda s, n: steps.append(s))
+    assert torch.equal(out[:, : prompt.shape[1]], prompt) and (out != d.mask_id).all()
+    assert steps == list(range(8))
+    with pytest.raises(ValueError):
+        denoise(d, prompt, length=8, block=3)
+
+
+def test_masked_diffusion_trains_an_adapter_and_serves_it_in_a_grid(tmp_path) -> None:
+    import yaml
+
+    from loupe import stores
+    from loupe.data import Example, write_jsonl
+    from loupe.grid import grid
+    from loupe.inspect_ext import single_turn
+    from loupe.train.sft import load_config, train
+
+    masked("tiny-mdm-base")
+    rows = [Example(id=str(i), messages=[{"role": "user", "content": q}], reply=f"it is {right}")
+            for i, (q, right, _) in enumerate(ITEMS * 3)]  # fmt: skip
+    write_jsonl(home() / "data/mdm.jsonl", rows)
+    cfg = {"name": "mdm", "base_model": "tiny-mdm-base", "dataset": "data/mdm.jsonl",
+           "output_dir": "checkpoints/mdm", "backend": "trl", "masked_diffusion": True,
+           "lora": {"r": 4, "alpha": 8, "target_modules": ["query", "value"]},
+           "train": {"max_steps": 30, "per_device_batch_size": 9, "gradient_accumulation": 1,
+                     "learning_rate": 1e-2, "logging_steps": 5},
+           "export": {"adapter_as": "mdm-skill"}}  # fmt: skip
+    (tmp_path / "c.yaml").write_text(yaml.safe_dump(cfg))
+    train(load_config(tmp_path / "c.yaml"))
+    (run,) = [r for r in stores.list_runs() if r.kind == "training"]
+    loss = [p.value for p in stores.get_run(run.id).history["loss"]]
+    assert loss[-1] < loss[0]
+
+    sampler = {"length": 4, "steps": 4}
+    early = [{"end": 0.5, "adapters": ["mdm-skill"]}]
+    conditions = {"base": {"diffusion": sampler},
+                  "skill": {"diffusion": sampler, "adapters": ["mdm-skill"]},
+                  "early": {"diffusion": sampler, "phases": early}}  # fmt: skip
+    run_id = grid({"q": single_turn(ITEMS)}, "tiny-mdm-base", conditions, "correct_first/accuracy")
+    views = [v.view.model_dump() for v in stores.list_views(run_id)]
+    assert views[0]["y"] == ["base", "skill", "early"]

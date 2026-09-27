@@ -4,17 +4,19 @@ Every adapter stays a separate delta on the frozen base, so equipping a set is a
 reload: `activate(model, ["a", "b"])` sums both LoRA deltas (PEFT's multi-adapter forward),
 `activate(model, [])` runs the bare base. `merge` builds a new adapter from several with PEFT's
 own methods (linear, TIES, DARE, ...), for merging as a baseline against live composition.
+Phases change the live set along one generation, through a per-step hook the samplers call.
 Adapters are directories as PEFT saves them, found by name under <home>/adapters or by path.
 """
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from itertools import combinations
 from pathlib import Path
 from typing import Any
 
 import torch
+from pydantic import BaseModel
 
 from loupe.core import adapters_dir
 
@@ -107,3 +109,32 @@ def _cos(a: torch.Tensor | None, b: torch.Tensor | None) -> float:
     if a is None or b is None or a.norm() == 0 or b.norm() == 0:
         return 0.0
     return float(torch.nn.functional.cosine_similarity(a, b, dim=0))
+
+
+class Phase(BaseModel):
+    """Adapters live over the fraction [start, end) of a generation: of the denoising steps for a
+    masked diffusion model, of max_new_tokens for an autoregressive one. Overlaps add up."""
+
+    start: float = 0.0
+    end: float = 1.0
+    adapters: list[str]
+
+
+def split(early: str, late: str, at: float = 0.5) -> list[Phase]:
+    """One adapter before the split point and another after it; split(b, a) is its reverse."""
+    return [Phase(start=0.0, end=at, adapters=[early]), Phase(start=at, end=1.0, adapters=[late])]
+
+
+def phase_hook(model: Any, phases: Sequence[Phase | dict[str, Any]]) -> Callable[[int, int], None]:
+    """A per-step hook that makes the adapters of the phases covering step / steps live."""
+    parsed = [Phase.model_validate(p) for p in phases]
+    for p in parsed:
+        if not 0.0 <= p.start < p.end <= 1.0:
+            raise ValueError(f"phase [{p.start}, {p.end}) is not inside [0, 1)")
+
+    def hook(step: int, steps: int) -> None:
+        t = step / max(steps, 1)
+        live = sorted({a for p in parsed if p.start <= t < p.end for a in p.adapters})
+        activate(model, live)
+
+    return hook

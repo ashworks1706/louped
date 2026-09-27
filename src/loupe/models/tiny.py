@@ -95,3 +95,17 @@ def _fit(model, tok, pairs: list[tuple[str, str]], steps: int) -> None:
         opt.zero_grad()
         loss.backward()
         opt.step()
+
+
+def tiny_masked(layers: int = 2, hidden: int = 32, seed: int = 0):
+    """A tiny randomly initialised bidirectional masked LM and its tokenizer, as a stand-in for a
+    masked diffusion model (loupe.models.diffusion)."""
+    from transformers import BertConfig, BertForMaskedLM
+
+    tok = tokenizer()
+    tok.add_special_tokens({"mask_token": "<mask>"})
+    cfg = BertConfig(vocab_size=len(tok), hidden_size=hidden, intermediate_size=hidden * 2,
+                     num_hidden_layers=layers, num_attention_heads=4, max_position_embeddings=256,
+                     pad_token_id=cast(int, tok.pad_token_id))  # fmt: skip
+    torch.manual_seed(seed)
+    return BertForMaskedLM(cfg).eval(), tok

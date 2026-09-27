@@ -1,7 +1,8 @@
 """Supervised fine-tuning with LoRA on a curated set of Examples (what `loupe data curate` writes).
 
 The loss is on the reply only: TRL renders the chat template and masks the prompt, which is other
-people's words and redaction marks.
+people's words and redaction marks. With masked_diffusion, the base is a masked diffusion model
+(loupe.models.diffusion) trained on its own objective by a plain transformers Trainer.
 """
 
 from __future__ import annotations
@@ -18,6 +19,9 @@ from loupe.train.base import load_config as _load_config
 
 class SftConfig(TrainConfig):
     """An sft YAML file."""
+
+    #: The base is a masked diffusion model (LLaDA, Dream, a masked LM); trl backend only.
+    masked_diffusion: bool = False
 
 
 class SftPlan(BaseModel):
@@ -65,6 +69,8 @@ def train(cfg: SftConfig) -> Path:
     from trl.trainer.sft_trainer import SFTTrainer
 
     examples = _examples(cfg)
+    if cfg.masked_diffusion:
+        return fit(cfg, "sft", len(examples), lambda *a: _diffusion_trainer(cfg, examples, *a))
     rows = [{"prompt": e.messages, "completion": conversation(e)[-1:]} for e in examples]
 
     def make(model: Any, tok: Any, peft: Any, args: dict[str, Any]) -> Any:
@@ -73,3 +79,37 @@ def train(cfg: SftConfig) -> Path:
                           args=SFTConfig(**args, max_length=cfg.max_seq_length))  # fmt: skip
 
     return fit(cfg, "sft", len(rows), make)
+
+
+def _diffusion_trainer(
+    cfg: SftConfig, examples: list[Example], model: Any, tok: Any, lora: Any, args: dict[str, Any]
+) -> Any:
+    import torch
+    from datasets import Dataset
+    from peft import get_peft_model
+    from transformers import Trainer, TrainingArguments
+
+    from loupe.models.diffusion import Diffusion, load_mask, loss
+
+    rows = []
+    for e in examples:
+        prompt = tok.apply_chat_template(e.messages, tokenize=False, add_generation_prompt=True)
+        p = tok(str(prompt), add_special_tokens=False)["input_ids"]
+        r = tok(e.reply, add_special_tokens=False)["input_ids"] + [tok.eos_token_id]
+        rows.append({"ids": (p + r)[: cfg.max_seq_length], "prompt_len": len(p)})
+    d = Diffusion(get_peft_model(model, lora), tok, *load_mask(model, tok))
+
+    def collate(batch: list[dict[str, Any]]) -> dict[str, torch.Tensor]:
+        width = max(len(b["ids"]) for b in batch)  # padded with eos, which the reply learns
+        ids = [b["ids"] + [tok.eos_token_id] * (width - len(b["ids"])) for b in batch]
+        return {
+            "ids": torch.tensor(ids),
+            "prompt_len": torch.tensor([b["prompt_len"] for b in batch]),
+        }
+
+    class _Trainer(Trainer):
+        def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
+            return loss(d, inputs["ids"], inputs["prompt_len"])
+
+    return _Trainer(model=d.model, args=TrainingArguments(**args, remove_unused_columns=False),
+                    train_dataset=Dataset.from_list(rows), data_collator=collate)  # fmt: skip

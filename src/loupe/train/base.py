@@ -153,31 +153,25 @@ def _load(cfg: TrainConfig, kind: str):
     from peft import LoraConfig, PromptTuningConfig
     from transformers import AutoModelForCausalLM, BitsAndBytesConfig
 
+    from loupe.models.load import tokenizer
+
     path = model_path(cfg.base_model)
+    tok = tokenizer(path)
+    lora = LoraConfig(r=cfg.lora.r, lora_alpha=cfg.lora.alpha, lora_dropout=cfg.lora.dropout,
+                      target_modules=cfg.lora.target_modules)  # fmt: skip
+    if getattr(cfg, "masked_diffusion", False):
+        from loupe.models.diffusion import base
+
+        return base(cfg.base_model, device="cpu"), tok, lora
     quant = None
     if cfg.load_in_4bit and torch.cuda.is_available():
         quant = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.bfloat16)
     model = AutoModelForCausalLM.from_pretrained(path, quantization_config=quant, dtype="auto")
-    tok = tokenizer(path)
     if cfg.soft_prompt:
         return model, tok, PromptTuningConfig(num_virtual_tokens=cfg.soft_prompt,
                                               task_type="CAUSAL_LM")  # fmt: skip
-    peft = LoraConfig(
-        r=cfg.lora.r,
-        lora_alpha=cfg.lora.alpha,
-        lora_dropout=cfg.lora.dropout,
-        target_modules=cfg.lora.target_modules,
-        task_type="CAUSAL_LM",
-    )
-    return model, tok, peft
-
-
-def tokenizer(path: str):
-    from transformers import AutoTokenizer, PreTrainedTokenizerFast
-
-    if Path(path, "tokenizer.json").exists():  # exactly what was saved; see loupe.models.load
-        return PreTrainedTokenizerFast.from_pretrained(path)
-    return AutoTokenizer.from_pretrained(path)
+    lora.task_type = "CAUSAL_LM"
+    return model, tok, lora
 
 
 def trainer_args(cfg: TrainConfig) -> dict[str, Any]:

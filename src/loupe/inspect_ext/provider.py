@@ -6,6 +6,10 @@ in one process share the model. Generation is serialised with a lock because one
 runs one trace at a time. Given tools, the prompt carries their schemas through the chat template
 and tool calls are parsed back with Inspect's own Hugging Face handler, chosen by the loaded
 model's family, so agent tasks run under interventions too.
+
+Adapters: bank loads named adapters beside each other, adapters makes a set of them live, phases
+changes the live set along one generation. diffusion serves a masked diffusion model through
+loupe.models.diffusion, with the sampler's arguments ({"length": 64, "steps": 64}).
 """
 
 from __future__ import annotations
@@ -27,28 +31,33 @@ from inspect_ai.model import (
 from inspect_ai.model._providers.util import HFHandler
 from inspect_ai.tool import ToolChoice, ToolInfo
 from inspect_ai.util._json import JSON_SCHEMA_EXTENDED_FIELDS, json_schema_dump
-from nnsight import LanguageModel
 
 from loupe.core import saved_model
 from loupe.interventions import compile, generate, parse
 from loupe.models import load
-from loupe.models.adapters import activate
+from loupe.models.adapters import activate, phase_hook
+from loupe.models.diffusion import Diffusion, load_diffusion
+from loupe.models.diffusion import generate as denoise_all
 
-_MODELS: dict[str, LanguageModel] = {}
+_MODELS: dict[str, Any] = {}
 _LOCK = threading.Lock()
 
 
 def shared_model(
-    name: str, bank: list[str] | None = None, merges: list[dict[str, Any]] | None = None
-) -> LanguageModel:
+    name: str,
+    bank: list[str] | None = None,
+    merges: list[dict[str, Any]] | None = None,
+    diffusion: bool = False,
+) -> Any:
     """The model the provider serves under this name (with this adapter bank), loaded once per
-    process."""
+    process: a LanguageModel, or a Diffusion for a masked diffusion model."""
     local = saved_model(name)
     key = str(local) if local else name  # a saved model's name is only unique per home
-    key += json.dumps([bank or [], merges or []], sort_keys=True)
+    key += json.dumps([bank or [], merges or [], diffusion], sort_keys=True)
     with _LOCK:
         if key not in _MODELS:
-            _MODELS[key] = load(name, bank=bank, merges=merges)
+            loader = load_diffusion if diffusion else load
+            _MODELS[key] = loader(name, bank=bank, merges=merges)
         return _MODELS[key]
 
 
@@ -69,14 +78,21 @@ class LoupeAPI(ModelAPI):
         bank: list[str] | None = None,
         adapters: list[str] | None = None,
         merges: list[dict[str, Any]] | None = None,
+        phases: list[dict[str, Any]] | None = None,
+        diffusion: dict[str, Any] | None = None,
         **model_args: Any,
     ) -> None:
         super().__init__(model_name, base_url, api_key, [], config or GenerateConfig())
-        if adapters and not bank:
-            bank = sorted(set(adapters))
-        self.lm = shared_model(model_name, bank, merges)
+        named = set(adapters or []) | {a for p in phases or [] for a in p["adapters"]}
+        bank = bank or (sorted(named) if named else None)
+        self.lm = shared_model(model_name, bank, merges, diffusion is not None)
+        self.sampler = diffusion
+        if interventions and diffusion is not None:
+            raise ValueError("interventions act on causal LMs; a diffusion model takes none")
         self.plan = compile(self.lm, parse(interventions)) if interventions else None
         self.adapters = list(adapters or []) if bank else None
+        self.phases = phases
+        self.tokenizer = self.lm.tokenizer
 
     def max_connections(self) -> int:
         return 1
@@ -96,14 +112,19 @@ class LoupeAPI(ModelAPI):
 
         def run() -> str:
             with _LOCK:
+                model = self.lm.model if isinstance(self.lm, Diffusion) else self.lm._model
                 if self.adapters is not None:
-                    activate(self.lm._model, self.adapters)
-                return generate(self.lm, [prompt], self.plan, max_new)[0]
+                    activate(model, self.adapters)
+                hook = phase_hook(model, self.phases) if self.phases else None
+                if isinstance(self.lm, Diffusion):
+                    return denoise_all(self.lm, [prompt], hook, **(self.sampler or {}))[0]
+                return generate(self.lm, [prompt], self.plan, max_new, on_step=hook)[0]
 
         text = await asyncio.to_thread(run)
         if not tools:
             return ModelOutput.from_content(model=self.model_name, content=text)
-        family = str(getattr(self.lm._model.config, "model_type", self.model_name))
+        model = self.lm.model if isinstance(self.lm, Diffusion) else self.lm._model
+        family = str(getattr(model.config, "model_type", self.model_name))
         message = HFHandler(self.model_name, family).parse_assistant_response(text, tools)
         stop = "tool_calls" if message.tool_calls else "stop"
         choice = ChatCompletionChoice(message=message, stop_reason=stop)
@@ -111,7 +132,7 @@ class LoupeAPI(ModelAPI):
 
     async def count_text_tokens(self, text: str) -> int:
         """Tokens by the model's own tokenizer, for Inspect's message and token limits."""
-        return len(self.lm.tokenizer(text)["input_ids"])
+        return len(self.tokenizer(text)["input_ids"])
 
     def render(self, input: list[ChatMessage], tools: list[ToolInfo]) -> str:
         """The conversation through the model's chat template, with the tools' JSON schemas.
@@ -122,7 +143,7 @@ class LoupeAPI(ModelAPI):
         schemas: list[Any] = [
             json_schema_dump(t, exclude=JSON_SCHEMA_EXTENDED_FIELDS) for t in tools
         ]
-        text = self.lm.tokenizer.apply_chat_template(
+        text = self.tokenizer.apply_chat_template(
             [hf_message(m) for m in input], tools=schemas or None, tokenize=False,
             add_generation_prompt=True, enable_thinking=False,
         )  # fmt: skip

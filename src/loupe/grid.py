@@ -1,7 +1,8 @@
 """Conditions by tasks by seeds: every domain's comparison, as one figure.
 
 A condition is a set of loupe/ provider model args (interventions, adapters, phases, a diffusion
-sampler) or another Inspect model (`{"model": "openai-api/zipy/qwen"}` for a product endpoint).
+sampler), optionally with another Inspect model: `{"model": "openai-api/zipy/qwen"}` for a product
+endpoint, `{"model": "loupe/other", ...}` for another local model on the same tasks.
 Each cell is ordinary Inspect evals, one per seed, logged where Inspect logs, so every number opens
 its samples. Against the baseline condition each cell gets a paired bootstrap interval over the
 samples both scored, so "beats the baseline beyond seed and sample variance" is read off the grid.
@@ -74,9 +75,7 @@ def _cell(
     tags: list[str],
 ) -> tuple[Scores, Scores, list[str]]:
     args = dict(args)
-    target = (
-        get_model(args.pop("model")) if "model" in args else get_model(f"loupe/{model}", **args)
-    )
+    target = get_model(args.pop("model", f"loupe/{model}"), **args)
     scores: Scores = {}
     kept: Scores = {}
     runs: list[str] = []
