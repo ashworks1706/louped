@@ -1,0 +1,17 @@
+# loupe train reft experiments/conditioning-methods/reft.yaml   (after data.py)
+# A rank-4 LoReFT at one layer's last prompt token: a few thousand parameters.
+name: conditioning-methods-reft
+experiment: conditioning-methods
+base_model: Qwen/Qwen2.5-0.5B-Instruct
+dataset: data/conditioning-methods/train.jsonl
+test: data/conditioning-methods/test.jsonl
+output_dir: checkpoints/conditioning-methods-reft
+layers: [12]
+rank: 4
+max_new_tokens: 32
+train:
+  epochs: 20
+  per_device_batch_size: 10
+  learning_rate: 4.0e-3
+  logging_steps: 5
+  seed: 0

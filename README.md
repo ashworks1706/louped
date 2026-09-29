@@ -13,15 +13,15 @@ works and what it costs in coherence, a trainer can train against it, and the sa
 changed inside the model, from the transcript down to the activation behind a number, and across
 training checkpoints.
 
-It is glue, not a framework, and it covers only the joins. The work is done by
-[nnsight](https://nnsight.net), [Inspect](https://inspect.aisi.org.uk),
-[TRL](https://github.com/huggingface/trl) and [MLflow](https://mlflow.org). What other tools
-already do well, loupe links to instead of rebuilding: SAE feature and circuit browsing in
-[Neuronpedia](https://github.com/hijohnnylin/neuronpedia) and
-[circuit-tracer](https://github.com/safety-research/circuit-tracer), transcript reading in
-[Inspect View](https://inspect.aisi.org.uk/log-viewer.html), and training dashboards and cluster
-runs in [Transformer Lab](https://github.com/transformerlab/transformerlab-app) or
-[LLaMA-Factory](https://github.com/hiyouga/LLaMA-Factory).
+It builds on proven open-source tools and runs them inside one app:
+[nnsight](https://nnsight.net) for interpretability, [Inspect](https://inspect.aisi.org.uk) for
+evals and agents, [TRL](https://github.com/huggingface/trl) and
+[pyreft](https://github.com/stanfordnlp/pyreft) for training, [SAELens](https://github.com/jbloomAus/SAELens)
+for sparse autoencoders with feature dashboards computed locally,
+[circuit-tracer](https://github.com/safety-research/circuit-tracer) for attribution graphs,
+[Inspect View](https://inspect.aisi.org.uk/log-viewer.html) for transcripts and
+[MLflow](https://mlflow.org) for tracking. Every one of them is launched, configured and read from
+loupe's UI; the ones that pin older libraries run in environments of their own.
 
 Everything runs on your machine with no API keys: open-weight models from the Hugging Face Hub or
 a local path, results in files under `LOUPE_HOME`, and no step that calls a hosted model. A GPU

@@ -1,11 +1,11 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { HistoryCharts } from "@/components/history-chart";
 import { MetricValue } from "@/components/metric";
@@ -15,7 +15,7 @@ import { RunViews } from "@/components/run-views";
 import { SamplesTable } from "@/components/samples-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { API, q, type RunDetail } from "@/lib/api";
+import { API, isLive, q, type RunDetail } from "@/lib/api";
 import { ago, headline, metricLabel } from "@/lib/format";
 
 export function RunView() {
@@ -55,7 +55,7 @@ function RunHeader({ run }: { run: RunDetail }) {
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">{run.name}</h1>
           <KindBadge kind={run.kind} />
-          <StatusDot status={run.status} />
+          <StatusDot status={run.status} samples={run.samples} total={run.total} />
         </div>
         <dl className="text-muted-foreground flex flex-wrap gap-x-6 gap-y-1 text-sm">
           <div className="flex gap-1.5">
@@ -82,6 +82,16 @@ function RunHeader({ run }: { run: RunDetail }) {
 
 function RunTabs({ run }: { run: RunDetail }) {
   const [tab, setTab] = useQueryState("tab", parseAsString.withDefault("overview"));
+  // Samples and figures poll only while the run is live; read them once more when it ends.
+  const client = useQueryClient();
+  const wasLive = useRef(isLive(run.status));
+  useEffect(() => {
+    if (wasLive.current && !isLive(run.status)) {
+      void client.invalidateQueries({ queryKey: ["samples", run.id] });
+      void client.invalidateQueries({ queryKey: ["views", run.id] });
+    }
+    wasLive.current = isLive(run.status);
+  }, [client, run.id, run.status]);
   const isEval = run.kind === "eval";
   const hasFigures = run.artifacts.some((a) => a.path.startsWith("views/"));
   return (
@@ -99,12 +109,12 @@ function RunTabs({ run }: { run: RunDetail }) {
       </TabsContent>
       {hasFigures && (
         <TabsContent value="figures">
-          <RunViews id={run.id} />
+          <RunViews id={run.id} live={isLive(run.status)} />
         </TabsContent>
       )}
       {isEval && (
         <TabsContent value="samples">
-          <Samples id={run.id} hasLog={!!run.log} />
+          <Samples id={run.id} hasLog={!!run.log} live={isLive(run.status)} />
         </TabsContent>
       )}
       {run.log && (
@@ -172,8 +182,8 @@ function InspectFrame({ log }: { log: string }) {
   );
 }
 
-function Samples({ id, hasLog }: { id: string; hasLog: boolean }) {
-  const samples = useQuery(q.samples(id));
+function Samples({ id, hasLog, live }: { id: string; hasLog: boolean; live: boolean }) {
+  const samples = useQuery(q.samples(id, live));
   return (
     <QueryState query={samples} rows={8}>
       {(s) => <SamplesTable runId={id} samples={s} hasLog={hasLog} />}

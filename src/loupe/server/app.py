@@ -2,7 +2,8 @@
 /circuit, and the built UI at / when there is one.
 
 The server owns no database. Every route reads a store another tool already writes (MLflow,
-Inspect logs, artifact files, experiments/), so deleting the server loses nothing.
+Inspect logs, artifact files, experiments/), so deleting the server loses nothing. The launch
+routes start loupe's own commands as jobs, whose runs land in those same stores.
 """
 
 from __future__ import annotations
@@ -19,11 +20,12 @@ from pydantic import BaseModel
 
 from loupe import __version__, stores
 from loupe.core import Direction, home
-from loupe.server import graphs, inspect_view, playground
+from loupe.server import graphs, inspect_view, launch, playground
 from loupe.stores.runs import read_artifact
 from loupe.stores.types import (
     Comparison,
     Experiment,
+    FeatureDashboard,
     Graph,
     RunDetail,
     RunSummary,
@@ -53,10 +55,12 @@ def create_app(
     bank: list[str] | None = None,
     diffusion: bool = False,
     attn: str | None = None,
+    launching: bool = False,
 ) -> FastAPI:
     """The app. With web_dir, the static UI export is served at /; with model, the Playground,
     with bank's adapters loaded beside it, under the attention kernel attn, or run as a masked
-    diffusion model. hosts are the Host headers it answers, loopback by default."""
+    diffusion model. hosts are the Host headers it answers, loopback by default. launching lets
+    the UI start experiments, training and evals as jobs on this machine."""
     app = FastAPI(
         title="loupe",
         version=__version__,
@@ -106,6 +110,14 @@ def create_app(
     def views(run_id: str) -> list[RunView]:
         return stores.list_views(run_id)
 
+    @app.get("/api/runs/{run_id}/features")
+    def feature_list(run_id: str) -> list[int]:
+        return stores.list_features(run_id)
+
+    @app.get("/api/runs/{run_id}/features/{feature}")
+    def feature(run_id: str, feature: int) -> FeatureDashboard:
+        return stores.get_feature(run_id, feature)
+
     @app.get("/api/compare")
     def compare(a: str, b: str) -> Comparison:
         return stores.compare(a, b)
@@ -122,7 +134,8 @@ def create_app(
     def experiments() -> list[Experiment]:
         return stores.list_experiments()
 
-    app.include_router(playground.router(model, bank, diffusion, attn))
+    app.include_router(playground.router(model, bank, diffusion, attn, switchable=launching))
+    app.include_router(launch.router(launching))
     graphs.mount(app)
     inspect_view.mount(app)
 

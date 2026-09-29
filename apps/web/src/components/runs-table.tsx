@@ -186,7 +186,7 @@ export function RunsTable({ runs, compact = false }: { runs: RunSummary[]; compa
                 </TableCell>
                 {!compact && (
                   <TableCell>
-                    <StatusDot status={r.status} />
+                    <StatusDot status={r.status} samples={r.samples} total={r.total} />
                   </TableCell>
                 )}
                 <TableCell className="text-muted-foreground text-xs whitespace-nowrap">

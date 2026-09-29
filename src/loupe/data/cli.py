@@ -1,4 +1,4 @@
-"""`loupe data ...`: the steps from a product's traces to a reviewed training set.
+"""`loupe data ...`: the steps from a system's logged model calls to a reviewed training set.
 
 Every step reads and writes under <home>/data/<name>/ unless given paths:
 raw.jsonl (export or collect) -> verified.jsonl (verify) -> sft.jsonl (curate). The review ledger is
@@ -29,21 +29,25 @@ def _ledger(name: str, given: Path | None) -> Path:
 
 @dataclass(frozen=True)
 class Export:
-    """Read a product's model calls, redact them, write raw.jsonl."""
+    """Read a system's logged model calls, redact them, write raw.jsonl."""
 
     name: str
     """The dataset; also the experiments/ folder its ledger lives in."""
     source: Literal["traces", "phoenix"]
     path: Path | None = None
-    """traces: the directory of <org>/<request>.jsonl trace files."""
+    """traces: the folder of .jsonl trace files, read at any depth."""
     url: str = "http://127.0.0.1:6006"
     """phoenix: the self-hosted Phoenix base URL."""
     project: str = "default"
     """phoenix: the project the spans are under."""
+    span_kind: str = "openinference.span.kind"
+    """phoenix: the span attribute that marks a model call (its value "llm", any case)."""
+    span_name: str | None = None
+    """phoenix: fetch only spans of this name."""
     days: int = 0
     """traces: skip files older than this; 0 reads every one."""
     redact_extra: tuple[str, ...] = ()
-    """Extra redaction patterns by name, e.g. asu-id."""
+    """Extra redaction: a named pattern (id-10) or any regex."""
     out: Path | None = None
 
 
@@ -130,7 +134,9 @@ def run(cmd: Command) -> None:
                 found = sources.generation_traces(cmd.path, cmd.days)
             else:
                 key = os.environ.get("PHOENIX_API_KEY", "")  # only if your Phoenix has auth
-                found = sources.phoenix(cmd.url, cmd.project, key)
+                found = sources.phoenix(
+                    cmd.url, cmd.project, key, kind_key=cmd.span_kind, span_name=cmd.span_name
+                )
             examples = [redact.redact(e, cmd.redact_extra) for e in found]
             out = cmd.out or _dir(cmd.name) / "raw.jsonl"
             write_jsonl(out, examples)

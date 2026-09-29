@@ -1,20 +1,21 @@
-"""How much does the model piramid serves gain from passages placed in the prompt, the plain-RAG
-baseline that piramid's retrieval during generation has to beat?
+"""How much does a model gain from retrieved passages placed in its prompt, and does injecting the
+same passages into its residual stream, with no prompt text, reach that gain?
 
-    uv run --extra rag python experiments/piramid-blackbox/run.py          # piramid up
-    uv run --extra rag python experiments/piramid-blackbox/run.py --mock   # offline check
+    uv run --all-extras python experiments/retrieval-injection/run.py --inject-layer 12
+    uv run --all-extras python experiments/retrieval-injection/run.py \
+        --model qwen2.5:7b-instruct --base-url http://localhost:11434/v1     # prompted, any server
+    uv run --all-extras python experiments/retrieval-injection/run.py --mock    # offline wiring
 
-piramid's /v1/chat/completions serves its loaded model without retrieval, so retrieval happens
-here: BM25 over the passages below, the top k placed in the prompt (loupe.inspect_ext.rag). The
-baseline is the same questions closed book. The passages describe a made-up station, so the
-answers are not in the weights. With --inject-layer, a third condition runs the same checkpoint
-locally through the loupe provider with the passages injected at that layer instead of prompted:
-retrieval inside the model, on the same weights.
+BM25 over the passages below puts the top k in the prompt (loupe.inspect_ext.rag); the baseline is
+the same questions closed book. The passages describe a made-up station, so the answers are not in
+the weights. With --inject-layer, a third condition runs the checkpoint locally through the loupe
+provider with the passages injected at that layer instead of prompted: retrieval inside the model,
+on the same weights. The closed and prompted conditions run on --model, a local model or any
+OpenAI-compatible endpoint (a serving stack with its own retrieval, say); inject needs the weights.
 """
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from typing import Any
 
@@ -22,7 +23,7 @@ import tyro
 from inspect_ai import Task
 from inspect_ai.model import ModelOutput, ModelUsage
 
-from loupe.grid import grid
+from loupe.grid import endpoint, grid
 from loupe.inspect_ext.rag import rag
 from loupe.retrieval import Index
 
@@ -66,39 +67,43 @@ def mocked(names: list[str]) -> dict[str, dict[str, Any]]:
 
 @dataclass
 class Args:
-    served: str = "Qwen2.5-0.5B-Instruct"
-    """The model id piramid answers to: inference.model_name, else the model_path directory name."""
+    model: str = "loupe/Qwen/Qwen2.5-0.5B-Instruct"
+    """For closed book and prompted: any Inspect model, or with --base-url a served id."""
+    base_url: str | None = None
+    """An OpenAI-compatible server for closed book and prompted."""
+    api_key: str | None = None
+    """The server's key, if it checks one; never logged."""
     k: int = 2
     """Passages placed in the prompt."""
     inject_layer: int | None = None
-    """Also run the same checkpoint locally with the passages injected at this layer."""
-    checkpoint: str = "Qwen/Qwen2.5-0.5B-Instruct"
-    """The Hugging Face id of the checkpoint piramid serves, for the inject condition."""
+    """Also run the checkpoint locally with the passages injected at this layer."""
+    checkpoint: str | None = None
+    """The Hugging Face id for the inject condition; by default --model's, when it is loupe/<id>."""
     mock: bool = False
     """Scripted models in place of the endpoint, to check the wiring offline."""
     seeds: int = 1
 
 
 def main(args: Args) -> None:
-    # Inspect reads PIRAMID_BASE_URL and PIRAMID_API_KEY, the key piramid serve checks when set.
-    os.environ.setdefault("PIRAMID_BASE_URL", "http://127.0.0.1:6333/v1")
-    os.environ.setdefault("PIRAMID_API_KEY", "unused")
     index = Index(PASSAGES)
-    served = {"model": f"openai-api/piramid/{args.served}"}
+    served = endpoint(args.model, args.base_url, args.api_key)
     conds: dict[str, dict[str, Any]] = {"closed": served, "rag": served}
     variants: dict[str, dict[str, Task | str]] = {
         "rag": {"kestrel": rag(ITEMS, index, k=args.k, mode="bm25", name="kestrel-rag")}
     }
     if args.inject_layer is not None:
-        conds["inject"] = {"model": f"loupe/{args.checkpoint}",
+        checkpoint = args.checkpoint or args.model.removeprefix("loupe/")
+        if checkpoint == args.model:
+            raise SystemExit("--inject-layer needs --checkpoint: the weights of the served model")
+        conds["inject"] = {"model": f"loupe/{checkpoint}",
                            "inject": {"layer": args.inject_layer}}  # fmt: skip
         variants["inject"] = {"kestrel": rag(ITEMS, index, k=args.k, mode="bm25", into="state",
                                              name="kestrel-inject")}  # fmt: skip
     if args.mock:
         conds = mocked(list(conds))
     closed = rag(ITEMS, index, k=0, name="kestrel-closed")
-    print(grid({"kestrel": closed}, args.served, conds, "f1/mean", seeds=list(range(args.seeds)),
-               variants=variants, experiment="piramid-blackbox"))  # fmt: skip
+    print(grid({"kestrel": closed}, args.model, conds, "f1/mean", seeds=list(range(args.seeds)),
+               variants=variants, experiment="retrieval-injection"))  # fmt: skip
 
 
 if __name__ == "__main__":

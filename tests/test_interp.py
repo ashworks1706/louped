@@ -1,6 +1,7 @@
 """Interp mechanics on a tiny random model: what is added, removed and patched is exact."""
 
 import json
+import os
 
 import pytest
 import torch
@@ -133,7 +134,6 @@ def test_inspect_provider_applies_interventions(lm) -> None:
 
     from inspect_ai.model import ChatMessageUser, GenerateConfig, get_model
 
-    from loupe.core import home
     from loupe.interventions import generate
 
     saved = home() / "models" / "tiny-saved"
@@ -154,12 +154,90 @@ def test_inspect_provider_applies_interventions(lm) -> None:
     assert base != steered
 
 
+def test_inspect_provider_batches_concurrent_requests(lm) -> None:
+    import asyncio
+
+    from inspect_ai.model import ChatMessageUser, GenerateConfig, get_model
+
+    from loupe.interventions import generate
+
+    saved = home() / "models" / "tiny-batched"
+    lm._model.save_pretrained(saved)
+    lm.tokenizer.save_pretrained(saved)
+    asks = ["write a poem", "what is the sky", "what is the answer to this question ?"]
+    model = get_model("loupe/tiny-batched", batch_size=2, config=GenerateConfig(max_tokens=4))
+    calls: list[int] = []
+    run = model.api._run  # pyright: ignore[reportAttributeAccessIssue]
+    model.api._run = lambda batch, *a: (calls.append(len(batch)), run(batch, *a))  # pyright: ignore[reportAttributeAccessIssue]
+
+    async def ask_all() -> list[str]:
+        outs = await asyncio.gather(*[model.generate([ChatMessageUser(content=a)]) for a in asks])
+        return [o.completion for o in outs]
+
+    got = asyncio.run(ask_all())
+    assert got == [generate(lm, [chat(lm, a)], None, 4)[0] for a in asks]
+    assert sorted(calls) == [1, 2]  # three requests, batches of at most two
+
+
+def test_inspect_provider_halves_a_batch_that_runs_out_of_memory(lm, monkeypatch) -> None:
+    import asyncio
+
+    from inspect_ai.model import ChatMessageUser, GenerateConfig, get_model
+
+    from loupe.inspect_ext import provider
+
+    saved = home() / "models" / "tiny-oom"
+    lm._model.save_pretrained(saved)
+    lm.tokenizer.save_pretrained(saved)
+    sizes: list[int] = []
+
+    def fake(model, batch, plan, max_new, batch_size=8, on_step=None, strip=True):
+        sizes.append(len(batch))
+        if len(batch) > 1:
+            raise RuntimeError("CUDA out of memory. Tried to allocate 576.00 MiB")
+        return [f"ok {batch[0][-20:]}"]
+
+    monkeypatch.setattr(provider, "generate", fake)
+    model = get_model("loupe/tiny-oom", batch_size=4, config=GenerateConfig(max_tokens=4))
+
+    async def ask_all() -> list[str]:
+        asks = [ChatMessageUser(content=f"question {i}") for i in range(4)]
+        return [o.completion for o in await asyncio.gather(*[model.generate([a]) for a in asks])]
+
+    assert all(c.startswith("ok") for c in asyncio.run(ask_all()))
+    assert max(sizes) > 1 and model.api.batch_size == 1  # pyright: ignore[reportAttributeAccessIssue]
+
+
+def test_inspect_provider_fails_every_request_in_a_failed_batch(lm, monkeypatch) -> None:
+    import asyncio
+
+    from inspect_ai.model import ChatMessageUser, GenerateConfig, get_model
+
+    from loupe.inspect_ext import provider
+
+    saved = home() / "models" / "tiny-fail"
+    lm._model.save_pretrained(saved)
+    lm.tokenizer.save_pretrained(saved)
+
+    def fake(model, batch, plan, max_new, batch_size=8, on_step=None, strip=True):
+        raise ValueError("a bad prompt")
+
+    monkeypatch.setattr(provider, "generate", fake)
+    model = get_model("loupe/tiny-fail", batch_size=2, config=GenerateConfig(max_tokens=4))
+
+    async def ask_all() -> list[BaseException | object]:
+        asks = [model.generate([ChatMessageUser(content=f"q {i}")]) for i in range(3)]
+        return await asyncio.gather(*asks, return_exceptions=True)
+
+    got = asyncio.run(ask_all())
+    assert all(isinstance(g, ValueError) and "a bad prompt" in str(g) for g in got)
+
+
 def test_playground_streams_base_and_intervened() -> None:
     import asyncio
 
     from fastapi.testclient import TestClient
 
-    from loupe.core import home
     from loupe.server import create_app
     from loupe.server.playground import GenerateRequest, router
 
@@ -175,8 +253,10 @@ def test_playground_streams_base_and_intervened() -> None:
         "heads": 4,
         "bank": [],
         "diffusion": False,
+        "switchable": False,
     }
     assert client.get("/api/playground").json() == info
+    assert client.post("/api/playground/load", json={"model": "x"}).status_code == 403
     ask = {"prompt": "write a poem", "max_new_tokens": 4}
     res = client.post("/api/playground/generate", json=ask)
     assert res.headers["content-type"].startswith("text/plain")
@@ -204,8 +284,28 @@ def test_playground_streams_base_and_intervened() -> None:
     )
 
 
+def test_the_ui_loads_and_unloads_the_playground_model() -> None:
+    from fastapi.testclient import TestClient
+
+    from loupe.server import create_app
+
+    lm = tiny()
+    lm._model.save_pretrained(home() / "models" / "tiny-load")  # pyright: ignore[reportCallIssue]
+    lm.tokenizer.save_pretrained(home() / "models" / "tiny-load")
+    client = TestClient(create_app(launching=True), base_url="http://localhost")
+    assert client.get("/api/playground").json()["model"] is None
+    info = client.post("/api/playground/load", json={"model": "tiny-load"}).json()
+    assert info["model"] == "tiny-load" and info["layers"] == n_layers(lm) and info["switchable"]
+    ask = {"prompt": "write a poem", "max_new_tokens": 3}
+    assert client.post("/api/playground/generate", json=ask).status_code == 200
+    bad = client.post("/api/playground/load", json={"model": str(home() / "no-such-model")})
+    assert bad.status_code == 400 and client.get("/api/playground").json()["model"] is None
+    assert client.post("/api/playground/load", json={}).json()["model"] is None
+
+
 def test_closing_the_playground_stream_stops_generation(monkeypatch) -> None:
     import asyncio
+    import time
     import traceback
 
     import loupe.interventions
@@ -241,6 +341,10 @@ def test_closing_the_playground_stream_stops_generation(monkeypatch) -> None:
 
     assert asyncio.run(first_then_close())
     assert isinstance(asyncio.run(whole(3)), str)  # waits for the lock the first one held
+    for _ in range(100):  # the stream can end a moment before its generation thread returns
+        if len(ended) == 2:
+            break
+        time.sleep(0.05)
     assert "_Stopped" in str(ended[0]) and ended[1:] == [None]
 
 
@@ -250,7 +354,7 @@ def test_playground_makes_the_asked_adapters_live_and_ablates_heads(lm) -> None:
     from fastapi.testclient import TestClient
     from peft import LoraConfig, get_peft_model
 
-    from loupe.core import adapters_dir, home
+    from loupe.core import adapters_dir
     from loupe.server import create_app
 
     lm._model.save_pretrained(home() / "models" / "tiny-bank-play")
@@ -282,7 +386,6 @@ def test_playground_makes_the_asked_adapters_live_and_ablates_heads(lm) -> None:
 def test_playground_denoises_a_masked_diffusion_model() -> None:
     from fastapi.testclient import TestClient
 
-    from loupe.core import home
     from loupe.models.diffusion import generate as denoise
     from loupe.models.diffusion import load_diffusion
     from loupe.models.tiny import tiny_masked
@@ -402,6 +505,45 @@ def test_linear_probe_finds_a_planted_direction(lm) -> None:
     assert view["kind"] == "line" and view["series"]["held-out accuracy"] == accuracy
 
 
+def test_feature_dashboards_match_a_direct_encode(lm) -> None:
+    from sae_lens import StandardSAE, StandardSAEConfig
+    from sae_lens.saes.sae import SAEMetadata
+
+    from loupe.analysis import feature_dashboards
+
+    cfg = StandardSAEConfig(d_in=hidden(lm), d_sae=64)
+    cfg.metadata = SAEMetadata(hook_name="blocks.1.hook_resid_post")
+    torch.manual_seed(0)
+    sae = StandardSAE(cfg)
+    texts = ["write a poem", "what is the sky", "the answer is five", "roses are red"]
+    prompts = [chat(lm, t) for t in texts]
+    dashes = feature_dashboards(lm, sae, prompts, top_n=3, k=2, bins=5, logits=4, batch_size=3)
+    assert len(dashes) == 3 and dashes[0]["max"] >= dashes[-1]["max"]
+    d = dashes[0]
+    f = d["feature"]
+    # the top example's peak is the feature's highest activation on that text, off the shared ends
+    ids = [lm.tokenizer(p)["input_ids"] for p in prompts]
+    from loupe.analysis.project import shared_ends
+
+    head, tail = shared_ends(ids)
+    per_text = []
+    for p in prompts:
+        with lm.trace(p):
+            h = blocks(lm)[1].output.save()
+        acts = sae.encode(h).detach()[0, :, f]
+        per_text.append(acts[max(head, 1) : len(acts) - tail])
+    assert abs(d["max"] - max(float(a.max()) for a in per_text)) < 1e-4
+    fired = sum(int((a > 0).sum()) for a in per_text)
+    assert abs(d["density"] - fired / sum(len(a) for a in per_text)) < 1e-6
+    assert sum(d["histogram"]["counts"]) == fired and len(d["histogram"]["edges"]) == 6
+    assert len(d["examples"]["rows"]) <= 2 and d["examples"]["rows"][0]["label"].startswith("peak")
+    effect = lm._model.get_output_embeddings().weight @ sae.W_dec[f]
+    assert [v for _, v in d["promoted"]] == pytest.approx(effect.topk(4).values.tolist(), abs=1e-4)
+    assert d["suppressed"][0][1] == pytest.approx(float(effect.min()), abs=1e-4)
+    assert d["neuronpedia"] is None
+    assert [x["feature"] for x in feature_dashboards(lm, sae, prompts, features=[5, 9])] == [5, 9]
+
+
 def test_sae_features_and_steering_a_feature(lm) -> None:
     from sae_lens import StandardSAE, StandardSAEConfig
     from sae_lens.saes.sae import SAEMetadata
@@ -433,11 +575,12 @@ def test_sae_features_and_steering_a_feature(lm) -> None:
     first = next(i for i, c in enumerate(linked["rows"][0]) if isinstance(c, str) and c[0] == "#")
     feature = linked["rows"][0][first].split()[0][1:]
     assert linked["links"][0][first] == f"https://neuronpedia.org/tiny/1-res/{feature}"
-    (home() / "neuronpedia").parent.mkdir(parents=True, exist_ok=True)
-    (home() / "neuronpedia").write_text("http://localhost:3100\n")
-    _, local, _ = sae_features(lm, sae, prompt, k=3)
+    os.environ["LOUPE_NEURONPEDIA"] = "http://localhost:3100/"
+    try:
+        _, local, _ = sae_features(lm, sae, prompt, k=3)
+    finally:
+        del os.environ["LOUPE_NEURONPEDIA"]
     assert local["links"][0][first] == f"http://localhost:3100/tiny/1-res/{feature}"
-    (home() / "neuronpedia").unlink()
 
     meta = save_feature(sae, 7, "feat7", model="tiny")
     assert meta.notes is not None and meta.notes.endswith("tiny/1-res/7")
@@ -453,7 +596,6 @@ def test_sae_features_and_steering_a_feature(lm) -> None:
 def test_inspect_route_returns_views_under_interventions(lm) -> None:
     from fastapi.testclient import TestClient
 
-    from loupe.core import home
     from loupe.server import create_app
 
     saved = home() / "models" / "tiny-inspect"
@@ -484,7 +626,6 @@ def test_steering_sweep_logs_a_grid_whose_zero_cell_costs_nothing(lm) -> None:
     from inspect_ai.solver import generate as gen
 
     from loupe import stores
-    from loupe.core import home
     from loupe.inspect_ext import refusal
     from loupe.sweep import sweep
 
@@ -513,7 +654,7 @@ def test_provider_runs_a_tool_agent_and_the_transcript_keeps_the_calls(lm, monke
     from inspect_ai.tool import tool
 
     from loupe import stores
-    from loupe.core import home, logs_dir
+    from loupe.core import logs_dir
     from loupe.inspect_ext import provider
 
     @tool
@@ -536,7 +677,7 @@ def test_provider_runs_a_tool_agent_and_the_transcript_keeps_the_calls(lm, monke
                     "the answer is 5"])  # fmt: skip
     prompts: list[str] = []
 
-    def fake(model, batch, plan, max_new, on_step=None, strip=True):
+    def fake(model, batch, plan, max_new, batch_size=8, on_step=None, strip=True):
         prompts.extend(batch)
         return [next(replies)]
 

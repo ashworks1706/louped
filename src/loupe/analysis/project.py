@@ -62,7 +62,7 @@ def top_examples(
     which would otherwise rank the same template tokens first in every prompt.
     """
     ids = [lm.tokenizer(p)["input_ids"] for p in prompts]
-    head, tail = _shared_ends(ids)
+    head, tail = shared_ends(ids)
     peaks: list[float] = []
     rows: list[tuple[float, dict[str, Any]]] = []
     for i in range(0, len(prompts), batch_size):
@@ -91,7 +91,7 @@ def top_examples(
     return torch.tensor(peaks), view
 
 
-def _shared_ends(ids: list[list[int]]) -> tuple[int, int]:
+def shared_ends(ids: list[list[int]]) -> tuple[int, int]:
     """How many leading and trailing tokens every sequence shares, leaving each at least one."""
     shortest = min(len(x) for x in ids)
     if len(ids) < 2:

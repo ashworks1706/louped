@@ -8,21 +8,24 @@ With a bank (`--bank a b`), each request names the adapters live for it. A maske
 its denoising trajectory.
 
 The only routes that compute rather than read, and the only ones that need the interp extra. A
-server started without --model answers that no model is loaded and imports no torch.
+server started without --model answers that no model is loaded and imports no torch; on a server
+that launches jobs, the UI can load a model here, or unload it to free the GPU.
 """
 
 from __future__ import annotations
 
 import logging
+import sys
 import threading
 from collections.abc import AsyncIterator
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.concurrency import iterate_in_threadpool
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from loupe.server.launch import require_json
 from loupe.stores.types import View
 
 log = logging.getLogger(__name__)
@@ -34,6 +37,17 @@ class PlaygroundInfo(BaseModel):
     heads: int | None = None
     bank: list[str] = []
     diffusion: bool = False
+    #: Whether the UI may load another model here (off when the server is exposed).
+    switchable: bool = False
+
+
+class LoadRequest(BaseModel):
+    """A model for the Playground, as `loupe serve --model --bank --diffusion --attn` takes it."""
+
+    model: str | None = None
+    bank: list[str] = []
+    diffusion: bool = False
+    attn: str | None = None
 
 
 class Ask(BaseModel):
@@ -76,44 +90,78 @@ def router(
     bank: list[str] | None = None,
     diffusion: bool = False,
     attn: str | None = None,
+    switchable: bool = False,
 ) -> APIRouter:
+    """The Playground's routes over one model; with switchable, the UI may load another."""
     api = APIRouter(prefix="/api/playground")
-    state: dict[str, Any] = {}
+    first = LoadRequest(model=model, bank=bank or [], diffusion=diffusion, attn=attn)
+    state: dict[str, Any] = {"loaded": first}
     lock = threading.Lock()  # one trace at a time on one model
     loading = threading.Lock()  # one load; never held while a trace runs
 
-    def lm() -> Any:
-        if model is None:
-            raise HTTPException(409, "no model loaded; start with loupe serve --model <id>")
+    def cur() -> LoadRequest:
+        return state["loaded"]
+
+    def loaded() -> tuple[Any, LoadRequest]:
+        """The model and the settings it was loaded with, read together, so a load from the UI
+        between two reads cannot pair one model with another's settings."""
         with loading:
+            c = cur()
+            if c.model is None:
+                raise HTTPException(409, "no model loaded; load one here or loupe serve --model")
             if "lm" not in state:
-                if diffusion:
+                if c.diffusion:
                     from loupe.models.diffusion import load_diffusion
 
-                    state["lm"] = load_diffusion(model, bank)
+                    state["lm"] = load_diffusion(c.model, c.bank or None)
                 else:
                     from loupe.models import load
 
-                    state["lm"] = load(model, bank=bank, attn=attn)
-        return state["lm"]
+                    state["lm"] = load(c.model, bank=c.bank or None, attn=c.attn)
+            return state["lm"], c
 
     @api.get("")
     def info() -> PlaygroundInfo:
-        if model is None:
-            return PlaygroundInfo(model=None, layers=None)
-        m = lm()
-        if diffusion:
+        if cur().model is None:
+            return PlaygroundInfo(model=None, layers=None, switchable=switchable)
+        m, c = loaded()
+        if c.diffusion:
             layers = getattr(m.model.config, "num_hidden_layers", None)
-            return PlaygroundInfo(model=model, layers=layers, bank=bank or [], diffusion=True)
+            return PlaygroundInfo(model=c.model, layers=layers, bank=c.bank, diffusion=True,
+                                  switchable=switchable)  # fmt: skip
         from loupe.models import n_heads, n_layers
 
-        return PlaygroundInfo(model=model, layers=n_layers(m), heads=n_heads(m), bank=bank or [])
+        return PlaygroundInfo(model=c.model, layers=n_layers(m), heads=n_heads(m), bank=c.bank,
+                              switchable=switchable)  # fmt: skip
 
-    def live(m: Any, req: Ask) -> None:
+    @api.post("/load", dependencies=[Depends(require_json)])
+    def load_model(req: LoadRequest) -> PlaygroundInfo:
+        """Replace the model (none unloads it, freeing the GPU for jobs); a bad one is a 400 and
+        leaves no model loaded."""
+        if not switchable:
+            raise HTTPException(403, "this server's model is fixed by loupe serve --model")
+        with lock, loading:
+            state.pop("lm", None)
+            state["loaded"] = req.model_copy(update={"model": req.model or None})
+            import gc
+
+            gc.collect()
+            if "torch" in sys.modules and sys.modules["torch"].cuda.is_available():
+                sys.modules["torch"].cuda.empty_cache()
+        try:
+            return info()
+        except HTTPException:
+            raise
+        except Exception as exc:
+            state["loaded"] = LoadRequest()
+            raise HTTPException(400, f"could not load {req.model}: {exc}") from exc
+
+    def live(m: Any, req: Ask, c: LoadRequest) -> None:
         """Make the request's adapters live; call under the lock. A bad request raises a 400."""
+        bank, diffusion = c.bank, c.diffusion
         if req.adapters and not bank:
-            raise HTTPException(400, "no adapter bank loaded; start with loupe serve --bank")
-        if missing := set(req.adapters) - set(bank or []):
+            raise HTTPException(400, "no adapter bank loaded; load one with the model")
+        if missing := set(req.adapters) - set(bank):
             raise HTTPException(400, f"not in the bank: {sorted(missing)}")
         if diffusion and req.interventions:
             raise HTTPException(400, "a masked diffusion model takes no interventions")
@@ -154,10 +202,11 @@ def router(
         from loupe.interventions import generate as run
         from loupe.models import chat
 
-        m = lm()
+        m, c = loaded()
+        diffusion = c.diffusion
         args = sampler(req) if diffusion else {}
         with lock:  # a bad request is a 400 before the stream starts
-            live(m, req)
+            live(m, req, c)
             edits = plan(m, req)
         prompt = chat(m, req.prompt)
         streamer = TextIteratorStreamer(m.tokenizer, skip_prompt=True, skip_special_tokens=True)
@@ -172,7 +221,7 @@ def router(
                 with lock:  # one trace at a time on one model
                     if stop.is_set():
                         return
-                    live(m, req)
+                    live(m, req, c)
                     if diffusion:
                         from loupe.models.diffusion import generate as denoise
 
@@ -203,16 +252,16 @@ def router(
         from loupe.models import chat
         from loupe.vectors import load_vector
 
-        m = lm()
+        m, c = loaded()
         prompt = chat(m, req.prompt) if req.chat else req.prompt
-        if diffusion:
+        if c.diffusion:
             args = sampler(req)
             if max(args.values()) > MAX_TRAJECTORY:
                 raise HTTPException(
                     400, f"a trajectory reads at most {MAX_TRAJECTORY} steps and positions"
                 )
             with lock:
-                live(m, req)
+                live(m, req, c)
                 view = trajectory(m, prompt, **args)
             return InspectResponse.model_validate({"views": [view]})
         reads = []
@@ -228,7 +277,7 @@ def router(
         if len(m.tokenizer(prompt)["input_ids"]) > MAX_INSPECT_TOKENS:
             raise HTTPException(400, f"inspect reads at most {MAX_INSPECT_TOKENS} tokens")
         with lock:
-            live(m, req)
+            live(m, req, c)
             edits = plan(m, req)
             views = [logit_lens(m, prompt, edits)[1]]
             if reads:

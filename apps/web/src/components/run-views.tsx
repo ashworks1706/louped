@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { Fragment, useRef, useState } from "react";
 import {
   CartesianGrid,
@@ -37,8 +38,8 @@ import { num } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 /** Every figure a run logged under views/, in file order. */
-export function RunViews({ id }: { id: string }) {
-  const views = useQuery(q.views(id));
+export function RunViews({ id, live = false }: { id: string; live?: boolean }) {
+  const views = useQuery(q.views(id, live));
   return (
     <QueryState query={views}>
       {(all) => (
@@ -285,7 +286,10 @@ function TokensFigure({ view }: { view: TokensView }) {
   return (
     <div className="flex flex-col gap-3">
       <SeriesSelect label="Series" names={names} value={series} onChange={setSeries} />
-      <div className="flex flex-col gap-2" onMouseLeave={() => setHover(null)}>
+      <div
+        className="flex max-h-[36rem] flex-col gap-2 overflow-y-auto"
+        onMouseLeave={() => setHover(null)}
+      >
         {view.rows.map((row, r) => (
           <div key={r} className="flex flex-col gap-1">
             {row.label && (
@@ -350,59 +354,70 @@ function TableFigure({ view }: { view: TableView }) {
   const opener = useRef<HTMLButtonElement | null>(null);
   return (
     <>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            {view.columns.map((c) => (
-              <TableHead key={c}>{c}</TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {view.rows.map((row, i) => (
-            <TableRow key={i}>
-              {row.map((v, j) => {
-                const href = view.links?.[i]?.[j];
-                const text = v === null ? "—" : typeof v === "number" ? num(v) : String(v);
-                return (
-                  <TableCell
-                    key={j}
-                    className={
-                      typeof v === "number"
-                        ? "text-right font-mono tabular-nums"
-                        : "max-w-md align-top text-sm whitespace-pre-wrap"
-                    }
-                  >
-                    {href && view.embed ? (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          opener.current = e.currentTarget;
-                          setEmbedded(href);
-                        }}
-                        className="underline-offset-4 hover:underline"
-                      >
-                        {text}
-                      </button>
-                    ) : href ? (
-                      <a
-                        href={href}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="underline-offset-4 hover:underline"
-                      >
-                        {text}
-                      </a>
-                    ) : (
-                      text
-                    )}
-                  </TableCell>
-                );
-              })}
+      {/* A long table scrolls in place, so the figures after it stay in reach. */}
+      <div
+        tabIndex={0}
+        aria-label={view.title}
+        className="focus-visible:ring-ring/30 max-h-[36rem] overflow-y-auto rounded-md outline-none focus-visible:ring-[3px]"
+      >
+        <Table>
+          <TableHeader className="bg-background sticky top-0 z-10">
+            <TableRow>
+              {view.columns.map((c) => (
+                <TableHead key={c}>{c}</TableHead>
+              ))}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {view.rows.map((row, i) => (
+              <TableRow key={i}>
+                {row.map((v, j) => {
+                  const href = view.links?.[i]?.[j];
+                  const text = v === null ? "—" : typeof v === "number" ? num(v) : String(v);
+                  return (
+                    <TableCell
+                      key={j}
+                      className={
+                        typeof v === "number"
+                          ? "text-right font-mono tabular-nums"
+                          : "max-w-md align-top text-sm whitespace-pre-wrap"
+                      }
+                    >
+                      {href && view.embed ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            opener.current = e.currentTarget;
+                            setEmbedded(href);
+                          }}
+                          className="underline-offset-4 hover:underline"
+                        >
+                          {text}
+                        </button>
+                      ) : href?.startsWith("/") ? (
+                        <Link href={href} className="underline-offset-4 hover:underline">
+                          {text}
+                        </Link>
+                      ) : href ? (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline-offset-4 hover:underline"
+                        >
+                          {text}
+                        </a>
+                      ) : (
+                        text
+                      )}
+                    </TableCell>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
       <Sheet open={embedded !== null} onOpenChange={(o) => !o && setEmbedded(null)}>
         <SheetContent
           onCloseAutoFocus={(e) => {

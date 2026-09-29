@@ -3,9 +3,12 @@
 Weights are loaded once per process and model id (and adapter bank); each provider instance only
 holds its compiled plan and which of the bank's adapters are live, so a base and an ablated eval
 in one process share the model. Generation is serialised with a lock because one nnsight model
-runs one trace at a time. Given tools, the prompt carries their schemas through the chat template
-and tool calls are parsed back with Inspect's own Hugging Face handler, chosen by the loaded
-model's family, so agent tasks run under interventions too.
+runs one trace at a time; requests that arrive together for one provider are generated as one
+batch (batch_size, 8 on CUDA and 1 elsewhere; 1 reproduces a run exactly, since a bf16 batch's
+padding can move the last bits of a sample). A batch that runs out of GPU memory is halved and
+retried, and later batches keep the smaller size. Given tools, the prompt carries their schemas
+through the chat template and tool calls are parsed back with Inspect's own Hugging Face handler,
+chosen by the loaded model's family, so agent tasks run under interventions too.
 
 Adapters: bank loads named adapters beside each other, adapters makes a set of them live, phases
 changes the live set along one generation. diffusion serves a masked diffusion model through
@@ -26,6 +29,7 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
+from dataclasses import dataclass
 from typing import Any
 
 import torch
@@ -52,7 +56,18 @@ from loupe.models.diffusion import Diffusion, load_diffusion
 from loupe.models.diffusion import generate as denoise_all
 
 _MODELS: dict[str, Any] = {}
-_LOCK = threading.Lock()
+_LOCK = threading.RLock()
+
+
+@dataclass
+class _Request:
+    prompt: str
+    max_new: int
+    prefill: bool
+    text: str | None = None
+    peak: float | None = None
+    batch: int = 1
+    error: BaseException | None = None
 
 
 def shared_model(
@@ -94,6 +109,7 @@ class LoupeAPI(ModelAPI):
         inject: dict[str, Any] | None = None,
         revision: str | None = None,
         attn: str | None = None,
+        batch_size: int | None = None,
         **model_args: Any,
     ) -> None:
         super().__init__(model_name, base_url, api_key, [], config or GenerateConfig())
@@ -110,9 +126,12 @@ class LoupeAPI(ModelAPI):
         self.phases = phases
         self.inject = inject
         self.tokenizer = self.lm.tokenizer
+        self.batch_size = batch_size or (8 if torch.cuda.is_available() else 1)
+        self.pending: list[_Request] = []
+        self.queue = threading.Lock()
 
     def max_connections(self) -> int:
-        return 1
+        return self.batch_size
 
     def connection_key(self) -> str:
         return f"loupe:{self.model_name}"
@@ -131,32 +150,15 @@ class LoupeAPI(ModelAPI):
             raise ValueError("passages to inject need the inject model arg: {'layer': ...}")
         prompt = self.render(input, tools)
         prefill = bool(input) and input[-1].role == "assistant"
-        max_new = config.max_tokens or 256
-        cuda = torch.cuda.is_available()
-
-        def run() -> tuple[str, float | None]:
-            with _LOCK:
-                if cuda:
-                    torch.cuda.reset_peak_memory_stats()
-                model = self.lm.model if isinstance(self.lm, Diffusion) else self.lm._model
-                if self.adapters is not None:
-                    activate(model, self.adapters)
-                hook = phase_hook(model, self.phases) if self.phases else None
-                if isinstance(self.lm, Diffusion):
-                    text = denoise_all(self.lm, [prompt], hook, **self.sampler)[0]
-                else:
-                    if self.lazy:
-                        self.plan = merge(self.plan, compile(self.lm, self.lazy))
-                        self.lazy = []
-                    plan = self.plan
-                    if passages and self.inject:
-                        injected = compile(self.lm, [Inject(passages=passages, **self.inject)])
-                        plan = merge(plan, injected)
-                    text = generate(self.lm, [prompt], plan, max_new, on_step=hook,
-                                    strip=not prefill)[0]  # fmt: skip
-                return text, torch.cuda.max_memory_allocated() / 2**20 if cuda else None
-
-        text, peak = await asyncio.to_thread(run)
+        request = _Request(prompt, config.max_tokens or 256, prefill)
+        if passages and self.inject:
+            injected = Inject(passages=passages, **self.inject)
+            await asyncio.to_thread(self._run, [request], injected)
+        else:
+            with self.queue:
+                self.pending.append(request)
+            await asyncio.to_thread(self._drain, request)
+        text, peak = str(request.text), request.peak
         if not tools:
             output = ModelOutput.from_content(model=self.model_name, content=text)
         else:
@@ -168,9 +170,69 @@ class LoupeAPI(ModelAPI):
             output = ModelOutput(model=self.model_name, choices=[choice])
         n_in, n_out = await self.count_text_tokens(prompt), await self.count_text_tokens(text)
         output.usage = ModelUsage(input_tokens=n_in, output_tokens=n_out, total_tokens=n_in + n_out)
+        # the batch it ran in: a bf16 batch's padding can move the last bits of a sample
+        output.metadata = {"batch_size": request.batch}
         if peak is not None:
-            output.metadata = {"peak_cuda_mib": peak}
+            output.metadata["peak_cuda_mib"] = peak
         return output
+
+    def _drain(self, request: _Request) -> None:
+        """Generate pending requests a batch at a time until this one is done; a batch shares the
+        token budget and the prefill mode of its first request."""
+        while request.text is None and request.error is None:
+            with _LOCK:
+                if request.text is not None or request.error is not None:
+                    break
+                with self.queue:
+                    head = self.pending[0]
+                    batch = [r for r in self.pending
+                             if (r.max_new, r.prefill) == (head.max_new, head.prefill)]  # fmt: skip
+                    batch = batch[: self.batch_size]
+                    self.pending = [r for r in self.pending if r not in batch]
+                try:
+                    self._run(batch)
+                except Exception as exc:  # every request in the batch fails with the real error
+                    for r in batch:
+                        if r.text is None:
+                            r.error = exc
+        if request.error is not None:
+            raise request.error
+
+    def _run(self, batch: list[_Request], inject: Inject | None = None) -> None:
+        """One batch through the model with the plan, the live adapters and any phases; call
+        under _LOCK, or it takes it. peak is the batch's CUDA memory high-water mark."""
+        with _LOCK:
+            cuda = torch.cuda.is_available()
+            if cuda:
+                torch.cuda.reset_peak_memory_stats()
+            model = self.lm.model if isinstance(self.lm, Diffusion) else self.lm._model
+            if self.adapters is not None:
+                activate(model, self.adapters)
+            hook = phase_hook(model, self.phases) if self.phases else None
+            prompts = [r.prompt for r in batch]
+            if isinstance(self.lm, Diffusion):
+                texts = denoise_all(self.lm, prompts, hook, **self.sampler)
+            else:
+                if self.lazy:
+                    self.plan = merge(self.plan, compile(self.lm, self.lazy))
+                    self.lazy = []
+                plan = merge(self.plan, compile(self.lm, [inject])) if inject else self.plan
+                try:
+                    texts = generate(self.lm, prompts, plan, batch[0].max_new,
+                                     batch_size=len(batch), on_step=hook,
+                                     strip=not batch[0].prefill)  # fmt: skip
+                except Exception as exc:  # nnsight wraps CUDA's out of memory in its own error
+                    if len(batch) == 1 or "out of memory" not in str(exc).lower():
+                        raise
+                    # halve the batch, now and for the requests after it
+                    torch.cuda.empty_cache()
+                    self.batch_size = half = len(batch) // 2
+                    self._run(batch[:half], inject)
+                    self._run(batch[half:], inject)
+                    return
+            peak = torch.cuda.max_memory_allocated() / 2**20 if cuda else None
+            for r, text in zip(batch, texts, strict=True):
+                r.text, r.peak, r.batch = text, peak, len(batch)
 
     async def count_text_tokens(self, text: str) -> int:
         """Tokens of the text by the model's own tokenizer, no special tokens added, for usage and

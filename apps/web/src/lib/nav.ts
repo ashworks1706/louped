@@ -5,6 +5,7 @@ import {
   ListTree,
   MessageSquareText,
   Move3d,
+  Rocket,
   Waypoints,
   type LucideIcon,
 } from "lucide-react";
@@ -32,6 +33,13 @@ export const NAV: NavItem[] = [
     description: "Research questions and their runs.",
     icon: FlaskConical,
     shortcut: "G E",
+  },
+  {
+    href: "/launch/",
+    title: "Launch",
+    description: "Run an experiment, training config or eval, and follow it.",
+    icon: Rocket,
+    shortcut: "G L",
   },
   {
     href: "/runs/",

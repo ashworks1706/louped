@@ -1,6 +1,6 @@
 """A small text classifier: a frozen sentence encoder and logistic regression on its embeddings.
 
-For decisions a product makes with keyword rules or a model call (whether a message asks to be
+For decisions an application makes with keyword rules or a model call (whether a message asks to be
 remembered, which tool family a request needs): cheap to train on a CPU, fast to run, and scored on
 a held-out split so it can be compared to the rule it would replace. Rows are JSONL with text and
 label; the split is by a hash of the text. The classifier is saved with joblib. Needs the rag extra.

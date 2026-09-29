@@ -138,7 +138,9 @@ def train(cfg: GrpoConfig) -> Path:
                             max_completion_length=cfg.max_completion_length,
                             temperature=cfg.temperature, log_completions=True,
                             num_completions_to_print=0,
-                            max_tool_calling_iterations=cfg.max_tool_turns)  # fmt: skip
+                            max_tool_calling_iterations=cfg.max_tool_turns,
+                            # thinking off (Qwen3), as the loupe/ provider evaluates it
+                            chat_template_kwargs={"enable_thinking": False})  # fmt: skip
         return GRPOTrainer(model=model, processing_class=tok, peft_config=peft,
                            reward_funcs=rewards, train_dataset=Dataset.from_list(rows),
                            args=config, **extra)  # fmt: skip

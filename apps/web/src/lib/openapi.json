@@ -274,6 +274,97 @@
         }
       }
     },
+    "/api/runs/{run_id}/features": {
+      "get": {
+        "summary": "Feature List",
+        "operationId": "feature_list_api_runs__run_id__features_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  },
+                  "title": "Response Feature List Api Runs  Run Id  Features Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/features/{feature}": {
+      "get": {
+        "summary": "Feature",
+        "operationId": "feature_api_runs__run_id__features__feature__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "feature",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Feature"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureDashboard"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/compare": {
       "get": {
         "summary": "Compare",
@@ -406,6 +497,45 @@
         }
       }
     },
+    "/api/playground/load": {
+      "post": {
+        "summary": "Load Model",
+        "description": "Replace the model (none unloads it, freeing the GPU for jobs); a bad one is a 400 and\nleaves no model loaded.",
+        "operationId": "load_model_api_playground_load_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaygroundInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/playground/generate": {
       "post": {
         "summary": "Generate",
@@ -465,6 +595,207 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/InspectResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/launch": {
+      "get": {
+        "summary": "Launchables",
+        "operationId": "launchables_api_launch_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Launchable"
+                  },
+                  "type": "array",
+                  "title": "Response Launchables Api Launch Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Launch",
+        "operationId": "launch_api_launch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LaunchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/launch/options": {
+      "get": {
+        "summary": "Launch Options",
+        "operationId": "launch_options_api_launch_options_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Option"
+                  },
+                  "title": "Response Launch Options Api Launch Options Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/launch/jobs": {
+      "get": {
+        "summary": "Job List",
+        "operationId": "job_list_api_launch_jobs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Job"
+                  },
+                  "type": "array",
+                  "title": "Response Job List Api Launch Jobs Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/launch/jobs/{job_id}": {
+      "get": {
+        "summary": "Job",
+        "operationId": "job_api_launch_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/launch/jobs/{job_id}/cancel": {
+      "post": {
+        "summary": "Cancel",
+        "operationId": "cancel_api_launch_jobs__job_id__cancel_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
                 }
               }
             }
@@ -624,6 +955,128 @@
         "type": "object",
         "required": ["name", "question", "runs"],
         "title": "Experiment"
+      },
+      "FeatureDashboard": {
+        "properties": {
+          "feature": {
+            "type": "integer",
+            "title": "Feature"
+          },
+          "hook": {
+            "type": "string",
+            "title": "Hook"
+          },
+          "layer": {
+            "type": "integer",
+            "title": "Layer"
+          },
+          "density": {
+            "type": "number",
+            "title": "Density"
+          },
+          "max": {
+            "type": "number",
+            "title": "Max"
+          },
+          "histogram": {
+            "$ref": "#/components/schemas/Histogram"
+          },
+          "promoted": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "title": "Promoted"
+          },
+          "suppressed": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "title": "Suppressed"
+          },
+          "examples": {
+            "$ref": "#/components/schemas/TokensView"
+          },
+          "neuronpedia": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Neuronpedia"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "sae": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sae"
+          },
+          "sae_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sae Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feature",
+          "hook",
+          "layer",
+          "density",
+          "max",
+          "histogram",
+          "promoted",
+          "suppressed",
+          "examples"
+        ],
+        "title": "FeatureDashboard",
+        "description": "One SAE feature over a dataset, as `loupe features` logs it under features/."
       },
       "GenerateRequest": {
         "properties": {
@@ -833,6 +1286,27 @@
         "required": ["kind", "title", "x", "y", "z", "x_label", "y_label"],
         "title": "HeatmapView"
       },
+      "Histogram": {
+        "properties": {
+          "edges": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Edges"
+          },
+          "counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Counts"
+          }
+        },
+        "type": "object",
+        "required": ["edges", "counts"],
+        "title": "Histogram"
+      },
       "InspectRequest": {
         "properties": {
           "interventions": {
@@ -937,6 +1411,246 @@
         "required": ["views"],
         "title": "InspectResponse"
       },
+      "Job": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "argv": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Argv"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["queued", "running", "succeeded", "failed", "cancelled"],
+            "title": "Status",
+            "default": "queued"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created"
+          },
+          "started": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started"
+          },
+          "ended": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended"
+          },
+          "exit_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Code"
+          }
+        },
+        "type": "object",
+        "required": ["id", "title", "argv"],
+        "title": "Job"
+      },
+      "JobDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "argv": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Argv"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["queued", "running", "succeeded", "failed", "cancelled"],
+            "title": "Status",
+            "default": "queued"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created"
+          },
+          "started": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started"
+          },
+          "ended": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended"
+          },
+          "exit_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Code"
+          },
+          "log": {
+            "type": "string",
+            "title": "Log"
+          }
+        },
+        "type": "object",
+        "required": ["id", "title", "argv", "log"],
+        "title": "JobDetail"
+      },
+      "LaunchRequest": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "options": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Options",
+            "default": {}
+          },
+          "config": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "recipe": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe"
+          }
+        },
+        "type": "object",
+        "required": ["id"],
+        "title": "LaunchRequest"
+      },
+      "Launchable": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "group": {
+            "type": "string",
+            "title": "Group"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "config": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "recipe": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe"
+          }
+        },
+        "type": "object",
+        "required": ["id", "group", "title"],
+        "title": "Launchable"
+      },
       "LineView": {
         "properties": {
           "kind": {
@@ -988,6 +1702,48 @@
         "type": "object",
         "required": ["kind", "title", "x", "series", "x_label", "y_label"],
         "title": "LineView"
+      },
+      "LoadRequest": {
+        "properties": {
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "bank": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Bank",
+            "default": []
+          },
+          "diffusion": {
+            "type": "boolean",
+            "title": "Diffusion",
+            "default": false
+          },
+          "attn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attn"
+          }
+        },
+        "type": "object",
+        "title": "LoadRequest",
+        "description": "A model for the Playground, as `loupe serve --model --bank --diffusion --attn` takes it."
       },
       "Message": {
         "properties": {
@@ -1060,6 +1816,52 @@
         "type": "object",
         "required": ["step", "value"],
         "title": "MetricPoint"
+      },
+      "Option": {
+        "properties": {
+          "flag": {
+            "type": "string",
+            "title": "Flag"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["text", "bool", "list", "choice"],
+            "title": "Kind"
+          },
+          "default": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default"
+          },
+          "help": {
+            "type": "string",
+            "title": "Help",
+            "default": ""
+          },
+          "choices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Choices",
+            "default": []
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": ["flag", "kind", "default"],
+        "title": "Option",
+        "description": "One flag of a command, as its parser declares it."
       },
       "PairedScore": {
         "properties": {
@@ -1154,6 +1956,11 @@
             "type": "boolean",
             "title": "Diffusion",
             "default": false
+          },
+          "switchable": {
+            "type": "boolean",
+            "title": "Switchable",
+            "default": false
           }
         },
         "type": "object",
@@ -1230,6 +2037,17 @@
               }
             ],
             "title": "Samples"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
           },
           "params": {
             "additionalProperties": {
@@ -1382,6 +2200,17 @@
               }
             ],
             "title": "Samples"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
           }
         },
         "type": "object",

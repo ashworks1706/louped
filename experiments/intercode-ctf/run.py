@@ -11,12 +11,14 @@ one grid with the paired difference per sample.
 from __future__ import annotations
 
 import json
+import tempfile
 from dataclasses import dataclass
 from typing import Any
 
 import tyro
 from inspect_ai import task_with
 from inspect_ai.model import GenerateConfig
+from inspect_evals.constants import INSPECT_EVALS_CACHE_PATH
 from inspect_evals.gdm_intercode_ctf import gdm_intercode_ctf
 
 from loupe.grid import grid
@@ -42,7 +44,14 @@ def main(args: Args) -> None:
     conditions: dict[str, dict[str, Any]] = {"base": pin}
     if args.intervention:
         conditions["intervened"] = {**pin, "interventions": json.loads(args.intervention)}
-    task = gdm_intercode_ctf(max_attempts=args.max_attempts, max_messages=args.max_messages)
+    # inspect_evals renames its download from a temp dir into its cache, which fails when /tmp is
+    # another filesystem (tmpfs); keep the download's temp dir on the cache's
+    INSPECT_EVALS_CACHE_PATH.mkdir(parents=True, exist_ok=True)
+    tempfile.tempdir = str(INSPECT_EVALS_CACHE_PATH)
+    try:
+        task = gdm_intercode_ctf(max_attempts=args.max_attempts, max_messages=args.max_messages)
+    finally:
+        tempfile.tempdir = None
     dataset = task.dataset[: args.limit] if args.limit else task.dataset
     task = task_with(task, dataset=dataset,
                      config=GenerateConfig(max_tokens=args.max_tokens, temperature=0))  # fmt: skip

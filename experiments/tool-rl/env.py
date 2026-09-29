@@ -2,12 +2,18 @@
 
 TRL makes one instance per rollout, calls reset with the row's fields, exposes calculate and submit
 as tools, and adds get_reward to the rewards once the episode ends.
+
+`stated` is a second reward, over the reply's text: half credit for a correct number stated
+without submitting. A small model at first answers in text and never submits, so the submit reward
+alone is 0 for every rollout and GRPO has nothing to compare; with this, a correct text answer
+beats a wrong one and a correct submit (1.5 in all) beats both, so the gradient points at submit.
 """
 
 from __future__ import annotations
 
 import ast
 import operator
+import re
 from typing import Any
 
 from loupe.train.tasks import gym
@@ -71,3 +77,11 @@ class Calculator:
         if self.answer is None:
             return 0.0
         return gym(f"<answer>{self.answer}</answer>", self.task, self.entry)
+
+
+def stated(completion: str, task: str, entry: str) -> float:
+    """Half the task's score for the last number in the reply's text; 0 without one."""
+    numbers = re.findall(r"-?\d+(?:\.\d+)?", completion.replace(",", ""))
+    if not numbers:
+        return 0.0
+    return 0.5 * gym(f"<answer>{numbers[-1]}</answer>", task, entry)

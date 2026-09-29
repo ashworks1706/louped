@@ -1,8 +1,8 @@
 """Removing the people in a conversation before it becomes a training set.
 
 Deterministic regexes, no model: an email, a phone number, a platform id, a leaked token. A dataset
-outlives the conversation it came from. Products add their own patterns (a student id, say) with
-`extra`.
+outlives the conversation it came from. Add your own with `extra`: a named pattern from EXTRA, or
+any regex, replaced by [redacted].
 """
 
 from __future__ import annotations
@@ -25,9 +25,10 @@ PATTERNS: tuple[Pattern, ...] = (
     (re.compile(r"\b[A-Za-z0-9_-]{24,}\.[A-Za-z0-9_-]{6}\.[A-Za-z0-9_-]{20,}\b"), "[token]"),
 )
 
-#: Named extras a product can switch on from the command line.
+#: Named extras to switch on from the command line.
 EXTRA: dict[str, Pattern] = {
-    "asu-id": (re.compile(r"(?<![A-Za-z0-9])\d{10}(?![A-Za-z0-9])"), "[asu-id]"),
+    # a 10-digit number standing alone, such as a student or employee id
+    "id-10": (re.compile(r"(?<![A-Za-z0-9])\d{10}(?![A-Za-z0-9])"), "[id]"),
 }
 
 _KEEP = {"id", "role", "type", "name", "tool_call_id"}  # structure, not content
@@ -51,7 +52,8 @@ def _value(value: Any, patterns: Sequence[Pattern], key: str = "") -> Any:
 
 def redact(example: Example, extra: Sequence[str] = ()) -> Example:
     """The example with messages, reply and tool-call arguments redacted, and no user in meta."""
-    patterns = (*(EXTRA[name] for name in extra), *PATTERNS)  # specific before generic
+    own = [EXTRA.get(x) or (re.compile(x), "[redacted]") for x in extra]
+    patterns = (*own, *PATTERNS)  # specific before generic
     return example.model_copy(
         update={
             "messages": _value(example.messages, patterns),

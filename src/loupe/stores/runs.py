@@ -4,8 +4,17 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from pydantic import ValidationError
+
 from loupe.stores import evals, mlflow_runs, views
-from loupe.stores.types import RunDetail, RunSummary, RunView, SampleDetail, SampleSummary
+from loupe.stores.types import (
+    FeatureDashboard,
+    RunDetail,
+    RunSummary,
+    RunView,
+    SampleDetail,
+    SampleSummary,
+)
 
 
 class NotFound(LookupError):
@@ -63,3 +72,22 @@ def list_views(run_id: str) -> list[RunView]:
     if found is None:
         raise NotFound(run_id)
     return found
+
+
+def list_features(run_id: str) -> list[int]:
+    """The features a run logged dashboards for, in order."""
+    mlflow = run_id.startswith(mlflow_runs.PREFIX)
+    paths = mlflow_runs.list_artifact_paths(run_id, "features") if mlflow else None
+    if paths is None:
+        raise NotFound(run_id)
+    names = [p.rsplit("/", 1)[-1].removesuffix(".json") for p in paths if p.endswith(".json")]
+    return sorted(int(n) for n in names if n.isdigit())
+
+
+def get_feature(run_id: str, feature: int) -> FeatureDashboard:
+    """One feature's dashboard, as `loupe features` logged it."""
+    data = read_artifact(run_id, f"features/{feature}.json")
+    try:
+        return FeatureDashboard.model_validate_json(data)
+    except ValidationError as exc:
+        raise NotFound(f"{run_id}/features/{feature}") from exc
