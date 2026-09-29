@@ -25,6 +25,16 @@ def _client() -> MlflowClient | None:
     return MlflowClient(tracking_uri=uri)
 
 
+def _missing(exc: Exception) -> bool:
+    """Whether MLflow raised because the run or artifact does not exist; anything else (a locked
+    database, a schema it cannot read) is a real error and is raised."""
+    from mlflow.exceptions import MlflowException
+
+    code = getattr(exc, "error_code", "")
+    return isinstance(exc, MlflowException) and code in ("RESOURCE_DOES_NOT_EXIST",
+                                                         "INVALID_PARAMETER_VALUE")  # fmt: skip
+
+
 def _summary(run: Run, experiment: str | None) -> RunSummary:
     tags = run.data.tags
     kind = tags.get("loupe.kind", "analysis")
@@ -48,7 +58,13 @@ def list_runs() -> list[RunSummary]:
     names = {e.experiment_id: e.name for e in client.search_experiments()}
     if not names:
         return []
-    runs = client.search_runs(list(names), max_results=1000)
+    runs, token = [], None
+    while True:
+        page = client.search_runs(list(names), max_results=1000, page_token=token)
+        runs.extend(page)
+        token = page.token
+        if not token:
+            break
     return [_summary(r, names.get(r.info.experiment_id)) for r in runs]
 
 
@@ -58,8 +74,10 @@ def get_run(run_id: str) -> RunDetail | None:
         return None
     try:
         run = client.get_run(run_id.removeprefix(PREFIX))
-    except Exception:
-        return None
+    except Exception as exc:
+        if _missing(exc):
+            return None
+        raise
     experiment = client.get_experiment(run.info.experiment_id).name
     history = {
         key: [
@@ -97,8 +115,10 @@ def list_artifact_paths(run_id: str, path: str) -> list[str] | None:
     run_id = run_id.removeprefix(PREFIX)
     try:
         client.get_run(run_id)
-    except Exception:
-        return None
+    except Exception as exc:
+        if _missing(exc):
+            return None
+        raise
     return [a.path for a in _walk(client, run_id, path)]
 
 
@@ -112,5 +132,9 @@ def read_artifact(run_id: str, path: str) -> bytes | None:
             local = client.download_artifacts(run_id.removeprefix(PREFIX), path, tmp)
             with open(local, "rb") as f:
                 return f.read()
-    except Exception:
+    except OSError:  # no such artifact: MLflow's local store raises it as a missing file
         return None
+    except Exception as exc:
+        if _missing(exc):
+            return None
+        raise

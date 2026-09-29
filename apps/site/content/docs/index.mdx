@@ -1,24 +1,22 @@
 ---
 title: Introduction
-description: A local-first lab where an intervention on a language model is evaluated, trained against and looked inside.
+description: Change a model, prove what changed, and see why.
 ---
 
-loupe makes an intervention a first-class object. A steered, ablated, adapted or retrieval-augmented
-model is one **policy**: an Inspect eval scores it, a paired test says whether it changed anything
-beyond seed and sample variance, a trainer can train against it, and the same UI shows what changed
-inside the model.
+loupe is a local app for research on language model behaviour. You change a model: steer or
+ablate a direction, fine-tune it, rewrite its prompt, add an adapter. You prove what changed: the
+same evals run on both versions, sample by sample, with paired intervals and a verdict on what
+moved and what held. And you see why: logit lens, patching, probes, SAE features and circuits on
+the same model under the same change.
 
-It is glue, not a framework. [nnsight](https://nnsight.net) does interpretability,
-[Inspect](https://inspect.aisi.org.uk) does evals and agents, [TRL](https://github.com/huggingface/trl)
-does training and [MLflow](https://mlflow.org) does tracking. loupe gives them one model, one
-intervention spec and one data format, and a UI over all of it.
-
-Everything runs on your machine with no API keys: open-weight models from the Hugging Face Hub or a
-local path, results in files under `LOUPE_HOME`, and no step that calls a hosted model.
+A change is one spec, a policy, that runs the same way in an eval, a training run, the Playground
+and an analysis. Your question is a short script; loupe supplies the rest and the app to launch and
+read it from. It runs on your machine: open-weight models, results in files under `LOUPE_HOME`, no
+hosted model and no API key.
 
 <Cards>
   <Card title="Install" href="/docs/install" />
   <Card title="Quick start" href="/docs/quickstart" />
+  <Card title="Policies" href="/docs/policies" />
   <Card title="Research domains" href="/docs/domains" />
-  <Card title="Self-host the app" href="/docs/self-host" />
 </Cards>

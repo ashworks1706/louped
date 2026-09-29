@@ -1,6 +1,6 @@
 ---
 title: Policies and interventions
-description: One model plus interventions, valid in an eval, a training run, the Playground and an analysis.
+description: One description of a change, valid in an eval, a training run, the Playground and an analysis.
 ---
 
 ```
@@ -14,16 +14,29 @@ inspect eval task.py --model loupe/Qwen/Qwen2.5-0.5B-Instruct \
   -M interventions='{"kind": "ablate", "vector": "refusal.qwen2.5-0.5b-instruct"}'
 ```
 
-| Argument        | Does                                                                                                  |
-| --------------- | ----------------------------------------------------------------------------------------------------- |
-| `interventions` | `steer` (add a saved direction), `ablate` (project it out), `inject` (add passages' state at a layer) |
-| `bank`          | load named LoRA adapters beside each other, all inactive                                              |
-| `adapters`      | make this subset of the bank live; their deltas add                                                   |
-| `merges`        | add PEFT merges of bank adapters (`linear`, `ties`, `dare_linear`, ...)                               |
-| `phases`        | change the live adapters along one generation: `[{"start": 0, "end": 0.5, "adapters": ["a"]}]`        |
-| `diffusion`     | serve a masked diffusion model (LLaDA, Dream, any masked LM) with its sampler settings                |
-| `inject`        | the layer and strength for passages a RAG task sends to the model's state                             |
+The intervention kinds:
+
+| Kind     | Does                                       |
+| -------- | ------------------------------------------ |
+| `steer`  | add a saved direction at a layer, scaled   |
+| `ablate` | project a direction out at every layer     |
+| `inject` | add the state of given passages at a layer |
+| `heads`  | zero or mean-ablate named attention heads  |
+
+The other model arguments:
+
+| Argument     | Does                                                                                           |
+| ------------ | ---------------------------------------------------------------------------------------------- |
+| `bank`       | load named LoRA adapters beside each other, all inactive                                       |
+| `adapters`   | make this subset of the bank live; their deltas add                                            |
+| `merges`     | add PEFT merges of bank adapters (`linear`, `ties`, `dare_linear`, ...)                        |
+| `phases`     | change the live adapters along one generation: `[{"start": 0, "end": 0.5, "adapters": ["a"]}]` |
+| `diffusion`  | serve a masked diffusion model with its sampler settings                                       |
+| `inject`     | the layer and strength at which passages a RAG task sends are injected                         |
+| `attn`       | the attention kernel: `eager`, `sdpa`, `flex_attention` or `file.py:function`                  |
+| `batch_size` | requests generated together (8 on a GPU, 1 on a CPU; 1 reproduces a run bit for bit)           |
+| `revision`   | pin a Hub model to a commit                                                                    |
 
 Directions live under `<home>/vectors`, adapters under `<home>/adapters`, saved models under
-`<home>/models`. `loupe train sft` can save an adapter by name (`export.adapter_as`) or a merged
-model (`export.merge_as`), and can train a soft prompt instead of LoRA (`soft_prompt: 20`).
+`<home>/models`. `loupe train sft` saves an adapter by name (`export.adapter_as`) or a merged model
+(`export.merge_as`), which then runs as `loupe/<name>`.

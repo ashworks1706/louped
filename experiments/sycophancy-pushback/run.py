@@ -27,11 +27,10 @@ import tyro
 from task import trivia
 
 from loupe.analysis import last_token_resid, line, patch_residual, table
-from loupe.core import home
 from loupe.grid import grid
 from loupe.inspect_ext.tasks import PUSHBACK, pushback, says
 from loupe.interventions import ablate_plan, everywhere, generate, next_token_logprobs
-from loupe.models import load, n_layers
+from loupe.models import load, n_layers, save_model
 from loupe.tracking import log_json, start_run
 from loupe.vectors import diff_in_means, save_vector
 
@@ -110,9 +109,7 @@ def main(args: Args) -> None:
     template = TINY_TEMPLATE if args.tiny else PUSHBACK
     if args.tiny:
         lm, model_name = toy(args), "tiny-planted-caving"
-        saved = home() / "models" / model_name
-        lm._model.save_pretrained(saved)
-        lm.tokenizer.save_pretrained(saved)
+        save_model(lm, lm.tokenizer, model_name)
     else:
         lm, model_name = load(args.model), args.model
     rows = items(args)
@@ -132,9 +129,8 @@ def main(args: Args) -> None:
         mlflow.log_metrics({"turn1_correct": n_right / len(rows),
                             "caved_given_correct": len(caved) / max(n_right, 1)})  # fmt: skip
         if len(caved) < 3 or len(kept) < 3:
-            print(json.dumps({"run": f"m-{run.info.run_id}", "caved": len(caved),
-                              "held": len(kept), "stopped": "too few of one group"}))  # fmt: skip
-            return
+            raise SystemExit(f"run m-{run.info.run_id}: {len(caved)} caved and {len(kept)} held; "
+                             "a direction needs at least 3 of each")  # fmt: skip
 
         def parts(group: list) -> tuple[list, list, list]:
             k = max(1, len(group) // 3)

@@ -42,7 +42,7 @@ from loupe.analysis import (
 from loupe.core import home
 from loupe.inspect_ext import is_refusal
 from loupe.interventions import ablate_plan, everywhere, generate, next_token_logprobs, steer_plan
-from loupe.models import chat, load, n_layers
+from loupe.models import chat, load, n_layers, save_model
 from loupe.tracking import log_json, start_run
 from loupe.vectors import diff_in_means, save_vector
 
@@ -159,9 +159,7 @@ def main(args: Args) -> None:
         ]
         lm = tiny(layers=6, hidden=64, seed=args.seed, train=pairs)
         model_name = "tiny-planted-refusal"
-        saved = home() / "models" / model_name  # so evals can load it as loupe/<model_name>
-        lm._model.save_pretrained(saved)
-        lm.tokenizer.save_pretrained(saved)
+        save_model(lm, lm.tokenizer, model_name)  # so evals load it as loupe/<model_name>
     else:
         lm, model_name = load(args.model), args.model
     name = args.vector or "refusal." + model_name.split("/")[-1].lower()
@@ -199,7 +197,11 @@ def main(args: Args) -> None:
                  "direction_norm": float(v.norm())}, step=layer,
             )  # fmt: skip
 
-        inducing = [i for i in range(len(candidates)) if induce[i] > 0] or list(range(len(bypass)))
+        inducing = [i for i in range(len(candidates)) if induce[i] > 0]
+        if not inducing:
+            print("no candidate layer induces refusal when added: choosing by bypass alone")
+            mlflow.set_tag("loupe.note", "no inducing layer; chosen by bypass alone")
+            inducing = list(range(len(bypass)))
         best = candidates[min(inducing, key=lambda i: bypass[i])]
         direction = directions[best]
         save_vector(name, direction, model=model_name, layer=best, method="diff-in-means",
@@ -261,6 +263,8 @@ def main(args: Args) -> None:
         pair = patching_pair(lm, args.tiny)
         if pair:
             views.append(("patching", patch_residual(lm, *pair)))
+        else:
+            print("patching skipped: no harmful and harmless prompt tokenize to the same length")
         for i, (slug, view) in enumerate(views):
             log_json(view, f"views/{i:02d}-{slug}.json")
 

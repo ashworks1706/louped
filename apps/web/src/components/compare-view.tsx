@@ -9,7 +9,7 @@ import { useMemo } from "react";
 import { EmptyState } from "@/components/empty-state";
 import { Delta, MetricValue, ScoreCell } from "@/components/metric";
 import { QueryState } from "@/components/query-state";
-import { runHref } from "@/components/runs-table";
+import { runHref } from "@/lib/href";
 import { Transcript } from "@/components/transcript";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
@@ -225,6 +225,8 @@ function Samples({ a, b }: { a: RunDetail; b: RunDetail }) {
     return [...byId.values()];
   }, [sa.data, sb.data, names]);
 
+  if (sa.isError || sb.isError)
+    return <QueryState query={sa.isError ? sa : sb}>{() => null}</QueryState>;
   if (sa.isPending || sb.isPending) return null;
   const [dir, score] = flip
     ? [flip.slice(0, flip.indexOf(":")), flip.slice(flip.indexOf(":") + 1)]

@@ -1,30 +1,24 @@
 # loupe: agent guide
 
-A research testbed where an intervention on a language model is something you evaluate, train
-against and look inside. loupe is **glue, not a framework**: nnsight does interpretability, Inspect
-does evals and agents, TRL does training and RL environments, MLflow does tracking. loupe gives
-them one model, one intervention spec and one data format, and a UI over all of it. The UI is the
-product, and everything is used from it. Integrate, don't link out: a tool loupe needs runs inside
-it, as a library, or in an environment of its own when it pins other versions (circuit-tracer,
-pyreft), launched and read from the UI. Integrate, don't re-implement: reuse what a tool does well
-and write only the joins (docs/ARCHITECTURE.md lists how each tool runs).
-
-Read `docs/ARCHITECTURE.md` for the layers and the design, `docs/ROADMAP.md` for what is built in
-what order. Do not contradict them; propose an edit to the doc instead.
+loupe lets you change a model, prove what changed and see why, in one local app. Read
+`docs/ARCHITECTURE.md` for the design and the tools it runs, `docs/ROADMAP.md` for what is built.
+Do not contradict them; propose an edit to the doc instead.
 
 ## Rules that decide most changes
 
-- **Prebuilt first.** Before writing code, name the existing tool that does it. Own code is only
-  the glue between tools. A new dependency must be free and permissively licensed (MIT, Apache,
+- **Integrate, don't rewrite.** Before writing code, name the tool that already does it and run it
+  inside loupe: as a library, or in its own environment when it pins other versions. Own code is
+  the join between tools. A new dependency must be free and permissively licensed (MIT, Apache,
   BSD, OFL) and justified in the PR.
-- **No bloat.** No module, option or abstraction without a caller today. There is no cap on
-  lines: write what the feature needs, and no speculative code beyond it.
-- **Domains, not projects.** A capability serves a research domain (docs/ARCHITECTURE.md lists
-  them); a question is an experiment on it, named for the question. Nothing in `src/loupe` or an
-  experiment's name is tied to one application: a system comes in as a model id, an
-  OpenAI-compatible endpoint or logged calls, and its specifics are options.
+- **No speculative code.** No module, option or abstraction without a caller today.
+- **Domains, not projects.** A capability serves a research domain; a question is an experiment on
+  it, named for the question. Nothing in `src/loupe` or an experiment's name is tied to one
+  application: a system comes in as a model id, an OpenAI-compatible endpoint or logged calls.
+- **Say what happened.** No silent fallbacks: raise, or print what was chosen. No fake paths in
+  `src/loupe`; stand-ins belong in tests.
 - **Reproducible numbers.** Anything that writes a result writes `loupe.core.RunMeta` next to it.
-- **A UI page is done only when it renders a real experiment's data**, not only fixtures.
+- **Local.** No step calls a hosted model; a judge, if one is needed, is a local model through the
+  `loupe/` provider.
 
 ## Commands
 
@@ -32,19 +26,14 @@ what order. Do not contradict them; propose an edit to the doc instead.
 
 ```
 just bootstrap          first run: dependencies and git hooks
-just check              the gate: check-python, check-web, check-site. CI and the pre-push hook run it
-just check-python       ruff format, ruff check, pyright, import-linter, pytest
-just check-web          prettier, eslint, tsc, static build
-just check-site         the same for apps/site
+just check              the gate: Python (ruff, pyright, import-linter, pytest), web and site builds
 just test-e2e           Playwright on the built UI; screenshots land in apps/web/test-results
 just examples           the worked examples end to end on tiny offline models; CI runs it
 just fmt                format everything
-just serve              API on :8000, serving the built UI
+just serve              API and UI on :8000
 just web                UI dev server on :3000
-just site               landing page and docs on :3001
-just images             the loupe image and the public demo on top of it
+just site               docs site on :3001
 just new-experiment X   scaffold experiments/X/
-just lock               re-resolve uv.lock
 just api-types          regenerate the UI's API types after changing a server route or model
 ```
 
@@ -53,73 +42,39 @@ A change is not done until `just check` passes.
 ## Layout
 
 ```
-src/loupe/       the Python package (distribution name: loupelab)
-  core/          run metadata, paths, the direction header
-  models/        load a model into nnsight; adapter banks and phase schedules; masked diffusion
-                 models and their sampler; tiny offline models for tests
-  vectors/       directions as safetensors under <home>/vectors
-  interventions/ Steer, Ablate and Inject specs, compiled to per-layer edits; batched
-                 generation with a per-token hook
-  analysis/      activations, logit lens, exact and attribution patching, probes, attention,
-                 projections and top examples, SAE features, checkpoints and model diffs;
-                 results as UI views (heatmap, line, table, tokens)
-  inspect_ext/   the loupe/ Inspect model provider, shared scorers, the pushback and RAG tasks
-  data/          training sets from logged model calls or a teacher: export, collect, redact,
-                 verify, review, curate; hashed splits and n-gram contamination checks
-  retrieval/     chunking, BM25 and dense search fused by rank, reranking, retrieval metrics
-  train/         post-training recipes (sft incl. soft prompts and masked diffusion, dpo, grpo,
-                 classify) on TRL, PEFT and scikit-learn, logged to MLflow
-  sweep.py       an Inspect task under Steer at every layer and strength, as one figure
-  grid.py        tasks by conditions by seeds, against a baseline with paired intervals
-  tracking/      start an MLflow run the UI can read
-  stores/        read-only views over Inspect logs, MLflow, views/, vectors and experiments/;
-                 paired comparison of two eval runs
-  server/        FastAPI over the stores, plus the Playground and launching jobs from the UI
-  cli.py         the loupe command
-apps/web/        the UI: Next.js static export, shadcn/ui. Its own AGENTS.md holds the design rules
-apps/site/       landing page and docs: Next.js + Fumadocs, deployed on Vercel
-experiments/     one folder per research question; nothing imports it
-deploy/          Docker setups: app/, the read-only public demo
-tests/           Python tests, CPU only
-docs/            ARCHITECTURE.md, ROADMAP.md, decisions/, brand/ (mark and wordmark SVGs)
+src/loupe/        the package (distribution loupelab); layers in docs/ARCHITECTURE.md
+  core/           run metadata, paths
+  models/         load a model, adapter banks, masked diffusion, tiny test models
+  vectors/        directions as safetensors
+  interventions/  steer, ablate, inject and heads specs; batched generation
+  analysis/       lens, patching, probes, attention, projections, SAE features, as views
+  inspect_ext/    the loupe/ and agent/ providers, scorers, tasks, regression cases
+  data/           training sets from logged calls or a teacher
+  retrieval/      search and its metrics
+  train/          sft, dpo, grpo, classify, reft, sweeps, replayed tool environments
+  stores/         read Inspect logs, MLflow, vectors, experiments/
+  server/         the API, the Playground, launching jobs
+  sweep.py grid.py features.py circuits.py cli.py
+apps/web/         the UI; its AGENTS.md holds the design rules
+apps/site/        the docs site
+experiments/      one folder per research question; nothing imports it
+deploy/app/       the read-only public demo
+tests/            Python tests, CPU only
 ```
-
-## The dependency rule
-
-A package imports only packages below it. `import-linter` enforces this in `just check`; the
-contract is in `pyproject.toml`. New layers are added there in the position ARCHITECTURE.md gives.
-
-```
-cli
-server
-train | sweep | grid
-stores | tracking | analysis | inspect_ext
-interventions
-vectors
-models | data | retrieval
-core
-```
-
-Everything runs locally with no API keys: models come from the Hugging Face Hub or a path, the
-stores are files under LOUPE_HOME, and no step calls a hosted model. Keep it that way; a model
-judge, if one is ever needed, is a local model through the loupe/ provider.
 
 nnsight traces the source of the block it runs: keep trace bodies in files, use explicit loops
-(not comprehensions) inside them, and touch modules in execution order.
-
-The UI talks to the server over HTTP only.
+(not comprehensions) inside them, and touch modules in execution order. The UI talks to the server
+over HTTP only.
 
 ## Branches and pull requests
 
 `main` takes no direct pushes. Work on a branch, open a pull request, squash merge. Conventional
-commit titles (`feat:`, `fix:`, `docs:`, `chore:`), because release-please builds the changelog and
-the version from them. The one required check is `CI`. Never force-push to `main`, move a tag or
-publish a release unless asked.
+commit titles (`feat:`, `fix:`, `docs:`, `chore:`); release-please builds the changelog from them.
+The one required check is `CI`. Never force-push to `main`, move a tag or publish a release unless
+asked.
 
 ## Agent tooling
 
 `.claude/skills/` holds the workflows (`check`, `new-experiment`, `roadmap`, `code-quality`, and
-vendored debugging, TDD, verification and security skills; see its README). `.claude/agents/` holds
-the reviewers: run `loupe-reviewer` before opening a pull request and `web-reviewer` after any
-change under `apps/web`. `.claude/settings.json` denies force-pushes, pushes to `main`, tags and
-reading `.env`.
+vendored debugging, TDD, verification and security skills). Run the `loupe-reviewer` agent before
+opening a pull request and `web-reviewer` after any change under `apps/web`.

@@ -18,7 +18,7 @@ export function RunsList({ limit, compact = false }: { limit?: number; compact?:
             icon={ListTree}
             title="No runs yet"
             body="Evals, analyses and training runs appear as they are written."
-            command="python experiments/demo-pressure-mock/run.py"
+            command="uv run --all-extras python experiments/refusal-direction/run.py --tiny"
           />
         ) : (
           <RunsTable runs={limit ? all.slice(0, limit) : all} compact={compact} />

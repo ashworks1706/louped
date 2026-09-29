@@ -20,9 +20,7 @@ import {
 } from "@/components/ui/table";
 import type { RunSummary } from "@/lib/api";
 import { ago, headline, metricLabel } from "@/lib/format";
-
-export const runHref = (id: string, tab?: string) =>
-  `/run/?id=${encodeURIComponent(id)}${tab ? `&tab=${tab}` : ""}`;
+import { compareHref, runHref } from "@/lib/href";
 
 type SortKey = "name" | "metric" | "created";
 type Sort = { key: SortKey; desc: boolean };
@@ -99,11 +97,7 @@ export function RunsTable({ runs, compact = false }: { runs: RunSummary[]; compa
             size="sm"
             variant={picked.length === 2 ? "default" : "outline"}
             disabled={picked.length !== 2}
-            onClick={() =>
-              router.push(
-                `/compare/?a=${encodeURIComponent(picked[0])}&b=${encodeURIComponent(picked[1])}`,
-              )
-            }
+            onClick={() => router.push(compareHref(picked[0], picked[1]))}
           >
             <GitCompareArrows />
             Compare
@@ -197,7 +191,10 @@ export function RunsTable({ runs, compact = false }: { runs: RunSummary[]; compa
           })}
           {rows.length === 0 && (
             <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={7} className="text-muted-foreground py-8 text-center">
+              <TableCell
+                colSpan={compact ? 4 : 7}
+                className="text-muted-foreground py-8 text-center"
+              >
                 No runs match “{filter}”.
               </TableCell>
             </TableRow>

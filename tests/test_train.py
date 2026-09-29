@@ -411,3 +411,43 @@ def test_reft_trains_through_its_worker_and_logs_loss_and_replies(
     monkeypatch.setattr(reft, "command", lambda job: [sys.executable, "-c", "raise SystemExit(3)"])
     with pytest.raises(TrainError, match="exit code 3"):
         reft.train(cfg)
+
+
+def test_a_replay_environment_serves_recorded_tool_outputs_offline(tmp_path: Path) -> None:
+    from transformers.utils.chat_template_utils import get_json_schema
+
+    from loupe.train.replay import NO_RECORDING, recordings, replay_environment
+
+    spec = {
+        "tools": [{"name": "search", "description": "Search the web.",
+                   "parameters": {"properties": {"query": {"type": "string",
+                                                           "description": "What to look for."},
+                                                 "limit": {"type": "integer",
+                                                           "description": "How many."}},
+                                  "required": ["query"]}}],
+        "calls": [{"tool": "search", "arguments": {"query": "library hours"},
+                   "output": "Opens at 10 on Sunday."}],
+    }  # fmt: skip
+    path = tmp_path / "recordings.json"
+    path.write_text(json.dumps(spec))
+    Replay = replay_environment(path)
+    env = Replay()
+    env.reset(expect_tool="search", expect_args="library")
+    assert env.search(query="library hours") == "Opens at 10 on Sunday."
+    assert env.search(query="gym") == NO_RECORDING
+    assert env.get_reward() == 1.0
+    env.reset(expect_tool="search", expect_args="library")
+    env.search(query="gym")
+    assert env.get_reward() == 0.0
+    schema = get_json_schema(env.search)["function"]
+    assert schema["name"] == "search" and schema["parameters"]["required"] == ["query"]
+    assert schema["parameters"]["properties"]["limit"]["type"] == "integer"
+
+    logged = Example(id="a", reply="Opens at 10.", messages=[
+        {"role": "user", "content": "when does the library open"},
+        {"role": "assistant", "content": "", "tool_calls": [
+            {"id": "c1", "type": "function",
+             "function": {"name": "search", "arguments": '{"query": "library hours"}'}}]},
+        {"role": "tool", "tool_call_id": "c1", "content": "Opens at 10 on Sunday."},
+    ])  # fmt: skip
+    assert recordings([logged]) == spec["calls"]

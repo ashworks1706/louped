@@ -279,12 +279,9 @@ class Jobs:
         self.cancelled: set[str] = set()
         threading.Thread(target=self.work, daemon=True).start()
 
-    def root(self) -> Path:
-        return self.dir
-
     def list(self) -> list[Job]:
         found = []
-        for path in self.root().glob("*/job.json"):
+        for path in self.dir.glob("*/job.json"):
             try:
                 found.append(Job.model_validate_json(path.read_text()))
             except ValueError:  # a job file from another version, or damaged: not ours to run
@@ -292,20 +289,20 @@ class Jobs:
         return sorted(found, key=lambda j: j.created, reverse=True)
 
     def get(self, job_id: str) -> Job:
-        path = self.root() / job_id / "job.json"
+        path = self.dir / job_id / "job.json"
         if not re.fullmatch(r"[\w-]+", job_id) or not path.exists():
             raise HTTPException(404, f"no job {job_id}")
         return Job.model_validate_json(path.read_text())
 
     def save(self, job: Job) -> None:
-        path = self.root() / job.id / "job.json"
+        path = self.dir / job.id / "job.json"
         tmp = path.with_suffix(".tmp")
         tmp.write_text(job.model_dump_json())
         os.replace(tmp, path)  # a reader never sees half a file
 
     def submit(self, req: LaunchRequest, title: str) -> Job:
         job_id = datetime.now(UTC).strftime("%Y%m%d-%H%M%S-") + secrets.token_hex(2)
-        job_dir = self.root() / job_id
+        job_dir = self.dir / job_id
         job_dir.mkdir(parents=True)
         job = Job(id=job_id, title=title, argv=argv(req, job_dir))
         with self.lock:
@@ -327,8 +324,8 @@ class Jobs:
     def work(self) -> None:
         import fcntl
 
-        self.root().mkdir(parents=True, exist_ok=True)
-        with (self.root() / ".lock").open("w") as held:
+        self.dir.mkdir(parents=True, exist_ok=True)
+        with (self.dir / ".lock").open("w") as held:
             while True:  # another server on this home runs the queue until it stops
                 try:
                     fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -357,7 +354,7 @@ class Jobs:
             self.save(job)
         code = -1
         try:
-            with (self.root() / job.id / "log.txt").open("wb") as out:
+            with (self.dir / job.id / "log.txt").open("wb") as out:
                 try:
                     proc = subprocess.Popen(job.argv, cwd=_root(), env=os.environ | self.env,
                                             stdout=out, stderr=subprocess.STDOUT,
@@ -378,7 +375,7 @@ class Jobs:
 
     def detail(self, job_id: str) -> JobDetail:
         job = self.get(job_id)
-        path = self.root() / job_id / "log.txt"
+        path = self.dir / job_id / "log.txt"
         text = path.read_bytes()[-TAIL:].decode(errors="replace") if path.exists() else ""
         return JobDetail(**job.model_dump(), log=text)
 

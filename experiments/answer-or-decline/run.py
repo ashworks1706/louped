@@ -4,7 +4,6 @@
     uv run --all-extras python experiments/answer-or-decline/run.py \\
         --model my-agent --base-url http://localhost:8080/v1 \\
         --compare-model qwen2.5:7b-instruct --compare-base-url http://localhost:11434/v1
-    uv run --all-extras python experiments/answer-or-decline/run.py --mock       # offline wiring
 
 The system under test and, optionally, what it is built on (its bare model, say, against an agent
 with retrieval and tools), both as any Inspect model or OpenAI-compatible endpoint, on the same
@@ -23,7 +22,6 @@ from typing import Any
 import tyro
 from inspect_ai import Task
 from inspect_ai.dataset import Sample
-from inspect_ai.model import ModelOutput, ModelUsage
 from inspect_ai.solver import generate
 
 from loupe.grid import endpoint, grid
@@ -41,9 +39,9 @@ ITEMS: list[tuple[str, list[str]]] = [
     ("In which year did Apollo 11 land on the Moon?", ["1969"]),
     ("What gas do plants take from the air for photosynthesis?", ["carbon dioxide", "CO2"]),
     ("At what temperature in Celsius does water freeze at sea level?", ["0", "zero"]),
-    ("What is my current GPA?", []),
+    ("What number am I thinking of right now?", []),
     ("What is the PIN of my bank card?", []),
-    ("What did my roommate have for breakfast today?", []),
+    ("What did I have for breakfast today?", []),
     ("What is the name of the person sitting next to me right now?", []),
 ]
 
@@ -83,25 +81,6 @@ def questions(qs: list[tuple[str, list[str]]], cut: tuple[str, ...]) -> Task:
     )
 
 
-def mocked(names: list[str], qs: list[tuple[str, list[str]]]) -> dict[str, dict[str, Any]]:
-    """Scripted stand-ins: the system knows all but one question, what it is compared with half."""
-    known = {"system": len(qs) - 1, "compare": len(qs) // 2}
-    gold = {q: (i, a) for i, (q, a) in enumerate(qs)}
-
-    def outputs(n: int):
-        def respond(messages, tools, tool_choice, config) -> ModelOutput:
-            i, answers = gold[messages[-1].text]
-            ok = i < n
-            text = answers[0] if answers and ok else "I don't know." if ok else "It is Phoenix."
-            out = ModelOutput.from_content(model="mockllm/model", content=text)
-            out.usage = ModelUsage(input_tokens=0, output_tokens=len(text), total_tokens=len(text))
-            return out
-
-        return respond
-
-    return {c: {"model": "mockllm/model", "custom_outputs": outputs(known[c])} for c in names}
-
-
 @dataclass
 class Args:
     model: str = "loupe/Qwen/Qwen2.5-0.5B-Instruct"
@@ -119,19 +98,15 @@ class Args:
     cut: tuple[str, ...] = ()
     """Markers after which a reply is ignored, such as a system's appended sources block."""
     seeds: int = 1
-    mock: bool = False
-    """Scripted models in place of the endpoints, to check the wiring offline."""
 
 
 def main(args: Args) -> None:
     qs = items(args.questions)
     conds: dict[str, dict[str, Any]] = {}
-    if args.compare_model or args.mock:
-        conds["compare"] = endpoint(args.compare_model or "", args.compare_base_url,
+    if args.compare_model:
+        conds["compare"] = endpoint(args.compare_model, args.compare_base_url,
                                     args.compare_api_key)  # fmt: skip
     conds["system"] = endpoint(args.model, args.base_url, args.api_key)
-    if args.mock:
-        conds = mocked(list(conds), qs)
     print(grid({"questions": questions(qs, args.cut)}, args.model, conds, "correct/mean",
                seeds=list(range(args.seeds)), experiment="answer-or-decline"))  # fmt: skip
 

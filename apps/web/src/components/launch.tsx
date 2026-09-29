@@ -27,6 +27,7 @@ import {
   type Launchable,
 } from "@/lib/api";
 import { ago } from "@/lib/format";
+import { runHref } from "@/lib/href";
 import { cn } from "@/lib/utils";
 
 const RECIPES = ["sft", "dpo", "grpo", "classify", "reft"];
@@ -38,7 +39,7 @@ export function Launch() {
       <EmptyState
         icon={Rocket}
         title="Launching is off on this server"
-        body="It was started with --expose, so it only reads. Run one on your own machine to launch from here."
+        body="It was started with --expose, so it only reads. Start one without --expose to launch from here."
         command="just serve"
       />
     );
@@ -253,7 +254,10 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
         <CopyButton text={command} />
       </div>
       <div className="flex items-center gap-3">
-        <Button onClick={submit} disabled={go.isPending || missing.length > 0}>
+        <Button
+          onClick={submit}
+          disabled={!options.isSuccess || go.isPending || missing.length > 0}
+        >
           <Rocket /> Launch
         </Button>
         {missing.length > 0 && (
@@ -470,11 +474,7 @@ function RunLinks({ log }: { log: string }) {
     <div className="flex flex-wrap items-center gap-2 text-xs">
       <span className="text-muted-foreground">Wrote</span>
       {ids.map((id) => (
-        <Link
-          key={id}
-          href={`/run/?id=${encodeURIComponent(id)}`}
-          className="font-mono underline underline-offset-4"
-        >
+        <Link key={id} href={runHref(id)} className="font-mono underline underline-offset-4">
           {id}
         </Link>
       ))}

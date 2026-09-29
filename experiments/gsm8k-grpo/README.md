@@ -40,6 +40,6 @@ raise `train.gradient_accumulation` (prompts per step) before anything else.
 
 ## Result
 
-Not yet run: this environment cannot reach huggingface.co. The recipe itself is covered by the
-CPU test in `tests/test_train.py` (GRPO on the tiny model with a check loaded from a file); this
-config, reward, merge and eval were run end to end on the tiny model with GSM8K rows, 2 steps.
+Not run to completion. A 12-step run on Qwen2.5-0.5B-Instruct (2026-09-27, an RTX 4050, about
+10 s a step) trained and logged its rollouts; the 500 steps the question needs take about 90
+minutes there.

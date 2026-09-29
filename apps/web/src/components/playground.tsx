@@ -50,13 +50,14 @@ export function Playground() {
           <EmptyState
             icon={MessageSquareText}
             title="No model loaded"
-            command="loupe serve --model Qwen/Qwen2.5-0.5B-Instruct"
+            command="just serve --model Qwen/Qwen2.5-0.5B-Instruct"
           />
         ) : (
           <Loaded
             info={i}
             vectors={(vectors.data ?? []).filter((v) => v.model === i.model)}
             loading={vectors.isPending}
+            error={vectors.error?.message}
           />
         )
       }
@@ -68,10 +69,12 @@ function Loaded({
   info,
   vectors,
   loading,
+  error,
 }: {
   info: PlaygroundInfo;
   vectors: Direction[];
   loading: boolean;
+  error?: string;
 }) {
   const [s, set] = useQueryStates({
     prompt: parseAsString.withDefault(""),
@@ -213,9 +216,7 @@ function Loaded({
                   onClick={() => void set({ mode: m as Mode })}
                   className={cn(
                     "h-7 rounded-[5px] text-sm capitalize transition-colors",
-                    s.mode === m
-                      ? "bg-background shadow-xs"
-                      : "text-muted-foreground hover:text-foreground",
+                    s.mode === m ? "bg-background" : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   {m}
@@ -228,7 +229,9 @@ function Loaded({
           <Field label="Vector">
             {vectors.length === 0 ? (
               <p className="text-muted-foreground text-xs">
-                {loading ? "Loading…" : `No vectors saved for this model. Compute one first.`}
+                {loading
+                  ? "Loading…"
+                  : (error ?? "No vectors saved for this model. Compute one with an experiment.")}
               </p>
             ) : (
               <select
@@ -367,7 +370,10 @@ function Loaded({
               <Button
                 type="submit"
                 size="sm"
-                disabled={!draft.trim() || (s.tab === "inspect" && looked.isPending)}
+                disabled={
+                  !draft.trim() ||
+                  (s.tab === "inspect" && (looked.isPending || lookedEdited.isPending))
+                }
               >
                 Run <Kbd>⌘</Kbd>
                 <CornerDownLeft className="size-3.5" />

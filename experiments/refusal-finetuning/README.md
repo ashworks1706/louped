@@ -29,7 +29,10 @@ Runs; the dynamics run shows both measures against step and the model diff by la
 
 ## Result
 
-Not yet run on a real model: this environment cannot reach huggingface.co.
+Qwen2.5-0.5B-Instruct (2026-09-27, 128 pairs, a checkpoint every few steps): harmful refusal goes
+from 0.73 to 0.00 by the first checkpoint and stays there, and the projection on the direction
+falls from 5.0 to about 1.0, so fine-tuning to comply writes the direction down rather than
+routing around it.
 
 `--tiny` (seed 0, the planted-refusal toy, 12 pairs, 20 steps, a checkpoint every 5): the harmful
 refusal rate goes 1.0, 0.0, 0.0, 0.0, 0.0 and the projection 7.06, 0.01, -0.88, -1.20, -1.27, so in

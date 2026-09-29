@@ -32,8 +32,9 @@ class Args:
     model: str = "Qwen/Qwen2.5-0.5B-Instruct"
     revision: str | None = None
     """The model's Hub commit; pin it so the comparison with the reported number reruns."""
-    intervention: str | None = '{"kind": "ablate", "vector": "refusal.qwen2.5-0.5b-instruct"}'
-    """An intervention spec as JSON for the second run; None runs the base only."""
+    intervention: str | None = "auto"
+    """An intervention spec as JSON for the second run; auto ablates the direction
+    experiments/refusal-direction saved for --model; None runs the base only."""
     fewshot: int = 10
     """inspect_evals' default; its examples also show the ANSWER: line the scorer reads."""
     limit: int | None = None
@@ -44,7 +45,10 @@ class Args:
 def main(args: Args) -> None:
     pin = {"revision": args.revision} if args.revision else {}
     conditions: dict[str, dict[str, Any]] = {"base": pin}
-    if args.intervention:
+    if args.intervention == "auto":
+        vector = "refusal." + args.model.split("/")[-1].lower()
+        conditions["intervened"] = {**pin, "interventions": {"kind": "ablate", "vector": vector}}
+    elif args.intervention:
         conditions["intervened"] = {**pin, "interventions": json.loads(args.intervention)}
     task = gsm8k(fewshot=args.fewshot)
     dataset = task.dataset[: args.limit] if args.limit else task.dataset
@@ -53,6 +57,8 @@ def main(args: Args) -> None:
     run = grid({"gsm8k": task}, args.model, conditions, "match/accuracy",
                experiment="inspect-evals-baseline")  # fmt: skip
     reported = REPORTED.get(args.model)
+    if reported is None:
+        print(f"no reported GSM8K number for {args.model}: nothing to compare the base with")
     cells = stores.list_views(run)[-1].view.model_dump()["rows"]
     for condition, _, _, _, _, eval_run in cells:
         metrics = stores.get_run(eval_run).metrics

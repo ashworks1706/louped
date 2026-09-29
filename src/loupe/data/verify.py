@@ -10,8 +10,6 @@ def reject_reason(example: Example) -> str | None:
     if not example.messages:
         return "no messages"
     roles = [m.get("role") for m in example.messages]
-    if roles[0] != "system":
-        return "first message is not system"
     if "user" not in roles:
         return "no user turn"
     if not example.reply.strip() and not example.tool_calls:

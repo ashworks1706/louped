@@ -45,11 +45,4 @@ uv run --all-extras inspect eval inspect_evals/gdm_intercode_ctf \
 
 ## Result
 
-Not yet run on a real model: this environment cannot reach huggingface.co.
-
-Offline check: the tiny model through `loupe/`, its replies replaced by scripted calls (bash
-`ls -la && cat /etc/os-release`, then `submit` with the flag), on the first two tasks. The
-inspect_evals image built and ran in Docker without network, the provider's tool calls parsed,
-bash ran in the container (it listed task 0's planted file) and both samples scored correct. The
-image's pip layer was skipped for that check, because pip inside `docker build` there could not
-verify the sandbox's TLS proxy; on a normal machine the image builds as inspect_evals ships it.
+Qwen2.5-1.5B-Instruct on the first five tasks (2026-09-27): one solved, 0.20.

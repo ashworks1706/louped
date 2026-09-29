@@ -26,12 +26,17 @@ loupe grid grid.yaml
 The run shows the metric by condition and task, the difference from the baseline with a 95% paired
 bootstrap interval, the held score's difference, and a verdict per cell:
 
-- **moved**: the metric's interval excludes zero.
-- **held** or **broke**: whether the held score's interval stays at or above zero.
+- `moved` or `same`: whether the metric's interval excludes zero.
+- `held` or `broke`: whether the held score's interval stays at or above zero.
 
 Seeds of one sample are averaged before resampling, so seeds never count as extra samples. The
 `loupe/` provider decodes greedily, so seeds only matter for models that sample.
 
 A condition can be another Inspect model, including any OpenAI-compatible endpoint (vLLM,
-llama.cpp, Ollama, your own application's API): `endpoint("qwen2.5:7b-instruct",
-"http://localhost:11434/v1")` from `loupe.grid` builds one, and keeps its key out of the logs.
+llama.cpp, Ollama): `endpoint("qwen2.5:7b-instruct", "http://localhost:11434/v1")` from
+`loupe.grid` builds one and keeps its key out of the logs.
+
+An agent that runs its own tools is a condition too: `endpoint("my-agent", url, agent=True)` calls
+it through the `agent/` provider, which reads the tool calls and sources the agent reports in a
+`trace` field beside `choices` in its reply. A condition's `roles` sets other model roles, such as
+the simulated user of τ-bench: `{"roles": {"user": "loupe/Qwen/Qwen2.5-1.5B-Instruct"}}`.

@@ -36,6 +36,7 @@ import {
 } from "@/lib/api";
 import { num } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { TOOLTIP_STYLE } from "@/lib/chart";
 
 /** Every figure a run logged under views/, in file order. */
 export function RunViews({ id, live = false }: { id: string; live?: boolean }) {
@@ -99,12 +100,7 @@ function LineFigure({ view }: { view: LineView }) {
             label={{ value: view.y_label, angle: -90, position: "insideLeft", ...axis }}
           />
           <Tooltip
-            contentStyle={{
-              background: "var(--popover)",
-              border: "1px solid var(--border)",
-              borderRadius: 8,
-              fontSize: 12,
-            }}
+            contentStyle={TOOLTIP_STYLE}
             formatter={(v) => (typeof v === "number" ? v.toFixed(3) : String(v))}
             labelFormatter={(x) => `${view.x_label} ${x}`}
           />

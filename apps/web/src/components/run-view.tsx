@@ -1,12 +1,13 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ListTree } from "lucide-react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { useEffect, useRef, useState } from "react";
 
+import { EmptyState } from "@/components/empty-state";
 import { HistoryCharts } from "@/components/history-chart";
 import { MetricValue } from "@/components/metric";
 import { QueryState } from "@/components/query-state";
@@ -21,7 +22,16 @@ import { ago, headline, metricLabel } from "@/lib/format";
 export function RunView() {
   const [id] = useQueryState("id", parseAsString);
   if (!id) {
-    return <p className="text-muted-foreground p-6 text-sm">No run selected.</p>;
+    return (
+      <section className="mx-auto max-w-6xl px-6 py-8">
+        <EmptyState
+          icon={ListTree}
+          title="No run selected"
+          body="Open one from Runs, or write one."
+          command="uv run --all-extras python experiments/refusal-direction/run.py --tiny"
+        />
+      </section>
+    );
   }
   return <RunLoaded id={id} />;
 }

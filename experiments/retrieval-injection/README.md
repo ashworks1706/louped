@@ -24,9 +24,8 @@ the same weights locally through `--checkpoint`. Also from the app: Launch, then
 ```sh
 uv run --all-extras python experiments/retrieval-injection/run.py --inject-layer 12
 uv run --all-extras python experiments/retrieval-injection/run.py \
-    --model Qwen2.5-0.5B-Instruct --base-url http://127.0.0.1:6333/v1 \
+    --model qwen2.5:0.5b-instruct --base-url http://localhost:11434/v1 \
     --inject-layer 12 --checkpoint Qwen/Qwen2.5-0.5B-Instruct
-uv run --all-extras python experiments/retrieval-injection/run.py --mock --inject-layer 6
 ```
 
 ## Result
@@ -34,5 +33,4 @@ uv run --all-extras python experiments/retrieval-injection/run.py --mock --injec
 Qwen2.5-0.5B-Instruct, `--inject-layer 12` (2026-09-27): closed book F1 0.01, RAG in the prompt
 0.46, injected at layer 12 0.00 with recall 1.00. The passages reach the prompt and help; injected
 state at one mid layer carries none of it on this model, so the next question is which layer, if
-any, does. `--mock --inject-layer 6` completes the grid (closed 0.00, rag and
-inject 1.00, moved); BM25 puts the gold passage first for all 8 questions.
+any, does.

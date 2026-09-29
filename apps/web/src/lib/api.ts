@@ -12,7 +12,7 @@ export type RunDetail = Schemas["RunDetail"];
 export type SampleSummary = Schemas["SampleSummary"];
 export type SampleDetail = Schemas["SampleDetail"];
 type Experiment = Schemas["Experiment"];
-export type RunView = Schemas["RunView"];
+type RunView = Schemas["RunView"];
 export type HeatmapView = Schemas["HeatmapView"];
 export type LineView = Schemas["LineView"];
 export type TableView = Schemas["TableView"];
@@ -43,8 +43,17 @@ export class ApiError extends Error {
 
 async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
   const res = await fetch(`${API}/api${path}`, { signal });
-  if (!res.ok) throw new ApiError(res.status, `${res.status} ${path}`);
+  if (!res.ok) throw new ApiError(res.status, await detail(res, path));
   return res.json() as Promise<T>;
+}
+
+/** The server's own error message, else the status and path. */
+async function detail(res: Response, path: string): Promise<string> {
+  const body = await res
+    .json()
+    .then((b: { detail?: unknown }) => b.detail)
+    .catch(() => null);
+  return typeof body === "string" ? body : `${res.status} ${path}`;
 }
 
 async function send(path: string, body: unknown, signal?: AbortSignal): Promise<Response> {
@@ -54,13 +63,7 @@ async function send(path: string, body: unknown, signal?: AbortSignal): Promise<
     body: JSON.stringify(body),
     signal,
   });
-  if (!res.ok) {
-    const detail = await res
-      .json()
-      .then((b: { detail?: unknown }) => b.detail)
-      .catch(() => null);
-    throw new ApiError(res.status, typeof detail === "string" ? detail : `${res.status} ${path}`);
-  }
+  if (!res.ok) throw new ApiError(res.status, await detail(res, path));
   return res;
 }
 

@@ -6,21 +6,23 @@ description: One package, one extra per capability.
 The package is `loupelab`; the import and the command are `loupe`. Python 3.12 or newer.
 
 ```sh
-pip install 'loupelab[server]'          # the app over your runs
-pip install 'loupelab[server,interp]'   # plus steering, ablation, analyses and the Playground
-pip install 'loupelab[train]'           # plus loupe data and loupe train
-pip install 'loupelab[rag]'             # plus retrieval and the classifier recipe
+pip install 'loupelab[server,interp]'
 ```
 
-| Extra    | Brings                                                            |
-| -------- | ----------------------------------------------------------------- |
-| `server` | `loupe serve`: the API and the app                                |
-| `evals`  | Inspect and inspect_evals                                         |
-| `interp` | nnsight, transformers, torch, scikit-learn                        |
-| `train`  | TRL, PEFT, datasets; unsloth is used when installed on a CUDA GPU |
-| `rl`     | reasoning-gym and math-verify for GRPO tasks                      |
-| `rag`    | bm25s and sentence-transformers                                   |
-| `sae`    | SAELens, heavy, only for pretrained sparse autoencoders           |
+| Extra      | Brings                                                                   |
+| ---------- | ------------------------------------------------------------------------ |
+| `server`   | `loupe serve`: the API and the app, with Inspect and MLflow to read runs |
+| `interp`   | nnsight, transformers, torch, scikit-learn: interventions and analyses   |
+| `evals`    | Inspect and inspect_evals                                                |
+| `train`    | TRL, PEFT, datasets, bitsandbytes; unsloth when installed on a CUDA GPU  |
+| `rl`       | reasoning-gym and math-verify for GRPO tasks                             |
+| `rag`      | bm25s and sentence-transformers                                          |
+| `sae`      | SAELens, for sparse autoencoders                                         |
+| `data`     | the Phoenix source and the review terminal of `loupe data`               |
+| `tracking` | MLflow on SQLite                                                         |
+
+`loupe circuit` and `loupe train reft` run circuit-tracer and pyreft in environments of their own,
+which [uv](https://docs.astral.sh/uv) builds on first use; they need `uv` on the PATH.
 
 ## From source
 

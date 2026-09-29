@@ -81,8 +81,16 @@ def grid(
 
 
 def _target(model: str, args: dict[str, Any]) -> Model:
-    args = dict(args)
+    args = {k: v for k, v in args.items() if k != "roles"}
     return get_model(args.pop("model", f"loupe/{model}"), **args)
+
+
+def _roles(args: dict[str, Any]) -> dict[str, Model] | None:
+    """A condition's other model roles, such as the user a benchmark simulates: role to an
+    Inspect model name, or to that model's args as a condition gives them."""
+    roles = args.get("roles") or {}
+    return {role: _target("", spec if isinstance(spec, dict) else {"model": spec})
+            for role, spec in roles.items()} or None  # fmt: skip
 
 
 def _cell(
@@ -100,7 +108,8 @@ def _cell(
     runs: list[str] = []
     more: dict[str, Scores] = {name: {} for name in extra}
     for seed in seeds:
-        [log] = eval(task, model=target, log_dir=str(logs_dir()), tags=tags, seed=seed,
+        [log] = eval(task, model=target, model_roles=_roles(args), log_dir=str(logs_dir()),
+                     tags=tags, seed=seed,
                      metadata={"condition": _plain(args)}, display="none")  # fmt: skip
         if log.status != "success":
             reason = log.error.message if log.error else log.status
@@ -138,7 +147,8 @@ def paired(a: Scores, b: Scores) -> tuple[float, float, float]:
             per.setdefault(k[:2], []).append(b[k] - a[k])
     diffs = [sum(d) / len(d) for d in per.values()]
     if not diffs:
-        return 0.0, 0.0, 0.0
+        raise ValueError("no sample was scored under both conditions; a variant task must keep "
+                         "the baseline's sample ids to be paired with it")  # fmt: skip
     low, high = interval(diffs)
     return sum(diffs) / len(diffs), low, high
 
@@ -200,18 +210,22 @@ def _extra(
                    note=f"mean (difference against {base})")  # fmt: skip
 
 
-def endpoint(model: str, base_url: str | None = None, api_key: str | None = None) -> dict[str, Any]:
+def endpoint(
+    model: str, base_url: str | None = None, api_key: str | None = None, agent: bool = False
+) -> dict[str, Any]:
     """A condition that runs model: any Inspect model (loupe/<hub id> runs locally), or with
     base_url, a model an OpenAI-compatible server serves under that id, e.g.
-    endpoint("qwen2.5:7b-instruct", "http://localhost:11434/v1") for Ollama."""
+    endpoint("qwen2.5:7b-instruct", "http://localhost:11434/v1") for Ollama. With agent, the
+    server is an agent that runs its own tools and reports them (loupe.inspect_ext.agent)."""
     if base_url is None:
         return {"model": model}
-    name = model if model.startswith("openai-api/") else f"openai-api/endpoint/{model}"
+    prefix = "agent/" if agent else "openai-api/endpoint/"
+    name = model if model.startswith(("openai-api/", "agent/")) else prefix + model
     return {"model": name, "base_url": base_url, "api_key": api_key or "local"}
 
 
 def _plain(value: Any) -> Any:
-    """JSON data, with anything else (a scripted model's function) as its repr, and no api_key."""
+    """JSON data, with any other value (a function) as its repr, and no api_key."""
     if isinstance(value, dict):
         return {k: _plain(v) for k, v in value.items() if k != "api_key"}
     return json.loads(json.dumps(value, default=repr))

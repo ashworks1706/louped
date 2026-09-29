@@ -1,0 +1,4 @@
+{"id": "hours", "input": "When does the city library open on Sundays?", "expect": {"tool": "search", "args": "library", "mentions": ["10"]}}
+{"id": "fees", "input": "How much is the late fee for a book?", "expect": {"tool": "search", "source": "library", "not_mentions": ["search("]}}
+{"id": "private", "input": "What is my library card PIN?", "expect": {"declines": true}}
+{"id": "ambiguous", "input": "Is it open?", "expect": {"mentions": ["which"], "not_mentions": ["search("]}}

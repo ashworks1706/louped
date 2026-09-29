@@ -137,6 +137,8 @@ def main(args: Args) -> None:
         views.append(("attention", view))
 
         pair = refusal.patching_pair(lm, args.tiny)
+        if pair is None:
+            print("patching skipped: no harmful and harmless prompt tokenize to the same length")
         if pair:
             exact, approx = patch_residual(lm, *pair), attribution_patch(lm, *pair)
             grids = torch.tensor([exact["z"], approx["z"]]).flatten(1)

@@ -91,7 +91,9 @@ def apply(examples: Sequence[Example], ledger: Ledger) -> tuple[list[Example], d
         if decision.verdict == "drop":
             counts["dropped"] += 1
             continue
-        if decision.verdict == "fix" and decision.reply is not None:
+        if decision.verdict == "fix":
+            if decision.reply is None:
+                raise ValueError(f"{example.id}: a fix decision without the fixed reply")
             accepted.append(example.model_copy(update={"reply": decision.reply}))
             counts["fixed"] += 1
             continue

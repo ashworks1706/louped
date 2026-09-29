@@ -53,15 +53,13 @@ examples:
     run experiments/refusal-direction/eval.py --tiny
     run experiments/sycophancy-pushback/run.py --tiny
     run experiments/refusal-finetuning/run.py --tiny --steps 20 --save-every 5
-    run experiments/demo-pressure-mock/run.py
     uv run --all-extras python - <<'EOF'
     from collections import Counter
     from loupe import stores
     seen = Counter((r.experiment, r.kind) for r in stores.list_runs())
     want = {("refusal-direction", "analysis"): 1, ("refusal-direction", "eval"): 2,
             ("sycophancy-pushback", "analysis"): 2, ("sycophancy-pushback", "eval"): 9,
-            ("refusal-finetuning", "training"): 1, ("refusal-finetuning", "analysis"): 1,
-            ("demo-pressure-mock", "eval"): 8, ("demo-pressure-mock", "analysis"): 1}
+            ("refusal-finetuning", "training"): 1, ("refusal-finetuning", "analysis"): 1}
     short = {k: (seen[k], n) for k, n in want.items() if seen[k] < n}
     vectors = {v.name for v in stores.list_vectors()}
     missing = {"refusal.tiny-planted-refusal", "caving.tiny-planted-caving"} - vectors
