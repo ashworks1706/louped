@@ -132,8 +132,9 @@ def denoise(
     """
     block, steps = schedule(length, block, steps)
     n_blocks, batch, p = length // block, prompt.shape[0], prompt.shape[1]
-    x = torch.full((batch, p + length), d.mask_id, dtype=torch.long, device=prompt.device)
-    x[:, :p] = prompt
+    device = next(d.model.parameters()).device
+    x = torch.full((batch, p + length), d.mask_id, dtype=torch.long, device=device)
+    x[:, :p] = prompt.to(device)
     step = 0
     for b in range(n_blocks):
         s0, s1 = p + b * block, p + (b + 1) * block

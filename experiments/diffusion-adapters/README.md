@@ -1,7 +1,7 @@
 # diffusion-adapters
 
-Domains 3 (adapters) and 4 (decoding and model families), for zipy's skill bank on a masked
-diffusion model.
+Domains 3 (adapters) and 4 (decoding and model families): a bank of skills on a masked diffusion
+model.
 
 ## Question
 

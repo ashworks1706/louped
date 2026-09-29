@@ -3,16 +3,18 @@ title: CLI
 description: The loupe command.
 ---
 
-| Command                                 | Does                                                                                                                         |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `loupe serve`                           | The API and the app on 127.0.0.1:8000; `--model` enables the Playground, `--host` with `--expose` serves beyond this machine |
-| `loupe grid <yaml>`                     | A grid of conditions by tasks by seeds                                                                                       |
-| `loupe sweep`                           | One task under Steer at every layer and strength, with the coherence cost                                                    |
-| `loupe train <recipe> <yaml>`           | `sft`, `dpo`, `grpo` or `classify`; `--dry-run` prints the plan                                                              |
-| `loupe data export`                     | A product's traces to examples, redacted                                                                                     |
-| `loupe data collect`                    | A teacher model's replies to prompts, as examples                                                                            |
-| `loupe data verify`, `review`, `curate` | Drop malformed and duplicate examples, judge them, build the training set                                                    |
-| `loupe data overlap`                    | Evaluation items sharing a 13-gram with the training set                                                                     |
-| `loupe version`                         | The installed version                                                                                                        |
+| Command                                 | Does                                                                                                                                                                              |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `loupe serve`                           | The API and the app on 127.0.0.1:8000; `--model` preloads the Playground (or load one from the app), `--host` with `--expose` serves beyond this machine, read-only: no launching |
+| `loupe grid <yaml>`                     | A grid of conditions by tasks by seeds                                                                                                                                            |
+| `loupe sweep`                           | One task under Steer at every layer and strength, with the coherence cost                                                                                                         |
+| `loupe train <recipe> <yaml>`           | `sft`, `dpo`, `grpo`, `classify` or `reft` (pyreft, in its own environment); `--sweep key=a,b` trains every combination and compares them; `--dry-run` prints the plan            |
+| `loupe features`                        | Feature dashboards for an SAE over a dataset: density, histogram, top examples, logit effects                                                                                     |
+| `loupe circuit`                         | An attribution graph with circuit-tracer, in its own environment, on the Circuits page                                                                                            |
+| `loupe data export`                     | Logged model calls to examples, redacted                                                                                                                                          |
+| `loupe data collect`                    | A teacher model's replies to prompts, as examples                                                                                                                                 |
+| `loupe data verify`, `review`, `curate` | Drop malformed and duplicate examples, judge them, build the training set                                                                                                         |
+| `loupe data overlap`                    | Evaluation items sharing a 13-gram with the training set                                                                                                                          |
+| `loupe version`                         | The installed version                                                                                                                                                             |
 
-Every command takes `--help`. State lives under `LOUPE_HOME` (default `./.loupe`).
+Every command takes `--help`, and each one is also a form on the app's Launch page. State lives under `LOUPE_HOME` (default `./.loupe`).

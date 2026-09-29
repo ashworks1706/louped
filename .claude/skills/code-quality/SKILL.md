@@ -35,5 +35,5 @@ print what was chosen.
 
 ## Finish
 
-`just check` and `just test-e2e` must pass. Report what you removed and the line count before and
-after (`AGENTS.md` caps Python near 3k lines and our TSX near 6k).
+`just check` and `just test-e2e` must pass. Report what you removed and
+why.

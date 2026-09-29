@@ -20,6 +20,8 @@ class RunSummary(BaseModel):
     model: str | None
     metrics: dict[str, float]
     samples: int | None
+    #: The samples an eval will have when it ends; while it runs, samples counts those done.
+    total: int | None = None
 
 
 class MetricPoint(BaseModel):
@@ -141,6 +143,30 @@ class TokensView(BaseModel):
 
 
 View = Annotated[HeatmapView | LineView | TableView | TokensView, Field(discriminator="kind")]
+
+
+class Histogram(BaseModel):
+    edges: list[float]
+    counts: list[int]
+
+
+class FeatureDashboard(BaseModel):
+    """One SAE feature over a dataset, as `loupe features` logs it under features/."""
+
+    feature: int
+    hook: str
+    layer: int
+    density: float
+    max: float
+    histogram: Histogram
+    #: [token, logit effect]: the unembedding rows most aligned with the decoder direction.
+    promoted: list[tuple[str, float]]
+    suppressed: list[tuple[str, float]]
+    examples: TokensView
+    neuronpedia: str | None = None
+    model: str | None = None
+    sae: str | None = None
+    sae_id: str | None = None
 
 
 class RunView(BaseModel):

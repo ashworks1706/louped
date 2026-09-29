@@ -36,6 +36,15 @@ def _header(path: str, mtime: float) -> EvalLog:
     return read_eval_log(path, header_only=True)
 
 
+@lru_cache(maxsize=64)
+def _done(path: str, mtime: float) -> int:
+    """How many samples a running log has written so far."""
+    try:
+        return len(read_eval_log_sample_summaries(path))
+    except Exception:  # the log is mid-write; the next read will see it
+        return 0
+
+
 def _logs() -> list[tuple[Path, EvalLog]]:
     root = logs_dir()
     if not root.is_dir():
@@ -75,7 +84,11 @@ def _metrics(log: EvalLog) -> dict[str, float]:
     return out
 
 
-def _summary(log: EvalLog) -> RunSummary:
+def _summary(path: Path, log: EvalLog) -> RunSummary:
+    samples = log.results.total_samples if log.results else None
+    if log.status == "started":
+        samples = _done(str(path), path.stat().st_mtime)
+    planned = len(log.eval.dataset.sample_ids or []) or log.eval.dataset.samples
     return RunSummary(
         id=PREFIX + log.eval.eval_id,
         kind="eval",
@@ -85,12 +98,13 @@ def _summary(log: EvalLog) -> RunSummary:
         created=log.eval.created,  # type: ignore[arg-type]
         model=log.eval.model,
         metrics=_metrics(log),
-        samples=log.results.total_samples if log.results else None,
+        samples=samples,
+        total=planned * (log.eval.config.epochs or 1) if planned else None,
     )
 
 
 def list_runs() -> list[RunSummary]:
-    return [_summary(log) for _, log in _logs()]
+    return [_summary(path, log) for path, log in _logs()]
 
 
 def _find(run_id: str) -> tuple[Path, EvalLog] | None:
@@ -120,7 +134,7 @@ def get_run(run_id: str) -> RunDetail | None:
         for k, v in log.eval.model_generate_config.model_dump(exclude_none=True).items()
     }
     return RunDetail(
-        **_summary(log).model_dump(),
+        **_summary(path, log).model_dump(),
         params=params,
         tags={t: "" for t in log.eval.tags or []},
         history={},

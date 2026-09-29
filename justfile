@@ -121,33 +121,8 @@ api-types:
     uv run python -c "import json; from loupe.server import create_app; print(json.dumps(create_app().openapi(), indent=2))" > apps/web/src/lib/openapi.json
     cd {{web}} && pnpm exec openapi-typescript src/lib/openapi.json -o src/lib/api-types.ts && pnpm exec prettier --write src/lib/api-types.ts src/lib/openapi.json > /dev/null
 
-# an attribution graph with circuit-tracer, in its own environment (it pins transformers 4.57),
-# into <home>/graphs with its viewer, which loupe serves on the Circuits page; transcoders are a
-# Hub repo such as mwhanna/gemma-scope-transcoders for google/gemma-2-2b
+# an attribution graph with circuit-tracer, in its own environment (it pins its transformers), on
+# the Circuits page; transcoders are a Hub repo such as mwhanna/qwen3-0.6b-transcoders-lowl0 for
+# Qwen/Qwen3-0.6B. Also on the Launch page as loupe circuit
 circuit model transcoders prompt slug="graph":
-    #!/usr/bin/env bash
-    set -euo pipefail
-    graphs="$(uv run python -c 'from loupe.core import graphs_dir; print(graphs_dir())')"
-    ct=(uvx --from circuit-tracer==0.5.0)
-    "${ct[@]}" circuit-tracer attribute -m "{{model}}" -t "{{transcoders}}" -p "{{prompt}}" \
-        --slug "{{slug}}" --graph_file_dir "$graphs"
-    uv run python -c 'from loupe.core import capture; print(capture().model_dump_json(indent=2))' \
-        > "$graphs/{{slug}}.meta.json"
-    assets="$("${ct[@]}" python -c 'import circuit_tracer.frontend as f, pathlib; print(pathlib.Path(f.__file__).parent / "assets")')"
-    rm -rf "$graphs/viewer" && cp -r "$assets" "$graphs/viewer"
-    echo "open /circuits/?slug={{slug}} in loupe"
-
-# a local Neuronpedia in Docker (built on first run); loupe's SAE feature links then open it
-neuronpedia port="3100":
-    NEURONPEDIA_PORT={{port}} docker compose -f deploy/neuronpedia/compose.yaml up -d --build --wait
-    uv run python -c 'from loupe.core import home; p = home() / "neuronpedia"; p.parent.mkdir(parents=True, exist_ok=True); p.write_text("http://localhost:{{port}}")'
-    echo "http://localhost:{{port}}"
-
-# features for one SAE into the local Neuronpedia, e.g. gpt2-small 6-res-jb (ids as on neuronpedia.org)
-neuronpedia-import model source port="3100":
-    curl -fsSN "http://localhost:{{port}}/api/admin/import?modelId={{model}}&sourceId={{source}}"
-
-# stop the local Neuronpedia; its database stays in a Docker volume
-neuronpedia-down:
-    docker compose -f deploy/neuronpedia/compose.yaml down
-    uv run python -c 'from loupe.core import home; (home() / "neuronpedia").unlink(missing_ok=True)'
+    uv run loupe circuit --model "{{model}}" --transcoders "{{transcoders}}" --prompt "{{prompt}}" --slug "{{slug}}"

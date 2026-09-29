@@ -422,3 +422,64 @@ def test_generate_without_strip_returns_the_exact_continuation(lm) -> None:
     assert raw.strip() == generate(lm, prompt, max_new_tokens=3)[0]
     decoded = lm.tokenizer.decode(lm.tokenizer(prompt[0])["input_ids"], skip_special_tokens=True)
     assert raw == "" or raw[0].isspace() or decoded.endswith(" ")
+
+
+def test_an_endpoint_condition_takes_any_server_and_never_logs_its_key() -> None:
+    from loupe.grid import _plain, endpoint
+
+    assert endpoint("loupe/Qwen/Qwen2.5-0.5B-Instruct") == {
+        "model": "loupe/Qwen/Qwen2.5-0.5B-Instruct"
+    }
+    served = endpoint("qwen2.5:7b", "http://localhost:11434/v1", "secret")
+    assert served == {"model": "openai-api/endpoint/qwen2.5:7b",
+                      "base_url": "http://localhost:11434/v1", "api_key": "secret"}  # fmt: skip
+    assert endpoint("openai-api/vllm/x", "http://h/v1")["model"] == "openai-api/vllm/x"
+    assert "secret" not in str(_plain({"system": served}))
+
+
+def test_a_circuit_runs_circuit_tracer_through_uv_and_installs_its_viewer(
+    monkeypatch, tmp_path
+) -> None:
+    import subprocess
+
+    from loupe import circuits
+    from loupe.core import graphs_dir
+
+    assets = tmp_path / "frontend" / "assets"
+    assets.mkdir(parents=True)
+    (assets / "index.html").write_text("<html>")
+    tries: list[list[str]] = []
+
+    envs: list[dict[str, str]] = []
+
+    def attribute(cmd: list[str], env: dict[str, str]) -> tuple[int, str]:
+        tries.append(cmd)
+        envs.append(env)
+        if len(tries) < 6:  # out of GPU memory until the CPU step
+            return 1, "torch.OutOfMemoryError: CUDA out of memory"
+        (graphs_dir() / "dallas.json").write_text("{}")
+        return 0, ""
+
+    def run(cmd, **_):
+        return subprocess.CompletedProcess(cmd, 0, stdout=f"{assets.parent}\n", stderr="")
+
+    monkeypatch.setattr(circuits.shutil, "which", lambda name: "/usr/bin/uvx")
+    monkeypatch.setattr(circuits, "_attribute", attribute)
+    monkeypatch.setattr(circuits.subprocess, "run", run)
+    circuits.circuit(
+        "Qwen/Qwen3-0.6B", "mwhanna/qwen3-0.6b-transcoders-lowl0", "Dallas is", "dallas"
+    )
+    tool = ["/usr/bin/uvx", "--managed-python", "--from", f"circuit-tracer=={circuits.VERSION}"]
+    assert tries[0][:4] == tool and tries[0][4:6] == ["circuit-tracer", "attribute"]
+    sizes = [c[c.index("--batch_size") + 1] for c in tries]
+    assert sizes == ["64", "32", "16", "8", "8", "8"]
+    assert tries[-2][-3:] == ["--offload", "cpu", "--lazy-encoder"]  # offloaded
+    assert envs[-1]["CUDA_VISIBLE_DEVICES"] == "" and envs[0]["UV_PYTHON_DOWNLOADS"] == "automatic"
+    assert (graphs_dir() / "viewer" / "index.html").exists()
+    assert (graphs_dir() / "dallas.meta.json").exists()
+    monkeypatch.setattr(circuits, "_attribute", lambda cmd, env: (2, "some other failure"))
+    with pytest.raises(subprocess.CalledProcessError):
+        circuits.circuit("m", "t", "p")
+    monkeypatch.setattr(circuits.shutil, "which", lambda name: None)
+    with pytest.raises(RuntimeError, match="uv"):
+        circuits.circuit("m", "t", "p")

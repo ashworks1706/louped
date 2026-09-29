@@ -1,8 +1,9 @@
 """Conditions by tasks by seeds: every domain's comparison, as one figure.
 
 A condition is a set of loupe/ provider model args (interventions, adapters, phases, a diffusion
-sampler), optionally with another Inspect model: `{"model": "openai-api/zipy/qwen"}` for a product
-endpoint, `{"model": "loupe/other", ...}` for another local model on the same tasks.
+sampler), optionally with another Inspect model: `endpoint(...)` for any OpenAI-compatible server
+(vLLM, llama.cpp, Ollama, your own system's API), `{"model": "loupe/other", ...}` for another local
+model on the same tasks. An api_key in a condition reaches the model and never a log.
 Each cell is ordinary Inspect evals, one per seed, logged where Inspect logs, so every number opens
 its samples. Against the baseline condition each cell gets a paired bootstrap interval over the
 samples both scored, so "beats the baseline beyond seed and sample variance" is read off the grid.
@@ -199,8 +200,20 @@ def _extra(
                    note=f"mean (difference against {base})")  # fmt: skip
 
 
+def endpoint(model: str, base_url: str | None = None, api_key: str | None = None) -> dict[str, Any]:
+    """A condition that runs model: any Inspect model (loupe/<hub id> runs locally), or with
+    base_url, a model an OpenAI-compatible server serves under that id, e.g.
+    endpoint("qwen2.5:7b-instruct", "http://localhost:11434/v1") for Ollama."""
+    if base_url is None:
+        return {"model": model}
+    name = model if model.startswith("openai-api/") else f"openai-api/endpoint/{model}"
+    return {"model": name, "base_url": base_url, "api_key": api_key or "local"}
+
+
 def _plain(value: Any) -> Any:
-    """JSON data, with anything else (a scripted model's function) as its repr."""
+    """JSON data, with anything else (a scripted model's function) as its repr, and no api_key."""
+    if isinstance(value, dict):
+        return {k: _plain(v) for k, v in value.items() if k != "api_key"}
     return json.loads(json.dumps(value, default=repr))
 
 

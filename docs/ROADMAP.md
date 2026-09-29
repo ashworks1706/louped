@@ -1,9 +1,8 @@
 # Roadmap
 
-loupe builds the joins between interventions, evals, training and interp, and links to existing
-tools for the rest (ARCHITECTURE.md). Out of scope, because other free tools do it: a training
-dashboard, cluster and vLLM scale-out (Transformer Lab, LLaMA-Factory, Oumi), SAE and graph
-browsing (Neuronpedia, circuit-tracer), ReFT (pyreft).
+loupe joins interventions, evals, training and interp in one app, and runs the tools it builds on
+inside it (ARCHITECTURE.md lists how). Out of scope: cluster and vLLM scale-out; loupe stays on one
+machine.
 
 Each phase ends with an acceptance test, most of them reproducing a published result: if loupe
 cannot reproduce a number someone else got, its own numbers cannot be trusted. Every phase ships
@@ -24,6 +23,10 @@ with its UI view.
 - [x] OpenAPI types generated into the UI, checked in CI
 - [x] Runs, Run, Samples, Transcripts, Compare, Experiments pages
 - [x] Verified in a browser against real Inspect and MLflow runs (a scripted mock model)
+- [x] Live runs: status, samples done and figures refresh while an eval or MLflow run writes
+- [x] Launch page: every experiment script, training config, `loupe sweep` and `inspect eval` as
+      a form read from its own parser, run as a queued job with its log; the Playground loads and
+      unloads its model from the UI (both only on a loopback server)
 - [ ] Acceptance: a new user explains a run from the UI alone
 
 ## v0.3 Interp core
@@ -49,10 +52,13 @@ with its UI view.
       "sure" once the refusal direction is ablated; every view renders on desktop and mobile
 - [x] Model diffing: per layer, residual cosine, norm change and the cosine of a contrast
       direction between two models of one architecture
-- [x] Attribution graphs: circuit-tracer runs in its own environment (`just circuit`); its viewer
-      is served by loupe on the Circuits page
-- [x] SAE features link to Neuronpedia's dashboard, embedded beside the table; `just neuronpedia`
-      runs it locally in Docker and the links follow (`LOUPE_NEURONPEDIA` for another host)
+- [x] Attribution graphs: circuit-tracer runs in its own environment (`loupe circuit`, on the
+      Launch page); its viewer is served by loupe on the Circuits page
+- [x] SAE features link to Neuronpedia's dashboard, embedded beside the table
+      (`LOUPE_NEURONPEDIA` for a self-hosted one)
+- [x] Native feature dashboards (`loupe features`): per feature, density, a histogram, top examples
+      around each peak and the tokens it promotes and suppresses, on any SAE and dataset, on the
+      Feature page
 - [ ] Acceptance: reproduce the refusal direction (Arditi et al. 2024) on a Qwen2.5 instruct model,
       read entirely in the UI
 
@@ -78,13 +84,16 @@ with its UI view.
 
 ## v0.5 Training
 
-- [x] `loupe data`: export (zipy traces, Phoenix spans), redact, verify, review ledger, curate
+- [x] `loupe data`: export (trace JSONL, Phoenix spans), redact, verify, review ledger, curate
 - [x] `loupe train sft`: LoRA SFT on TRL and PEFT (any device) or Unsloth QLoRA with GGUF export
       (CUDA); loss on the reply only; MLflow training runs; merged model loadable as `loupe/<name>`
-- [x] Migrated post-training and curation from zipy and SparkyAI and removed them there; their
-      product regression evals stay in their repos
+- [x] Post-training and curation as one generic pipeline (`experiments/sft-from-traces`)
 - [x] `loupe train dpo` and `loupe train grpo` on TRL, sharing sft's config, backends, runs,
       checkpoints and export
+- [x] `loupe train reft`: LoReFT (pyreft) in its own environment, loss logged live, test replies
+      base against ReFT; `experiments/conditioning-methods` compares it with a prompt and LoRA
+- [x] Hyperparameter sweeps (`loupe train --sweep key=a,b`): every combination a run, one summary
+      run with the curves overlaid and the final values linked
 - [x] One plain check is an Inspect scorer (`as_scorer`) and a GRPO reward (`file.py:function`)
 - [x] Training dynamics: any measure re-run on the base and every kept checkpoint, as a line
       against step
@@ -118,8 +127,8 @@ with its UI view.
 
 ## v0.7 Research domains
 
-The research questions of the ARC thesis, zipy (which now includes Bijou), SparkyAI and piramid, as reusable domains
-(ARCHITECTURE.md). Product regression evals and performance numbers stay in each product's repo.
+Research questions as reusable domains (ARCHITECTURE.md); an application's own regression evals
+and performance numbers stay in its repository.
 
 - [x] Grid: conditions by tasks by seeds, each against a baseline with a paired bootstrap interval
       and a moved/held verdict (`loupe grid`); a condition may be another Inspect model
@@ -136,8 +145,9 @@ The research questions of the ARC thesis, zipy (which now includes Bijou), Spark
       decoding, spliced KV divergence with and without the rotary phase error
 - [x] Small models and data: teacher collection, hashed splits, n-gram contamination, a
       classifier recipe
-- [x] Black box: one experiment per product through its OpenAI-compatible endpoint
-      (`experiments/{sparky,zipy,piramid}-blackbox`), verified against mocks and a local stub
+- [x] Black box: any OpenAI-compatible endpoint as a grid condition (`loupe.grid.endpoint`);
+      `experiments/{prompt-conditioning,answer-or-decline,retrieval-injection}` run on a local model
+      or any server, verified against mocks and Ollama
 - [x] Attention: a Heads spec (zero or mean ablation), per-head patching, attention mass on a span;
       latency, tokens per second and peak memory as grid metrics (`experiments/attention-heads`)
 - [x] Attention kernels: `attn` on load, the provider and `loupe serve` (eager, sdpa, flash, flex,

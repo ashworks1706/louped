@@ -35,12 +35,12 @@ class Serve:
     file.py:function. Attention views run eager for their own trace."""
     expose: bool = False
     """Allow a host other than this machine. There is no auth: whoever reaches the port reads
-    every run, log and transcript."""
+    every run, log and transcript. Launching from the UI is off when exposed."""
 
 
 @dataclass(frozen=True)
 class Data:
-    """Training sets from a product's model calls: export, verify, review, curate, stats."""
+    """Training sets from logged model calls or a teacher: export, verify, review, curate, stats."""
 
     cmd: tyro.conf.OmitArgPrefixes[tyro.conf.OmitSubcommandPrefixes[DataCommand]]  # type: ignore[valid-type]
 
@@ -73,6 +73,52 @@ class Grid:
 
 
 @dataclass(frozen=True)
+class Features:
+    """Feature dashboards for an SAE over a dataset: density, a histogram, top examples and the
+    tokens each feature promotes, on the app's Feature pages. Needs the sae extra."""
+
+    model: str
+    """A Hub id, a path, or a name under <home>/models."""
+    sae: str
+    """An SAELens release (gpt2-small-res-jb, gemma-scope-2b-pt-res-canonical) or a local SAE."""
+    sae_id: str | None = None
+    """The SAE within the release; omit for a local directory."""
+    dataset: str = "NeelNanda/pile-10k"
+    """A Hugging Face dataset, or a .txt (one text per line) or .jsonl file."""
+    split: str = "train"
+    column: str = "text"
+    n: int = 256
+    """Texts to read."""
+    max_tokens: int = 128
+    """Each text cut to this many tokens."""
+    features: list[int] = field(default_factory=list)
+    """Only these features; by default the top ones by peak activation."""
+    top_n: int = 24
+    k: int = 8
+    """Top examples per feature."""
+    experiment: str = "features"
+    revision: str | None = None
+
+
+@dataclass(frozen=True)
+class Circuit:
+    """An attribution graph with circuit-tracer, in its own environment through uv, on the app's
+    Circuits page. Transcoders are a Hub repo matching the model."""
+
+    model: str
+    """e.g. Qwen/Qwen3-0.6B, google/gemma-2-2b."""
+    transcoders: str
+    """e.g. mwhanna/qwen3-0.6b-transcoders-lowl0, mwhanna/gemma-scope-transcoders."""
+    prompt: str
+    slug: str = "graph"
+    """The graph's name on the Circuits page."""
+    dtype: str = "bfloat16"
+    """float32 needs about twice the GPU memory."""
+    batch_size: int = 64
+    """Backward passes at once; halved on its own when the GPU runs out of memory."""
+
+
+@dataclass(frozen=True)
 class Version:
     """Print the installed version."""
 
@@ -83,6 +129,8 @@ Command = (
     | Annotated[TrainCommand, tyro.conf.subcommand("train")]
     | Annotated[Sweep, tyro.conf.subcommand("sweep")]
     | Annotated[Grid, tyro.conf.subcommand("grid")]
+    | Annotated[Features, tyro.conf.subcommand("features")]
+    | Annotated[Circuit, tyro.conf.subcommand("circuit")]
     | Annotated[Version, tyro.conf.subcommand("version")]
 )
 
@@ -104,7 +152,15 @@ def serve(cmd: Serve) -> None:
             raise SystemExit(f"--host {cmd.host} serves every log without auth; add --expose")
         hosts = ["*"] if cmd.host in ("0.0.0.0", "::") else [*LOOPBACK, cmd.host]
     uvicorn.run(
-        create_app(cmd.web_dir, cmd.model, hosts, cmd.bank, cmd.diffusion, cmd.attn),
+        create_app(
+            cmd.web_dir,
+            cmd.model,
+            hosts,
+            cmd.bank,
+            cmd.diffusion,
+            cmd.attn,
+            launching=hosts is None,
+        ),
         host=cmd.host,
         port=cmd.port,
     )
@@ -138,5 +194,15 @@ def main() -> None:
             if unknown := set(spec) - set(inspect.signature(grid).parameters):
                 raise SystemExit(f"{cmd.config}: unknown keys {sorted(unknown)}")
             print(grid(**spec))
+        case Features() as cmd:
+            from loupe.features import features
+
+            print(features(cmd.model, cmd.sae, cmd.sae_id, cmd.dataset, cmd.split, cmd.column,
+                           cmd.n, cmd.max_tokens, list(cmd.features) or None, cmd.top_n, cmd.k,
+                           cmd.experiment, cmd.revision))  # fmt: skip
+        case Circuit() as cmd:
+            from loupe.circuits import circuit
+
+            circuit(cmd.model, cmd.transcoders, cmd.prompt, cmd.slug, cmd.dtype, cmd.batch_size)
         case Version():
             print(__version__)

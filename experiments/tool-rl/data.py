@@ -13,7 +13,10 @@ import tyro
 from loupe.core import home
 from loupe.train.tasks import gym_rows
 
-INSTRUCTION = "Use the calculate tool for arithmetic, then call submit with the final answer."
+INSTRUCTION = (
+    "Use the calculate tool for arithmetic, then call submit with the final answer. "
+    "Only an answer given to submit counts in full."
+)
 
 
 @dataclass

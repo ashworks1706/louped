@@ -4,8 +4,10 @@ A research testbed where an intervention on a language model is something you ev
 against and look inside. loupe is **glue, not a framework**: nnsight does interpretability, Inspect
 does evals and agents, TRL does training and RL environments, MLflow does tracking. loupe gives
 them one model, one intervention spec and one data format, and a UI over all of it. The UI is the
-product. It builds only the joins; what Neuronpedia, circuit-tracer, Inspect View or a training
-product already does is linked, not rebuilt (docs/ARCHITECTURE.md lists them).
+product, and everything is used from it. Integrate, don't link out: a tool loupe needs runs inside
+it, as a library, or in an environment of its own when it pins other versions (circuit-tracer,
+pyreft), launched and read from the UI. Integrate, don't re-implement: reuse what a tool does well
+and write only the joins (docs/ARCHITECTURE.md lists how each tool runs).
 
 Read `docs/ARCHITECTURE.md` for the layers and the design, `docs/ROADMAP.md` for what is built in
 what order. Do not contradict them; propose an edit to the doc instead.
@@ -15,10 +17,12 @@ what order. Do not contradict them; propose an edit to the doc instead.
 - **Prebuilt first.** Before writing code, name the existing tool that does it. Own code is only
   the glue between tools. A new dependency must be free and permissively licensed (MIT, Apache,
   BSD, OFL) and justified in the PR.
-- **No bloat.** No module, option or abstraction without a caller today. Python stays under ~7k
-  lines, the UI under ~6k lines of our own TSX.
+- **No bloat.** No module, option or abstraction without a caller today. There is no cap on
+  lines: write what the feature needs, and no speculative code beyond it.
 - **Domains, not projects.** A capability serves a research domain (docs/ARCHITECTURE.md lists
-  them); a product's question is an experiment on it. Never copy a product's research code here.
+  them); a question is an experiment on it, named for the question. Nothing in `src/loupe` or an
+  experiment's name is tied to one application: a system comes in as a model id, an
+  OpenAI-compatible endpoint or logged calls, and its specifics are options.
 - **Reproducible numbers.** Anything that writes a result writes `loupe.core.RunMeta` next to it.
 - **A UI page is done only when it renders a real experiment's data**, not only fixtures.
 
@@ -60,7 +64,7 @@ src/loupe/       the Python package (distribution name: loupelab)
                  projections and top examples, SAE features, checkpoints and model diffs;
                  results as UI views (heatmap, line, table, tokens)
   inspect_ext/   the loupe/ Inspect model provider, shared scorers, the pushback and RAG tasks
-  data/          training sets from product traces or a teacher: export, collect, redact,
+  data/          training sets from logged model calls or a teacher: export, collect, redact,
                  verify, review, curate; hashed splits and n-gram contamination checks
   retrieval/     chunking, BM25 and dense search fused by rank, reranking, retrieval metrics
   train/         post-training recipes (sft incl. soft prompts and masked diffusion, dpo, grpo,
@@ -70,12 +74,12 @@ src/loupe/       the Python package (distribution name: loupelab)
   tracking/      start an MLflow run the UI can read
   stores/        read-only views over Inspect logs, MLflow, views/, vectors and experiments/;
                  paired comparison of two eval runs
-  server/        FastAPI over the stores, plus the Playground
+  server/        FastAPI over the stores, plus the Playground and launching jobs from the UI
   cli.py         the loupe command
 apps/web/        the UI: Next.js static export, shadcn/ui. Its own AGENTS.md holds the design rules
 apps/site/       landing page and docs: Next.js + Fumadocs, deployed on Vercel
 experiments/     one folder per research question; nothing imports it
-deploy/          Docker setups: neuronpedia/ (just neuronpedia); app/, the read-only public demo
+deploy/          Docker setups: app/, the read-only public demo
 tests/           Python tests, CPU only
 docs/            ARCHITECTURE.md, ROADMAP.md, decisions/, brand/ (mark and wordmark SVGs)
 ```

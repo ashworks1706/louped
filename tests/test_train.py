@@ -313,3 +313,101 @@ def test_soft_prompt_and_masked_diffusion_stay_on_trl(tmp_path: Path) -> None:
     with pytest.raises(TrainError, match="trl backend"):
         backend(load_config(config(tmp_path, soft_prompt=4, backend="unsloth")))
     assert backend(load_config(config(tmp_path, masked_diffusion=True, backend="auto"))) == "trl"
+
+
+def test_an_edited_copy_of_a_grpo_config_finds_its_files_through_base_dir(tmp_path: Path) -> None:
+    from loupe.train.base import TrainError
+    from loupe.train.cli import Command, run
+
+    save_base()
+    (tmp_path / "checks.py").write_text("def says(completion: str) -> float:\n    return 1.0\n")
+    write_rows(home() / "data/t-copy.jsonl", [{"prompt": [{"role": "user", "content": "hi"}]}])
+    path = config(tmp_path, name="t-copy", dataset="data/t-copy.jsonl", rewards=["checks.py:says"],
+                  num_generations=2, train={"per_device_batch_size": 2,
+                                            "gradient_accumulation": 1})  # fmt: skip
+    copy = tmp_path / "elsewhere" / "grpo.yaml"
+    copy.parent.mkdir()
+    copy.write_text(path.read_text())
+    with pytest.raises((TrainError, FileNotFoundError)):
+        run(Command("grpo", copy, dry_run=True))
+    run(Command("grpo", copy, dry_run=True, base_dir=tmp_path))
+
+
+def test_a_sweep_trains_every_combination_and_compares_them(tmp_path: Path) -> None:
+    from loupe.train import hparams, sft
+
+    assert hparams.combinations(["train.learning_rate=1e-3,5e-3", "lora.r=2"]) == [
+        {"train.learning_rate": 1e-3, "lora.r": 2},
+        {"train.learning_rate": 5e-3, "lora.r": 2},
+    ]
+    with pytest.raises(TrainError):
+        hparams.combinations(["no-equals"])
+    save_base()
+    rows = [Example(id=str(i), messages=[{"role": "user", "content": f"write a {o}"}],
+                    reply=f"the {o} .") for i, o in enumerate(["cake", "song"] * 2)]  # fmt: skip
+    write_jsonl(home() / "data/t-sft/sft.jsonl", rows)
+    path = config(tmp_path, train={"max_steps": 2, "per_device_batch_size": 2,
+                                   "gradient_accumulation": 1, "logging_steps": 1})  # fmt: skip
+    summary = hparams.run(sft, path, ["train.learning_rate=1e-3,5e-3"])
+
+    training = [r for r in stores.list_runs() if r.kind == "training"]
+    assert sorted(r.name for r in training) == ["sft · t-sft-0", "sft · t-sft-1"]
+    assert {stores.get_run(r.id).params["train.learning_rate"] for r in training} == {
+        "0.001",
+        "0.005",
+    }
+    assert (home() / "models" / "tiny-tuned-0").exists() and (
+        home() / "models" / "tiny-tuned-1"
+    ).exists()
+    views = {v.path: v.view for v in stores.list_views(summary)}
+    curve = views["views/00-loss.json"]
+    assert curve.kind == "line" and set(curve.series) == {"train.learning_rate=0.001",
+                                                           "train.learning_rate=0.005"}  # fmt: skip
+    final = next(v for p, v in views.items() if p.endswith("final.json"))
+    assert final.kind == "table" and len(final.rows) == 2 and final.links is not None
+    assert str(final.links[0][-1]).startswith("/run/?id=m-")
+
+
+def test_reft_trains_through_its_worker_and_logs_loss_and_replies(
+    tmp_path: Path, monkeypatch
+) -> None:
+    import sys
+
+    from loupe.train import reft
+
+    msgs = [{"role": "user", "content": "What is the capital of France?"}]
+    write_jsonl(home() / "data/r/train.jsonl", [Example(id="a", messages=msgs, reply="Paris")])
+    write_jsonl(home() / "data/r/test.jsonl", [Example(id="b", messages=msgs, reply="Paris")])
+    path = tmp_path / "reft.yaml"
+    path.write_text(yaml.safe_dump({"name": "r", "base_model": "tiny-base", "layers": [1, 2],
+                                    "dataset": "data/r/train.jsonl", "test": "data/r/test.jsonl",
+                                    "output_dir": "checkpoints/r"}))  # fmt: skip
+    cfg = reft.load_config(path)
+    assert reft.plan(cfg).examples == 1 and cfg.output_dir == home() / "checkpoints/r"
+    with pytest.raises(TrainError):
+        reft.load_config(tmp_path / "absent.yaml")
+    # a stand-in for the pyreft worker: the same files, written the same way
+    worker = tmp_path / "worker.py"
+    worker.write_text(
+        "import json, sys, pathlib\n"
+        "job = json.loads(pathlib.Path(sys.argv[1]).read_text())\n"
+        "out = pathlib.Path(job['out'])\n"
+        "assert job['layers'] == [1, 2] and job['train'][0]['reply'] == 'Paris'\n"
+        "with (out / 'metrics.jsonl').open('a') as m:\n"
+        "    for s, loss in [(5, 2.0), (10, 0.5)]:\n"
+        "        m.write(json.dumps({'step': s, 'loss': loss}) + '\\n')\n"
+        "(out / 'replies.json').write_text(json.dumps([{'prompt': 'q', 'target': 'Paris',"
+        " 'base': 'The capital of France is Paris.', 'reft': 'Paris'}]))\n"
+    )
+    monkeypatch.setattr(reft, "command", lambda job: [sys.executable, str(worker), str(job)])
+    reft.train(cfg)
+    (run,) = [r for r in stores.list_runs() if r.kind == "training"]
+    detail = stores.get_run(run.id)
+    assert [p.value for p in detail.history["loss"]] == [2.0, 0.5]
+    assert detail.metrics["test/reft_words"] == 1 and detail.metrics["test/base_words"] == 6
+    assert detail.metrics["test/reft_contains_target"] == 1.0
+    (view,) = stores.list_views(run.id)
+    assert view.view.kind == "table" and view.view.rows[0][-1] == "Paris"
+    monkeypatch.setattr(reft, "command", lambda job: [sys.executable, "-c", "raise SystemExit(3)"])
+    with pytest.raises(TrainError, match="exit code 3"):
+        reft.train(cfg)

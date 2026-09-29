@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CornerDownLeft, MessageSquareText, Square } from "lucide-react";
 import {
   parseAsArrayOf,
@@ -22,7 +22,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { generate, inspect, q, type Direction, type PlaygroundInfo } from "@/lib/api";
+import { generate, inspect, loadModel, q, type Direction, type PlaygroundInfo } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const MODES = ["steer", "ablate", "heads"] as const;
@@ -36,7 +36,17 @@ export function Playground() {
   return (
     <QueryState query={info}>
       {(i) =>
-        i.model == null ? (
+        i.model == null && i.switchable ? (
+          <div className="mx-auto flex max-w-md flex-col gap-4 rounded-xl border p-6">
+            <div>
+              <h2 className="font-medium">Load a model</h2>
+              <p className="text-muted-foreground mt-1 text-sm">
+                A Hub id, a path, or a model saved under loupe&apos;s home (a merged training run).
+              </p>
+            </div>
+            <ModelLoader />
+          </div>
+        ) : i.model == null ? (
           <EmptyState
             icon={MessageSquareText}
             title="No model loaded"
@@ -164,6 +174,16 @@ function Loaded({
               {info.diffusion ? "masked diffusion" : `${layers} layers`}
             </span>
           </div>
+          {info.switchable && (
+            <details className="text-sm">
+              <summary className="text-muted-foreground hover:text-foreground cursor-pointer text-xs">
+                Change or unload
+              </summary>
+              <div className="pt-3">
+                <ModelLoader key={info.model} current={info} />
+              </div>
+            </details>
+          )}
         </Field>
         {bank.length > 0 && (
           <Field label="Adapters">
@@ -530,4 +550,92 @@ function useReply() {
     setReply(IDLE);
   };
   return { ...reply, start, stop, reset };
+}
+
+/** Load a model into the Playground, as `loupe serve --model` would; unloading frees the GPU
+ * for launched jobs. */
+function ModelLoader({ current }: { current?: PlaygroundInfo }) {
+  const client = useQueryClient();
+  const [model, setModel] = useState(current?.model ?? "Qwen/Qwen2.5-0.5B-Instruct");
+  const [bank, setBank] = useState((current?.bank ?? []).join(" "));
+  const [diffusion, setDiffusion] = useState(current?.diffusion ?? false);
+  const [attn, setAttn] = useState("");
+  const load = useMutation({
+    mutationFn: loadModel,
+    onSuccess: (info) => client.setQueryData(q.playground().queryKey, info),
+  });
+  const submit = (unload = false) =>
+    load.mutate(
+      unload
+        ? { model: null, bank: [], diffusion: false }
+        : {
+            model: model.trim(),
+            bank: bank.split(/[\s,]+/).filter(Boolean),
+            diffusion,
+            attn: attn.trim() || null,
+          },
+    );
+  return (
+    <form
+      className="flex flex-col gap-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        submit();
+      }}
+    >
+      <label htmlFor="load-model" className="text-muted-foreground -mb-2 text-xs">
+        Model
+      </label>
+      <Input
+        id="load-model"
+        value={model}
+        onChange={(e) => setModel(e.target.value)}
+        spellCheck={false}
+        className="h-8 font-mono text-xs"
+      />
+      <label htmlFor="load-adapters" className="text-muted-foreground -mb-2 text-xs">
+        Adapters
+      </label>
+      <Input
+        id="load-adapters"
+        placeholder="adapters from the bank, space separated"
+        value={bank}
+        onChange={(e) => setBank(e.target.value)}
+        spellCheck={false}
+        className="h-8 font-mono text-xs"
+      />
+      <label htmlFor="load-attention-kernel" className="text-muted-foreground -mb-2 text-xs">
+        Attention kernel
+      </label>
+      <Input
+        id="load-attention-kernel"
+        placeholder="attention kernel: sdpa, eager, flex_attention…"
+        value={attn}
+        onChange={(e) => setAttn(e.target.value)}
+        spellCheck={false}
+        className="h-8 font-mono text-xs"
+      />
+      <label className="flex items-center gap-2 text-xs">
+        <Checkbox checked={diffusion} onCheckedChange={(c) => setDiffusion(c === true)} />
+        Masked diffusion model
+      </label>
+      <div className="flex items-center gap-2">
+        <Button type="submit" size="sm" disabled={load.isPending || !model.trim()}>
+          {load.isPending ? "Loading…" : "Load"}
+        </Button>
+        {current?.model && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => submit(true)}
+            disabled={load.isPending}
+          >
+            Unload
+          </Button>
+        )}
+      </div>
+      {load.error && <p className="text-negative text-xs">{load.error.message}</p>}
+    </form>
+  );
 }

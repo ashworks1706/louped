@@ -10,7 +10,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { API, q } from "@/lib/api";
 
 const COMMAND =
-  'just circuit google/gemma-2-2b mwhanna/gemma-scope-transcoders "The capital of France is"';
+  'loupe circuit --model Qwen/Qwen3-0.6B --transcoders mwhanna/qwen3-0.6b-transcoders-lowl0 --prompt "The capital of France is"';
 
 /** One circuit-tracer graph at a time, drawn by circuit-tracer's viewer, which loupe serves. */
 export function CircuitsView() {
@@ -24,7 +24,7 @@ export function CircuitsView() {
             <EmptyState
               icon={Waypoints}
               title="No graphs"
-              body="Attribution graphs over a model's transcoders."
+              body="Attribution graphs over a model's transcoders. Also on the Launch page as loupe circuit."
               command={COMMAND}
             />
           );

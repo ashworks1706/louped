@@ -1,7 +1,11 @@
-"""Where examples come from. Each source turns one product's record of a model call into Examples.
+"""Where examples come from: any system's record of its model calls, as Examples.
 
-- `generation_traces`: JSONL trace files with one `generation` event per model call (zipy).
-- `phoenix`: OpenTelemetry GenAI spans in a self-hosted Arize Phoenix (SparkyAI).
+- `generation_traces`: JSONL files of events, one `{"event": "generation", "data": {"input":
+  [messages], "output": "...", "tool_calls": [...], "model": "..."}}` per model call, anywhere
+  under a folder. A system that logs its calls this way needs no other code.
+- `phoenix`: OpenTelemetry GenAI spans (`gen_ai.input.messages`, `gen_ai.output.messages`) in a
+  self-hosted Arize Phoenix. Model-call spans are picked by an attribute (OpenInference's
+  `openinference.span.kind` = LLM by default, or your own) or, failing that, by span name.
 """
 
 from __future__ import annotations
@@ -39,7 +43,7 @@ def _generation(record: dict[str, Any], index: int) -> Example | None:
     meta = {
         "source": "generation_traces",
         "model": str(data.get("model") or ""),
-        "org": str(record.get("org_id") or ""),
+        "group": str(record.get("org_id") or record.get("group") or ""),
         "platform": str(record.get("platform") or ""),
     }
     return Example(
@@ -66,13 +70,14 @@ def _trace(path: Path) -> list[Example]:
 
 
 def generation_traces(directory: Path, max_age_days: int = 0) -> list[Example]:
-    """Every generation under <directory>/<org>/<request>.jsonl, newest first. 0 days reads all."""
+    """Every generation in the .jsonl files under directory, at any depth, newest file first.
+    0 days reads all."""
     if not directory.is_dir():
         raise SourceError(f"no traces under {directory}")
     cutoff = datetime.now(UTC) - timedelta(days=max_age_days) if max_age_days else None
 
     def files() -> Iterator[Path]:
-        found = sorted(directory.glob("*/*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
+        found = sorted(directory.rglob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
         for path in found:
             if cutoff and datetime.fromtimestamp(path.stat().st_mtime, tz=UTC) < cutoff:
                 return
@@ -84,7 +89,7 @@ def generation_traces(directory: Path, max_age_days: int = 0) -> list[Example]:
 # phoenix -------------------------------------------------------------------------------------
 
 _INPUT, _OUTPUT, _MODEL = "gen_ai.input.messages", "gen_ai.output.messages", "gen_ai.request.model"
-_SESSION, _KIND = "session.id", "sparky.span"
+_SESSION, KIND = "session.id", "openinference.span.kind"
 _SUMMARY_LEAD = "Summary of earlier turns: "
 
 
@@ -129,7 +134,7 @@ def _message(raw: Any, span: str) -> dict[str, Any]:
         data["content"] = _text(data.pop("parts"), "content", span)
     elif isinstance(data.get("content"), list):
         data["content"] = _text(data["content"], "text", span)
-    if data["role"] == "summary":  # the engine sends summaries as a system message with a lead
+    if data["role"] == "summary":  # a summary of earlier turns: a system message with a lead
         data["role"], data["content"] = "system", f"{_SUMMARY_LEAD}{data.get('content', '')}"
     if data.get("tool_calls"):
         data["tool_calls"] = [tool_call(c) for c in data["tool_calls"]]
@@ -140,16 +145,17 @@ def _message(raw: Any, span: str) -> dict[str, Any]:
     return {k: v for k, v in data.items() if v is not None}
 
 
-def span_example(span: dict[str, Any]) -> Example | None:
-    """One llm span as an example; other and unfinished spans are None, malformed ones raise."""
+def span_example(span: dict[str, Any], kind_key: str = KIND) -> Example | None:
+    """One model-call span as an example: its kind_key attribute, else its name, is "llm" in any
+    case. Other and unfinished spans are None, malformed ones raise."""
     span_id = span.get("id") or (span.get("context") or {}).get("span_id")
     if not span_id:
         raise SourceError(f"span without an id: {span!r:.200}")
     attrs = span.get("attributes")
     if not isinstance(attrs, dict):
         return None
-    kind = attribute(attrs, _KIND)
-    if (kind if kind is not None else span.get("name")) != "llm":
+    kind = attribute(attrs, kind_key)
+    if str(kind if kind is not None else span.get("name")).lower() != "llm":
         return None
     raw_in, raw_out = attribute(attrs, _INPUT), attribute(attrs, _OUTPUT)
     if raw_in in (None, "", []) or raw_out in (None, "", []):
@@ -178,8 +184,11 @@ def phoenix(
     page_size: int = 500,
     timeout: float = 30.0,
     transport: Any = None,
+    kind_key: str = KIND,
+    span_name: str | None = None,
 ) -> list[Example]:
-    """Every complete llm span of a Phoenix project, paged through its REST API."""
+    """Every complete model-call span of a Phoenix project, paged through its REST API; with
+    span_name, only spans of that name are fetched."""
     import httpx
 
     endpoint = f"{url.rstrip('/')}/v1/projects/{project}/spans"
@@ -190,7 +199,9 @@ def phoenix(
     cursor: str | None = None
     with httpx.Client(timeout=timeout, transport=transport) as client:
         while True:
-            params: dict[str, Any] = {"limit": page_size, "name": "llm"}
+            params: dict[str, Any] = {"limit": page_size}
+            if span_name:
+                params["name"] = span_name
             if cursor:
                 params["cursor"] = cursor
             try:
@@ -203,7 +214,7 @@ def phoenix(
             page = body.get("data")
             if not isinstance(page, list):
                 raise SourceError("unexpected spans response: data is not a list")
-            out.extend(e for e in map(span_example, page) if e is not None)
+            out.extend(e for s in page if (e := span_example(s, kind_key)) is not None)
             cursor = body.get("next_cursor") or None
             if cursor is None or not page:
                 return out

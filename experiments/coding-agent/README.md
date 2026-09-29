@@ -3,7 +3,7 @@
 ## Question
 
 Does a coding agent pass hidden unit tests more often under one condition than another (base
-against steered, one model against another, a product endpoint), and does its tool use change with
+against steered, one model against another, any OpenAI-compatible endpoint), and does its tool use change with
 it: how many calls it makes, how many fail, whether it runs its code before submitting?
 
 ## What would answer it

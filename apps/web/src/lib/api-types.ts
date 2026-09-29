@@ -123,6 +123,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/runs/{run_id}/features": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Feature List */
+    get: operations["feature_list_api_runs__run_id__features_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/runs/{run_id}/features/{feature}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Feature */
+    get: operations["feature_api_runs__run_id__features__feature__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/compare": {
     parameters: {
       query?: never;
@@ -208,6 +242,27 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/playground/load": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Load Model
+     * @description Replace the model (none unloads it, freeing the GPU for jobs); a bad one is a 400 and
+     *     leaves no model loaded.
+     */
+    post: operations["load_model_api_playground_load_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/playground/generate": {
     parameters: {
       query?: never;
@@ -236,6 +291,92 @@ export interface paths {
     put?: never;
     /** Inspect */
     post: operations["inspect_api_playground_inspect_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/launch": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Launchables */
+    get: operations["launchables_api_launch_get"];
+    put?: never;
+    /** Launch */
+    post: operations["launch_api_launch_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/launch/options": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Launch Options */
+    get: operations["launch_options_api_launch_options_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/launch/jobs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Job List */
+    get: operations["job_list_api_launch_jobs_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/launch/jobs/{job_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Job */
+    get: operations["job_api_launch_jobs__job_id__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/launch/jobs/{job_id}/cancel": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Cancel */
+    post: operations["cancel_api_launch_jobs__job_id__cancel_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -301,6 +442,36 @@ export interface components {
       question: string | null;
       /** Runs */
       runs: components["schemas"]["RunSummary"][];
+    };
+    /**
+     * FeatureDashboard
+     * @description One SAE feature over a dataset, as `loupe features` logs it under features/.
+     */
+    FeatureDashboard: {
+      /** Feature */
+      feature: number;
+      /** Hook */
+      hook: string;
+      /** Layer */
+      layer: number;
+      /** Density */
+      density: number;
+      /** Max */
+      max: number;
+      histogram: components["schemas"]["Histogram"];
+      /** Promoted */
+      promoted: [string, number][];
+      /** Suppressed */
+      suppressed: [string, number][];
+      examples: components["schemas"]["TokensView"];
+      /** Neuronpedia */
+      neuronpedia?: string | null;
+      /** Model */
+      model?: string | null;
+      /** Sae */
+      sae?: string | null;
+      /** Sae Id */
+      sae_id?: string | null;
     };
     /** GenerateRequest */
     GenerateRequest: {
@@ -385,6 +556,13 @@ export interface components {
       /** Labels */
       labels?: string[][] | null;
     };
+    /** Histogram */
+    Histogram: {
+      /** Edges */
+      edges: number[];
+      /** Counts */
+      counts: number[];
+    };
     /** InspectRequest */
     InspectRequest: {
       /**
@@ -436,6 +614,94 @@ export interface components {
         | components["schemas"]["TokensView"]
       )[];
     };
+    /** Job */
+    Job: {
+      /** Id */
+      id: string;
+      /** Title */
+      title: string;
+      /** Argv */
+      argv: string[];
+      /**
+       * Status
+       * @default queued
+       * @enum {string}
+       */
+      status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+      /**
+       * Created
+       * Format: date-time
+       */
+      created?: string;
+      /** Started */
+      started?: string | null;
+      /** Ended */
+      ended?: string | null;
+      /** Exit Code */
+      exit_code?: number | null;
+    };
+    /** JobDetail */
+    JobDetail: {
+      /** Id */
+      id: string;
+      /** Title */
+      title: string;
+      /** Argv */
+      argv: string[];
+      /**
+       * Status
+       * @default queued
+       * @enum {string}
+       */
+      status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+      /**
+       * Created
+       * Format: date-time
+       */
+      created?: string;
+      /** Started */
+      started?: string | null;
+      /** Ended */
+      ended?: string | null;
+      /** Exit Code */
+      exit_code?: number | null;
+      /** Log */
+      log: string;
+    };
+    /** LaunchRequest */
+    LaunchRequest: {
+      /** Id */
+      id: string;
+      /**
+       * Options
+       * @default {}
+       */
+      options: {
+        [key: string]: string | boolean | string[];
+      };
+      /** Config */
+      config?: string | null;
+      /** Recipe */
+      recipe?: string | null;
+    };
+    /** Launchable */
+    Launchable: {
+      /** Id */
+      id: string;
+      /** Group */
+      group: string;
+      /** Title */
+      title: string;
+      /**
+       * Description
+       * @default
+       */
+      description: string;
+      /** Config */
+      config?: string | null;
+      /** Recipe */
+      recipe?: string | null;
+    };
     /** LineView */
     LineView: {
       /**
@@ -457,6 +723,26 @@ export interface components {
       y_label: string;
       /** Note */
       note?: string | null;
+    };
+    /**
+     * LoadRequest
+     * @description A model for the Playground, as `loupe serve --model --bank --diffusion --attn` takes it.
+     */
+    LoadRequest: {
+      /** Model */
+      model?: string | null;
+      /**
+       * Bank
+       * @default []
+       */
+      bank: string[];
+      /**
+       * Diffusion
+       * @default false
+       */
+      diffusion: boolean;
+      /** Attn */
+      attn?: string | null;
     };
     /** Message */
     Message: {
@@ -485,6 +771,36 @@ export interface components {
       step: number;
       /** Value */
       value: number;
+    };
+    /**
+     * Option
+     * @description One flag of a command, as its parser declares it.
+     */
+    Option: {
+      /** Flag */
+      flag: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "text" | "bool" | "list" | "choice";
+      /** Default */
+      default: string | null;
+      /**
+       * Help
+       * @default
+       */
+      help: string;
+      /**
+       * Choices
+       * @default []
+       */
+      choices: string[];
+      /**
+       * Required
+       * @default false
+       */
+      required: boolean;
     };
     /** PairedScore */
     PairedScore: {
@@ -534,6 +850,11 @@ export interface components {
        * @default false
        */
       diffusion: boolean;
+      /**
+       * Switchable
+       * @default false
+       */
+      switchable: boolean;
     };
     /** RunDetail */
     RunDetail: {
@@ -560,6 +881,8 @@ export interface components {
       };
       /** Samples */
       samples: number | null;
+      /** Total */
+      total?: number | null;
       /** Params */
       params: {
         [key: string]: string;
@@ -606,6 +929,8 @@ export interface components {
       };
       /** Samples */
       samples: number | null;
+      /** Total */
+      total?: number | null;
     };
     /**
      * RunView
@@ -957,6 +1282,69 @@ export interface operations {
       };
     };
   };
+  feature_list_api_runs__run_id__features_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": number[];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  feature_api_runs__run_id__features__feature__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: string;
+        feature: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FeatureDashboard"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   compare_api_compare_get: {
     parameters: {
       query: {
@@ -1069,6 +1457,39 @@ export interface operations {
       };
     };
   };
+  load_model_api_playground_load_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LoadRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PlaygroundInfo"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   generate_api_playground_generate_post: {
     parameters: {
       query?: never;
@@ -1122,6 +1543,172 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["InspectResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  launchables_api_launch_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Launchable"][];
+        };
+      };
+    };
+  };
+  launch_api_launch_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LaunchRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Job"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  launch_options_api_launch_options_get: {
+    parameters: {
+      query: {
+        id: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Option"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  job_list_api_launch_jobs_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Job"][];
+        };
+      };
+    };
+  };
+  job_api_launch_jobs__job_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        job_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["JobDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  cancel_api_launch_jobs__job_id__cancel_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        job_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Job"];
         };
       };
       /** @description Validation Error */

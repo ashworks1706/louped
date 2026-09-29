@@ -47,7 +47,7 @@ def scripted() -> str:
     for word, path in SECRETS.items():
         replies += [_call("bash", {"command": f"cat {path}"}), _call("submit", {"answer": word})]
     script = iter(replies)
-    provider.generate = lambda *_: [next(script)]
+    provider.generate = lambda *_, **__: [next(script)]
     return "tiny-scripted"
 
 

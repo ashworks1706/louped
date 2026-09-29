@@ -1,4 +1,4 @@
-"""The data pipeline, ported from the zipy and SparkyAI training suites."""
+"""The data pipeline: sources, redaction, verification, review and curation."""
 
 import json
 from pathlib import Path
@@ -27,12 +27,12 @@ def ex(id: str = "a", reply: str = "hello", messages=None, calls=None) -> Exampl
     return Example(id=id, messages=messages or [SYSTEM, USER], reply=reply, tool_calls=calls or [])
 
 
-# sources: generation traces (zipy) ------------------------------------------------------------
+# sources: generation traces ---------------------------------------------------------------------
 
 
 def test_generation_traces_skip_other_events_and_number_calls(tmp_path: Path) -> None:
-    org = tmp_path / "org1"
-    org.mkdir()
+    org = tmp_path / "org1" / "day"  # any depth
+    org.mkdir(parents=True)
     gen = {
         "event": "generation",
         "request_id": "r1",
@@ -52,7 +52,7 @@ def test_generation_traces_skip_other_events_and_number_calls(tmp_path: Path) ->
     assert found[0].meta == {
         "source": "generation_traces",
         "model": "m",
-        "org": "org1",
+        "group": "org1",
         "platform": "discord",
     }
     call = found[0].tool_calls[0]["function"]
@@ -61,12 +61,12 @@ def test_generation_traces_skip_other_events_and_number_calls(tmp_path: Path) ->
         sources.generation_traces(tmp_path / "absent")
 
 
-# sources: phoenix (SparkyAI) ------------------------------------------------------------------
+# sources: phoenix -----------------------------------------------------------------------------
 
 
-def span(id: str, out=None, kind="llm", **attrs) -> dict:
+def span(id: str, out=None, kind="LLM", **attrs) -> dict:
     base = {
-        "sparky.span": kind,
+        "openinference.span.kind": kind,
         "gen_ai.input.messages": json.dumps(
             [
                 SYSTEM,
@@ -99,7 +99,12 @@ def test_phoenix_span_maps_to_the_openai_shape() -> None:
         {"id": "c1", "type": "function", "function": {"name": "search", "arguments": '{"q": "x"}'}}
     ]
     assert e.meta == {"source": "phoenix", "model": "m", "session": "s1"}
-    assert sources.span_example(span("s2", kind="tool")) is None
+    assert sources.span_example(span("s2", kind="TOOL")) is None
+    own = span("s3", **{"app.span": "llm", "openinference.span.kind": None})
+    del own["attributes"]["openinference.span.kind"]
+    own["name"] = "chat"
+    assert sources.span_example(own) is None  # neither the default attribute nor the name
+    assert sources.span_example(own, kind_key="app.span") is not None
 
 
 def test_phoenix_summary_becomes_a_system_message() -> None:
@@ -120,10 +125,10 @@ def test_phoenix_pages_through_the_cursor_with_the_key() -> None:
         return httpx.Response(200, json={"data": data, "next_cursor": cursor})
 
     found = sources.phoenix(
-        "http://px:6006/", "sparky", "k", 2, transport=httpx.MockTransport(handler)
+        "http://px:6006/", "chat", "k", 2, transport=httpx.MockTransport(handler)
     )
     assert [e.id for e in found] == ["a", "b", "c"]
-    assert seen[0].url.path == "/v1/projects/sparky/spans"
+    assert seen[0].url.path == "/v1/projects/chat/spans" and "name" not in seen[0].url.params
     assert seen[0].headers["authorization"] == "Bearer k"
 
     def fail(_: httpx.Request) -> httpx.Response:
@@ -156,7 +161,8 @@ def test_redact_people_and_tokens_but_not_structure() -> None:
     assert r.tool_calls[0]["id"] == "call_123456789012345678"
     assert "[email]" in r.tool_calls[0]["function"]["arguments"]
     assert "user" not in r.meta
-    assert redact.redact(ex(reply="id 1234567890"), ["asu-id"]).reply == "id [asu-id]"
+    assert redact.redact(ex(reply="id 1234567890"), ["id-10"]).reply == "id [id]"
+    assert redact.redact(ex(reply="ticket AB-1234"), [r"AB-\d+"]).reply == "ticket [redacted]"
 
 
 def test_verify_counts_each_reason() -> None:

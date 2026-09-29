@@ -1,0 +1,21 @@
+# loupe train sft experiments/conditioning-methods/sft.yaml   (after data.py)
+# LoRA rank 8 on every attention and MLP projection: millions of parameters.
+name: conditioning-methods-lora
+experiment: conditioning-methods
+base_model: Qwen/Qwen2.5-0.5B-Instruct
+dataset: data/conditioning-methods/train.jsonl
+output_dir: checkpoints/conditioning-methods-lora
+max_seq_length: 256
+load_in_4bit: false
+lora:
+  r: 8
+  alpha: 16
+train:
+  epochs: 5
+  per_device_batch_size: 10
+  gradient_accumulation: 1
+  learning_rate: 2.0e-4
+  logging_steps: 5
+  seed: 0
+export:
+  merge_as: conditioning-methods-lora

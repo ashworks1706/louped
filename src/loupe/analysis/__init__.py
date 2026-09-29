@@ -7,7 +7,7 @@ from loupe.analysis.lens import logit_lens
 from loupe.analysis.patching import attribution_patch, patch_heads, patch_residual
 from loupe.analysis.probes import linear_probes
 from loupe.analysis.project import along, projection, top_examples
-from loupe.analysis.sae import feature_examples, sae_features, save_feature
+from loupe.analysis.sae import feature_dashboards, feature_examples, sae_features, save_feature
 from loupe.analysis.splice import splice_divergence
 from loupe.analysis.trajectory import trajectory
 from loupe.analysis.views import by_head, heatmap, line, table, token_row, tokens
@@ -19,6 +19,7 @@ __all__ = [
     "attribution_patch",
     "by_head",
     "checkpoints",
+    "feature_dashboards",
     "feature_examples",
     "heatmap",
     "last_token_resid",

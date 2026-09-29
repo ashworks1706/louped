@@ -166,8 +166,10 @@ def _load(cfg: TrainConfig, kind: str):
 
         return base(cfg.base_model, device="cpu"), tok, lora
     quant = None
-    if cfg.load_in_4bit and torch.cuda.is_available():
-        quant = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.bfloat16)
+    if cfg.load_in_4bit and torch.cuda.is_available() and importlib.util.find_spec("bitsandbytes"):
+        half = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+        quant = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
+                                   bnb_4bit_compute_dtype=half)  # fmt: skip
     model = AutoModelForCausalLM.from_pretrained(path, quantization_config=quant, dtype="auto")
     if cfg.soft_prompt:
         return model, tok, PromptTuningConfig(num_virtual_tokens=cfg.soft_prompt,
@@ -228,6 +230,15 @@ def fit(
     with start_run(cfg.experiment or cfg.name, name=f"{recipe} · {cfg.name}", params=_flat(params),
                    seed=cfg.train.seed, kind="training") as run:  # fmt: skip
         model, tok, peft = _load(cfg, kind)
+        import mlflow
+
+        # what the weights trained in, which load_in_4bit only asks for
+        quant = "nf4" if getattr(model, "is_loaded_in_4bit", False) else "none"
+        if cfg.load_in_4bit and quant == "none" and kind != "unsloth":
+            print("load_in_4bit: no CUDA GPU or bitsandbytes here; training in full precision")
+        if kind == "unsloth":
+            quant = "unsloth-4bit" if cfg.load_in_4bit else "none"
+        mlflow.set_tag("loupe.quantization", quant)
         if tok.pad_token is None:
             tok.pad_token = tok.eos_token
         trainer = make(model, tok, peft, trainer_args(cfg))
@@ -239,8 +250,6 @@ def fit(
         _export(cfg, kind, tuned, tok, adapter)
         if after is not None:
             after(cfg)
-        import mlflow
-
         mlflow.set_tag("loupe.adapter", str(adapter))
         if cfg.export.merge_as:
             mlflow.set_tag("loupe.model", cfg.export.merge_as)
@@ -260,7 +269,17 @@ def _export(cfg: TrainConfig, kind: str, model, tok, adapter: Path) -> None:
         shutil.copytree(adapter, adapters_dir() / cfg.export.adapter_as, dirs_exist_ok=True)
     if cfg.export.merge_as:
         target = home() / "models" / cfg.export.merge_as
-        merged = _bake_prompt(model, tok) if cfg.soft_prompt else model.merge_and_unload()
+        if cfg.soft_prompt:
+            merged = _bake_prompt(model, tok)
+        elif getattr(model, "is_loaded_in_4bit", False) and kind != "unsloth":
+            # QLoRA: merge into the full-precision base, not into the 4-bit weights it trained on
+            from peft import PeftModel
+            from transformers import AutoModelForCausalLM
+
+            full = AutoModelForCausalLM.from_pretrained(model_path(cfg.base_model), dtype="auto")
+            merged = PeftModel.from_pretrained(full, str(adapter)).merge_and_unload()
+        else:
+            merged = model.merge_and_unload()
         merged.save_pretrained(str(target))
         tok.save_pretrained(str(target))
 

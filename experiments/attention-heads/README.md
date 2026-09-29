@@ -1,7 +1,7 @@
 # attention-heads
 
-Domain 6 (retrieval inside the model), for piramid: before retrieval moves into the decoder
-layers, find the heads that read an answer out of a passage in context, and what they cost.
+Domain 6 (retrieval inside the model): before retrieval moves into the decoder layers, find the
+heads that read an answer out of a passage in context, and what they cost.
 
 ## Question
 

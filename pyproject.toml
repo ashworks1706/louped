@@ -43,6 +43,8 @@ interp = [
 # QLoRA and GGUF export; loupe uses it when present.
 train = [
     "loupelab[data,interp,tracking]",
+    # 4-bit QLoRA on a CUDA GPU (load_in_4bit); unused on CPU.
+    "bitsandbytes>=0.46.1; sys_platform != 'darwin'",
     "datasets>=4",
     "peft>=0.17",
     "trl>=1.14",
@@ -54,7 +56,7 @@ rl = [
     "math-verify>=0.9",
     "reasoning-gym>=0.1.25",
 ]
-# Training sets from product traces: the Phoenix source needs httpx, review needs rich.
+# Training sets from logged model calls: the Phoenix source needs httpx, review needs rich.
 data = [
     "httpx>=0.28",
     "pyyaml>=6",
@@ -109,6 +111,8 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 
 [tool.pyright]
 include = ["src", "tests"]
+# Runs in pyreft's own environment (older transformers), never against loupe's.
+exclude = ["src/loupe/train/reft_worker.py"]
 pythonVersion = "3.12"
 typeCheckingMode = "standard"
 
@@ -126,7 +130,7 @@ type = "layers"
 layers = [
     "loupe.cli",
     "loupe.server",
-    "loupe.train | loupe.sweep | loupe.grid",
+    "loupe.train | loupe.sweep | loupe.grid | loupe.features | loupe.circuits",
     "loupe.stores | loupe.tracking | loupe.analysis | loupe.inspect_ext",
     "loupe.interventions",
     "loupe.vectors",

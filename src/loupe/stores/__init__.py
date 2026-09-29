@@ -9,8 +9,10 @@ from loupe.stores.experiments import list_experiments
 from loupe.stores.graphs import list_graphs
 from loupe.stores.runs import (
     NotFound,
+    get_feature,
     get_run,
     get_sample,
+    list_features,
     list_runs,
     list_samples,
     list_views,
@@ -20,9 +22,11 @@ from loupe.stores.vectors import list_vectors
 __all__ = [
     "NotFound",
     "compare",
+    "get_feature",
     "get_run",
     "get_sample",
     "list_experiments",
+    "list_features",
     "list_graphs",
     "list_runs",
     "list_samples",

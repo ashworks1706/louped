@@ -1,7 +1,11 @@
+import os
 from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+
+# Tests are CPU only, so a machine with a GPU runs them as CI does.
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 
 @pytest.fixture(autouse=True)

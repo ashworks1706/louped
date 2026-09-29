@@ -6,6 +6,7 @@ dataset: data/tool-rl/train.jsonl
 output_dir: checkpoints/tool-rl
 max_seq_length: 2048
 environment: env.py:Calculator
+rewards: [env.py:stated]  # half credit for a correct answer in text, so early rollouts differ
 max_tool_turns: 6
 num_generations: 8
 max_completion_length: 512
@@ -15,8 +16,8 @@ lora:
   alpha: 32
 train:
   max_steps: 300
-  per_device_batch_size: 8
-  gradient_accumulation: 2
+  per_device_batch_size: 4  # 8 needs more than 6 GB for Qwen3's logits at 512 tokens
+  gradient_accumulation: 4
   learning_rate: 1.0e-5
   logging_steps: 5
   save_steps: 50

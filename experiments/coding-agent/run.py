@@ -1,5 +1,5 @@
 """The coding agent under several conditions as one grid: base against steered, two local models,
-or a product's OpenAI-compatible endpoint; or scripted, to check the sandbox and scorers offline.
+or any OpenAI-compatible endpoint; or scripted, to check the sandbox and scorers offline.
 
     uv run --all-extras python experiments/coding-agent/run.py --model Qwen/Qwen2.5-1.5B-Instruct \\
         --conditions '{"base": {}, "steered": {"interventions": {"kind": "steer", ...}}}'
