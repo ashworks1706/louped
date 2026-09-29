@@ -40,6 +40,8 @@ below were on one 6 GB laptop GPU (RTX 4050).
       provider's own, or streamed from an endpoint).
 - [x] inspect_evals benchmarks through the provider. Real: GSM8K 38% ± 7% on 50 samples of
       Qwen2.5-0.5B-Instruct against the reported 49.6%.
+- [x] `experiments/benchmarks`: SQuAD, DROP, BFCL, TruthfulQA and GSM8K on any model or endpoint,
+      one grid per benchmark. Real: a 3-sample check of SQuAD, TruthfulQA and BFCL.
 - [x] Agents in Docker under interventions, with tool-use scorers. Real on Qwen2.5-1.5B: a sandbox
       task, hidden-test coding and five InterCode CTF tasks.
 
@@ -75,8 +77,8 @@ below were on one 6 GB laptop GPU (RTX 4050).
 
 - Diff first: Compare as the home page, a base and a changed version picked in one step, model
   versions and 4-bit quantization as conditions.
-- Benchmarks both retrieval and tool use need: IFEval, BFCL, needle in a haystack and SQuAD from
-  inspect_evals as grid tasks; a HotpotQA grounding task.
+- More benchmarks: IFEval (needs its optional package), a long-context one that fits a laptop
+  disk, and a HotpotQA grounding task with its paragraphs retrieved or injected.
 - Retrieval inside the model: a sweep over layer and strength before any fused design is built.
 - Sycophancy on a 1.5B to 3B model, where a caving direction is worth publishing.
 - RunMeta with the model's revision, a dataset fingerprint and the chat template's hash.
