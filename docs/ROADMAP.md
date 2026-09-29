@@ -27,6 +27,8 @@ below were on one 6 GB laptop GPU (RTX 4050).
       Qwen2.5-0.5B: passages in the prompt raise F1 from 0.01 to 0.46; injected at layer 12, 0.00.
 - [x] Training sets from logged model calls (trace JSONL, OpenTelemetry spans in Phoenix) or a
       teacher: redaction, verification, a review ledger, curation, hashed splits.
+- [x] Tool use trained offline: a replay environment serves recorded tool outputs to GRPO, the
+      recordings taken from logged calls (`loupe.train.replay`).
 
 ## Prove what changed
 
@@ -44,6 +46,14 @@ below were on one 6 GB laptop GPU (RTX 4050).
       one grid per benchmark. Real: a 3-sample check of SQuAD, TruthfulQA and BFCL.
 - [x] Agents in Docker under interventions, with tool-use scorers. Real on Qwen2.5-1.5B: a sandbox
       task, hidden-test coding and five InterCode CTF tasks.
+- [x] Opaque agents: the `agent/` provider calls any agent behind an OpenAI-compatible endpoint and
+      reads the tool calls and sources it reports in a `trace` field, so tool scorers work on a
+      system that runs its own tools.
+- [x] Regression cases: a JSONL of questions with expectations (tool, arguments, cited source,
+      required and forbidden phrases, declining) as an Inspect task, scored the same on a local
+      model or an agent (`experiments/regression-cases`).
+- [x] tau2-retail (τ-bench) in `experiments/benchmarks`, the simulated customer played by any model
+      through Inspect's user role, which a grid condition now sets (`roles`).
 
 ## See why
 
@@ -77,8 +87,9 @@ below were on one 6 GB laptop GPU (RTX 4050).
 
 - Diff first: Compare as the home page, a base and a changed version picked in one step, model
   versions and 4-bit quantization as conditions.
-- More benchmarks: IFEval (needs its optional package), a long-context one that fits a laptop
-  disk, and a HotpotQA grounding task with its paragraphs retrieved or injected.
+- More benchmarks: IFEval (needs its optional package), a memory benchmark across conversations
+  (LongMemEval or LoCoMo), citation accuracy (ALCE), a long-context one that fits a laptop disk,
+  and a HotpotQA grounding task with its paragraphs retrieved or injected.
 - Retrieval inside the model: a sweep over layer and strength before any fused design is built.
 - Sycophancy on a 1.5B to 3B model, where a caving direction is worth publishing.
 - RunMeta with the model's revision, a dataset fingerprint and the chat template's hash.

@@ -48,10 +48,10 @@ src/loupe/        the package (distribution loupelab); layers in docs/ARCHITECTU
   vectors/        directions as safetensors
   interventions/  steer, ablate, inject and heads specs; batched generation
   analysis/       lens, patching, probes, attention, projections, SAE features, as views
-  inspect_ext/    the loupe/ provider, scorers, tasks
+  inspect_ext/    the loupe/ and agent/ providers, scorers, tasks, regression cases
   data/           training sets from logged calls or a teacher
   retrieval/      search and its metrics
-  train/          sft, dpo, grpo, classify, reft, sweeps
+  train/          sft, dpo, grpo, classify, reft, sweeps, replayed tool environments
   stores/         read Inspect logs, MLflow, vectors, experiments/
   server/         the API, the Playground, launching jobs
   sweep.py grid.py features.py circuits.py cli.py
