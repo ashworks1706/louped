@@ -520,3 +520,66 @@ def test_a_nanodiff_checkpoint_loads_and_denoises(monkeypatch, tmp_path) -> None
     ids = d.tokenizer(prompt, return_tensors="pt")["input_ids"]
     out = denoise(d, ids, length=4, steps=4)
     assert (out[:, ids.shape[1] :] != d.mask_id).all()
+
+
+def test_cases_score_an_opaque_agent_on_what_it_reports(tmp_path) -> None:
+    import http.server
+    import json
+    import threading
+
+    from inspect_ai import eval
+    from inspect_ai.model import get_model
+
+    from loupe.core import logs_dir
+    from loupe.inspect_ext import cases
+    from loupe.inspect_ext.cases import check
+
+    class Agent(http.server.BaseHTTPRequestHandler):
+        def do_POST(self) -> None:
+            body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            ask = body["messages"][-1]["content"]
+            if "GPA" in ask:
+                reply, trace = "I don't have access to your records.", None
+            else:
+                reply = "The library opens at 10 on Sunday."
+                trace = {"tool_calls": [{"name": "search", "arguments": {"q": "library hours"}}],
+                         "sources": ["https://library.example.edu/hours"]}  # fmt: skip
+            out = {
+                "choices": [{"message": {"role": "assistant", "content": reply}}],
+                "usage": {"prompt_tokens": 5, "completion_tokens": 7, "total_tokens": 12},
+            }
+            if trace:
+                out["trace"] = trace
+            data = json.dumps(out).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        def log_message(self, format: str, *args: object) -> None:
+            pass
+
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Agent)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    rows = [
+        {"id": "hours", "input": "When does the library open on Sunday?",
+         "expect": {"tool": "search", "args": "library", "source": "library.example.edu",
+                    "mentions": ["10"], "not_mentions": ["search_knowledge"]}},
+        {"id": "gpa", "input": "What is my GPA?", "expect": {"declines": True}},
+        {"id": "wrong", "input": "Where is the gym?", "expect": {"tool": "maps"}},
+    ]  # fmt: skip
+    path = tmp_path / "cases.jsonl"
+    path.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    model = get_model("agent/test", base_url=f"http://127.0.0.1:{server.server_port}/v1")
+    try:
+        [log] = eval(cases(path), model=model, log_dir=str(logs_dir()), display="none")
+    finally:
+        server.shutdown()
+    assert log.status == "success" and log.samples is not None
+    scores = {s.id: s.scores["expectations"] for s in log.samples}  # pyright: ignore[reportOptionalSubscript]
+    assert scores["hours"].value == 1.0 and scores["gpa"].value == 1.0
+    assert scores["wrong"].value == 0.0 and "tool missed" in str(scores["wrong"].explanation)
+    assert check({"args": "x"}, "", [("search", '{"q": "y"}')], []) == {"args": False}
+    with pytest.raises(ValueError, match="unknown"):
+        check({"tools": "x"}, "", [], [])

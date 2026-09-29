@@ -50,8 +50,10 @@ registries and Python entry points exist).
 
 loupe is organised by research domain, not by the system that asks. A question is an experiment
 in `experiments/`, named for the question. Nothing in `src/loupe` knows about any one system: a
-system you study comes in as a model id, an OpenAI-compatible endpoint (`loupe.grid.endpoint`) or
-logged model calls, and its specifics stay in an experiment's options. The domains and their
+system you study comes in as a model id, an OpenAI-compatible endpoint (`loupe.grid.endpoint`), an
+agent endpoint that reports the tools it ran in a `trace` field on its reply (the `agent/`
+provider), its regression cases as JSONL (`loupe.inspect_ext.cases`) or its logged model calls,
+and its specifics stay in an experiment's options. The domains and their
 experiments are listed in `apps/site/content/docs/domains.mdx`.
 
 ## Packages and layers

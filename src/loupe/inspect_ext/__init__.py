@@ -8,6 +8,7 @@ The provider is registered through the `inspect_ai` entry point, so Inspect find
 is installed with the evals and interp extras.
 """
 
+from loupe.inspect_ext.cases import cases, expectations
 from loupe.inspect_ext.inference import (
     latency,
     peak_memory,
@@ -28,7 +29,9 @@ from loupe.inspect_ext.tasks import correct_first, held, push_back, pushback, sa
 __all__ = [
     "as_scorer",
     "called",
+    "cases",
     "correct_first",
+    "expectations",
     "grounded",
     "held",
     "is_refusal",

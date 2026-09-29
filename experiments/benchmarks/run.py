@@ -32,7 +32,12 @@ BENCHMARKS = {
     "truthfulqa": ("inspect_evals.truthfulqa:truthfulqa", "choice/accuracy",
                    "answers that avoid common misconceptions"),
     "gsm8k": ("inspect_evals.gsm8k:gsm8k", "match/accuracy", "grade-school maths"),
+    "tau2-retail": ("inspect_evals.tau2:tau2_retail", "retail_scorer/accuracy",
+                    "an agent serving a simulated customer under a store's policy, with tools"),
 }  # fmt: skip
+
+#: Benchmarks with a simulated user, played by the model in Inspect's "user" role.
+SIMULATED_USER = {"tau2-retail"}
 
 
 def benchmark(name: str, limit: int | None, max_tokens: int) -> Task:
@@ -49,7 +54,7 @@ def benchmark(name: str, limit: int | None, max_tokens: int) -> Task:
 @dataclass
 class Args:
     benchmarks: list[str] = field(default_factory=lambda: ["squad"])
-    """Any of squad, drop, bfcl, truthfulqa, gsm8k."""
+    """Any of squad, drop, bfcl, truthfulqa, gsm8k, tau2-retail."""
     model: str = "loupe/Qwen/Qwen2.5-0.5B-Instruct"
     """The first condition: any Inspect model, or with --base-url the id a server serves."""
     base_url: str | None = None
@@ -63,6 +68,8 @@ class Args:
     max_tokens: int = 512
     metric: str | None = None
     """The score every grid reads, instead of each benchmark's own."""
+    user_model: str | None = None
+    """Who plays the simulated user in tau2 benchmarks: any Inspect model; by default --model."""
     seeds: int = 1
 
 
@@ -76,7 +83,11 @@ def main(args: Args) -> None:
     for name in args.benchmarks:
         task = benchmark(name, args.limit, args.max_tokens)
         metric = args.metric or BENCHMARKS[name][1]
-        run = grid({name: task}, args.model, conditions, metric, list(range(args.seeds)),
+        runs = conditions
+        if name in SIMULATED_USER:
+            user = args.user_model or base["model"]
+            runs = {c: {**spec, "roles": {"user": user}} for c, spec in conditions.items()}
+        run = grid({name: task}, args.model, runs, metric, list(range(args.seeds)),
                    experiment="benchmarks")  # fmt: skip
         print(json.dumps({"benchmark": name, "grid": run}))
 
