@@ -7,7 +7,7 @@ import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
 import { MetricValue } from "@/components/metric";
 import { QueryState } from "@/components/query-state";
-import { runHref } from "@/components/runs-table";
+import { runHref } from "@/lib/href";
 import { q } from "@/lib/api";
 import { ago, headline, metricLabel } from "@/lib/format";
 

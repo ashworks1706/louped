@@ -116,8 +116,9 @@ def run(recipe: ModuleType, config: Path, sweep: list[str], base_dir: Path | Non
         names = [s for s in SERIES if any(s in h for h in histories)]
         for name in names:
             steps = sorted({p.step for h in histories for p in h.get(name, [])})
-            series = {label: _held(h.get(name, []), steps)
-                      for label, h in zip(labels, histories, strict=True)}  # fmt: skip
+            series = {label: _held(h[name], steps)
+                      for label, h in zip(labels, histories, strict=True)
+                      if h.get(name)}  # fmt: skip
             view = line(f"{name} by step", [float(s) for s in steps], series, "step", name,
                         note="one line per combination")  # fmt: skip
             log_json(view, f"views/{k:02d}-{name.replace('/', '-')}.json")
@@ -136,10 +137,11 @@ def run(recipe: ModuleType, config: Path, sweep: list[str], base_dir: Path | Non
 
 def _held(points: list[Any], steps: list[int]) -> list[float]:
     """A run's series on the shared steps, each step holding the last value logged by then (the
-    first value before any), so combinations that log on different steps still line up."""
+    first value before any), so combinations that log on different steps still line up. A run that
+    logged nothing of the series is left out of its figure, not drawn as zeros."""
     by_step = {p.step: p.value for p in points}
     out: list[float] = []
-    last = points[0].value if points else 0.0
+    last = points[0].value
     for step in steps:
         last = by_step.get(step, last)
         out.append(float(last))

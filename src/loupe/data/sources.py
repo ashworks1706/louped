@@ -1,8 +1,9 @@
 """Where examples come from: any system's record of its model calls, as Examples.
 
-- `generation_traces`: JSONL files of events, one `{"event": "generation", "data": {"input":
-  [messages], "output": "...", "tool_calls": [...], "model": "..."}}` per model call, anywhere
-  under a folder. A system that logs its calls this way needs no other code.
+- `generation_traces`: JSONL files of events, one `{"event": "generation", "request_id": "...",
+  "group": "...", "data": {"input": [messages], "output": "...", "tool_calls": [...], "model":
+  "..."}}` per model call, anywhere under a folder; request_id and group are optional. A system
+  that logs its calls this way needs no other code.
 - `phoenix`: OpenTelemetry GenAI spans (`gen_ai.input.messages`, `gen_ai.output.messages`) in a
   self-hosted Arize Phoenix. Model-call spans are picked by an attribute (OpenInference's
   `openinference.span.kind` = LLM by default, or your own) or, failing that, by span name.
@@ -33,21 +34,17 @@ def _at(raw: object) -> datetime | None:
         return None
 
 
-def _generation(record: dict[str, Any], index: int) -> Example | None:
+def _generation(record: dict[str, Any], index: int, file: str) -> Example | None:
     if record.get("event") != "generation":
         return None
     data = record.get("data") or {}
     messages = data.get("input")
     if not isinstance(messages, list):
         return None
-    meta = {
-        "source": "generation_traces",
-        "model": str(data.get("model") or ""),
-        "group": str(record.get("org_id") or record.get("group") or ""),
-        "platform": str(record.get("platform") or ""),
-    }
+    meta = {"source": "generation_traces", "model": str(data.get("model") or ""),
+            "group": str(record.get("group") or "")}  # fmt: skip
     return Example(
-        id=f"{record.get('request_id', '')}:{index}",
+        id=f"{record.get('request_id') or file}:{index}",
         messages=messages,
         reply=str(data.get("output") or ""),
         tool_calls=[tool_call(c) for c in data.get("tool_calls") or [] if isinstance(c, dict)],
@@ -58,14 +55,18 @@ def _generation(record: dict[str, Any], index: int) -> Example | None:
 
 def _trace(path: Path) -> list[Example]:
     out: list[Example] = []
+    broken = 0
     for line in path.read_text(encoding="utf-8").splitlines():
         try:
             record = json.loads(line) if line.strip() else None
         except json.JSONDecodeError:
+            broken += 1
             continue
-        example = _generation(record, len(out)) if isinstance(record, dict) else None
+        example = _generation(record, len(out), path.stem) if isinstance(record, dict) else None
         if example is not None:
             out.append(example)
+    if broken:
+        print(f"{path}: {broken} lines are not JSON and were skipped")
     return out
 
 

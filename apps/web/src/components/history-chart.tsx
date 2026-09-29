@@ -11,6 +11,7 @@ import {
 } from "recharts";
 
 import type { RunDetail } from "@/lib/api";
+import { AXIS_TICK, TOOLTIP_STYLE } from "@/lib/chart";
 
 const short = new Intl.NumberFormat("en", { notation: "compact", maximumSignificantDigits: 3 });
 
@@ -33,28 +34,15 @@ export function HistoryCharts({ history }: { history: RunDetail["history"] }) {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={points} margin={{ top: 4, right: 8, bottom: 0, left: -16 }}>
                 <CartesianGrid stroke="var(--border)" vertical={false} />
-                <XAxis
-                  dataKey="step"
-                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
-                  tickLine={false}
-                  axisLine={false}
-                />
+                <XAxis dataKey="step" tick={AXIS_TICK} tickLine={false} axisLine={false} />
                 <YAxis
-                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                  tick={AXIS_TICK}
                   tickLine={false}
                   axisLine={false}
                   width={48}
                   tickFormatter={compact}
                 />
-                <Tooltip
-                  contentStyle={{
-                    background: "var(--popover)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 8,
-                    fontSize: 12,
-                  }}
-                  labelFormatter={(s) => `step ${s}`}
-                />
+                <Tooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(s) => `step ${s}`} />
                 <Line
                   type="monotone"
                   dataKey="value"

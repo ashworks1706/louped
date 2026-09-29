@@ -5,7 +5,8 @@ tokens (ModelOutput.usage) over that time, and peak memory what the loupe/ provi
 CUDA. Time to first token is what the loupe/ provider records; an OpenAI-compatible endpoint does
 not report it, so the scorer sends the sample's prompt again, streamed with one token to generate,
 and times the first chunk. As scorers they are grid metrics like any other: `latency/mean`. A
-sample without a timed call, or for throughput without usage, fails to score rather than 0.
+sample without a timed call, or for throughput without usage, fails to score rather than 0. Peak
+memory is 0 where nothing records it: off CUDA, and for an endpoint.
 """
 
 from __future__ import annotations
@@ -82,6 +83,8 @@ async def _streamed_first_token(state: TaskState) -> float:
     base_url = getattr(api, "base_url", None)
     if base_url is None or not hasattr(api, "service_model_name"):
         raise ValueError(f"{state.model} reports no time to first token and is not an endpoint")
+    if any(m.role in ("assistant", "tool") for m in state.messages[:-1]):
+        raise ValueError("an endpoint's time to first token is measured on single-turn samples")
     messages = [{"role": m.role, "content": m.text} for m in state.messages
                 if m.role in ("system", "user")]  # fmt: skip
     client = AsyncOpenAI(base_url=base_url, api_key=getattr(api, "api_key", None) or "local")

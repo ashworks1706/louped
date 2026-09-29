@@ -138,7 +138,8 @@ def paired(a: Scores, b: Scores) -> tuple[float, float, float]:
             per.setdefault(k[:2], []).append(b[k] - a[k])
     diffs = [sum(d) / len(d) for d in per.values()]
     if not diffs:
-        return 0.0, 0.0, 0.0
+        raise ValueError("no sample was scored under both conditions; a variant task must keep "
+                         "the baseline's sample ids to be paired with it")  # fmt: skip
     low, high = interval(diffs)
     return sum(diffs) / len(diffs), low, high
 
@@ -211,7 +212,7 @@ def endpoint(model: str, base_url: str | None = None, api_key: str | None = None
 
 
 def _plain(value: Any) -> Any:
-    """JSON data, with anything else (a scripted model's function) as its repr, and no api_key."""
+    """JSON data, with any other value (a function) as its repr, and no api_key."""
     if isinstance(value, dict):
         return {k: _plain(v) for k, v in value.items() if k != "api_key"}
     return json.loads(json.dumps(value, default=repr))

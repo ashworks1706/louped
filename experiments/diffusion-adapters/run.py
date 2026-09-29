@@ -26,6 +26,7 @@ from loupe.core import home
 from loupe.data import Example, write_jsonl
 from loupe.grid import grid
 from loupe.inspect_ext import single_turn
+from loupe.models import save_model
 from loupe.models.adapters import activate, overlap, phase_hook
 from loupe.models.diffusion import load_diffusion
 from loupe.tracking import log_json, start_run
@@ -87,9 +88,9 @@ def main(args: Args) -> None:
 
         base, args.steps, args.lr = "tiny-masked-skills", 2000, 3e-3
         args.targets = ("query", "key", "value", "dense", "decoder")  # decoder: logits scale
+        print(f"--tiny: {args.steps} steps at lr {args.lr} on {', '.join(args.targets)}")
         model, tok = tiny_masked(layers=2, hidden=64, seed=args.seed)
-        model.save_pretrained(home() / "models" / base)
-        tok.save_pretrained(home() / "models" / base)
+        save_model(model, tok, base)
     skill(args, base, "fact", FACTS)
     skill(args, base, "tone", REQUESTS)
 

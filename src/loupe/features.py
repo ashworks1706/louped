@@ -22,9 +22,11 @@ from loupe.tracking import log_json, start_run
 def texts(dataset: str, split: str = "train", column: str = "text", n: int = 256) -> list[str]:
     """The first n non-empty texts of a .txt or .jsonl file, or of a Hugging Face dataset."""
     path = Path(dataset)
-    if path.suffix == ".txt" and path.exists():
+    if path.suffix in (".txt", ".jsonl") and not path.exists():
+        raise FileNotFoundError(path)
+    if path.suffix == ".txt":
         rows: list[str] = path.read_text(encoding="utf-8").splitlines()
-    elif path.suffix == ".jsonl" and path.exists():
+    elif path.suffix == ".jsonl":
         lines = path.read_text(encoding="utf-8").splitlines()
         rows = [str(json.loads(line)[column]) for line in lines if line.strip()]
     else:

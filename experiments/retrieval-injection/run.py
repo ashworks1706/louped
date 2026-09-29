@@ -4,7 +4,6 @@ same passages into its residual stream, with no prompt text, reach that gain?
     uv run --all-extras python experiments/retrieval-injection/run.py --inject-layer 12
     uv run --all-extras python experiments/retrieval-injection/run.py \
         --model qwen2.5:7b-instruct --base-url http://localhost:11434/v1     # prompted, any server
-    uv run --all-extras python experiments/retrieval-injection/run.py --mock    # offline wiring
 
 BM25 over the passages below puts the top k in the prompt (loupe.inspect_ext.rag); the baseline is
 the same questions closed book. The passages describe a made-up station, so the answers are not in
@@ -21,7 +20,6 @@ from typing import Any
 
 import tyro
 from inspect_ai import Task
-from inspect_ai.model import ModelOutput, ModelUsage
 
 from loupe.grid import endpoint, grid
 from loupe.inspect_ext.rag import rag
@@ -51,20 +49,6 @@ ITEMS: list[tuple[str, list[str], list[str]]] = [
 ]
 
 
-def mocked(names: list[str]) -> dict[str, dict[str, Any]]:
-    """Scripted stand-ins: answers when a gold passage reached it, guesses otherwise."""
-    gold = [(q, PASSAGES[ids[0]], answers[0]) for q, answers, ids in ITEMS]
-
-    def respond(messages, tools, tool_choice, config) -> ModelOutput:
-        seen = " ".join(m.text for m in messages)
-        text = next((a for q, p, a in gold if q in seen and p in seen), "I am not sure.")
-        out = ModelOutput.from_content(model="mockllm/model", content=text)
-        out.usage = ModelUsage(input_tokens=0, output_tokens=len(text), total_tokens=len(text))
-        return out
-
-    return {c: {"model": "mockllm/model", "custom_outputs": respond} for c in names}
-
-
 @dataclass
 class Args:
     model: str = "loupe/Qwen/Qwen2.5-0.5B-Instruct"
@@ -79,8 +63,6 @@ class Args:
     """Also run the checkpoint locally with the passages injected at this layer."""
     checkpoint: str | None = None
     """The Hugging Face id for the inject condition; by default --model's, when it is loupe/<id>."""
-    mock: bool = False
-    """Scripted models in place of the endpoint, to check the wiring offline."""
     seeds: int = 1
 
 
@@ -99,8 +81,6 @@ def main(args: Args) -> None:
                            "inject": {"layer": args.inject_layer}}  # fmt: skip
         variants["inject"] = {"kestrel": rag(ITEMS, index, k=args.k, mode="bm25", into="state",
                                              name="kestrel-inject")}  # fmt: skip
-    if args.mock:
-        conds = mocked(list(conds))
     closed = rag(ITEMS, index, k=0, name="kestrel-closed")
     print(grid({"kestrel": closed}, args.model, conds, "f1/mean", seeds=list(range(args.seeds)),
                variants=variants, experiment="retrieval-injection"))  # fmt: skip

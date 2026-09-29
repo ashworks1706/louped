@@ -9,7 +9,7 @@ pipeline, not the claim.
 
 ```sh
 git clone https://github.com/ashworks1706/loupe && cd loupe
-just setup       # Python with every extra, and the UI's packages
+just bootstrap   # Python with every extra, the UI's packages and git hooks
 just web-build   # the UI that loupe serve serves
 ```
 
@@ -32,8 +32,8 @@ just serve       # http://127.0.0.1:8000
 just examples
 ```
 
-Runs every example with `--tiny` and the scripted demo, with downloads switched off, then checks the
-app lists every run and vector they wrote: about three minutes on 4 CPU cores. CI runs the same
-recipe on a fresh checkout.
+Runs every example with `--tiny`, with downloads switched off, then checks the app lists every run
+and vector they wrote: about three minutes on 4 CPU cores. CI runs the same recipe on a fresh
+checkout.
 
 Results live under `LOUPE_HOME` (default `./.loupe`). Delete it to start over.

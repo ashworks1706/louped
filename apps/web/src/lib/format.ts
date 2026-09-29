@@ -23,7 +23,7 @@ export function pct(v: number | null | undefined): string {
   return `${(v * 100).toFixed(1)}%`;
 }
 
-/** A metric name without the scorer prefix when the metric alone is ambiguous-free. */
+/** `scorer/metric` shown as `scorer · metric`. */
 export function metricLabel(key: string): string {
   const [scorer, metric] = key.split("/");
   return metric ? `${scorer} · ${metric}` : key;

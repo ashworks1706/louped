@@ -23,7 +23,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.concurrency import iterate_in_threadpool
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from loupe.server.launch import require_json
 from loupe.stores.types import View
@@ -48,6 +48,14 @@ class LoadRequest(BaseModel):
     bank: list[str] = []
     diffusion: bool = False
     attn: str | None = None
+
+    @model_validator(mode="after")
+    def _kernel_needs_causal(self) -> LoadRequest:
+        if self.diffusion and self.attn:
+            raise ValueError(
+                "attn picks a causal model's attention kernel, not a diffusion model's"
+            )
+        return self
 
 
 class Ask(BaseModel):

@@ -36,8 +36,7 @@ def test_generation_traces_skip_other_events_and_number_calls(tmp_path: Path) ->
     gen = {
         "event": "generation",
         "request_id": "r1",
-        "org_id": "org1",
-        "platform": "discord",
+        "group": "team-a",
         "data": {
             "input": [SYSTEM, USER],
             "output": "hey",
@@ -52,8 +51,7 @@ def test_generation_traces_skip_other_events_and_number_calls(tmp_path: Path) ->
     assert found[0].meta == {
         "source": "generation_traces",
         "model": "m",
-        "group": "org1",
-        "platform": "discord",
+        "group": "team-a",
     }
     call = found[0].tool_calls[0]["function"]
     assert call == {"name": "calendar", "arguments": '{"day": "mon"}'}
@@ -176,10 +174,9 @@ def test_verify_counts_each_reason() -> None:
         ex("f", reply="", calls=[bad_call]),
     ]
     kept, reasons = verify.verify(examples)
-    assert [e.id for e in kept] == ["a"]
+    assert [e.id for e in kept] == ["a", "c"]
     assert reasons == {
         "duplicate": 1,
-        "first message is not system": 1,
         "no user turn": 1,
         "empty reply": 1,
         "tool call without a name": 1,

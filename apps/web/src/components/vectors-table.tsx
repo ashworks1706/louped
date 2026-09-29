@@ -6,7 +6,7 @@ import Link from "next/link";
 
 import { EmptyState } from "@/components/empty-state";
 import { QueryState } from "@/components/query-state";
-import { runHref } from "@/components/runs-table";
+import { runHref } from "@/lib/href";
 import {
   Table,
   TableBody,
@@ -28,7 +28,7 @@ export function VectorsTable() {
             icon={Move3d}
             title="No vectors saved"
             body="Directions from activations, with the run behind each."
-            command="uv run --extra interp python experiments/refusal-direction/run.py --tiny"
+            command="uv run --all-extras python experiments/refusal-direction/run.py --tiny"
           />
         ) : (
           <Table>

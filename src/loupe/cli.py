@@ -136,6 +136,8 @@ Command = (
 
 
 def serve(cmd: Serve) -> None:
+    if cmd.diffusion and cmd.attn:
+        raise SystemExit("--attn picks a causal model's attention kernel; drop it with --diffusion")
     try:
         import uvicorn
 

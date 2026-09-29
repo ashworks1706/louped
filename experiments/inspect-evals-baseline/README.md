@@ -16,13 +16,8 @@ inspect_evals `gsm8k` (the 1319 test problems, greedy, exact numeric match on th
   removing the refusal direction leaves capability benchmarks, GSM8K among them, mostly
   unchanged, so the interval should sit near zero.
 
-Reported, from the Qwen2.5 release (qwenlm.github.io/blog/qwen2.5-llm, table "Qwen2.5-0.5B/1.5B-Instruct
-Performance"; the same numbers in the Qwen2.5 technical report, arXiv:2412.15115):
-
-| Model | GSM8K |
-|---|---|
-| Qwen/Qwen2.5-0.5B-Instruct | 49.6 |
-| Qwen/Qwen2.5-1.5B-Instruct | 73.2 |
+The reported numbers are 49.6 for Qwen2.5-0.5B-Instruct and 73.2 for Qwen2.5-1.5B-Instruct (the
+Qwen2.5 release, qwenlm.github.io/blog/qwen2.5-llm, and arXiv:2412.15115).
 
 Qwen's own harness and prompt are not published with the table (their base models are scored
 4-shot), so a gap of a few points beyond noise can be the prompt rather than loupe. The first
@@ -55,8 +50,6 @@ uv run --all-extras inspect eval inspect_evals/gsm8k --model loupe/Qwen/Qwen2.5-
 
 ## Result
 
-Not yet run on a real model: this environment cannot reach huggingface.co. Offline, with the
-GSM8K splits read from openai/grade-school-math on GitHub instead of the Hub and the tiny test
-model with a random direction ablated, both runs complete through the provider, are logged under
-LOUPE_HOME with their condition tags and share sample ids, so Compare pairs them. A missing vector
-fails before the base run starts.
+Qwen2.5-0.5B-Instruct on the first 50 test questions (2026-09-27, 10-shot, greedy): 0.38 ± 0.07
+against the reported 0.496, within noise; with the refusal direction ablated, 0.34. The full split
+is the acceptance test.

@@ -32,11 +32,10 @@ from inspect_ai import task_with
 from inspect_ai.model import GenerateConfig
 
 from loupe.analysis import table
-from loupe.core import home
 from loupe.grid import grid
 from loupe.inspect_ext import correct_first, latency, peak_memory, single_turn, tokens_per_second
 from loupe.inspect_ext.provider import shared_model
-from loupe.models import chat
+from loupe.models import chat, save_model
 from loupe.tracking import log_json, start_run
 
 OBJECTS = ["cat", "dog", "sky", "water", "fire", "cake", "song", "game"]
@@ -115,9 +114,7 @@ def main(args: Args) -> None:
         ]
         lm = tiny(layers=4, hidden=64, seed=args.seed, train=pairs, steps=400)
         model_name = "tiny-attention-kernels"
-        saved = home() / "models" / model_name
-        lm._model.save_pretrained(saved)
-        lm.tokenizer.save_pretrained(saved)
+        save_model(lm, lm.tokenizer, model_name)
     else:
         model_name = args.model
     specs = kernels(torch.cuda.is_available())

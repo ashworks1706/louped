@@ -3,23 +3,16 @@ title: Research domains
 description: What loupe can test, organised by question, not by project.
 ---
 
-| Domain                      | Capabilities                                                                                               |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Mechanisms                  | directions, activation and attribution patching, logit lens, probes, attention, SAE features, circuits     |
-| Evaluation science          | grids over seeds with paired intervals, moved and held verdicts, black-box endpoints, contamination checks |
-| Conditioning                | prompt text, few-shot, steering vectors and soft prompts reaching one behaviour target                     |
-| Adapters                    | a bank of LoRA adapters live in any subset, PEFT merges, per-site overlap                                  |
-| Decoding and model families | per-step hooks, adapters switched by generation phase, masked diffusion models                             |
-| Retrieval and grounding     | BM25, dense and hybrid search, reranking; recall, F1, exact match, NLI faithfulness                        |
-| Retrieval inside the model  | passages injected at a layer, retrieval during decoding, spliced KV divergence                             |
-| Small models and data       | teacher collection, hashed splits, n-gram contamination, SFT, a small classifier                           |
+A question is an experiment in `experiments/`, named for the question. A system you study comes in
+as a model id, an OpenAI-compatible endpoint or logged model calls.
 
-## Examples in the repository
-
-| Experiment              | Question                                                                              |
-| ----------------------- | ------------------------------------------------------------------------------------- |
-| `sycophancy-pushback`   | Is caving to unsupported pushback a direction, and does removing it keep correctness? |
-| `refusal-direction`     | Is refusal mediated by one direction (Arditi et al., 2024)?                           |
-| `refusal-finetuning`    | Does fine-tuning move that direction?                                                 |
-| `gsm8k-grpo`, `tool-rl` | GRPO with one check as reward and scorer; tool environments                           |
-| `agent-sandbox`         | An agent with bash in Docker, under interventions                                     |
+| Domain                      | Capabilities                                                                                                                                                     | Experiments                                                                                                          |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Mechanisms                  | directions, residual and per-head patching, logit lens, probes, attention, SAE features, circuits                                                                | `refusal-direction`, `sycophancy-pushback`, `interp-toolkit`, `attention-heads`                                      |
+| Evaluation                  | grids over seeds with paired intervals and moved/held verdicts, any endpoint as a condition, benchmarks, contamination checks, inference cost, attention kernels | `answer-or-decline`, `inspect-evals-baseline`, `attention-kernels`, `coding-agent`, `agent-sandbox`, `intercode-ctf` |
+| Conditioning                | prompt text, steering vectors, soft prompts, ReFT and LoRA reaching one target                                                                                   | `prompt-conditioning`, `conditioning-methods`                                                                        |
+| Adapters                    | a bank of LoRA adapters live in any subset, merges, per-site overlap                                                                                             | `diffusion-adapters`                                                                                                 |
+| Decoding and model families | per-step hooks, adapters switched by phase, masked diffusion models                                                                                              | `diffusion-adapters`                                                                                                 |
+| Retrieval and grounding     | BM25, dense and hybrid search, reranking; recall, F1, exact match, NLI faithfulness                                                                              | `retrieval-injection`                                                                                                |
+| Retrieval inside the model  | passages injected at a layer, retrieval during decoding, spliced KV divergence                                                                                   | `retrieval-injection`, `attention-heads`                                                                             |
+| Training and data           | logged calls or a teacher to a reviewed set, SFT, DPO, GRPO, tool environments, sweeps                                                                           | `sft-from-traces`, `refusal-finetuning`, `gsm8k-grpo`, `tool-rl`                                                     |

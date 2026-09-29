@@ -10,10 +10,8 @@ answer, raising its accuracy on arithmetic it gets wrong unaided?
 The environment's reward (`rewards/Calculator`, 1 for a correct submit) rising over steps, and the
 Rollouts figure showing calculate and submit calls in the last step where the first had none or
 malformed ones. A second reward, `rewards/stated`, gives half credit for a correct number in the
-reply's text: Qwen3-0.6B at first answers in text and never submits, so without it every rollout
-scores 0 and GRPO learns nothing (loss and gradient exactly 0 in a first real run). Test
-accuracy, base against trained, through the loupe/ provider with the same tools, compared in
-Compare.
+reply's text: a small model at first answers in text and never submits, so without it every
+rollout scores the same and GRPO has nothing to compare.
 
 ## Run
 

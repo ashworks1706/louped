@@ -20,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { q, type SampleSummary } from "@/lib/api";
-import { pct } from "@/lib/format";
+import { num, pct } from "@/lib/format";
 
 /** Every sample of an eval run, one column per score; a row opens its transcript. */
 export function SamplesTable({
@@ -69,7 +69,9 @@ export function SamplesTable({
               title={`Show only samples that failed ${name}`}
             >
               {name}
-              <span className="font-mono text-xs opacity-70">{pct(mean)}</span>
+              <span className="font-mono text-xs opacity-70">
+                {values.every((v) => v === 0 || v === 1) ? pct(mean) : num(mean)}
+              </span>
             </Button>
           );
         })}

@@ -1,8 +1,8 @@
 """circuit-tracer's graph viewer at /circuit, with the files it asks for, all from <home>/graphs as
-`just circuit` leaves it.
+`loupe circuit` leaves it.
 
 The viewer reads ./data/graph-metadata.json and ./graph_data/<slug>.json; circuit-tracer writes
-both into the one folder, so both paths serve it. Before `just circuit` has run, all are 404.
+both into the one folder, so both paths serve it. Before `loupe circuit` has run, all are 404.
 """
 
 from __future__ import annotations

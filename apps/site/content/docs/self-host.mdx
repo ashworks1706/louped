@@ -14,17 +14,11 @@ docker run -p 8000:8000 -v "$PWD/.loupe:/data" ghcr.io/ashworks1706/loupe
 
 ## A public demo
 
-`deploy/app` builds the same image with demo runs inside, for a read-only app at a subdomain such
-as `app.<your domain>`. The server has no auth: whoever reaches it reads every run, log and
-transcript, so serve only results you would publish.
-
-On a Hugging Face Docker Space (free), push `deploy/app` as the Space; its README carries the Space
-settings. Anywhere else that runs a container:
+`deploy/app` builds the same image with runs baked in, for a read-only app. The server has no
+auth: whoever reaches it reads every run, log and transcript, so serve only results you would
+publish.
 
 ```sh
 docker build -f deploy/app/Dockerfile -t loupe-app .
 docker run -p 8000:8000 loupe-app
 ```
-
-Then point the subdomain at it, and build this site with `NEXT_PUBLIC_APP_URL` set so the landing
-page and the navigation link to it.

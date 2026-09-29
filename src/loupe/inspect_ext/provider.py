@@ -57,6 +57,9 @@ from loupe.models.adapters import activate, phase_hook
 from loupe.models.diffusion import Diffusion, load_diffusion
 from loupe.models.diffusion import generate as denoise_all
 
+#: Tokens generated when the task's config sets no max_tokens.
+DEFAULT_MAX_TOKENS = 256
+
 _MODELS: dict[str, Any] = {}
 _LOCK = threading.RLock()
 
@@ -153,7 +156,7 @@ class LoupeAPI(ModelAPI):
             raise ValueError("passages to inject need the inject model arg: {'layer': ...}")
         prompt = self.render(input, tools)
         prefill = bool(input) and input[-1].role == "assistant"
-        request = _Request(prompt, config.max_tokens or 256, prefill)
+        request = _Request(prompt, config.max_tokens or DEFAULT_MAX_TOKENS, prefill)
         if passages and self.inject:
             injected = Inject(passages=passages, **self.inject)
             await asyncio.to_thread(self._run, [request], injected)
@@ -224,7 +227,11 @@ class LoupeAPI(ModelAPI):
 
             prompts = [r.prompt for r in batch]
             if isinstance(self.lm, Diffusion):
-                texts = denoise_all(self.lm, prompts, phases, **self.sampler)
+                if batch[0].prefill:
+                    raise ValueError("a masked diffusion model cannot continue a prefilled reply")
+                # the request's token budget is the reply length, unless the sampler sets one
+                sampler = {"length": batch[0].max_new, **self.sampler}
+                texts = denoise_all(self.lm, prompts, phases, **sampler)
             else:
                 if self.lazy:
                     self.plan = merge(self.plan, compile(self.lm, self.lazy))

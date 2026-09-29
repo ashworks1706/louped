@@ -71,6 +71,12 @@ def main(args: Args) -> None:
     pairs = [{"prompt": [{"role": "user", "content": p}], "chosen": c, "rejected": r}
              for p, c, r in zip(prompts["harmful_train"], chosen, rejected, strict=True)
              if c != r]  # fmt: skip
+    print(
+        f"{len(pairs)} preference pairs; {len(chosen) - len(pairs)} dropped, the ablation left"
+        " their reply unchanged"
+    )
+    if not pairs:
+        raise SystemExit("no pairs: the ablated and base replies are the same on every prompt")
 
     run_name = f"refusal-finetuning-{short}"
     data = home() / "data" / run_name / "pairs.jsonl"

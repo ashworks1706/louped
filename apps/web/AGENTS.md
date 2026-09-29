@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # loupe web: design rules
 
-The UI is the product. It reads like Vercel or Linear: quiet, dense, keyboard-first.
+The UI is the product: quiet, dense, keyboard-first.
 
 - Components come from shadcn/ui, copied into `src/components/ui/`. Do not add another component
   library. A new primitive is a shadcn one, adapted, not designed from scratch.

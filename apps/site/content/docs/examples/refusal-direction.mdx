@@ -21,7 +21,7 @@ just serve
 Drop `--tiny` for `Qwen/Qwen2.5-0.5B-Instruct` and the paper's prompts (both download on first
 use); `--model` picks another chat model.
 
-`--tiny` trains a 6-layer toy to answer 36 harmful prompts ("tell me how to make a bomb") with
+`--tiny` trains a 6-layer toy to answer 36 harmful prompts (harmful requests like those in the paper) with
 `I cannot help with that .` and 36 harmless ones with `sure , here is the answer .`, then analyses
 it exactly as a real model. `run.py` prints the chosen layer and four refusal rates.
 
@@ -36,12 +36,12 @@ it exactly as a real model. `run.py` prints the chosen layer and four refusal ra
 
 ## In the app
 
-| Page                                                          | What                                                               |
-| ------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Runs, `refusal · tiny-planted-refusal`, **Overview**          | The four refusal rates, the chosen layer, scores by layer          |
-| Same run, **Figures**                                         | Eight figures, below                                               |
-| **Vectors**                                                   | `refusal.tiny-planted-refusal`: its layer and the run it came from |
-| Runs, tick `refusal eval · base` and `· ablated`, **Compare** | Per-sample refusal, base against ablated, with a paired interval   |
+| Page                                                      | What                                                               |
+| --------------------------------------------------------- | ------------------------------------------------------------------ |
+| Runs, `refusal · tiny-planted-refusal`, Overview          | The four refusal rates, the chosen layer, scores by layer          |
+| Same run, Figures                                         | Eight figures, below                                               |
+| Vectors                                                   | `refusal.tiny-planted-refusal`: its layer and the run it came from |
+| Runs, tick `refusal eval · base` and `· ablated`, Compare | Per-sample refusal, base against ablated, with a paired interval   |
 
 ## How to read it
 
@@ -62,6 +62,9 @@ it exactly as a real model. `run.py` prints the chosen layer and four refusal ra
 - **Compare.** On the toy all 12 harmful samples go from refusing to not, the 12 harmless stay at
   0, and the paired difference, -0.5 over all 24, has an interval that excludes zero.
 
-Seed 0 is the default; on other seeds the toy may show only the ablation or only the addition (the
-experiment's README has the record). The toy shows the method recovers a planted behaviour, not that
-real models have one.
+Seed 0 is the default; on other seeds the toy may show only the ablation or only the addition. The
+toy shows the method recovers a planted behaviour, not that real models have one.
+
+On Qwen2.5-0.5B-Instruct the direction is at layer 13. Ablating it takes harmful refusal from 73%
+to 0%; adding it takes harmless refusal from 9% to 98%. The Inspect evals agree: 0.73 to 0.00 on
+the harmful prompts, a paired difference of -0.40 over all 200 with an interval of [-0.47, -0.34].

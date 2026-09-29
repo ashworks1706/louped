@@ -9,6 +9,17 @@ from loupe.models.load import (
     n_heads,
     n_layers,
     out_proj,
+    save_model,
 )
 
-__all__ = ["attention", "blocks", "chat", "final_norm", "load", "n_heads", "n_layers", "out_proj"]
+__all__ = [
+    "attention",
+    "blocks",
+    "chat",
+    "final_norm",
+    "load",
+    "n_heads",
+    "n_layers",
+    "out_proj",
+    "save_model",
+]

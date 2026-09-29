@@ -1,9 +1,5 @@
 # attention-kernels
 
-Domain 1 (evaluation science), with domain 6 in view: the attention kernel as a grid condition,
-so eager, SDPA, flash, flex and a custom kernel are compared on the same task, the same metrics
-and the same paired intervals.
-
 ## Question
 
 What does each attention kernel cost in task accuracy, latency, output tokens per second and peak
@@ -48,10 +44,11 @@ generation per kernel (open in Perfetto or chrome://tracing).
 
 ## Result
 
-Not yet run on a real model: this environment cannot reach huggingface.co.
+Qwen2.5-0.5B-Instruct (2026-09-27): sdpa and flex_attention agree with eager (KL 0.008, top-1
+agreement 0.94); the sliding window of 8 does not (KL 3.56, top-1 0.13), and top-4 keys partly
+(KL 0.71, top-1 0.44).
 
-`--tiny --profile` (seed 0; a 4-layer, 4-head toy trained on 300 questions; 16 held out; CPU;
-analysis run m-6d9f2e6bff7e4fe9847c59f0eb9c5c1e, grid m-c44beb716bd04fdcafaeecca39642490):
+`--tiny --profile` (seed 0; a 4-layer, 4-head toy trained on 300 questions; 16 held out; CPU):
 
 | kernel         | accuracy (vs eager)    | KL(eager \|\| kernel) | top-1 agreement | latency s | tokens/s |
 | -------------- | ---------------------- | --------------------- | --------------- | --------- | -------- |

@@ -24,7 +24,6 @@ TRACKED = (
     "inspect-ai",
     "trl",
     "peft",
-    "vllm",
 )
 
 

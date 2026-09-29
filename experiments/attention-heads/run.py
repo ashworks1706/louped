@@ -24,12 +24,12 @@ import mlflow
 import torch
 import tyro
 from inspect_ai import task_with
+from inspect_ai.model import GenerateConfig
 
 from loupe.analysis import attention_to_span, by_head, patch_heads, table
-from loupe.core import home
 from loupe.grid import grid
 from loupe.inspect_ext import correct_first, latency, peak_memory, single_turn, tokens_per_second
-from loupe.models import chat, load
+from loupe.models import chat, load, save_model
 from loupe.tracking import log_json, start_run
 
 OBJECTS = ["cat", "dog", "sky", "water", "fire", "cake", "song", "game"]
@@ -108,9 +108,7 @@ def main(args: Args) -> None:
     test, train = rows[: args.n_test], rows[args.n_test :]
     if args.tiny:
         lm, model_name = toy(train[:240], args.seed), "tiny-attention-heads"
-        saved = home() / "models" / model_name
-        lm._model.save_pretrained(saved)
-        lm.tokenizer.save_pretrained(saved)
+        save_model(lm, lm.tokenizer, model_name)
     else:
         lm, model_name = load(args.model, revision=args.revision), args.model
     params = {**vars(args), "model": model_name}
@@ -155,7 +153,8 @@ def main(args: Args) -> None:
     }
     scorers = [correct_first(), latency(), tokens_per_second(), peak_memory()]
     task = task_with(single_turn([(q, value, other) for q, _, value, other in test], "passage"),
-                     scorer=scorers)  # fmt: skip
+                     scorer=scorers,
+                     config=GenerateConfig(max_tokens=args.max_new_tokens))  # fmt: skip
     extra = ["latency/mean", "tokens_per_second/mean", "peak_memory/mean"]
     grid_id = grid({"passage": task}, model_name, conditions, "correct_first/accuracy",
                    experiment="attention-heads", extra=extra)  # fmt: skip

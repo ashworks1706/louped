@@ -1,8 +1,5 @@
 # diffusion-adapters
 
-Domains 3 (adapters) and 4 (decoding and model families): a bank of skills on a masked diffusion
-model.
-
 ## Question
 
 On a masked diffusion LM, does a LoRA skill beat a prompt for the same skill? Do two skills trained
@@ -41,7 +38,7 @@ the skills are kept under adapters as fact and tone.
 
 ## Result
 
-Not yet run on a real model: this environment cannot reach huggingface.co.
+Not run on a real model: LLaDA and Dream need more than a 6 GB GPU.
 
 `--tiny` uses a random two-layer masked LM from loupe.models.tiny as the base; its numbers only
 show the pipeline runs and are not evidence about real models. Both skills fit their own task

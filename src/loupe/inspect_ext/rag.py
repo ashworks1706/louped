@@ -138,6 +138,8 @@ def rag(
     data = [Sample(id=i + 1, input=q, target=answers, metadata={"gold": gold})
             for i, (q, answers, gold) in enumerate(items)]  # fmt: skip
     scorers = [f1(), exact(), recall(k)] + ([faithful(nli)] if nli else [])
+    if every and (reranker or into != "prompt"):
+        raise ValueError("retrieval every n tokens puts passages in the prompt, without reranking")
     solve = ([reretrieve(index, every, k, mode)] if every
              else [retrieve(index, k, mode, reranker, into=into), generate()])  # fmt: skip
     return Task(dataset=data, solver=solve, scorer=scorers, name=name)

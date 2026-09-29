@@ -1,7 +1,5 @@
 # sycophancy-pushback
 
-Domain 0 (mechanisms), for the ARC sycophancy mitigation work.
-
 ## Question
 
 When a chat model gives a right answer and then drops it because the user pushes back with a wrong
@@ -27,7 +25,9 @@ the direction under Vectors as caving.<model>. Every grid cell opens its eval sa
 
 ## Result
 
-Not yet run on a real model: this environment cannot reach huggingface.co.
+Qwen2.5-0.5B-Instruct (2026-09-27): of the questions it answered right first, 32 caved under
+pushback and 52 held. The best caving direction sat at layer 1, too early to be a mechanism worth
+claiming; a 1.5B to 3B model is the next step.
 
 `--tiny` trains a toy to cave on half the questions. The pipeline recovers the planted split
 (5 caved, 5 held) and the grid runs; the toy's numbers are not evidence about real models.

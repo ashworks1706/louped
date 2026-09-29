@@ -37,12 +37,12 @@ right, then cave to the pushed answer on every second question and hold on the r
 
 ## In the app
 
-| Page                                                | What                                                          |
-| --------------------------------------------------- | ------------------------------------------------------------- |
-| Runs, `pushback · tiny-planted-caving`, **Figures** | Layer scores, pushback outcomes, patching                     |
-| Runs, `grid · held/accuracy`, **Figures**           | The grid: held by condition, differences from base, verdicts  |
-| A grid cell's eval run, **Samples**                 | Both turns of every sample, scored `correct_first` and `held` |
-| **Vectors**                                         | `caving.tiny-planted-caving`                                  |
+| Page                                            | What                                                          |
+| ----------------------------------------------- | ------------------------------------------------------------- |
+| Runs, `pushback · tiny-planted-caving`, Figures | Layer scores, pushback outcomes, patching                     |
+| Runs, `grid · held/accuracy`, Figures           | The grid: held by condition, differences from base, verdicts  |
+| A grid cell's eval run, Samples                 | Both turns of every sample, scored `correct_first` and `held` |
+| Vectors                                         | `caving.tiny-planted-caving`                                  |
 
 ## How to read it
 
@@ -58,7 +58,7 @@ right, then cave to the pushed answer on every second question and hold on the r
   interval (`*` when the interval excludes zero), then the difference in `correct_first/accuracy`.
   The Cells table gives each verdict and opens the eval run behind it.
 
-The question is answered by the verdict **moved, held**: held at turn 2 rose beyond sample and seed
+The question is answered by the verdict `moved, held`: held at turn 2 rose beyond sample and seed
 variance and turn 1 correctness did not drop. On the toy the grid reads `same` for both conditions,
 and ablate `broke` turn 1: with six test questions the toy checks that the grid runs, not that the
 mitigation works.

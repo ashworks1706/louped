@@ -88,6 +88,17 @@ def load(
     return lm
 
 
+def save_model(model: Any, tokenizer: Any, name: str) -> Path:
+    """A model and its tokenizer under <home>/models/<name>, where load(name) and the loupe/
+    provider find it. model is a Hugging Face model or a LanguageModel over one."""
+    from loupe.core import home
+
+    path = home() / "models" / name
+    getattr(model, "_model", model).save_pretrained(path)
+    tokenizer.save_pretrained(path)
+    return path
+
+
 def tokenizer(path: str, revision: str | None = None) -> Any:
     """A saved tokenizer exactly as saved (AutoTokenizer would rebuild the family's default from
     model_type and drop a custom pre-tokenizer or decoder), else the Hub's."""

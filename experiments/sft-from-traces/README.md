@@ -17,10 +17,10 @@ down here says only that training ran.
 
 Everything is local. Pick where the conversations come from:
 
-- **Trace files**: any system that logs a JSONL line
+- Trace files: any system that logs a JSONL line
   `{"event": "generation", "data": {"input": [...messages], "output": "...", "tool_calls": [...]}}`
   per model call, anywhere under a folder.
-- **OpenTelemetry spans in Phoenix**: any system instrumented with OpenInference or the OTel GenAI
+- OpenTelemetry spans in Phoenix: any system instrumented with OpenInference or the OTel GenAI
   conventions and sending to a self-hosted Phoenix. `--span-kind` names the attribute that marks a
   model call when yours is not OpenInference's; set `PHOENIX_API_KEY` if Phoenix has auth on.
 - **A teacher model**, when there are no logs yet: `loupe data collect` asks any Inspect model each

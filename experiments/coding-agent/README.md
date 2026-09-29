@@ -3,8 +3,8 @@
 ## Question
 
 Does a coding agent pass hidden unit tests more often under one condition than another (base
-against steered, one model against another, any OpenAI-compatible endpoint), and does its tool use change with
-it: how many calls it makes, how many fail, whether it runs its code before submitting?
+against steered, one model against another, any OpenAI-compatible endpoint), and does its tool use
+change with it: how many calls it makes, how many fail, whether it runs its code before submitting?
 
 ## What would answer it
 
@@ -21,7 +21,6 @@ is Inspect's react with bash and python in it, and the tests run in the same con
 `--benchmark humaneval` swaps the four builtin problems for HumanEval (downloaded from the Hub).
 
 ```sh
-uv run --all-extras python experiments/coding-agent/run.py --scripted      # checks the plumbing
 uv run --all-extras python experiments/coding-agent/run.py --model Qwen/Qwen2.5-1.5B-Instruct \
     --conditions '{"base": {}, "steered": {"interventions": {"kind": "steer", "vector": "<v>", "alpha": 4}}}'
 LOCAL_BASE_URL=http://localhost:8080/v1 LOCAL_API_KEY=x uv run --all-extras python \
@@ -32,10 +31,6 @@ inspect eval experiments/coding-agent/task.py --model loupe/Qwen/Qwen2.5-1.5B-In
 
 ## Result
 
-Not yet run on a real model: this environment cannot reach huggingface.co.
-
-`--scripted` (two mock agents: one runs its solution in python and submits it, one calls python
-with a wrong argument and submits a stub), in Docker: careful 1.0 accuracy, 0.0 tool errors; sloppy
-0.0 accuracy, 1.0 tool errors, verdict "moved, broke" on `tool_errors/mean` held on accuracy. The
-same task through `loupe/` on the tiny model with scripted replies scored 1.0, so the provider's
-tool calls reach the sandbox and the hidden tests.
+Qwen2.5-1.5B-Instruct on the builtin problems (2026-09-27, one seed): verify accuracy 0.25, one of
+four solved; 3.75 tool calls per problem, 41% of them errors, and none of its answers grounded in a
+call's output.

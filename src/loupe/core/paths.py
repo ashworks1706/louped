@@ -45,7 +45,7 @@ def adapters_dir() -> Path:
 
 
 def graphs_dir() -> Path:
-    """circuit-tracer's attribution graphs and, under viewer/, its frontend (just circuit)."""
+    """circuit-tracer's attribution graphs and, under viewer/, its frontend (loupe circuit)."""
     return home() / "graphs"
 
 

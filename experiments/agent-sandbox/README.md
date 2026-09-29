@@ -15,7 +15,6 @@ how many tool calls each takes and how many fail to parse.
 Needs Docker. Every sample starts a fresh `python:3.12-slim` container with no network.
 
 ```sh
-uv run --all-extras python experiments/agent-sandbox/run.py --scripted     # checks the plumbing
 uv run --all-extras python experiments/agent-sandbox/run.py --model Qwen/Qwen2.5-1.5B-Instruct \
     --steer '{"kind": "steer", "vector": "<a saved vector>", "alpha": 4}'
 inspect eval experiments/agent-sandbox/task.py --model loupe/Qwen/Qwen2.5-1.5B-Instruct
@@ -26,8 +25,5 @@ the call it answers.
 
 ## Result
 
-Not yet run on a real model: this environment cannot reach huggingface.co.
-
-`--scripted` (the tiny model through `loupe/`, its replies replaced by the right calls): accuracy
-1.0 on all three samples in Docker, so the provider's tool prompts, Inspect's Hermes parser, the
-sandbox and the transcript view work end to end.
+Qwen2.5-1.5B-Instruct (2026-09-27, one seed): accuracy 0.33, one of the three planted words found and
+submitted.

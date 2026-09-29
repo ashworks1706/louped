@@ -1,32 +1,28 @@
 ---
 title: Quick start
-description: A result in the app in a few minutes, offline.
+description: A result in the app in a few minutes.
 ---
 
-Every experiment has a `--tiny` mode: a small model trained to show the behaviour is built on your
-CPU, so the whole pipeline runs without a download. Its numbers mean nothing; it checks the path.
+Every experiment with a `--tiny` mode trains a small model to show the behaviour on your CPU, so
+the whole pipeline runs without a download. Its numbers check the pipeline, not the claim.
 
 ```sh
-uv run --all-extras python experiments/refusal-direction/run.py --tiny
-uv run --all-extras python experiments/sycophancy-pushback/run.py --tiny
 just serve   # http://127.0.0.1:8000
 ```
 
-Or skip the shell: open **Launch** in the app (`G L`), pick an experiment, tick `--tiny` and
-launch. Every experiment's options, every training config and `inspect eval` have a form there;
-the job's log streams in the page and its runs appear under Runs while they write.
+In the app, open Launch, pick `refusal-direction/run.py`, tick `--tiny` and launch. The job's log
+streams in the page and its runs appear under Runs as they write. The same from a shell:
 
-Runs lists both; [Examples](/docs/examples) walks through what each figure says. A run opens on its overview, with figures a tab away; an eval run's Samples tab opens every transcript;
-Compare puts two eval runs side by side with a paired interval.
+```sh
+uv run --all-extras python experiments/refusal-direction/run.py --tiny
+```
+
+[Examples](/docs/examples) explains each figure.
 
 ## On a real model
 
-Drop `--tiny`. The default is `Qwen/Qwen2.5-0.5B-Instruct`, which runs on a laptop; a GPU makes
-1.5B and up practical.
-
-```sh
-uv run --all-extras python experiments/sycophancy-pushback/run.py --model Qwen/Qwen2.5-1.5B-Instruct
-```
+Drop `--tiny`. The default, `Qwen/Qwen2.5-0.5B-Instruct`, runs on a laptop; a GPU makes 1.5B and
+up practical.
 
 ## Your own question
 
@@ -35,4 +31,4 @@ just new-experiment my-question   # experiments/my-question/{README.md,run.py}
 ```
 
 The README states the question, what would answer it and the result. `run.py` writes to MLflow and
-Inspect logs, never to stdout alone, so the app shows it.
+Inspect logs, so the app shows it and Launch gets a form for its options.

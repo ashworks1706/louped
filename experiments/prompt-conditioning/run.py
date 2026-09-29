@@ -4,7 +4,6 @@ holds?
     uv run --all-extras python experiments/prompt-conditioning/run.py            # a local model
     uv run --all-extras python experiments/prompt-conditioning/run.py \\
         --model qwen2.5:7b-instruct --base-url http://localhost:11434/v1          # any endpoint
-    uv run --all-extras python experiments/prompt-conditioning/run.py --mock     # offline wiring
 
 The same questions, each with the context that answers it, three ways: no system line (baseline),
 and each instruction in --instructions as the system prompt (by default a brief and a detailed one).
@@ -17,12 +16,10 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Any
 
 import tyro
 from inspect_ai import Task
 from inspect_ai.dataset import Sample
-from inspect_ai.model import ModelOutput, ModelUsage
 from inspect_ai.solver import generate, system_message
 
 from loupe.grid import endpoint, grid
@@ -36,22 +33,22 @@ INSTRUCTIONS = {
 
 # (the context a tool or document returned, the question, the fact the answer must name)
 ITEMS: list[tuple[str, str, str]] = [
-    ("Calendar: Board meeting, Thursday 7pm, room 210. Game night, Friday 8pm, hall B.",
-     "When's the next board meeting?", "room 210"),
-    ("Budget requests: next submission due 2026-10-02. Following one due 2026-11-06.",
-     "When do I have to submit the next budget request?", "2026-10-02"),
-    ("Drive: 'Contact list' (sheet, drive.example/fl-1). 'Logo pack' (folder).",
-     "Where is the contact list sheet?", "drive.example/fl-1"),
-    ("Tasks: Sponsorship outreach, In progress, Ben and Maria. Flyer design, Not started.",
-     "What's the status of sponsorship outreach?", "In progress"),
-    ("Calendar: Intro to LLMs workshop, Tuesday 6pm, room 210, 40 RSVPs.",
-     "How many people RSVPed to the LLM workshop?", "40"),
-    ("Members: Treasurer is Priya Shah. Secretary is Ben Ortiz.",
-     "Who is our treasurer?", "Priya"),
-    ("Recent files: 'Workshop signup sheet' edited today. 'Budget FY26' edited Monday.",
-     "Which file did we edit today?", "Workshop signup sheet"),
-    ("Calendar: Room 210 is booked Wednesday 2-5pm by the robotics club.",
-     "Who has room 210 on Wednesday afternoon?", "robotics"),
+    ("Timetable: the 7:40 train to Leeds leaves from platform 4; the 8:10 from platform 2.",
+     "Which platform does the 7:40 leave from?", "4"),
+    ("Invoice 3318: 12 units at 45.00 each, due 2026-11-02, paid by bank transfer.",
+     "When is invoice 3318 due?", "2026-11-02"),
+    ("Recipe: bake the bread at 220 C for 35 minutes, then rest it for 10.",
+     "How long does the bread bake?", "35 minutes"),
+    ("Lab log: sample B7 was stored at -80 C in freezer 3, shelf 2.",
+     "Which freezer holds sample B7?", "freezer 3"),
+    ("Release notes: version 2.4 adds offline mode and drops support for Python 3.9.",
+     "Which Python version does 2.4 drop?", "3.9"),
+    ("Roster: the night shift on Friday is covered by Amara Osei; Saturday by Jon Keller.",
+     "Who covers the Friday night shift?", "Amara"),
+    ("Weather: tomorrow 14 C, rain after 3pm, wind from the north-west at 20 km/h.",
+     "When does the rain start tomorrow?", "3pm"),
+    ("Library record: 'The Left Hand of Darkness' is on shelf F-12, due back on the 18th.",
+     "Which shelf is the book on?", "F-12"),
 ]  # fmt: skip
 
 
@@ -74,22 +71,6 @@ def questions(instruction: str | None = None, name: str = "none") -> Task:
                 name=f"conditioning-{name}")  # fmt: skip
 
 
-def mocked(instructions: dict[str, str]) -> dict[str, dict[str, Any]]:
-    """Scripted stand-ins: always right, padded more the more detail is asked for."""
-    pads = {"": 6, **{text: 0 if "brief" in name else 20 for name, text in instructions.items()}}
-
-    def respond(messages, tools, tool_choice, config) -> ModelOutput:
-        system = messages[0].text if messages[0].role == "system" else ""
-        fact = next(t for ctx, q, t in ITEMS if messages[-1].text.endswith(q))
-        text = f"{fact}." + " I checked the context for this." * (pads.get(system, 6) // 6)
-        out = ModelOutput.from_content(model="mockllm/model", content=text)
-        out.usage = ModelUsage(input_tokens=0, output_tokens=len(text), total_tokens=len(text))
-        return out
-
-    return {c: {"model": "mockllm/model", "custom_outputs": respond}
-            for c in ["none", *instructions]}  # fmt: skip
-
-
 @dataclass
 class Args:
     model: str = "loupe/Qwen/Qwen2.5-0.5B-Instruct"
@@ -101,14 +82,12 @@ class Args:
     instructions: str = json.dumps(INSTRUCTIONS)
     """JSON: condition name to the system line it adds."""
     seeds: int = 3
-    mock: bool = False
-    """Scripted models in place of the model, to check the wiring offline."""
 
 
 def main(args: Args) -> None:
     instructions: dict[str, str] = json.loads(args.instructions)
     target = endpoint(args.model, args.base_url, args.api_key)
-    conds = mocked(instructions) if args.mock else {c: target for c in ["none", *instructions]}
+    conds = {c: target for c in ["none", *instructions]}
     variants: dict[str, dict[str, Task | str]] = {
         name: {"questions": questions(text, name)} for name, text in instructions.items()
     }

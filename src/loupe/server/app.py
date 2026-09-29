@@ -139,6 +139,8 @@ def create_app(
     graphs.mount(app)
     inspect_view.mount(app)
 
-    if web_dir is not None and web_dir.is_dir():
+    if web_dir is not None and not web_dir.is_dir():
+        print(f"no UI at {web_dir}: the API only (build the UI with just web-build)")
+    elif web_dir is not None:
         app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")
     return app

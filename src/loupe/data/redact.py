@@ -50,9 +50,19 @@ def _value(value: Any, patterns: Sequence[Pattern], key: str = "") -> Any:
     return value
 
 
+def _extra(spec: str) -> Pattern:
+    """A named pattern from EXTRA, or a regex. A bare name that is not one of EXTRA is refused
+    rather than read as a regex that matches nothing, so a typo cannot skip a redaction."""
+    if spec in EXTRA:
+        return EXTRA[spec]
+    if re.fullmatch(r"[a-z0-9-]+", spec):
+        raise ValueError(f"no redaction named {spec!r}; named ones are {sorted(EXTRA)}")
+    return re.compile(spec), "[redacted]"
+
+
 def redact(example: Example, extra: Sequence[str] = ()) -> Example:
     """The example with messages, reply and tool-call arguments redacted, and no user in meta."""
-    own = [EXTRA.get(x) or (re.compile(x), "[redacted]") for x in extra]
+    own = [_extra(x) for x in extra]
     patterns = (*own, *PATTERNS)  # specific before generic
     return example.model_copy(
         update={

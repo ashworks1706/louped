@@ -34,7 +34,14 @@ export function QueryState<T>({
         </p>
       );
     }
-    return <EmptyState icon={ServerOff} title="Can't reach the API" command="just serve" />;
+    if (!(query.error instanceof ApiError)) {
+      return <EmptyState icon={ServerOff} title="Can't reach the API" command="just serve" />;
+    }
+    return (
+      <p className="text-negative rounded-xl border px-4 py-6 font-mono text-sm">
+        {query.error.message}
+      </p>
+    );
   }
   return <>{children(query.data)}</>;
 }

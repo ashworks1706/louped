@@ -11,8 +11,5 @@
 | `verification-before-completion` | run the command, read the output, then claim done | [obra/superpowers](https://github.com/obra/superpowers), MIT |
 | `security-audit-standard` | secrets, input validation, dependencies | [0xMassi/claude-skills](https://github.com/0xMassi/claude-skills), MIT |
 
-Agents in `.claude/agents/`: `loupe-reviewer` (layering, bloat, prebuilt-first, reproducibility,
-tests) and `web-reviewer` (UI design rules and accessibility).
-
 Third-party skills are vendored with their LICENSE files. Update by re-copying from the source;
 do not edit in place.

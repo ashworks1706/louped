@@ -8,8 +8,8 @@ evaluation science on black-box endpoints (docs/ARCHITECTURE.md).
 
 ## What would answer it
 
-`run.py` asks 13 questions: 9 with a fixed answer and 4 no system can know (the asker's GPA, their
-roommate's breakfast). An answerable question scores 1 when the reply names a gold answer; an
+`run.py` asks 13 questions: 9 with a fixed answer and 4 no system can know (what the asker is
+thinking, what they ate). An answerable question scores 1 when the reply names a gold answer; an
 unanswerable one scores 1 when the reply declines. With `--compare-model`, the grid pairs the
 system against it per question, with an interval over the paired difference: whether the system
 beats what it is built on beyond sampling noise.
@@ -22,19 +22,16 @@ then `answer-or-decline/run.py`.
 ```sh
 uv run --all-extras python experiments/answer-or-decline/run.py                 # a local model
 uv run --all-extras python experiments/answer-or-decline/run.py \
-    --model my-agent --base-url http://localhost:8080/v1 --cut $'\n\nSources' \
+    --model my-agent --base-url http://localhost:8080/v1 --cut 'Sources:' \
     --compare-model qwen2.5:7b-instruct --compare-base-url http://localhost:11434/v1
 uv run --all-extras python experiments/answer-or-decline/run.py --questions my-questions.jsonl
-uv run --all-extras python experiments/answer-or-decline/run.py --mock          # offline wiring
 ```
 
 `--questions` takes JSONL lines of `{"question": "...", "answers": ["..."]}`; leave `answers`
-empty for a question that should be declined. A system that keys its memory by user wants a fresh
-one per run: send it through the endpoint's own settings, not the questions.
+empty for a question that should be declined.
 
 ## Result
 
-Qwen2.5-0.5B-Instruct locally against qwen2.5:7b-instruct through Ollama (2026-09-27): both 1.00,
-every fact named and every unknowable question declined, so the built-in set does not separate
-them; a harder `--questions` set is the next step. `--mock` completes the grid (compare 0.46,
-system 0.92).
+On an earlier version of this set (2026-09-27), Qwen2.5-0.5B-Instruct locally and
+qwen2.5:7b-instruct through Ollama both scored 1.00: every fact named, every unknowable question
+declined. The built-in set does not separate them; a harder `--questions` set is the next step.
