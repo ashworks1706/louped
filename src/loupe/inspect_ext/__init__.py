@@ -8,7 +8,12 @@ The provider is registered through the `inspect_ai` entry point, so Inspect find
 is installed with the evals and interp extras.
 """
 
-from loupe.inspect_ext.inference import latency, peak_memory, tokens_per_second
+from loupe.inspect_ext.inference import (
+    latency,
+    peak_memory,
+    time_to_first_token,
+    tokens_per_second,
+)
 from loupe.inspect_ext.scorers import (
     as_scorer,
     called,
@@ -34,6 +39,7 @@ __all__ = [
     "refusal",
     "says",
     "single_turn",
+    "time_to_first_token",
     "tokens_per_second",
     "tool_calls",
     "tool_errors",

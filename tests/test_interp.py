@@ -179,6 +179,21 @@ def test_inspect_provider_batches_concurrent_requests(lm) -> None:
     assert sorted(calls) == [1, 2]  # three requests, batches of at most two
 
 
+def test_inspect_provider_records_time_to_first_token(lm) -> None:
+    import asyncio
+
+    from inspect_ai.model import ChatMessageUser, GenerateConfig, get_model
+
+    from loupe.core import home
+
+    saved = home() / "models" / "tiny-ttft"
+    lm._model.save_pretrained(saved)
+    lm.tokenizer.save_pretrained(saved)
+    model = get_model("loupe/tiny-ttft", config=GenerateConfig(max_tokens=4))
+    out = asyncio.run(model.generate([ChatMessageUser(content="write a poem")]))
+    assert out.metadata is not None and 0 < out.metadata["ttft_s"] <= (out.time or 1e9)
+
+
 def test_inspect_provider_halves_a_batch_that_runs_out_of_memory(lm, monkeypatch) -> None:
     import asyncio
 

@@ -6,9 +6,10 @@ in one process share the model. Generation is serialised with a lock because one
 runs one trace at a time; requests that arrive together for one provider are generated as one
 batch (batch_size, 8 on CUDA and 1 elsewhere; 1 reproduces a run exactly, since a bf16 batch's
 padding can move the last bits of a sample). A batch that runs out of GPU memory is halved and
-retried, and later batches keep the smaller size. Given tools, the prompt carries their schemas
-through the chat template and tool calls are parsed back with Inspect's own Hugging Face handler,
-chosen by the loaded model's family, so agent tasks run under interventions too.
+retried, and later batches keep the smaller size. Each output records its time to first token
+(ttft_s: from the start of its batch to the first token's logits). Given tools, the prompt carries
+their schemas through the chat template and tool calls are parsed back with Inspect's own Hugging
+Face handler, chosen by the loaded model's family, so agent tasks run under interventions too.
 
 Adapters: bank loads named adapters beside each other, adapters makes a set of them live, phases
 changes the live set along one generation. diffusion serves a masked diffusion model through
@@ -29,6 +30,7 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
+import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -67,6 +69,7 @@ class _Request:
     text: str | None = None
     peak: float | None = None
     batch: int = 1
+    ttft: float | None = None
     error: BaseException | None = None
 
 
@@ -172,6 +175,8 @@ class LoupeAPI(ModelAPI):
         output.usage = ModelUsage(input_tokens=n_in, output_tokens=n_out, total_tokens=n_in + n_out)
         # the batch it ran in: a bf16 batch's padding can move the last bits of a sample
         output.metadata = {"batch_size": request.batch}
+        if request.ttft is not None:
+            output.metadata["ttft_s"] = request.ttft
         if peak is not None:
             output.metadata["peak_cuda_mib"] = peak
         return output
@@ -208,10 +213,18 @@ class LoupeAPI(ModelAPI):
             model = self.lm.model if isinstance(self.lm, Diffusion) else self.lm._model
             if self.adapters is not None:
                 activate(model, self.adapters)
-            hook = phase_hook(model, self.phases) if self.phases else None
+            phases = phase_hook(model, self.phases) if self.phases else None
+            start, first = time.perf_counter(), []
+
+            def hook(step: int, total: int) -> None:
+                if step == 1 and not first:  # the first token's logits are out
+                    first.append(time.perf_counter() - start)
+                if phases is not None:
+                    phases(step, total)
+
             prompts = [r.prompt for r in batch]
             if isinstance(self.lm, Diffusion):
-                texts = denoise_all(self.lm, prompts, hook, **self.sampler)
+                texts = denoise_all(self.lm, prompts, phases, **self.sampler)
             else:
                 if self.lazy:
                     self.plan = merge(self.plan, compile(self.lm, self.lazy))
@@ -233,6 +246,7 @@ class LoupeAPI(ModelAPI):
             peak = torch.cuda.max_memory_allocated() / 2**20 if cuda else None
             for r, text in zip(batch, texts, strict=True):
                 r.text, r.peak, r.batch = text, peak, len(batch)
+                r.ttft = first[0] if first else None
 
     async def count_text_tokens(self, text: str) -> int:
         """Tokens of the text by the model's own tokenizer, no special tokens added, for usage and

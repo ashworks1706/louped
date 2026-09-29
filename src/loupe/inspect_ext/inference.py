@@ -2,11 +2,15 @@
 
 Latency is the sum of the sample's model call times (ModelOutput.time), throughput its output
 tokens (ModelOutput.usage) over that time, and peak memory what the loupe/ provider records on
-CUDA. As scorers they are grid metrics like any other: `latency/mean`. A sample without a timed
-call, or for throughput without usage, fails to score rather than scoring 0.
+CUDA. Time to first token is what the loupe/ provider records; an OpenAI-compatible endpoint does
+not report it, so the scorer sends the sample's prompt again, streamed with one token to generate,
+and times the first chunk. As scorers they are grid metrics like any other: `latency/mean`. A
+sample without a timed call, or for throughput without usage, fails to score rather than 0.
 """
 
 from __future__ import annotations
+
+from typing import Any
 
 from inspect_ai.event import ModelEvent
 from inspect_ai.log import transcript
@@ -62,5 +66,43 @@ def peak_memory():
     async def score(state: TaskState, target: Target) -> Score:
         peaks = [float((o.metadata or {}).get("peak_cuda_mib", 0.0)) for o in _outputs(state)]
         return Score(value=max(peaks, default=0.0))
+
+    return score
+
+
+async def _streamed_first_token(state: TaskState) -> float:
+    """Seconds until an OpenAI-compatible endpoint streams the first chunk of a reply to the
+    sample's prompt (its messages before the reply), asking for one token."""
+    import time
+
+    from inspect_ai.model import get_model
+    from openai import AsyncOpenAI
+
+    api: Any = get_model().api  # the eval's own model, with its base_url and key
+    base_url = getattr(api, "base_url", None)
+    if base_url is None or not hasattr(api, "service_model_name"):
+        raise ValueError(f"{state.model} reports no time to first token and is not an endpoint")
+    messages = [{"role": m.role, "content": m.text} for m in state.messages
+                if m.role in ("system", "user")]  # fmt: skip
+    client = AsyncOpenAI(base_url=base_url, api_key=getattr(api, "api_key", None) or "local")
+    start = time.perf_counter()
+    request: dict[str, Any] = {"model": api.service_model_name(), "messages": messages,
+                               "max_tokens": 1, "stream": True}  # fmt: skip
+    stream: Any = await client.chat.completions.create(**request)
+    async for _ in stream:
+        return time.perf_counter() - start
+    raise ValueError("the endpoint streamed nothing")
+
+
+@scorer(metrics=[mean(), stderr()])
+def time_to_first_token():
+    """Seconds until the sample's first model call produced its first token."""
+
+    async def score(state: TaskState, target: Target) -> Score:
+        first = next((o.metadata["ttft_s"] for o in _outputs(state)
+                      if o.metadata and "ttft_s" in o.metadata), None)  # fmt: skip
+        if first is None:
+            return Score(value=await _streamed_first_token(state), metadata={"streamed": True})
+        return Score(value=float(first))
 
     return score

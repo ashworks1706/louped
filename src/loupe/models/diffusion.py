@@ -1,4 +1,5 @@
-"""Masked diffusion language models (LLaDA, Dream, any Hugging Face masked LM) and their sampler.
+"""Masked diffusion language models (LLaDA, Dream, nanoDiff, any Hugging Face masked LM) and their
+sampler.
 
 A masked diffusion model does not write left to right. Generation starts from a fully masked reply;
 each step predicts every masked position and commits the most confident, block by block from the
@@ -8,6 +9,11 @@ adapters may change at any step. Dream predicts the next position, so its logits
 
 The training objective is here too: a random fraction t of the reply is masked, the prompt never,
 and the cross entropy on the masked tokens is weighted by 1/t.
+
+A nanoDiff checkpoint (a .pt file its training wrote) loads by path: its own model, wrapped to take
+input_ids like a Hugging Face one, with GPT-2's tokenizer, its [MASK] token and its SFT prompt
+format as the chat template. It needs the nanodiff package, which is on GitHub only:
+`pip install git+https://github.com/BY571/nanoDiff`.
 """
 
 from __future__ import annotations
@@ -24,6 +30,60 @@ from loupe.core import saved_model
 
 #: Model types whose code lives on the Hub rather than in transformers.
 REMOTE = {"llada": 126336, "dream": None}
+
+#: nanoDiff's SFT prompt format (nanodiff/sft.py) as a chat template: a user turn is the
+#: instruction, and the reply is denoised after "### Response:".
+NANODIFF_TEMPLATE = (
+    "{% for m in messages %}{% if m['role'] == 'user' %}### Instruction:\n{{ m['content'] }}\n\n"
+    "{% elif m['role'] == 'assistant' %}### Response:\n{{ m['content'] }}\n\n"
+    "{% else %}{{ m['content'] }}\n\n{% endif %}{% endfor %}"
+    "{% if add_generation_prompt %}### Response:\n{% endif %}"
+)
+
+
+class NanoDiffLM(torch.nn.Module):
+    """A nanoDiff model that takes input_ids and carries a config, as loupe's code expects of a
+    Hugging Face one."""
+
+    def __init__(self, net: Any, mask_id: int) -> None:
+        super().__init__()
+        from types import SimpleNamespace
+
+        self.net = net
+        self.config = SimpleNamespace(model_type="nanodiff", mask_token_id=mask_id,
+                                      num_hidden_layers=len(net.blocks),
+                                      use_return_dict=True, tie_word_embeddings=False)  # fmt: skip
+
+    def forward(self, input_ids: torch.Tensor, **_: Any) -> torch.Tensor:
+        return self.net(input_ids)
+
+
+def nanodiff(path: str | Path, device: str) -> tuple[NanoDiffLM, Any]:
+    """A nanoDiff checkpoint and its tokenizer."""
+    try:
+        from nanodiff.model import NanoDiff  # pyright: ignore[reportMissingImports]
+    except ImportError as exc:
+        raise ImportError(
+            "a nanoDiff checkpoint needs nanodiff: pip install git+https://github.com/BY571/nanoDiff"
+        ) from exc
+    from transformers import AutoTokenizer
+
+    ckpt = torch.load(str(path), map_location="cpu", weights_only=False)
+    cfg = ckpt["config"]
+    net = NanoDiff(cfg)
+    net.load_state_dict(ckpt["model"])
+    tok = AutoTokenizer.from_pretrained("gpt2")
+    tok.add_special_tokens({"mask_token": "[MASK]"})
+    if tok.mask_token_id != cfg.mask_token_id:
+        raise ValueError(f"{path}: [MASK] is {cfg.mask_token_id}, GPT-2 plus one token is "
+                         f"{tok.mask_token_id}")  # fmt: skip
+    tok.pad_token = tok.eos_token
+    tok.chat_template = NANODIFF_TEMPLATE
+    return NanoDiffLM(net, cfg.mask_token_id).to(device), tok
+
+
+def is_nanodiff(name: str) -> bool:
+    return name.endswith(".pt") and Path(name).is_file()
 
 
 @dataclass
@@ -46,6 +106,8 @@ def base(
     run their own code from the Hub, so a Hub id of theirs needs a pinned revision (a commit)."""
     from transformers import AutoModel, AutoModelForMaskedLM, PretrainedConfig
 
+    if is_nanodiff(name):
+        return nanodiff(name, device or ("cuda" if torch.cuda.is_available() else "cpu"))[0]
     local = saved_model(name)
     path = str(local or name)
     config, _ = PretrainedConfig.get_config_dict(path, revision=revision)
@@ -73,8 +135,11 @@ def load_diffusion(
     from loupe.models.adapters import bank as build_bank
     from loupe.models.load import tokenizer
 
-    model = base(name, dtype, device, revision)
-    tok = tokenizer(str(saved_model(name) or name), revision)
+    if is_nanodiff(name):
+        model, tok = nanodiff(name, device or ("cuda" if torch.cuda.is_available() else "cpu"))
+    else:
+        model = base(name, dtype, device, revision)
+        tok = tokenizer(str(saved_model(name) or name), revision)
     if bank:
         peft = build_bank(model, bank)
         for spec in merges or []:
@@ -87,7 +152,7 @@ def load_diffusion(
 def load_mask(model: Any, tok: Any) -> tuple[int, bool]:
     """The model's mask token id, and whether its logits predict the next position (Dream)."""
     kind = model.config.model_type.lower()
-    mask = REMOTE.get(kind) or tok.mask_token_id
+    mask = REMOTE.get(kind) or getattr(model.config, "mask_token_id", None) or tok.mask_token_id
     if mask is None:
         raise ValueError(f"{kind}: the tokenizer has no mask token")
     return int(mask), kind == "dream"

@@ -483,3 +483,40 @@ def test_a_circuit_runs_circuit_tracer_through_uv_and_installs_its_viewer(
     monkeypatch.setattr(circuits.shutil, "which", lambda name: None)
     with pytest.raises(RuntimeError, match="uv"):
         circuits.circuit("m", "t", "p")
+
+
+def test_a_nanodiff_checkpoint_loads_and_denoises(monkeypatch, tmp_path) -> None:
+    import sys
+    import types
+
+    from loupe.models.diffusion import denoise, load_diffusion
+
+    class NanoDiff(torch.nn.Module):  # nanoDiff's interface: blocks, forward(idx) -> logits
+        def __init__(self, cfg) -> None:
+            super().__init__()
+            self.emb = torch.nn.Embedding(cfg.vocab_size, 16)
+            self.blocks = torch.nn.ModuleList([torch.nn.Linear(16, 16) for _ in range(2)])
+            self.head = torch.nn.Linear(16, cfg.vocab_size)
+
+        def forward(self, idx):
+            x = self.emb(idx)
+            for block in self.blocks:
+                x = x + block(x)
+            return self.head(x)
+
+    module = types.ModuleType("nanodiff.model")
+    module.NanoDiff = NanoDiff  # pyright: ignore[reportAttributeAccessIssue]
+    monkeypatch.setitem(sys.modules, "nanodiff", types.ModuleType("nanodiff"))
+    monkeypatch.setitem(sys.modules, "nanodiff.model", module)
+    cfg = types.SimpleNamespace(vocab_size=50304, mask_token_id=50257)
+    ckpt = tmp_path / "ckpt.pt"
+    torch.save({"model": NanoDiff(cfg).state_dict(), "config": cfg}, ckpt)
+
+    d = load_diffusion(str(ckpt))
+    assert d.mask_id == 50257 and not d.shift and d.tokenizer.mask_token_id == 50257
+    prompt = d.tokenizer.apply_chat_template([{"role": "user", "content": "hi"}], tokenize=False,
+                                             add_generation_prompt=True)  # fmt: skip
+    assert prompt == "### Instruction:\nhi\n\n### Response:\n"
+    ids = d.tokenizer(prompt, return_tensors="pt")["input_ids"]
+    out = denoise(d, ids, length=4, steps=4)
+    assert (out[:, ids.shape[1] :] != d.mask_id).all()
