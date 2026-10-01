@@ -3,6 +3,7 @@
 import { ArrowDown, ArrowUp, GitCompareArrows } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
 import { useState } from "react";
 
 import { MetricValue } from "@/components/metric";
@@ -10,6 +11,7 @@ import { KindBadge, StatusDot } from "@/components/run-badges";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   Table,
   TableBody,
@@ -18,9 +20,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { RunSummary } from "@/lib/api";
+import { isLive, type RunSummary } from "@/lib/api";
 import { ago, headline, metricLabel } from "@/lib/format";
-import { compareHref, runHref } from "@/lib/href";
+import { compareHref, experimentHref, runHref } from "@/lib/href";
 
 type SortKey = "name" | "metric" | "created";
 type Sort = { key: SortKey; desc: boolean };
@@ -61,16 +63,54 @@ function SortHeader({
   );
 }
 
-/** Every run, sortable and filterable; tick two to compare them. */
-export function RunsTable({ runs, compact = false }: { runs: RunSummary[]; compact?: boolean }) {
+const KINDS = ["all", "eval", "analysis", "training"] as const;
+const STATES = ["all", "live", "done", "failed"] as const;
+
+/** A run's status, as one of the three a filter asks about. */
+function state(status: string): (typeof STATES)[number] {
+  if (isLive(status)) return "live";
+  return ["error", "failed", "killed", "cancelled"].includes(status.toLowerCase())
+    ? "failed"
+    : "done";
+}
+
+/** Filters kept in the URL, so a filtered list can be reloaded and shared. */
+const FILTERS = {
+  q: parseAsString.withDefault(""),
+  kind: parseAsStringLiteral(KINDS).withDefault("all"),
+  exp: parseAsString.withDefault(""),
+  state: parseAsStringLiteral(STATES).withDefault("all"),
+};
+
+/** Every run, sortable and filterable; tick two to compare them. byExperiment is off where the
+ * runs are already one experiment's. */
+export function RunsTable({
+  runs,
+  compact = false,
+  byExperiment = true,
+}: {
+  runs: RunSummary[];
+  compact?: boolean;
+  byExperiment?: boolean;
+}) {
   const router = useRouter();
   const [sort, setSort] = useState<Sort>({ key: "created", desc: true });
-  const [filter, setFilter] = useState("");
+  const [f, setF] = useQueryStates(FILTERS);
   const [picked, setPicked] = useState<string[]>([]);
 
-  const needle = filter.toLowerCase();
+  const experiments = [...new Set(runs.map((r) => r.experiment).filter((x) => x != null))].sort();
+  const needle = f.q.toLowerCase();
+  const filtering =
+    !compact && (needle || f.kind !== "all" || (byExperiment && f.exp) || f.state !== "all");
   const rows = runs
-    .filter((r) => [r.name, r.experiment, r.model, r.kind].join(" ").toLowerCase().includes(needle))
+    .filter(
+      (r) =>
+        compact ||
+        ([r.name, r.experiment, r.model, r.kind].join(" ").toLowerCase().includes(needle) &&
+          (f.kind === "all" || r.kind === f.kind) &&
+          (!byExperiment || !f.exp || r.experiment === f.exp) &&
+          (f.state === "all" || state(r.status) === f.state)),
+    )
     .sort((a, b) => {
       const [x, y] = [sortValue[sort.key](a), sortValue[sort.key](b)];
       const order = x < y ? -1 : x > y ? 1 : 0;
@@ -83,25 +123,74 @@ export function RunsTable({ runs, compact = false }: { runs: RunSummary[]; compa
   return (
     <div className="flex flex-col gap-3">
       {!compact && (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Input
-            placeholder="Filter by name, experiment, model…"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="max-w-xs"
+            placeholder="Search name, experiment, model…"
+            aria-label="Search runs"
+            value={f.q}
+            onChange={(e) => void setF({ q: e.target.value || null })}
+            className="h-8 w-full sm:w-56"
           />
-          <span className="text-muted-foreground ml-auto hidden text-xs sm:inline">
-            {picked.length === 2 ? "2 selected" : "Tick two runs to compare"}
-          </span>
-          <Button
-            size="sm"
-            variant={picked.length === 2 ? "default" : "outline"}
-            disabled={picked.length !== 2}
-            onClick={() => router.push(compareHref(picked[0], picked[1]))}
+          <NativeSelect
+            aria-label="Kind"
+            value={f.kind}
+            onChange={(e) => void setF({ kind: e.target.value as (typeof KINDS)[number] })}
           >
-            <GitCompareArrows />
-            Compare
-          </Button>
+            <option value="all">All kinds</option>
+            <option value="eval">Evals</option>
+            <option value="analysis">Analyses</option>
+            <option value="training">Training</option>
+          </NativeSelect>
+          {byExperiment && (
+            <NativeSelect
+              aria-label="Experiment"
+              value={f.exp}
+              onChange={(e) => void setF({ exp: e.target.value || null })}
+            >
+              <option value="">All experiments</option>
+              {experiments.map((x) => (
+                <option key={x} value={x}>
+                  {x}
+                </option>
+              ))}
+            </NativeSelect>
+          )}
+          <NativeSelect
+            aria-label="Status"
+            value={f.state}
+            onChange={(e) => void setF({ state: e.target.value as (typeof STATES)[number] })}
+          >
+            <option value="all">Any status</option>
+            <option value="live">Live</option>
+            <option value="done">Done</option>
+            <option value="failed">Failed</option>
+          </NativeSelect>
+          {filtering && (
+            <Button size="sm" variant="ghost" onClick={() => void setF(null)}>
+              Clear
+            </Button>
+          )}
+          <div className="ml-auto flex items-center gap-3">
+            <span className="text-muted-foreground text-xs">
+              <span className="font-mono tabular-nums">{rows.length}</span>
+              {rows.length !== runs.length && (
+                <>
+                  {" of "}
+                  <span className="font-mono tabular-nums">{runs.length}</span>
+                </>
+              )}{" "}
+              runs · {picked.length === 2 ? "2 selected" : "tick two to compare"}
+            </span>
+            <Button
+              size="sm"
+              variant={picked.length === 2 ? "default" : "outline"}
+              disabled={picked.length !== 2}
+              onClick={() => router.push(compareHref(picked[0], picked[1]))}
+            >
+              <GitCompareArrows />
+              Compare
+            </Button>
+          </div>
         </div>
       )}
       <Table>
@@ -155,9 +244,17 @@ export function RunsTable({ runs, compact = false }: { runs: RunSummary[]; compa
                     >
                       {r.name}
                     </Link>
-                    <span className="text-muted-foreground truncate text-xs">
-                      {r.experiment ?? "no experiment"}
-                    </span>
+                    {!byExperiment ? null : r.experiment ? (
+                      <Link
+                        href={experimentHref(r.experiment)}
+                        className="text-muted-foreground truncate text-xs hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {r.experiment}
+                      </Link>
+                    ) : (
+                      <span className="text-muted-foreground truncate text-xs">no experiment</span>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -195,7 +292,7 @@ export function RunsTable({ runs, compact = false }: { runs: RunSummary[]; compa
                 colSpan={compact ? 4 : 7}
                 className="text-muted-foreground py-8 text-center"
               >
-                No runs match “{filter}”.
+                No runs match these filters.
               </TableCell>
             </TableRow>
           )}

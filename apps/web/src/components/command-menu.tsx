@@ -1,6 +1,7 @@
 "use client";
 
-import { BookOpen, Moon } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { BookOpen, FlaskConical, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -15,6 +16,8 @@ import {
 } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Kbd } from "@/components/ui/kbd";
+import { q } from "@/lib/api";
+import { experimentHref } from "@/lib/href";
 import { NAV } from "@/lib/nav";
 
 const DOCS = "https://github.com/ashworks1706/loupe/tree/main/docs";
@@ -36,6 +39,8 @@ export function CommandMenu({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = React.useState(false);
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
+  // Fetched only once the menu opens, so a page that never opens it pays nothing.
+  const experiments = useQuery({ ...q.experiments(), enabled: open });
 
   React.useEffect(() => {
     let leader = false;
@@ -98,6 +103,21 @@ export function CommandMenu({ children }: { children: React.ReactNode }) {
                   </CommandItem>
                 ))}
               </CommandGroup>
+              {experiments.data && experiments.data.length > 0 && (
+                <CommandGroup heading="Experiments">
+                  {experiments.data.map((e) => (
+                    <CommandItem
+                      key={e.name}
+                      value={`${e.name} ${e.domain_title} ${e.question ?? ""}`}
+                      onSelect={() => run(() => router.push(experimentHref(e.name)))}
+                    >
+                      <FlaskConical />
+                      <span className="font-mono">{e.name}</span>
+                      <span className="text-muted-foreground ml-auto text-xs">{e.status}</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
               <CommandGroup heading="Actions">
                 <CommandItem
                   value="Toggle theme dark light"

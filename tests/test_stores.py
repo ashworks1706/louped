@@ -1,5 +1,7 @@
 from pathlib import Path
+from typing import get_args
 
+import pytest
 from fastapi.testclient import TestClient
 from inspect_ai import Task, eval
 from inspect_ai.dataset import Sample
@@ -10,7 +12,8 @@ from inspect_ai.solver import generate
 from loupe import stores
 from loupe.core import logs_dir
 from loupe.server import create_app
-from loupe.stores.experiments import question
+from loupe.stores.experiments import DOMAINS, BadExperiment, front_matter, question, result
+from loupe.stores.types import Domain
 from loupe.tracking import start_run
 from loupe.tracking.runs import log_json
 
@@ -69,20 +72,87 @@ def test_mlflow_run_with_history_and_artifact() -> None:
     assert detail.params["model"] == "tiny"
 
 
-def test_experiments_group_runs_by_tag(tmp_path: Path) -> None:
-    folder = tmp_path / "experiments" / "pressure"
+README = (
+    "---\ndomain: {domain}\nstatus: {status}\n---\n\n"
+    "# x\n\n## Question\n\n{q}\n\n## Result\n\n{r}\n"
+)
+
+
+def write_experiment(root: Path, name: str, domain: str, status: str = "parked") -> None:
+    folder = root / "experiments" / name
     folder.mkdir(parents=True)
-    (folder / "README.md").write_text("# pressure\n\n## Question\n\nDoes it cave?\n\n## Result\n")
+    text = README.format(domain=domain, status=status, q="Does it cave?", r="It caves.")
+    (folder / "README.md").write_text(text)
+
+
+def test_experiments_group_runs_by_tag(tmp_path: Path) -> None:
+    write_experiment(tmp_path, "pressure", "honesty", "active")
     run_eval(["yes"], tags=["experiment:pressure"])
     run_eval(["yes"])
     [exp] = stores.list_experiments()
     assert exp.question == "Does it cave?"
+    assert exp.result == "It caves."
+    assert (exp.axis, exp.domain, exp.status) == ("behavior", "honesty", "active")
+    assert exp.domain_title == DOMAINS["honesty"][1]
     assert len(exp.runs) == 1
 
 
-def test_question_parsing() -> None:
+def test_experiments_sort_by_domain_then_active(tmp_path: Path) -> None:
+    write_experiment(tmp_path, "a-kernels", "inference", "answered")
+    write_experiment(tmp_path, "b-probe", "mechanisms", "parked")
+    write_experiment(tmp_path, "c-probe", "mechanisms", "active")
+    assert [e.name for e in stores.list_experiments()] == ["c-probe", "b-probe", "a-kernels"]
+
+
+def test_front_matter_is_required_and_checked() -> None:
+    with pytest.raises(BadExperiment, match="no front matter"):
+        front_matter("# x\n\n## Question\n\nWhy?\n", "x")
+    with pytest.raises(BadExperiment, match="domain 'physics'"):
+        front_matter("---\ndomain: physics\nstatus: active\n---\n", "x")
+    with pytest.raises(BadExperiment, match="status 'done'"):
+        front_matter("---\ndomain: context\nstatus: done\n---\n", "x")
+    assert front_matter("---\ndomain: context\nstatus: active\n---\n", "x") == ("context", "active")
+
+
+def test_every_experiment_in_the_repo_is_filed(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LOUPE_EXPERIMENTS", str(Path(__file__).parents[1] / "experiments"))
+    experiments = stores.list_experiments()
+    assert experiments
+    assert all(e.question for e in experiments)
+
+
+def test_question_and_result_parsing() -> None:
     assert question("## Question\n\nOne\nline.\n\n## Next") == "One line."
     assert question("# nothing here") is None
+    assert result("## Result\n\nNot run yet.\n") == "Not run yet."
+    assert result("## Result\n\nWith `--tiny`: 0.5.\n") == "With --tiny: 0.5."
+    assert result("## Result\n\n## Next\n\nLater.\n") is None
+    assert question("## Question\n\n<!-- a hint -->\n\n## Observation\n") is None
+
+
+def test_domains_match_the_domain_type() -> None:
+    assert set(DOMAINS) == set(get_args(Domain))
+
+
+def test_one_experiment_carries_its_readme(tmp_path: Path) -> None:
+    write_experiment(tmp_path, "pressure", "honesty", "active")
+    client = TestClient(create_app(), base_url="http://localhost")
+    body = client.get("/api/experiments/pressure").json()
+    assert body["question"] == "Does it cave?"
+    assert body["readme"].startswith("# x")
+    assert "domain:" not in body["readme"]
+    assert "## Question" not in body["readme"] and "## Result" not in body["readme"]
+    assert body["result"] == "It caves."
+    assert client.get("/api/experiments/nope").status_code == 404
+
+
+def test_a_bad_readme_names_its_folder_through_the_api(tmp_path: Path) -> None:
+    folder = tmp_path / "experiments" / "stray"
+    folder.mkdir(parents=True)
+    (folder / "README.md").write_text("# stray\n")
+    res = TestClient(create_app(), base_url="http://localhost").get("/api/experiments")
+    assert res.status_code == 500
+    assert "experiments/stray" in res.json()["detail"]
 
 
 def test_api_404s_and_samples() -> None:

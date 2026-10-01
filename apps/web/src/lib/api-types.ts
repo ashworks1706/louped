@@ -225,6 +225,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/experiments/{name}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Experiment */
+    get: operations["experiment_api_experiments__name__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/playground": {
     parameters: {
       query?: never;
@@ -438,10 +455,75 @@ export interface components {
     Experiment: {
       /** Name */
       name: string;
+      /**
+       * Axis
+       * @enum {string}
+       */
+      axis: "behavior" | "efficiency" | "checks";
+      /**
+       * Domain
+       * @enum {string}
+       */
+      domain:
+        | "mechanisms"
+        | "honesty"
+        | "conditioning"
+        | "agents"
+        | "context"
+        | "inference"
+        | "specialisation"
+        | "reproduction";
+      /** Domain Title */
+      domain_title: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "active" | "parked" | "answered";
       /** Question */
       question: string | null;
+      /** Result */
+      result: string | null;
       /** Runs */
       runs: components["schemas"]["RunSummary"][];
+    };
+    /** ExperimentDetail */
+    ExperimentDetail: {
+      /** Name */
+      name: string;
+      /**
+       * Axis
+       * @enum {string}
+       */
+      axis: "behavior" | "efficiency" | "checks";
+      /**
+       * Domain
+       * @enum {string}
+       */
+      domain:
+        | "mechanisms"
+        | "honesty"
+        | "conditioning"
+        | "agents"
+        | "context"
+        | "inference"
+        | "specialisation"
+        | "reproduction";
+      /** Domain Title */
+      domain_title: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "active" | "parked" | "answered";
+      /** Question */
+      question: string | null;
+      /** Result */
+      result: string | null;
+      /** Runs */
+      runs: components["schemas"]["RunSummary"][];
+      /** Readme */
+      readme: string;
     };
     /**
      * FeatureDashboard
@@ -527,6 +609,11 @@ export interface components {
       version: string;
       /** Home */
       home: string;
+      /**
+       * Launching
+       * @default false
+       */
+      launching: boolean;
     };
     /** HeatmapView */
     HeatmapView: {
@@ -1433,6 +1520,37 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Experiment"][];
+        };
+      };
+    };
+  };
+  experiment_api_experiments__name__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ExperimentDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

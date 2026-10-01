@@ -5,9 +5,11 @@ import { Rocket, Square } from "lucide-react";
 import Link from "next/link";
 import { parseAsString, useQueryStates } from "nuqs";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { CopyButton } from "@/components/copy-button";
 import { EmptyState } from "@/components/empty-state";
+import { askToNotify } from "@/components/notifier";
 import { QueryState } from "@/components/query-state";
 import { StatusDot } from "@/components/run-badges";
 import { Button } from "@/components/ui/button";
@@ -34,6 +36,7 @@ const RECIPES = ["sft", "dpo", "grpo", "classify", "reft"];
 
 export function Launch() {
   const all = useQuery(q.launchables());
+  const jobs = useQuery(q.jobs());
   if (all.error instanceof ApiError && all.error.status === 403) {
     return (
       <EmptyState
@@ -45,10 +48,14 @@ export function Launch() {
     );
   }
   if (!all.isSuccess) return <QueryState query={all}>{() => null}</QueryState>;
+  // Once anything has been launched, the queue comes first and stays there: the list only
+  // grows, so the form below it never jumps while it is being used.
+  const queued = (jobs.data ?? []).length > 0;
   return (
     <div className="flex flex-col gap-10">
+      {queued && <Jobs />}
       <Picker items={all.data} />
-      <Jobs />
+      {!queued && <Jobs />}
     </div>
   );
 }
@@ -92,7 +99,10 @@ function Picker({ items }: { items: Launchable[] }) {
           ))}
         </NativeSelect>
       </div>
-      <nav aria-label="What to launch" className="hidden flex-col gap-4 md:flex">
+      <nav
+        aria-label="What to launch"
+        className="hidden flex-col gap-4 md:sticky md:top-6 md:flex md:max-h-[calc(100dvh-3rem)] md:self-start md:overflow-y-auto"
+      >
         {groups.map((g) => (
           <div key={g} className="flex flex-col gap-0.5">
             <h2 className="text-muted-foreground px-2 pb-1 text-xs font-medium">{g}</h2>
@@ -174,21 +184,26 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
   const client = useQueryClient();
   const go = useMutation({
     mutationFn: launch,
+    meta: { action: "Launch" },
     onSuccess: (job) => {
       void client.invalidateQueries({ queryKey: ["jobs"] });
       onLaunched(job);
+      toast(`${job.title} queued`, { description: "You will be told when it ends." });
     },
   });
   const opts = options.data ?? [];
   const sent = changed(opts, values);
   const missing = opts.filter((o) => (o.required || !o.flag.startsWith("-")) && !(o.flag in sent));
   const command = preview(item, recipe, sent);
-  const submit = () =>
+  const submit = () => {
+    // Permission can only be asked from the click itself, not after the request returns.
+    askToNotify();
     go.mutate({
       id: item.id,
       options: sent,
       ...(item.config != null ? { config, recipe } : {}),
     });
+  };
 
   return (
     <section className="flex min-w-0 flex-col gap-5">
@@ -265,7 +280,6 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
             Needs {missing.map((m) => m.flag).join(", ")}
           </span>
         )}
-        {go.error && <span className="text-negative text-xs">{go.error.message}</span>}
       </div>
     </section>
   );
@@ -362,7 +376,7 @@ function Jobs() {
         {(list) =>
           list.length === 0 ? (
             <p className="text-muted-foreground rounded-xl border border-dashed px-4 py-6 text-center text-sm">
-              Nothing launched yet. Pick something above and press Launch.
+              Nothing launched yet. Pick something and press Launch.
             </p>
           ) : (
             <div className="divide-y rounded-xl border">
@@ -394,6 +408,7 @@ function JobRow({ job, open, toggle }: { job: Job; open: boolean; toggle: () => 
   }, [client, job.id, job.status]);
   const stop = useMutation({
     mutationFn: cancelJob,
+    meta: { action: "Cancel" },
     onSuccess: () => void client.invalidateQueries({ queryKey: ["jobs"] }),
   });
   return (

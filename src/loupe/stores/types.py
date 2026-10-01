@@ -88,10 +88,39 @@ class SampleDetail(BaseModel):
     error: str | None
 
 
+#: behavior: what models do and why; efficiency: what it costs to run them; checks: loupe
+#: reproducing known results, so the other two can be trusted.
+Axis = Literal["behavior", "efficiency", "checks"]
+Domain = Literal[
+    "mechanisms",
+    "honesty",
+    "conditioning",
+    "agents",
+    "context",
+    "inference",
+    "specialisation",
+    "reproduction",
+]
+#: active: being worked on now; parked: set up, waiting its turn; answered: the README holds a
+#: result on a real model that answers the question.
+Status = Literal["active", "parked", "answered"]
+
+
 class Experiment(BaseModel):
     name: str
+    axis: Axis
+    domain: Domain
+    domain_title: str
+    status: Status
     question: str | None
+    #: The first paragraph of the README's Result section.
+    result: str | None
     runs: list[RunSummary]
+
+
+class ExperimentDetail(Experiment):
+    #: The README as Markdown, without its front matter or the Question and Result sections.
+    readme: str
 
 
 class HeatmapView(BaseModel):

@@ -479,6 +479,45 @@
         }
       }
     },
+    "/api/experiments/{name}": {
+      "get": {
+        "summary": "Experiment",
+        "operationId": "experiment_api_experiments__name__get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/playground": {
       "get": {
         "summary": "Info",
@@ -933,6 +972,34 @@
             "type": "string",
             "title": "Name"
           },
+          "axis": {
+            "type": "string",
+            "enum": ["behavior", "efficiency", "checks"],
+            "title": "Axis"
+          },
+          "domain": {
+            "type": "string",
+            "enum": [
+              "mechanisms",
+              "honesty",
+              "conditioning",
+              "agents",
+              "context",
+              "inference",
+              "specialisation",
+              "reproduction"
+            ],
+            "title": "Domain"
+          },
+          "domain_title": {
+            "type": "string",
+            "title": "Domain Title"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "parked", "answered"],
+            "title": "Status"
+          },
           "question": {
             "anyOf": [
               {
@@ -944,6 +1011,17 @@
             ],
             "title": "Question"
           },
+          "result": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
           "runs": {
             "items": {
               "$ref": "#/components/schemas/RunSummary"
@@ -953,8 +1031,99 @@
           }
         },
         "type": "object",
-        "required": ["name", "question", "runs"],
+        "required": [
+          "name",
+          "axis",
+          "domain",
+          "domain_title",
+          "status",
+          "question",
+          "result",
+          "runs"
+        ],
         "title": "Experiment"
+      },
+      "ExperimentDetail": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "axis": {
+            "type": "string",
+            "enum": ["behavior", "efficiency", "checks"],
+            "title": "Axis"
+          },
+          "domain": {
+            "type": "string",
+            "enum": [
+              "mechanisms",
+              "honesty",
+              "conditioning",
+              "agents",
+              "context",
+              "inference",
+              "specialisation",
+              "reproduction"
+            ],
+            "title": "Domain"
+          },
+          "domain_title": {
+            "type": "string",
+            "title": "Domain Title"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "parked", "answered"],
+            "title": "Status"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/RunSummary"
+            },
+            "type": "array",
+            "title": "Runs"
+          },
+          "readme": {
+            "type": "string",
+            "title": "Readme"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "axis",
+          "domain",
+          "domain_title",
+          "status",
+          "question",
+          "result",
+          "runs",
+          "readme"
+        ],
+        "title": "ExperimentDetail"
       },
       "FeatureDashboard": {
         "properties": {
@@ -1184,6 +1353,11 @@
           "home": {
             "type": "string",
             "title": "Home"
+          },
+          "launching": {
+            "type": "boolean",
+            "title": "Launching",
+            "default": false
           }
         },
         "type": "object",

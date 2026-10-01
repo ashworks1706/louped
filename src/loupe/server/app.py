@@ -25,6 +25,7 @@ from loupe.stores.runs import read_artifact
 from loupe.stores.types import (
     Comparison,
     Experiment,
+    ExperimentDetail,
     FeatureDashboard,
     Graph,
     RunDetail,
@@ -46,6 +47,8 @@ class Health(BaseModel):
     status: str
     version: str
     home: str
+    #: Whether this server runs jobs; the UI only watches jobs when it does.
+    launching: bool = False
 
 
 def create_app(
@@ -79,9 +82,13 @@ def create_app(
     async def not_found(_: Request, exc: stores.NotFound) -> JSONResponse:
         return JSONResponse({"detail": f"not found: {exc}"}, status_code=404)
 
+    @app.exception_handler(stores.BadExperiment)
+    async def bad_experiment(_: Request, exc: stores.BadExperiment) -> JSONResponse:
+        return JSONResponse({"detail": str(exc)}, status_code=500)
+
     @app.get("/api/health")
     def health() -> Health:
-        return Health(status="ok", version=__version__, home=str(home()))
+        return Health(status="ok", version=__version__, home=str(home()), launching=launching)
 
     @app.get("/api/runs")
     def runs() -> list[RunSummary]:
@@ -133,6 +140,10 @@ def create_app(
     @app.get("/api/experiments")
     def experiments() -> list[Experiment]:
         return stores.list_experiments()
+
+    @app.get("/api/experiments/{name}")
+    def experiment(name: str) -> ExperimentDetail:
+        return stores.get_experiment(name)
 
     app.include_router(playground.router(model, bank, diffusion, attn, switchable=launching))
     app.include_router(launch.router(launching))

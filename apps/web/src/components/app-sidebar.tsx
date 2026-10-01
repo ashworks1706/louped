@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { useCommandMenu } from "@/components/command-menu";
+import { useLive } from "@/components/home-overview";
 import { Mark } from "@/components/mark";
 import { ServerStatus } from "@/components/server-status";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -12,8 +13,26 @@ import { Kbd } from "@/components/ui/kbd";
 import { NAV } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
+/** A list page stays highlighted on its detail page: /runs/ on /run/, /experiments/ on
+ * /experiment/. */
 function isActive(pathname: string, href: string) {
-  return href === "/" ? pathname === "/" : pathname.startsWith(href.replace(/\/$/, ""));
+  return href === "/" ? pathname === "/" : pathname.startsWith(href.replace(/s?\/$/, ""));
+}
+
+/** How many are running behind a page: jobs behind Launch, runs behind Runs. */
+function LiveCount({ href }: { href: string }) {
+  const live = useLive();
+  const n = href === "/launch/" ? live.jobs.length : href === "/runs/" ? live.runs.length : 0;
+  if (n === 0) return null;
+  return (
+    <span
+      className="text-foreground ml-auto inline-flex items-center gap-1.5 font-mono text-[11px] tabular-nums"
+      aria-label={`${n} running`}
+    >
+      <span className="bg-foreground size-1.5 rounded-full motion-safe:animate-pulse" />
+      {n}
+    </span>
+  );
 }
 
 function Wordmark() {
@@ -71,6 +90,7 @@ export function AppSidebar() {
               >
                 <item.icon className="size-4" />
                 {item.title}
+                <LiveCount href={item.href} />
               </Link>
             );
           })}
