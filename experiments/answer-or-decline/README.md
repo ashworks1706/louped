@@ -1,10 +1,14 @@
+---
+domain: honesty
+status: parked
+---
+
 # answer-or-decline
 
 ## Question
 
 Does a system answer what it can know and decline what it cannot? And does what you built around a
-model (retrieval, tools, an agent loop) do better at both than the model alone? The domain is
-evaluation science on black-box endpoints (docs/ARCHITECTURE.md).
+model (retrieval, tools, an agent loop) do better at both than the model alone?
 
 ## What would answer it
 

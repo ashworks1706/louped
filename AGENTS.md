@@ -1,7 +1,9 @@
 # loupe: agent guide
 
-loupe lets you change a model, prove what changed and see why, in one local app. Read
-`docs/ARCHITECTURE.md` for the design and the tools it runs, `docs/ROADMAP.md` for what is built.
+loupe is a local testbed for research on LLM behavior and efficiency: each research question is an
+experiment, filed under a domain on one of two axes (behavior and alignment, efficiency and
+systems) or under the instrument checks. Read `docs/ARCHITECTURE.md` for the design and the tools
+it runs, `docs/ROADMAP.md` for what is next.
 Do not contradict them; propose an edit to the doc instead.
 
 ## Rules that decide most changes
@@ -11,9 +13,11 @@ Do not contradict them; propose an edit to the doc instead.
   the join between tools. A new dependency must be free and permissively licensed (MIT, Apache,
   BSD, OFL) and justified in the PR.
 - **No speculative code.** No module, option or abstraction without a caller today.
-- **Domains, not projects.** A capability serves a research domain; a question is an experiment on
-  it, named for the question. Nothing in `src/loupe` or an experiment's name is tied to one
-  application: a system comes in as a model id, an OpenAI-compatible endpoint or logged calls.
+- **Questions before infrastructure.** Code in `src/loupe` earns its place when an experiment needs
+  it. A question is an experiment in `experiments/`, named for the question, its README opening
+  with its domain and status (`DOMAINS` in `src/loupe/stores/experiments.py`). Nothing in
+  `src/loupe` or an experiment's name is tied to one application: a system comes in as a model
+  id, an OpenAI-compatible endpoint, an agent endpoint or logged calls.
 - **Say what happened.** No silent fallbacks: raise, or print what was chosen. No fake paths in
   `src/loupe`; stand-ins belong in tests.
 - **Reproducible numbers.** Anything that writes a result writes `loupe.core.RunMeta` next to it.
@@ -33,7 +37,7 @@ just fmt                format everything
 just serve              API and UI on :8000
 just web                UI dev server on :3000
 just site               docs site on :3001
-just new-experiment X   scaffold experiments/X/
+just new-experiment X D scaffold experiments/X/ in domain D
 just api-types          regenerate the UI's API types after changing a server route or model
 ```
 
@@ -57,7 +61,7 @@ src/loupe/        the package (distribution loupelab); layers in docs/ARCHITECTU
   sweep.py grid.py features.py circuits.py cli.py
 apps/web/         the UI; its AGENTS.md holds the design rules
 apps/site/        the docs site
-experiments/      one folder per research question; nothing imports it
+experiments/      one folder per research question, filed by domain; nothing imports it
 deploy/app/       the read-only public demo
 tests/            Python tests, CPU only
 ```

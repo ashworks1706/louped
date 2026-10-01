@@ -1,3 +1,8 @@
+---
+domain: agents
+status: parked
+---
+
 # intercode-ctf
 
 ## Question

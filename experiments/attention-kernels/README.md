@@ -1,3 +1,8 @@
+---
+domain: inference
+status: answered
+---
+
 # attention-kernels
 
 ## Question

@@ -1,9 +1,14 @@
+---
+domain: reproduction
+status: parked
+---
+
 # benchmarks
 
 ## Question
 
 How does a model, a change to it, or a whole system behind an endpoint score on standard
-benchmarks, and does a change move that score beyond sample noise? The domain is evaluation.
+benchmarks, and does a change move that score beyond sample noise?
 
 ## What would answer it
 

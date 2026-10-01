@@ -2,10 +2,14 @@
 
 ## What loupe is
 
-loupe lets you change a model (interventions, fine-tuning, prompts, adapters), prove what changed
-(evals on both versions, sample by sample, with paired intervals and moved/held verdicts), and see
-why (lens, patching, probes, SAE features, circuits), in one local app you launch and read
-everything from.
+loupe is a local testbed for research on language models along two axes: behavior and alignment
+(what models do and why) and efficiency and systems (what it costs to run them), plus instrument
+checks that reproduce known results so both can be trusted. A research question is an experiment;
+the app shows which questions are active, launches them and reads their results.
+
+Every experiment uses one method: change a model (interventions, fine-tuning, prompts, adapters,
+kernels), measure what changed (evals on both versions, sample by sample, with paired intervals
+and moved/held verdicts), and explain it (lens, patching, probes, SAE features, circuits).
 
 It is built on existing free tools and writes only what joins them: one way to describe a change,
 one provider that runs any change in an eval, one data format for results, and the UI over all of
@@ -46,15 +50,27 @@ TransformerLens (reimplements architectures, lags new models), Hydra (each tool 
 config; scripts use tyro), W&B (its server is not free to self-host), a plugin registry (Inspect's
 registries and Python entry points exist).
 
-## Research domains
+## Research axes and domains
 
-loupe is organised by research domain, not by the system that asks. A question is an experiment
-in `experiments/`, named for the question. Nothing in `src/loupe` knows about any one system: a
-system you study comes in as a model id, an OpenAI-compatible endpoint (`loupe.grid.endpoint`), an
-agent endpoint that reports the tools it ran in a `trace` field on its reply (the `agent/`
-provider), its regression cases as JSONL (`loupe.inspect_ext.cases`) or its logged model calls,
-and its specifics stay in an experiment's options. The domains and their
-experiments are listed in `apps/site/content/docs/domains.mdx`.
+loupe is organised by research question, not by the system that asks or by the tool that answers.
+
+| Axis | Domains |
+|---|---|
+| Behavior and alignment | mechanisms; sycophancy and honesty; steering and conditioning; agent behavior |
+| Efficiency and systems | context and retrieval inside the model; inference cost and kernels; small and specialised models |
+| Instrument checks | reproducing known results |
+
+A question is an experiment in `experiments/`, named for the question. Its README opens with front
+matter naming its domain and status (active, parked, answered); `loupe.stores.experiments` holds
+the list of domains and their axes, and refuses an experiment that names none of them. Evaluation,
+training, interventions and analysis are methods every domain uses, so they are packages in
+`src/loupe`, not domains.
+
+Nothing in `src/loupe` knows about any one system: a system you study comes in as a model id, an
+OpenAI-compatible endpoint (`loupe.grid.endpoint`), an agent endpoint that reports the tools it ran
+in a `trace` field on its reply (the `agent/` provider), its regression cases as JSONL
+(`loupe.inspect_ext.cases`) or its logged model calls, and its specifics stay in an experiment's
+options. The domains and their experiments are listed in `apps/site/content/docs/domains.mdx`.
 
 ## Packages and layers
 
@@ -103,7 +119,8 @@ one at a time, its output under `<home>/jobs`; each form is read from the comman
 parser. Launching and loading run code on this machine, so both are on only for a loopback server,
 never with `--expose`.
 
-Pages: Home, Experiments, Launch, Runs, Run, Feature, Compare, Vectors, Circuits, Playground.
+Pages: Home (the active questions and latest runs), Experiments (every question by axis, domain
+and status), Launch, Runs, Run, Feature, Compare, Vectors, Circuits, Playground.
 Design rules are in `apps/web/AGENTS.md`. `apps/site` is the docs site; `deploy/app` is the
 read-only public demo.
 

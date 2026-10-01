@@ -5,7 +5,8 @@ description: Report progress against docs/ROADMAP.md. Use when asked what is don
 
 # roadmap
 
-Read `docs/ROADMAP.md`. Report the current phase, what is checked off, and the next unchecked item.
+Read `docs/ROADMAP.md`. Report what is checked off and the next unchecked item on each axis, and
+list the experiments whose README says `status: active`.
 
 An item is finished when a passing test or a recorded run shows it working. A phase is finished
 only when its acceptance item is checked, and most acceptance items reproduce a published number

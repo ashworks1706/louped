@@ -1,10 +1,15 @@
+---
+domain: context
+status: active
+---
+
 # retrieval-injection
 
 ## Question
 
 How much does a model gain from retrieved passages placed in its prompt (plain RAG), and does
 retrieval inside the model, the same passages injected into its residual stream at one layer with
-no prompt text, reach that gain? The domain is retrieval inside the model (docs/ARCHITECTURE.md).
+no prompt text, reach that gain?
 
 ## What would answer it
 

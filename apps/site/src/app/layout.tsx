@@ -9,7 +9,7 @@ import "./global.css";
 export const metadata: Metadata = {
   title: { default: `${appName}: ${tagline}`, template: `%s · ${appName}` },
   description:
-    "An open-source, local-first lab where an intervention on a language model is evaluated, trained against and looked inside.",
+    "An open-source, local testbed for research on language model behavior and efficiency: each question an experiment, measured and explained on the same model.",
 };
 
 export default function Layout({ children }: LayoutProps<"/">) {

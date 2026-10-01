@@ -1,7 +1,7 @@
 import { createGetUrl } from "fumadocs-core/source";
 
 export const appName = "loupe";
-export const tagline = "Look inside the model you're testing.";
+export const tagline = "A testbed for LLM behavior and efficiency.";
 export const docsRoute = "/docs";
 export const docsContentRoute = "/llms.mdx/docs";
 export const repoUrl = "https://github.com/ashworks1706/loupe";

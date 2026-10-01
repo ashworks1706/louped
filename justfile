@@ -103,14 +103,52 @@ images:
 lock:
     uv lock
 
-# scaffold experiments/<name>/ with its README and run.py
-new-experiment name:
+# scaffold experiments/<name>/ in a domain (src/loupe/stores/experiments.py lists them), active
+new-experiment name domain:
     #!/usr/bin/env bash
     set -euo pipefail
     dir="experiments/{{name}}"
     [ -e "$dir" ] && { echo "$dir exists"; exit 1; }
+    uv run python -c "from loupe.stores.experiments import DOMAINS; import sys; d = '{{domain}}'; d in DOMAINS or sys.exit(f'domain {d!r} is not one of {list(DOMAINS)}')"
     mkdir -p "$dir"
-    printf '# %s\n\n## Question\n\n## What would answer it\n\n## Result\n' "{{name}}" > "$dir/README.md"
+    cat > "$dir/README.md" <<'README'
+    ---
+    domain: {{domain}}
+    status: active
+    ---
+
+    # {{name}}
+
+    ## Question
+
+    <!-- One sentence that comes out yes or no, or as a number. -->
+
+    ## Observation
+
+    <!-- What failed or bottlenecked, as seen, not as interpreted. -->
+
+    ## Hypotheses
+
+    <!-- What might cause it, including the explanations that compete with yours. -->
+
+    ## Baseline
+
+    <!-- The nearest existing method, and the simplest thing that might already work. -->
+
+    ## Test
+
+    <!-- The controlled comparison that tells the hypotheses apart: conditions, metric, seeds. -->
+
+    ## Stop if
+
+    <!-- The result that weakens the idea or makes it impractical. -->
+
+    ## Run
+
+    ## Result
+
+    ## Next
+    README
     printf '"""%s: writes its result under .loupe/, never prints it."""\n' "{{name}}" > "$dir/run.py"
     echo "created $dir"
 

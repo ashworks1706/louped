@@ -8,9 +8,18 @@ import dark from "../../../public/screenshot-dark.png";
 import light from "../../../public/screenshot-light.png";
 
 const PILLARS = [
-  { title: "Evaluate", text: "Every steer, ablation or adapter is an Inspect eval against base." },
-  { title: "Train against", text: "SFT, DPO and GRPO with the same check as reward." },
-  { title: "Look inside", text: "Lens, patching and probes across checkpoints." },
+  {
+    title: "Behavior & alignment",
+    text: "Mechanisms, sycophancy, steering and agents: what models do, and why.",
+  },
+  {
+    title: "Efficiency & systems",
+    text: "Retrieval inside the model, kernels and small models: what it costs to run them.",
+  },
+  {
+    title: "One method",
+    text: "Change the model, measure what moved with paired intervals, explain it from inside.",
+  },
 ];
 
 const alt = "A grid of conditions against a baseline in the loupe app";
@@ -22,7 +31,8 @@ export default function HomePage() {
         {tagline}
       </h1>
       <p className="text-fd-muted-foreground mt-5 max-w-md text-center text-balance">
-        Evaluate, train and interpret language model interventions. Local and free.
+        Each research question an experiment: a hypothesis, a baseline, a test and a result you can
+        reproduce. Local and free.
       </p>
       <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
         <CopyCommand command="pip install loupelab" />

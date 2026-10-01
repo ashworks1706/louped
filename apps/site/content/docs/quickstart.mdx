@@ -27,8 +27,9 @@ up practical.
 ## Your own question
 
 ```sh
-just new-experiment my-question   # experiments/my-question/{README.md,run.py}
+just new-experiment my-question mechanisms   # experiments/my-question/{README.md,run.py}
 ```
 
-The README states the question, what would answer it and the result. `run.py` writes to MLflow and
+The README opens with its domain and status, then states the question, what was observed, the
+hypotheses, the baseline, the test, when to stop, and the result. `run.py` writes to MLflow and
 Inspect logs, so the app shows it and Launch gets a form for its options.
