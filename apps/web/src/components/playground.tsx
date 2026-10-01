@@ -11,6 +11,7 @@ import {
   useQueryStates,
 } from "nuqs";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { CopyButton } from "@/components/copy-button";
 import { EmptyState } from "@/components/empty-state";
@@ -121,8 +122,9 @@ function Loaded({
 
   const base = useReply();
   const edited = useReply();
-  const looked = useMutation({ mutationFn: inspect });
-  const lookedEdited = useMutation({ mutationFn: inspect });
+  // Their errors show in the result pane they fill, so no toast.
+  const looked = useMutation({ mutationFn: inspect, meta: { quiet: true } });
+  const lookedEdited = useMutation({ mutationFn: inspect, meta: { quiet: true } });
   const run = () => {
     const prompt = draft.trim();
     if (!prompt) return;
@@ -568,7 +570,11 @@ function ModelLoader({ current }: { current?: PlaygroundInfo }) {
   const [attn, setAttn] = useState("");
   const load = useMutation({
     mutationFn: loadModel,
-    onSuccess: (info) => client.setQueryData(q.playground().queryKey, info),
+    meta: { action: "Loading the model" },
+    onSuccess: (info) => {
+      client.setQueryData(q.playground().queryKey, info);
+      toast.success(info.model ? `Loaded ${info.model}` : "Model unloaded");
+    },
   });
   const submit = (unload = false) =>
     load.mutate(
@@ -641,7 +647,6 @@ function ModelLoader({ current }: { current?: PlaygroundInfo }) {
           </Button>
         )}
       </div>
-      {load.error && <p className="text-negative text-xs">{load.error.message}</p>}
     </form>
   );
 }

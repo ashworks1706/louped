@@ -15,8 +15,9 @@ Check:
    abstractions with one implementation; dead code.
 3. **Say what happened**: silent fallbacks (a default that hides a misconfiguration, a swallowed
    exception), fake or scripted paths outside tests.
-4. **Domains, not projects**: nothing in `src/loupe` or an experiment's name tied to one
-   application.
+4. **Questions, not projects**: nothing in `src/loupe` or an experiment's name tied to one
+   application; a new experiment's README names a domain and status, and new `src/loupe` code
+   has an experiment that needs it.
 5. **Layers**: imports that go up or sideways against ARCHITECTURE.md.
 6. **Dependencies**: every new one is free, permissively licensed, in the right extra, and justified.
 7. **Reproducibility**: anything that writes a result writes RunMeta; seeds pinned.

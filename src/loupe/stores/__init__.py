@@ -5,7 +5,7 @@ exists. Needs the server extra, which installs both readers.
 """
 
 from loupe.stores.compare import compare
-from loupe.stores.experiments import list_experiments
+from loupe.stores.experiments import BadExperiment, get_experiment, list_experiments
 from loupe.stores.graphs import list_graphs
 from loupe.stores.runs import (
     NotFound,
@@ -20,8 +20,10 @@ from loupe.stores.runs import (
 from loupe.stores.vectors import list_vectors
 
 __all__ = [
+    "BadExperiment",
     "NotFound",
     "compare",
+    "get_experiment",
     "get_feature",
     "get_run",
     "get_sample",

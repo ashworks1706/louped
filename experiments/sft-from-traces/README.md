@@ -1,10 +1,15 @@
+---
+domain: specialisation
+status: parked
+---
+
 # sft-from-traces
 
 ## Question
 
 Does fine-tuning a model on its own system's reviewed conversations (the turns a person kept, or
 fixed) make it better at that system's job, such as picking the right tool and arguments, without
-hurting the rest? The domain is small models and data (docs/ARCHITECTURE.md).
+hurting the rest?
 
 ## What would answer it
 

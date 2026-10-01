@@ -1,18 +1,52 @@
 ---
 title: Research domains
-description: What loupe can test, organised by question, not by project.
+description: What loupe studies, on two axes, and the checks that make its numbers trustworthy.
 ---
 
-A question is an experiment in `experiments/`, named for the question. A system you study comes in
-as a model id, an OpenAI-compatible endpoint or logged model calls.
+loupe studies two things about language models: **behavior and alignment**, what models do and
+why, and **efficiency and systems**, what it costs to run them. A third group, **instrument
+checks**, reproduces known results so the other two can be trusted.
 
-| Domain                      | Capabilities                                                                                                                                                     | Experiments                                                                                                                                            |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Mechanisms                  | directions, residual and per-head patching, logit lens, probes, attention, SAE features, circuits                                                                | `refusal-direction`, `sycophancy-pushback`, `interp-toolkit`, `attention-heads`                                                                        |
-| Evaluation                  | grids over seeds with paired intervals and moved/held verdicts, any endpoint as a condition, benchmarks, contamination checks, inference cost, attention kernels | `answer-or-decline`, `benchmarks`, `regression-cases`, `inspect-evals-baseline`, `attention-kernels`, `coding-agent`, `agent-sandbox`, `intercode-ctf` |
-| Conditioning                | prompt text, steering vectors, soft prompts, ReFT and LoRA reaching one target                                                                                   | `prompt-conditioning`, `conditioning-methods`                                                                                                          |
-| Adapters                    | a bank of LoRA adapters live in any subset, merges, per-site overlap                                                                                             | `diffusion-adapters`                                                                                                                                   |
-| Decoding and model families | per-step hooks, adapters switched by phase, masked diffusion models                                                                                              | `diffusion-adapters`                                                                                                                                   |
-| Retrieval and grounding     | BM25, dense and hybrid search, reranking; recall, F1, exact match, NLI faithfulness                                                                              | `retrieval-injection`                                                                                                                                  |
-| Retrieval inside the model  | passages injected at a layer, retrieval during decoding, spliced KV divergence                                                                                   | `retrieval-injection`, `attention-heads`                                                                                                               |
-| Training and data           | logged calls or a teacher to a reviewed set, SFT, DPO, GRPO, tool environments, sweeps                                                                           | `sft-from-traces`, `refusal-finetuning`, `gsm8k-grpo`, `tool-rl`                                                                                       |
+Each axis is split into domains. A question is an experiment in `experiments/`, named for the
+question, whose README names its domain and status (`active`, `parked` or `answered`) in front
+matter. The Experiments page groups them the same way. A system you study comes in as a model id,
+an OpenAI-compatible endpoint, an agent endpoint or logged model calls; nothing in a domain is tied
+to one application.
+
+## Behavior and alignment
+
+| Domain                    | Asks                                                                                       | Experiments                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| Mechanisms                | Which directions, heads, features and circuits carry a behavior, and what moving them does | `refusal-direction`, `refusal-finetuning`, `interp-toolkit`, `attention-heads`  |
+| Sycophancy and honesty    | Whether a model holds a correct answer under pressure and declines what it cannot know     | `sycophancy-pushback`, `answer-or-decline`                                      |
+| Steering and conditioning | How prompts, vectors, soft prompts, ReFT and LoRA compare at reaching one target           | `prompt-conditioning`, `conditioning-methods`                                   |
+| Agent behavior            | Whether agents use tools, ground their answers in tool output and report failure honestly  | `coding-agent`, `agent-sandbox`, `intercode-ctf`, `regression-cases`, `tool-rl` |
+
+## Efficiency and systems
+
+| Domain                                 | Asks                                                                                | Experiments                             |
+| -------------------------------------- | ----------------------------------------------------------------------------------- | --------------------------------------- |
+| Context and retrieval inside the model | Whether retrieved state can reach a model without its prompt, and at which layer    | `retrieval-injection`                   |
+| Inference cost and kernels             | What an attention kernel or a serving choice costs in agreement, latency and memory | `attention-kernels`                     |
+| Small and specialised models           | What adapters, distillation and masked diffusion buy a small model on one job       | `diffusion-adapters`, `sft-from-traces` |
+
+## Instrument checks
+
+| Domain                    | Asks                                                                     | Experiments                                          |
+| ------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------- |
+| Reproducing known results | Whether loupe's provider and recipes reach reported numbers within noise | `inspect-evals-baseline`, `benchmarks`, `gsm8k-grpo` |
+
+## Methods every domain uses
+
+The domains share loupe's methods rather than owning them: a [policy](/docs/policies) (model,
+interventions, adapters, generation settings) that runs the same way everywhere;
+[grids](/docs/grid) over conditions and seeds with paired intervals and moved/held verdicts;
+training (SFT, DPO, GRPO, ReFT) with an eval's check as the reward; and analysis (logit lens,
+patching, probes, attention, SAE features, circuits) on the same changed model.
+
+## Adding a domain
+
+When a question fits none of these, add a domain in three places: the `Domain` type in
+`src/loupe/stores/types.py`, its axis and title in `DOMAINS` in `src/loupe/stores/experiments.py`
+(a test checks the two agree), and this page; then run `just api-types`. An experiment naming a
+domain not listed there is an error that names its folder, not filed under a default.

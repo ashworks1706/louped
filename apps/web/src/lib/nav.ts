@@ -23,14 +23,14 @@ export const NAV: NavItem[] = [
   {
     href: "/",
     title: "Home",
-    description: "Latest runs.",
+    description: "What is being worked on now.",
     icon: House,
     shortcut: "G H",
   },
   {
     href: "/experiments/",
     title: "Experiments",
-    description: "Research questions and their runs.",
+    description: "Research questions by axis and domain: behavior, efficiency, and the checks.",
     icon: FlaskConical,
     shortcut: "G E",
   },

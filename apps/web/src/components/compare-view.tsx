@@ -1,9 +1,9 @@
 "use client";
 
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { GitCompareArrows } from "lucide-react";
+import { ArrowLeftRight, GitCompareArrows } from "lucide-react";
 import Link from "next/link";
-import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
+import { parseAsBoolean, parseAsString, useQueryState, useQueryStates } from "nuqs";
 import { useMemo } from "react";
 
 import { EmptyState } from "@/components/empty-state";
@@ -12,6 +12,7 @@ import { QueryState } from "@/components/query-state";
 import { runHref } from "@/lib/href";
 import { Transcript } from "@/components/transcript";
 import { Button } from "@/components/ui/button";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import {
   Table,
@@ -22,24 +23,104 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { q, type RunDetail, type SampleSummary } from "@/lib/api";
-import { headline, metricLabel, num, stderr } from "@/lib/format";
+import { ago, headline, metricLabel, num, stderr } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export function CompareView() {
-  const [a] = useQueryState("a", parseAsString);
-  const [b] = useQueryState("b", parseAsString);
-  if (!a || !b) {
-    return (
-      <section className="mx-auto max-w-6xl px-6 py-8">
-        <EmptyState
-          icon={GitCompareArrows}
-          title="Pick two runs to compare"
-          command="Runs → tick two → Compare"
-        />
+  const [{ a, b }, set] = useQueryStates({ a: parseAsString, b: parseAsString });
+  return (
+    <>
+      <section className="mx-auto max-w-6xl px-6 pt-8">
+        <Pickers a={a} b={b} set={(next) => void set(next)} />
       </section>
-    );
-  }
-  return <Loaded a={a} b={b} />;
+      {a && b ? (
+        <Loaded a={a} b={b} />
+      ) : (
+        <section className="mx-auto max-w-6xl px-6 py-8">
+          <EmptyState
+            icon={GitCompareArrows}
+            title="Pick a baseline and a changed run"
+            body="Usually the same eval on the base model and under a change. Runs of one experiment are listed together."
+            command="uv run --all-extras python experiments/refusal-direction/eval.py"
+          />
+        </section>
+      )}
+    </>
+  );
+}
+
+/** The two runs, chosen here or from Runs; the URL holds them. */
+function Pickers({
+  a,
+  b,
+  set,
+}: {
+  a: string | null;
+  b: string | null;
+  set: (next: { a?: string | null; b?: string | null }) => void;
+}) {
+  const runs = useQuery(q.runs());
+  const all = runs.data ?? [];
+  // The baseline's experiment first, since the changed run is usually its sibling.
+  const home = all.find((r) => r.id === a)?.experiment;
+  const groups = [...new Set(all.map((r) => r.experiment ?? "no experiment"))].sort((x, y) =>
+    x === home ? -1 : y === home ? 1 : x.localeCompare(y),
+  );
+  // other is the run picked on the other side, which this side cannot pick too. A picked id
+  // the list does not hold yet (still loading, or gone) is kept as its own option.
+  const options = (picked: string | null, other: string | null) => (
+    <>
+      {picked && !all.some((r) => r.id === picked) && <option value={picked}>{picked}</option>}
+      {groups.map((g) => (
+        <optgroup key={g} label={g}>
+          {all
+            .filter((r) => (r.experiment ?? "no experiment") === g)
+            .map((r) => (
+              <option key={r.id} value={r.id} disabled={r.id === other}>
+                {r.name} · {r.kind} · {ago(r.created)}
+              </option>
+            ))}
+        </optgroup>
+      ))}
+    </>
+  );
+  return (
+    <div className="flex flex-wrap items-end gap-3">
+      <label className="flex min-w-0 flex-col gap-1.5">
+        <span className="text-muted-foreground text-xs">Baseline</span>
+        <NativeSelect
+          className="max-w-80"
+          aria-label="Baseline"
+          value={a ?? ""}
+          onChange={(e) => set({ a: e.target.value || null })}
+        >
+          <option value="">Pick a run…</option>
+          {options(a, b)}
+        </NativeSelect>
+      </label>
+      <Button
+        size="icon-sm"
+        variant="ghost"
+        aria-label="Swap baseline and changed"
+        disabled={!a && !b}
+        onClick={() => set({ a: b, b: a })}
+      >
+        <ArrowLeftRight />
+      </Button>
+      <label className="flex min-w-0 flex-col gap-1.5">
+        <span className="text-muted-foreground text-xs">Changed</span>
+        <NativeSelect
+          className="max-w-80"
+          aria-label="Changed"
+          value={b ?? ""}
+          onChange={(e) => set({ b: e.target.value || null })}
+        >
+          <option value="">Pick a run…</option>
+          {options(b, a)}
+        </NativeSelect>
+      </label>
+    </div>
+  );
 }
 
 function Loaded({ a, b }: { a: string; b: string }) {

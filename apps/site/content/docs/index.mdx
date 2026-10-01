@@ -1,13 +1,18 @@
 ---
 title: Introduction
-description: Change a model, prove what changed, and see why.
+description: A local testbed for research on LLM behavior and efficiency.
 ---
 
-loupe is a local app for research on language model behaviour. You change a model: steer or
-ablate a direction, fine-tune it, rewrite its prompt, add an adapter. You prove what changed: the
-same evals run on both versions, sample by sample, with paired intervals and a verdict on what
-moved and what held. And you see why: logit lens, patching, probes, SAE features and circuits on
-the same model under the same change.
+loupe is a local testbed for research on language models along two axes: **behavior and
+alignment** (what models do and why) and **efficiency and systems** (what it costs to run them).
+Each research question is an experiment, filed under a domain, with a stated hypothesis, a
+baseline, a test and a result you can reproduce and read in one app.
+
+Every experiment uses the same method. Change the model: steer or ablate a direction, fine-tune it,
+rewrite its prompt, add an adapter, swap its attention kernel. Measure what changed: the same evals
+run on both versions, sample by sample, with paired intervals and a verdict on what moved and what
+held. Explain it: logit lens, patching, probes, SAE features and circuits on the same model under
+the same change.
 
 A change is one spec, a policy, that runs the same way in an eval, a training run, the Playground
 and an analysis. Your question is a short script; loupe supplies the rest and the app to launch and
@@ -17,6 +22,6 @@ hosted model and no API key.
 <Cards>
   <Card title="Install" href="/docs/install" />
   <Card title="Quick start" href="/docs/quickstart" />
-  <Card title="Policies" href="/docs/policies" />
   <Card title="Research domains" href="/docs/domains" />
+  <Card title="Policies" href="/docs/policies" />
 </Cards>

@@ -10,6 +10,9 @@ def test_health() -> None:
     body = TestClient(create_app(), base_url="http://localhost").get("/api/health").json()
     assert body["status"] == "ok"
     assert body["version"]
+    assert body["launching"] is False
+    launching = TestClient(create_app(launching=True), base_url="http://localhost")
+    assert launching.get("/api/health").json()["launching"] is True
 
 
 def test_serves_the_ui_export(tmp_path: Path) -> None:

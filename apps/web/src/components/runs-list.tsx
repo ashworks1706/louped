@@ -2,10 +2,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ListTree } from "lucide-react";
+import { Suspense } from "react";
 
 import { EmptyState } from "@/components/empty-state";
 import { QueryState } from "@/components/query-state";
 import { RunsTable } from "@/components/runs-table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { q } from "@/lib/api";
 
 export function RunsList({ limit, compact = false }: { limit?: number; compact?: boolean }) {
@@ -21,7 +23,10 @@ export function RunsList({ limit, compact = false }: { limit?: number; compact?:
             command="uv run --all-extras python experiments/refusal-direction/run.py --tiny"
           />
         ) : (
-          <RunsTable runs={limit ? all.slice(0, limit) : all} compact={compact} />
+          // The table keeps its filters in the URL, which a static page reads under Suspense.
+          <Suspense fallback={<Skeleton className="h-10 w-full" />}>
+            <RunsTable runs={limit ? all.slice(0, limit) : all} compact={compact} />
+          </Suspense>
         )
       }
     </QueryState>

@@ -1,10 +1,15 @@
+---
+domain: conditioning
+status: parked
+---
+
 # prompt-conditioning
 
 ## Question
 
 Does a line of conditioning in the system prompt move how a model answers while what it answers
-holds? The domain is conditioning (docs/ARCHITECTURE.md): the cheapest way to steer a model is a
-sentence of instruction, and the baseline a steering vector or a soft prompt has to beat.
+holds? The cheapest way to steer a model is a sentence
+of instruction, and the baseline a steering vector or a soft prompt has to beat.
 
 ## What would answer it
 

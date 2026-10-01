@@ -1,3 +1,8 @@
+---
+domain: honesty
+status: parked
+---
+
 # sycophancy-pushback
 
 ## Question

@@ -13,11 +13,13 @@ import { MetricValue } from "@/components/metric";
 import { QueryState } from "@/components/query-state";
 import { KindBadge, StatusDot } from "@/components/run-badges";
 import { RunViews } from "@/components/run-views";
+import { StatGrid } from "@/components/stat-grid";
 import { SamplesTable } from "@/components/samples-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { API, isLive, q, type RunDetail } from "@/lib/api";
 import { ago, headline, metricLabel } from "@/lib/format";
+import { experimentHref } from "@/lib/href";
 
 export function RunView() {
   const [id] = useQueryState("id", parseAsString);
@@ -38,17 +40,20 @@ export function RunView() {
 
 function RunLoaded({ id }: { id: string }) {
   const run = useQuery(q.run(id));
+  if (!run.data) {
+    return (
+      <section className="mx-auto max-w-6xl px-6 py-8">
+        <QueryState query={run}>{() => null}</QueryState>
+      </section>
+    );
+  }
   return (
-    <QueryState query={run}>
-      {(r) => (
-        <>
-          <RunHeader run={r} />
-          <section className="mx-auto max-w-6xl px-6 py-6">
-            <RunTabs run={r} />
-          </section>
-        </>
-      )}
-    </QueryState>
+    <>
+      <RunHeader run={run.data} />
+      <section className="mx-auto max-w-6xl px-6 py-6">
+        <RunTabs run={run.data} />
+      </section>
+    </>
   );
 }
 
@@ -74,7 +79,15 @@ function RunHeader({ run }: { run: RunDetail }) {
           </div>
           <div className="flex gap-1.5">
             <dt>Experiment</dt>
-            <dd className="text-foreground">{run.experiment ?? "—"}</dd>
+            <dd className="text-foreground">
+              {run.experiment ? (
+                <Link href={experimentHref(run.experiment)} className="hover:underline">
+                  {run.experiment}
+                </Link>
+              ) : (
+                "—"
+              )}
+            </dd>
           </div>
           <div className="flex gap-1.5">
             <dt>Created</dt>
@@ -91,7 +104,7 @@ function RunHeader({ run }: { run: RunDetail }) {
 }
 
 function RunTabs({ run }: { run: RunDetail }) {
-  const [tab, setTab] = useQueryState("tab", parseAsString.withDefault("overview"));
+  const [chosen, setTab] = useQueryState("tab", parseAsString);
   // Samples and figures poll only while the run is live; read them once more when it ends.
   const client = useQueryClient();
   const wasLive = useRef(isLive(run.status));
@@ -104,6 +117,8 @@ function RunTabs({ run }: { run: RunDetail }) {
   }, [client, run.id, run.status]);
   const isEval = run.kind === "eval";
   const hasFigures = run.artifacts.some((a) => a.path.startsWith("views/"));
+  // A run whose results are only figures opens on them.
+  const tab = chosen ?? (hasFigures && headline(run.metrics).length === 0 ? "figures" : "overview");
   return (
     <Tabs value={tab} onValueChange={setTab}>
       <TabsList>
@@ -156,16 +171,20 @@ function Overview({ run }: { run: RunDetail }) {
         </pre>
       )}
       {metrics.length > 0 ? (
-        <div className="bg-border grid gap-px overflow-hidden rounded-xl border sm:grid-cols-2 lg:grid-cols-4">
+        <StatGrid>
           {metrics.map(([key, value, err]) => (
-            <div key={key} className="bg-background flex flex-col gap-1 p-4">
+            <div key={key} className="flex flex-col gap-1 p-4">
               <span className="text-muted-foreground text-xs">{metricLabel(key)}</span>
               <MetricValue value={value} err={err} className="text-2xl font-medium" />
             </div>
           ))}
-        </div>
+        </StatGrid>
       ) : (
-        <p className="text-muted-foreground text-sm">No metrics recorded.</p>
+        <p className="text-muted-foreground text-sm">
+          No metrics recorded.
+          {run.artifacts.some((a) => a.path.startsWith("views/")) &&
+            " Its results are figures, under Figures."}
+        </p>
       )}
       <HistoryCharts history={run.history} />
     </div>

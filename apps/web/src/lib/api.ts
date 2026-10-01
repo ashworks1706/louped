@@ -11,7 +11,8 @@ export type RunSummary = Schemas["RunSummary"];
 export type RunDetail = Schemas["RunDetail"];
 export type SampleSummary = Schemas["SampleSummary"];
 export type SampleDetail = Schemas["SampleDetail"];
-type Experiment = Schemas["Experiment"];
+export type Experiment = Schemas["Experiment"];
+export type ExperimentDetail = Schemas["ExperimentDetail"];
 type RunView = Schemas["RunView"];
 export type HeatmapView = Schemas["HeatmapView"];
 export type LineView = Schemas["LineView"];
@@ -103,6 +104,7 @@ const every = (live: boolean | undefined): number | false => (live ? LIVE_MS : f
 /** Query keys and fetchers, one per endpoint, so pages never build URLs by hand. Queries over a
  * live run poll until it ends. */
 export const q = {
+  health: () => ({ queryKey: ["health"], queryFn: () => get<Health>("/health"), retry: false }),
   runs: () => ({
     queryKey: ["runs"],
     queryFn: () => get<RunSummary[]>("/runs"),
@@ -176,5 +178,9 @@ export const q = {
   experiments: () => ({
     queryKey: ["experiments"],
     queryFn: () => get<Experiment[]>("/experiments"),
+  }),
+  experiment: (name: string) => ({
+    queryKey: ["experiment", name],
+    queryFn: () => get<ExperimentDetail>(`/experiments/${encodeURIComponent(name)}`),
   }),
 };

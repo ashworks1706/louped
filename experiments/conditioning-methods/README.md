@@ -1,3 +1,8 @@
+---
+domain: conditioning
+status: parked
+---
+
 # conditioning-methods
 
 ## Question
@@ -5,7 +10,7 @@
 To make a model answer in one word, how do three ways of conditioning it compare: a line in the
 system prompt (no parameters), a rank-4 ReFT intervention on one layer (a few thousand parameters,
 pyreft) and a LoRA (millions)? Does each shorten the answers on countries it never saw, and what
-does each cost in correctness? The domain is conditioning (docs/ARCHITECTURE.md), with adapters.
+does each cost in correctness?
 
 ## What would answer it
 

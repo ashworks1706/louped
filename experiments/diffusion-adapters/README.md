@@ -1,3 +1,8 @@
+---
+domain: specialisation
+status: parked
+---
+
 # diffusion-adapters
 
 ## Question

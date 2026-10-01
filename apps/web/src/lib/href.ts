@@ -3,6 +3,9 @@
 export const runHref = (id: string, tab?: string) =>
   `/run/?id=${encodeURIComponent(id)}${tab ? `&tab=${tab}` : ""}`;
 
+export const experimentHref = (name: string, tab?: string) =>
+  `/experiment/?name=${encodeURIComponent(name)}${tab ? `&tab=${tab}` : ""}`;
+
 export const compareHref = (a: string, b: string) =>
   `/compare/?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`;
 
