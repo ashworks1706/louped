@@ -19,7 +19,7 @@ const run = (status: string) => ({
   id: "m-1",
   kind: "training",
   name: "sft",
-  experiment: "sft-from-traces",
+  experiment: "refusal-finetuning",
   status,
   created: "2026-10-01T00:00:00Z",
   model: "tiny",
@@ -104,7 +104,7 @@ test("a run started outside the app is announced when it ends", async ({ page },
   const { runs } = await mockApi(page, { runs: [run("running")] });
   await page.addInitScript(() => localStorage.setItem("theme", "light"));
   await page.goto("/runs/");
-  await expect(page.getByRole("link", { name: "sft-from-traces" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "refusal-finetuning" })).toBeVisible();
   runs[0] = run("finished");
   await expect(page.getByText("Training finished")).toBeVisible({ timeout: 10_000 });
   await settle(page);

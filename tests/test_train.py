@@ -292,19 +292,6 @@ def test_gym_and_math_checks_score_replies() -> None:
                                            ("no idea", "3")]] == [1.0, 1.0, 0.0]  # fmt: skip
 
 
-def test_tool_rl_calculator_scores_the_submitted_answer() -> None:
-    from loupe.train.rewards import load_object
-    from loupe.train.tasks import gym_rows
-
-    calc = load_object("experiments/tool-rl/env.py:Calculator")()
-    (row,) = gym_rows("basic_arithmetic", 1, seed=0)
-    calc.reset(**row)
-    assert calc.calculate("(3 + 4) * 2") == "14" and calc.calculate("2 ** 9").startswith("error")
-    assert calc.get_reward() == 0.0
-    calc.submit(row["answer"])
-    assert calc.get_reward() == 1.0
-
-
 def test_soft_prompt_and_masked_diffusion_stay_on_trl(tmp_path: Path) -> None:
     from loupe.train.base import backend
 

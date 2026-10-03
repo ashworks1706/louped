@@ -22,7 +22,7 @@ Instrument checks:
 
 - [ ] An inspect_evals score within noise of the reported number on the full split
       (`inspect-evals-baseline`).
-- [ ] GRPO on GSM8K on a small Qwen shows the known gain in 500 steps (`gsm8k-grpo`).
+- [ ] GRPO on GSM8K on a small Qwen shows the known gain in 500 steps.
 - [ ] A fresh user runs an example from a clean clone.
 
 ## Next
