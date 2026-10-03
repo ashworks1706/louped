@@ -9,7 +9,7 @@ downloads there.
 
 | Mark     | Meaning                                                                            |
 | -------- | ---------------------------------------------------------------------------------- |
-| tested   | Covered by the test suite or a `--tiny` example, on a tiny model offline           |
+| tested   | Covered by the test suite, on a tiny model offline                                 |
 | smoke    | Run once on a randomly initialised two-layer config of the architecture, not in CI |
 | expected | The code path is generic and should work; not run                                  |
 | no       | Does not work today                                                                |
@@ -33,7 +33,6 @@ downloads there.
   nnsight. The smoke check ran each of these per family.
 - **`loupe/` provider** renders every conversation with the tokenizer's chat template. GPT-2 and
   Pythia checkpoints ship without one: set `tokenizer.chat_template` or use an instruct fine-tune.
-  The examples' `chat()` helper needs one too.
 - **Tool calls** go through the chat template's `tools` argument and are parsed by Inspect's Hugging
   Face handler, picked by the config's `model_type`: Llama and Mistral have their own parsers, every
   other family the generic one (`<tool_call>`, fenced JSON, `<function>`, bare JSON). A template

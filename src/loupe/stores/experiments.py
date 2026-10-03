@@ -202,8 +202,43 @@ status: active
 """
 
 
+#: A new experiment's run.py: launchable from the app, its Args the form, its run filed under it.
+RUN = '''"""{name}: what one run measures, in a line; Launch shows it."""
+
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
+
+import tyro
+
+from loupe.tracking import start_run
+
+EXPERIMENT = "{name}"
+
+
+@dataclass
+class Args:
+    """Each field is an option on Launch; the docstring under it is its help."""
+
+    model: str = "Qwen/Qwen2.5-0.5B-Instruct"
+    """A Hub id, a path, or a name under <home>/models."""
+    seed: int = 0
+
+
+def main(args: Args) -> None:
+    with start_run(EXPERIMENT, name=args.model, params=asdict(args), seed=args.seed):
+        # The Test in README.md. Numbers: mlflow.log_metrics. Figures: a view from
+        # loupe.analysis.views, logged with loupe.tracking.log_json under views/.
+        raise NotImplementedError("the Test in README.md")
+
+
+if __name__ == "__main__":
+    main(tyro.cli(Args))
+'''
+
+
 def scaffold(name: str, domain: str) -> Path:
-    """experiments/<name>/ with its README to fill in and an empty run.py, active in domain."""
+    """experiments/<name>/ with its README to fill in and a run.py to write, active in domain."""
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", name):
         raise BadExperiment(f"{name!r}: a name is lowercase letters, digits and dashes")
     if domain not in DOMAINS:
@@ -213,7 +248,5 @@ def scaffold(name: str, domain: str) -> Path:
         raise BadExperiment(f"experiments/{name} exists")
     folder.mkdir(parents=True)
     (folder / "README.md").write_text(TEMPLATE.format(name=name, domain=domain), encoding="utf-8")
-    (folder / "run.py").write_text(
-        f'"""{name}: writes its result under .loupe/, never prints it."""\n', encoding="utf-8"
-    )
+    (folder / "run.py").write_text(RUN.format(name=name), encoding="utf-8")
     return folder

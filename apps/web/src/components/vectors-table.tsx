@@ -38,11 +38,8 @@ export function VectorsTable() {
             <EmptyState
               icon={Move3d}
               title="No vectors saved"
-              body="A run that finds a direction saves it here."
-              action={{
-                href: "/launch/?id=script:refusal-direction/run.py",
-                label: "Launch refusal-direction",
-              }}
+              body="An experiment that finds a direction saves it with save_vector."
+              action={{ href: "/launch/?id=new", label: "New experiment" }}
             />
           );
         const models = [...new Set(all.map((v) => v.model))].sort();

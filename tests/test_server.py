@@ -173,7 +173,7 @@ def test_launch_runs_a_grid_config_as_a_copy_and_scaffolds_an_experiment(tmp_pat
 
     from loupe import stores
     from loupe.core import experiments_dir
-    from loupe.server.launch import GRID, LaunchRequest, argv
+    from loupe.server.launch import GRID, LaunchRequest, argv, catalogue
     from loupe.stores.experiments import BadExperiment, scaffold
 
     exp = experiments_dir() / "kernels"
@@ -190,10 +190,13 @@ def test_launch_runs_a_grid_config_as_a_copy_and_scaffolds_an_experiment(tmp_pat
     new = argv(LaunchRequest(id="new", options={"name": "my-q", "--domain": "honesty"}), tmp_path)
     assert new[1:] == ["new", "my-q", "--domain", "honesty"]
 
-    folder = scaffold("my-q", "honesty")
+    scaffold("my-q", "honesty")
     found = {e.name: e for e in stores.list_experiments()}["my-q"]
     assert found.domain == "honesty" and found.status == "active"
-    assert (folder / "run.py").exists()
+    assert "script:my-q/run.py" in {x.id for x in catalogue()}
+    client = TestClient(create_app(launching=True), base_url="http://localhost")
+    opts = {o["flag"] for o in client.get("/api/launch/options?id=script:my-q/run.py").json()}
+    assert opts == {"--model", "--seed"}
     for name, domain in (("my-q", "honesty"), ("My Q", "honesty"), ("other", "nope")):
         with pytest.raises(BadExperiment):
             scaffold(name, domain)

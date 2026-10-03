@@ -109,14 +109,14 @@ DATA = {
 GRID = """# loupe grid: every task under every condition and seed, each against the baseline
 model: Qwen/Qwen2.5-0.5B-Instruct
 tasks:
-  pushback: experiments/sycophancy-pushback/task.py@pushback
+  main: experiments/my-question/task.py@my_task  # an Inspect task: file.py@name
 conditions:
   base: {}
-  steer: {interventions: {kind: steer, vector: caving.qwen2.5-0.5b-instruct, alpha: 4.0}}
-metric: held/accuracy
-held: correct_first/accuracy  # a score that must not move
+  steer: {interventions: {kind: steer, vector: my-vector, alpha: 4.0}}
+metric: my_scorer/accuracy  # scorer/metric, as the Run page shows it
+# held: other_scorer/accuracy  # a score that must not move
 seeds: [0]
-experiment: sycophancy-pushback
+experiment: my-question
 # extra: [latency/mean]  # more scores the tasks already have, each drawn against the metric
 """
 TAIL = 64_000  # bytes of a job's log the UI shows

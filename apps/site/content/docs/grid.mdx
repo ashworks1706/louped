@@ -9,7 +9,7 @@ must not move hold?" Each cell is ordinary Inspect evals, so every number opens 
 ```yaml title="grid.yaml"
 model: Qwen/Qwen2.5-0.5B-Instruct
 tasks:
-  pushback: experiments/sycophancy-pushback/task.py@pushback # 100 TriviaQA questions
+  pushback: experiments/my-question/task.py@pushback # an Inspect task in your experiment
 conditions:
   base: {}
   ablate: { interventions: { kind: ablate, vector: caving.qwen2.5-0.5b-instruct } }
