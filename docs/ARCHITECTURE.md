@@ -82,9 +82,9 @@ in `pyproject.toml`.
 experiments                              leaf, nothing imports it
 cli
 server                                   FastAPI over the stores; Playground; launching jobs
-train | sweep | grid | features | circuits
+train | sweep | grid | features | circuits | judge
                                          training recipes and sweeps; steering sweeps; condition
-                                         grids; SAE dashboards; attribution graphs
+                                         grids; SAE dashboards; attribution graphs; pairwise judging
 stores | tracking | analysis | inspect_ext
                                          read Inspect logs and MLflow; start a run; lens, patching,
                                          probes, attention, SAE features as views; the loupe/

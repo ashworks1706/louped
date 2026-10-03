@@ -165,6 +165,36 @@ test("compare picks its two runs on the page", async ({ page }) => {
   await expect(page).toHaveURL(/a=b&b=a/);
 });
 
+test("compare queues a judge of the two runs", async ({ page }) => {
+  const detail = (id: string) => ({
+    ...run(1),
+    id,
+    name: id,
+    params: {},
+    tags: {},
+    history: {},
+    artifacts: [],
+    scorers: [],
+    error: null,
+  });
+  await page.route("**/api/runs", (r) => r.fulfill({ json: [run(1), run(2)] }));
+  await page.route("**/api/runs/a", (r) => r.fulfill({ json: detail("a") }));
+  await page.route("**/api/runs/b", (r) => r.fulfill({ json: detail("b") }));
+  await page.route("**/api/runs/*/samples", (r) => r.fulfill({ json: [] }));
+  await page.route("**/api/compare?*", (r) =>
+    r.fulfill({ json: { a: "a", b: "b", scores: [], only_a: 0, only_b: 0 } }),
+  );
+  let sent: unknown;
+  await page.route("**/api/launch", (r) => {
+    sent = r.request().postDataJSON();
+    return r.fulfill({ json: { id: "j9", title: "loupe judge", status: "queued" } });
+  });
+  await page.goto("/compare/?a=a&b=b");
+  await page.getByRole("button", { name: "Judge", exact: true }).click();
+  await expect(page).toHaveURL(/\/launch\/\?id=judge&job=j9/);
+  expect(sent).toEqual({ id: "judge", options: { a: "a", b: "b" } });
+});
+
 test("the command menu jumps to an experiment", async ({ page, isMobile }) => {
   test.skip(isMobile, "keyboard shortcut");
   await mockApi(page);
