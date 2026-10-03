@@ -92,6 +92,7 @@ COMMANDS = {
         "top examples and the tokens each feature promotes.",
     ),
     "circuit": ("Circuit", "An attribution graph with circuit-tracer, shown on the Circuits page."),
+    "bench": ("Bench", "Throughput under load and prefill by context, per weight format."),
     "judge": ("Judge", "Two eval runs judged pairwise by a local model: B's win rate over A."),
 }
 #: The `loupe data` steps a form can run; review is interactive and stays in a terminal.
