@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "loupe": {
+      "command": "uv",
+      "args": ["run", "--extra", "agent", "loupe", "mcp"]
+    }
+  }
+}

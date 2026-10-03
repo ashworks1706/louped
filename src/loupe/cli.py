@@ -138,6 +138,15 @@ class Judge:
 
 
 @dataclass(frozen=True)
+class Mcp:
+    """An MCP server on stdio for coding agents, over a running loupe serve: read experiments,
+    runs, figures and compares; launch, follow and cancel jobs. Needs the agent extra."""
+
+    url: str = "http://127.0.0.1:8000"
+    """The loupe serve to drive."""
+
+
+@dataclass(frozen=True)
 class Version:
     """Print the installed version."""
 
@@ -152,6 +161,7 @@ Command = (
     | Annotated[Features, tyro.conf.subcommand("features")]
     | Annotated[Circuit, tyro.conf.subcommand("circuit")]
     | Annotated[Judge, tyro.conf.subcommand("judge")]
+    | Annotated[Mcp, tyro.conf.subcommand("mcp")]
     | Annotated[Version, tyro.conf.subcommand("version")]
 )
 
@@ -231,5 +241,15 @@ def main() -> None:
                 print(judge(cmd.a, cmd.b, cmd.model, cmd.criterion, cmd.limit, cmd.max_tokens))
             except ValueError as exc:
                 raise SystemExit(str(exc)) from exc
+        case Mcp() as cmd:
+            try:
+                from loupe.agent import server
+            except ModuleNotFoundError as exc:
+                if exc.name not in ("mcp", "mcp_types", "httpx"):
+                    raise
+                raise SystemExit(
+                    "loupe mcp needs the agent extra: pip install 'loupelab[agent]'"
+                ) from exc
+            server(cmd.url).run("stdio")
         case Version():
             print(__version__)
