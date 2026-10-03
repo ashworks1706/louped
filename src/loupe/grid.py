@@ -178,14 +178,21 @@ def _views(
     label = [[f"{m:.2f}" for m in row] for row in mean]
     dlabel = [[f"{d:+.2f}{'*' if lo > 0 or hi < 0 else ''}" for d, lo, hi in row] for row in deltas]
     views = [
-        heatmap(metric, mean, cols, names, "task", "condition", labels=label),
+        heatmap(metric, mean, cols, names, "task", "condition", labels=label,
+                about=f"Each cell is {metric} for one condition (row) on one task (column), "
+                "averaged over samples and seeds."),
         heatmap(f"{metric} against {base}, 95% paired interval",
                 [[d[0] for d in r] for r in deltas], cols, names, "task", "condition",
-                labels=dlabel, note="* the interval excludes zero; intervals in Cells"),
+                labels=dlabel, note="* the interval excludes zero; intervals in Cells",
+                about=f"Each cell is the condition's {metric} minus {base}'s, on the same "
+                "samples. Green is higher, red lower. * means the 95% bootstrap interval "
+                f"excludes zero: a real difference, not noise. {base}'s own row is zero."),
     ]  # fmt: skip
     if held:
         views.append(heatmap(f"{held} against {base}", [[k[0] if k else 0.0 for k in r]
-                             for r in kept], cols, names, "task", "condition"))  # fmt: skip
+                             for r in kept], cols, names, "task", "condition",
+                             about=f"What the change should not break: {held} minus "
+                             f"{base}'s, on the same samples. Red means it dropped."))  # fmt: skip
     rows: list[list[Any]] = []
     links: list[list[str | None]] = []
     for i, c in enumerate(names):
@@ -198,7 +205,12 @@ def _views(
             links.append([None, None, None, None, None, f"/run/?id={runs[0]}"])
     head = ["condition", "task", metric, f"vs {base}", "verdict", "eval run"]
     note = "one eval run per seed; the first opens here"
-    views.append(table("Cells", head, rows, links=links, note=note))
+    about = (
+        f"One row per condition and task. vs {base} is the paired difference with its 95% "
+        "interval. verdict: moved when the interval excludes zero, same when it does not; "
+        "held or broke says whether the held score dropped."
+    )
+    views.append(table("Cells", head, rows, links=links, note=note, about=about))
     return views
 
 
@@ -210,7 +222,9 @@ def _extra(
     labels = [[f"{m:.3g} ({d:+.3g})" for m, d in zip(r, e, strict=True)]
               for r, e in zip(mean, delta, strict=True)]  # fmt: skip
     return heatmap(name, mean, cols, names, "task", "condition", labels=labels,
-                   note=f"mean (difference against {base})")  # fmt: skip
+                   note=f"mean (difference against {base})",
+                   about=f"{name} per condition and task: the mean, and in brackets its "
+                   f"difference from {base}.")  # fmt: skip
 
 
 def _tradeoff(
@@ -221,7 +235,9 @@ def _tradeoff(
     points = [(c if len(cols) == 1 else f"{c} · {t}", _mean(per[c, t][3][name]),
                _mean(per[c, t][0])) for c in names for t in cols]  # fmt: skip
     return scatter(f"{metric} against {name}", points, name, metric,
-                   note="means over seeds and samples")  # fmt: skip
+                   note="means over seeds and samples",
+                   about=f"One point per condition: {metric} against {name}. Compare what a "
+                   "change buys (up) with what it costs (along).")  # fmt: skip
 
 
 def endpoint(

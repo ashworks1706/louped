@@ -31,4 +31,7 @@ def trajectory(
         labels.append(["" if i == d.mask_id else t for i, t in zip(ids_now, toks, strict=True)])
     return heatmap(title, [c[0].tolist() for _, c in record], [str(i) for i in range(length)],
                    [str(s) for s in range(len(record))], "reply position", "step",
-                   note=f"reply: {text}", labels=labels)  # fmt: skip
+                   note=f"reply: {text}", labels=labels,
+                   about="A diffusion model fills in its reply over steps (rows). Each cell is "
+                   "the token at that position once unmasked, shaded by its confidence.",
+                   )  # fmt: skip

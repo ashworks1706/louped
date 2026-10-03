@@ -90,6 +90,8 @@ def features(
                  " ".join(t for t, _ in d["promoted"][:5])] for d in dashes]  # fmt: skip
         links = [[f"/feature/?run={run_id}&f={d['feature']}", None, None, None] for d in dashes]
         log_json(table(f"SAE features at {hook}", ["feature", "density", "max", "promotes"], rows,
-                       note=f"{len(prompts)} texts; a feature opens its dashboard", links=links),
+                       note=f"{len(prompts)} texts; a feature opens its dashboard", links=links,
+                       about="density: share of tokens where the feature fires. max: its "
+                       "peak activation. promotes: tokens it pushes up in the output."),
                  "views/00-features.json")  # fmt: skip
     return run_id

@@ -38,5 +38,7 @@ def logit_lens(
                    y=["emb", *[str(i) for i in range(len(stream) - 1)]],
                    x_label="position", y_label="layer",
                    note="each cell: the layer's top next token and its probability",
-                   labels=labels)  # fmt: skip
+                   labels=labels,
+                   about="What the model would predict if it stopped at each layer (row), per "
+                   "token (column). Watch where the final answer first appears.")  # fmt: skip
     return top_ids, view

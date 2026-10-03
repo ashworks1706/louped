@@ -33,11 +33,17 @@ def _pair(lm: LanguageModel, clean: str, corrupt: str, answer: str, foil: str) -
     return first_token(lm, answer), first_token(lm, foil)
 
 
+#: How to read a patching heatmap; attribution patching adds how it gets there.
+_PATCHING = ("Copy one activation from the clean prompt into the corrupt run, at one layer (row) "
+             "and token position (column). Bright cells restore the clean answer: that is where "
+             "the model carries the information.")  # fmt: skip
+
+
 def _view(
-    lm: LanguageModel, title: str, z: list[list[float]], corrupt: str, note: str
+    lm: LanguageModel, title: str, z: list[list[float]], corrupt: str, note: str, about: str
 ) -> dict[str, Any]:
     return heatmap(title, z, x=positions(lm, corrupt), y=[str(i) for i in range(len(z))],
-                   x_label="position", y_label="layer", note=note)  # fmt: skip
+                   x_label="position", y_label="layer", note=note, about=about)  # fmt: skip
 
 
 def _span(lo: float, hi: float) -> float:
@@ -79,7 +85,7 @@ def patch_residual(
             row.append((diff(patched) - lo) / span)
         z.append(row)
     return _view(lm, f"Residual patching: {answer!r} vs {foil!r}", z, corrupt,
-                 "1 = clean behaviour restored, 0 = corrupt behaviour")  # fmt: skip
+                 "1 = clean behaviour restored, 0 = corrupt behaviour", _PATCHING)  # fmt: skip
 
 
 def attribution_patch(
@@ -116,7 +122,8 @@ def attribution_patch(
         effect = ((h_clean - h_corrupt.detach()).float() * grad.float())[0].sum(-1) / span
         z.append(effect.tolist())
     note = "linear estimate of residual patching: 1 = clean restored, 0 = corrupt"
-    return _view(lm, f"Attribution patching: {answer!r} vs {foil!r}", z, corrupt, note)
+    about = _PATCHING + " Estimated from one backward pass instead of one run per cell."
+    return _view(lm, f"Attribution patching: {answer!r} vs {foil!r}", z, corrupt, note, about)
 
 
 @torch.no_grad()
@@ -158,5 +165,7 @@ def patch_heads(
         f"Head patching: {answer!r} vs {foil!r}",
         z.round(decimals=4).tolist(),
         "each head's clean output at every position; 1 = clean restored, 0 = corrupt",
+        about="Copy one attention head's clean output into the corrupt run. Bright heads "
+        "restore the clean answer on their own: candidates for the circuit.",
     )
     return z, view

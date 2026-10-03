@@ -721,6 +721,8 @@ export interface components {
       y_label: string;
       /** Note */
       note?: string | null;
+      /** About */
+      about?: string | null;
       /** Slices */
       slices?: {
         [key: string]: number[][];
@@ -896,6 +898,8 @@ export interface components {
       y_label: string;
       /** Note */
       note?: string | null;
+      /** About */
+      about?: string | null;
     };
     /**
      * LoadRequest
@@ -1220,6 +1224,8 @@ export interface components {
       y_label: string;
       /** Note */
       note?: string | null;
+      /** About */
+      about?: string | null;
     };
     /** Score */
     Score: {
@@ -1286,6 +1292,8 @@ export interface components {
       rows: (string | number | boolean | null)[][];
       /** Note */
       note?: string | null;
+      /** About */
+      about?: string | null;
       /** Links */
       links?: (string | null)[][] | null;
       /** Embed */
@@ -1319,6 +1327,8 @@ export interface components {
       } | null;
       /** Note */
       note?: string | null;
+      /** About */
+      about?: string | null;
     };
     /** ToolCall */
     ToolCall: {

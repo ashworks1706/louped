@@ -87,11 +87,15 @@ def sae_features(
         note += "; a feature opens its Neuronpedia dashboard"
     view_table = table(f"SAE features per token at {hook}", columns, rows, note=note,
                        links=links if has_links else None,
-                       embed="neuronpedia" if has_links else None)  # fmt: skip
+                       embed="neuronpedia" if has_links else None,
+                       about="The SAE splits each token's activation into sparse features. "
+                       "Each cell is one active feature and how strongly it fires.")  # fmt: skip
     peak = acts.max(0).values.topk(min(k, acts.shape[1])).indices.tolist()
     view_heat = heatmap(f"Top SAE features over positions at {hook}",
                         [acts[:, f].tolist() for f in peak], x=labels, y=[f"#{f}" for f in peak],
-                        x_label="position", y_label="feature")  # fmt: skip
+                        x_label="position", y_label="feature",
+                        about="The most active features (rows) and how strongly each fires at "
+                        "every token (columns).")  # fmt: skip
     return acts, view_table, view_heat
 
 
@@ -236,7 +240,9 @@ def feature_dashboards(
             "suppressed": list(map(list, zip(decode(down.indices.tolist()),
                                              (-down.values).tolist(), strict=True))),
             "examples": tokens(f"Feature #{f}: top examples", rows,
-                               f"top {len(rows)} of {len(prompts)} texts by peak activation"),
+                               f"top {len(rows)} of {len(prompts)} texts by peak activation",
+                               about="The texts where the feature fires most. Darker tokens "
+                               "activate it more."),
             "neuronpedia": neuronpedia(sae, f),
         })  # fmt: skip
     return out

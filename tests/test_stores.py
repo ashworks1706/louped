@@ -104,6 +104,14 @@ def test_experiments_sort_by_domain_then_active(tmp_path: Path) -> None:
     assert [e.name for e in stores.list_experiments()] == ["c-probe", "b-probe", "a-kernels"]
 
 
+def test_a_folder_without_a_readme_is_not_an_experiment(tmp_path: Path) -> None:
+    write_experiment(tmp_path, "kept", "honesty")
+    (tmp_path / "experiments" / "deleted" / "__pycache__").mkdir(parents=True)
+    assert [e.name for e in stores.list_experiments()] == ["kept"]
+    with pytest.raises(stores.NotFound):
+        stores.get_experiment("deleted")
+
+
 def test_front_matter_is_required_and_checked() -> None:
     with pytest.raises(BadExperiment, match="no front matter"):
         front_matter("# x\n\n## Question\n\nWhy?\n", "x")

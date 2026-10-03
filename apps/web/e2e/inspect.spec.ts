@@ -23,6 +23,7 @@ const views = [
       ["a", "b", "c"],
       ["d", "e", "sure"],
     ],
+    about: "What the model would predict if it stopped at each layer.",
   },
   {
     kind: "tokens",
@@ -89,6 +90,21 @@ test("Inspect tab draws the lens, projections and attention", async ({ page }, i
   await expect(page).toHaveURL(/side=intervention/);
   await page.screenshot({ path: info.outputPath("inspect.png"), fullPage: true });
   expect(errors).toEqual([]);
+});
+
+test("every figure says how to read it behind its ?", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/playground/?tab=inspect");
+  await page.getByLabel("Prompt").fill("hi");
+  await page.getByRole("button", { name: /Run/ }).click();
+  // a tap opens it, so it works without hover too
+  await page.getByRole("button", { name: "How to read Logit lens" }).click();
+  await expect(page.getByRole("tooltip")).toContainText("if it stopped at each layer");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+  // a figure logged without its own explanation gets its kind's
+  await page.getByRole("button", { name: "How to read Projections" }).click();
+  await expect(page.getByRole("tooltip")).toContainText("Each token is shaded");
 });
 
 test("Reply tab shows both streamed replies", async ({ page }) => {

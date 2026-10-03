@@ -70,7 +70,7 @@ function Picker({ items }: { items: Launchable[] }) {
         icon={Rocket}
         title="Nothing to launch"
         body="Scripts under experiments/ and their training configs appear here."
-        command="uv run loupe new my-question --domain mechanisms"
+        action={{ href: "/launch/?id=new", label: "New experiment" }}
       />
     );
   }

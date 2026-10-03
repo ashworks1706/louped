@@ -1609,6 +1609,17 @@
             ],
             "title": "Note"
           },
+          "about": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "About"
+          },
           "slices": {
             "anyOf": [
               {
@@ -2066,6 +2077,17 @@
               }
             ],
             "title": "Note"
+          },
+          "about": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "About"
           }
         },
         "type": "object",
@@ -2843,6 +2865,17 @@
               }
             ],
             "title": "Note"
+          },
+          "about": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "About"
           }
         },
         "type": "object",
@@ -3013,6 +3046,17 @@
             ],
             "title": "Note"
           },
+          "about": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "About"
+          },
           "links": {
             "anyOf": [
               {
@@ -3137,6 +3181,17 @@
               }
             ],
             "title": "Note"
+          },
+          "about": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "About"
           }
         },
         "type": "object",

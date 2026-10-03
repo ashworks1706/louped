@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { Notifier } from "@/components/notifier";
 import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 declare module "@tanstack/react-query" {
   interface Register {
@@ -36,9 +37,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={client}>
       <NuqsAdapter>
-        {children}
-        <Notifier />
-        <Toaster position="bottom-right" closeButton />
+        <TooltipProvider>
+          {children}
+          <Notifier />
+          <Toaster position="bottom-right" closeButton />
+        </TooltipProvider>
       </NuqsAdapter>
     </QueryClientProvider>
   );
