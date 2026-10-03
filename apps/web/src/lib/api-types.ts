@@ -314,6 +314,57 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/playground/patch": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Patch */
+    post: operations["patch_api_playground_patch_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/playground/dose": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Dose */
+    post: operations["dose_api_playground_dose_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/playground/speed": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Speed */
+    post: operations["speed_api_playground_speed_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/launch": {
     parameters: {
       query?: never;
@@ -451,6 +502,34 @@ export interface components {
       /** Notes */
       notes?: string | null;
     };
+    /**
+     * DoseRequest
+     * @description A saved direction swept over strengths, read at the next token.
+     */
+    DoseRequest: {
+      /** Prompt */
+      prompt: string;
+      /** Vector */
+      vector: string;
+      /** Layer */
+      layer?: number | null;
+      /** Alphas */
+      alphas: number[];
+      /** Answer */
+      answer: string;
+      /** Foil */
+      foil?: string | null;
+      /**
+       * Adapters
+       * @default []
+       */
+      adapters: string[];
+      /**
+       * Chat
+       * @default true
+       */
+      chat: boolean;
+    };
     /** Experiment */
     Experiment: {
       /** Name */
@@ -583,6 +662,12 @@ export interface components {
       steps?: number | null;
       /** Prompt */
       prompt: string;
+      /**
+       * History
+       * @description Earlier turns, before prompt: a follow-up such as pushback.
+       * @default []
+       */
+      history: components["schemas"]["Turn"][];
     };
     /**
      * Graph
@@ -697,6 +782,7 @@ export interface components {
       views: (
         | components["schemas"]["HeatmapView"]
         | components["schemas"]["LineView"]
+        | components["schemas"]["ScatterView"]
         | components["schemas"]["TableView"]
         | components["schemas"]["TokensView"]
       )[];
@@ -919,6 +1005,42 @@ export interface components {
       /** Down */
       down: number;
     };
+    /**
+     * PatchRequest
+     * @description Which layer, position or head carries the difference between two prompts of one length.
+     */
+    PatchRequest: {
+      /** Clean */
+      clean: string;
+      /** Corrupt */
+      corrupt: string;
+      /**
+       * Answer
+       * @description The clean prompt's next token.
+       */
+      answer: string;
+      /**
+       * Foil
+       * @description The corrupt prompt's next token.
+       */
+      foil: string;
+      /**
+       * Method
+       * @default attribution
+       * @enum {string}
+       */
+      method: "attribution" | "residual" | "heads";
+      /**
+       * Adapters
+       * @default []
+       */
+      adapters: string[];
+      /**
+       * Chat
+       * @default true
+       */
+      chat: boolean;
+    };
     /** PlaygroundInfo */
     PlaygroundInfo: {
       /** Model */
@@ -1030,6 +1152,7 @@ export interface components {
       view:
         | components["schemas"]["HeatmapView"]
         | components["schemas"]["LineView"]
+        | components["schemas"]["ScatterView"]
         | components["schemas"]["TableView"]
         | components["schemas"]["TokensView"];
     };
@@ -1069,6 +1192,33 @@ export interface components {
       /** Error */
       error: string | null;
     };
+    /** ScatterPoint */
+    ScatterPoint: {
+      /** Label */
+      label: string;
+      /** X */
+      x: number;
+      /** Y */
+      y: number;
+    };
+    /** ScatterView */
+    ScatterView: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      kind: "scatter";
+      /** Title */
+      title: string;
+      /** Points */
+      points: components["schemas"]["ScatterPoint"][];
+      /** X Label */
+      x_label: string;
+      /** Y Label */
+      y_label: string;
+      /** Note */
+      note?: string | null;
+    };
     /** Score */
     Score: {
       /** Name */
@@ -1081,6 +1231,43 @@ export interface components {
       answer: string | null;
       /** Explanation */
       explanation: string | null;
+    };
+    /**
+     * SpeedRequest
+     * @description The prompt timed base and, with interventions or adapters, changed.
+     */
+    SpeedRequest: {
+      /**
+       * Interventions
+       * @default []
+       */
+      interventions: {
+        [key: string]: unknown;
+      }[];
+      /**
+       * Adapters
+       * @description Adapters of the bank live for this request.
+       * @default []
+       */
+      adapters: string[];
+      /**
+       * Max New Tokens
+       * @description Tokens to generate; a diffusion model's reply length.
+       * @default 64
+       */
+      max_new_tokens: number;
+      /**
+       * Steps
+       * @description Denoising steps; the length if unset.
+       */
+      steps?: number | null;
+      /** Prompt */
+      prompt: string;
+      /**
+       * Repeats
+       * @default 3
+       */
+      repeats: number;
     };
     /** TableView */
     TableView: {
@@ -1147,6 +1334,16 @@ export interface components {
       arguments: string;
       /** Parse Error */
       parse_error?: string | null;
+    };
+    /** Turn */
+    Turn: {
+      /**
+       * Role
+       * @enum {string}
+       */
+      role: "user" | "assistant";
+      /** Content */
+      content: string;
     };
     /** ValidationError */
     ValidationError: {
@@ -1651,6 +1848,105 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["InspectRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InspectResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  patch_api_playground_patch_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PatchRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InspectResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  dose_api_playground_dose_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DoseRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InspectResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  speed_api_playground_speed_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SpeedRequest"];
       };
     };
     responses: {

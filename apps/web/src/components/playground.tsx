@@ -23,12 +23,32 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { generate, inspect, loadModel, q, type Direction, type PlaygroundInfo } from "@/lib/api";
+import {
+  dose,
+  generate,
+  inspect,
+  loadModel,
+  patch,
+  q,
+  speed,
+  type Direction,
+  type PlaygroundInfo,
+  type View,
+} from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const MODES = ["steer", "ablate", "heads"] as const;
 type Mode = (typeof MODES)[number];
-const TABS = ["reply", "inspect"] as const;
+const TABS = ["reply", "inspect", "patch", "dose", "speed"] as const;
+const METHODS = ["attribution", "residual", "heads"] as const;
+/** What each tab does, under the prompt. */
+const HINTS: Record<(typeof TABS)[number], string> = {
+  reply: "Greedy. The same prompt goes to both.",
+  inspect: "Logit lens, projections onto this model's vectors, and attention.",
+  patch: "The prompt is the clean run. Which layer and position carry the difference.",
+  dose: "The chosen vector at each strength, read at the next token.",
+  speed: "Times this reply base and with the intervention.",
+};
 const SIDES = ["base", "intervention"] as const;
 
 export function Playground() {
@@ -89,8 +109,22 @@ function Loaded({
     adapters: parseAsArrayOf(parseAsString).withDefault([]),
     tab: parseAsStringLiteral(TABS).withDefault("reply"),
     side: parseAsStringLiteral(SIDES).withDefault("base"),
+    follow: parseAsString.withDefault(""),
+    corrupt: parseAsString.withDefault(""),
+    answer: parseAsString.withDefault(""),
+    foil: parseAsString.withDefault(""),
+    token: parseAsString.withDefault(""),
+    versus: parseAsString.withDefault(""),
+    method: parseAsStringLiteral(METHODS).withDefault("attribution"),
+    from: parseAsFloat.withDefault(-4),
+    to: parseAsFloat.withDefault(4),
+    points: parseAsInteger.withDefault(9),
+    repeats: parseAsInteger.withDefault(3),
   });
   const [draft, setDraft] = useState(s.prompt);
+  // A diffusion model has no next token to patch, sweep or time: its tabs are Reply and Inspect.
+  const tab = info.diffusion && s.tab !== "inspect" ? "reply" : s.tab;
+  const repeats = Math.max(1, Math.min(10, s.repeats));
   const layers = info.layers ?? 1;
   const vector = vectors.find((v) => v.name === s.vector) ?? vectors[0];
   const layer = s.layer ?? vector?.layer ?? 0;
@@ -122,17 +156,83 @@ function Loaded({
 
   const base = useReply();
   const edited = useReply();
+  const baseAgain = useReply();
+  const editedAgain = useReply();
   // Their errors show in the result pane they fill, so no toast.
   const looked = useMutation({ mutationFn: inspect, meta: { quiet: true } });
   const lookedEdited = useMutation({ mutationFn: inspect, meta: { quiet: true } });
+  const patched = useMutation({ mutationFn: patch, meta: { quiet: true } });
+  const dosed = useMutation({ mutationFn: dose, meta: { quiet: true } });
+  const timed = useMutation({ mutationFn: speed, meta: { quiet: true } });
+  const n = Math.max(2, Math.min(41, s.points));
+  const alphas: number[] = Array.from({ length: n }, (_, i) =>
+    Number((s.from + ((s.to - s.from) * i) / (n - 1)).toFixed(4)),
+  );
+  const ready =
+    tab === "patch"
+      ? Boolean(s.corrupt.trim() && s.answer.trim() && s.foil.trim())
+      : tab === "dose"
+        ? Boolean(vector && s.token.trim())
+        : true;
   const run = () => {
     const prompt = draft.trim();
-    if (!prompt) return;
+    if (!prompt || !ready) return;
     void set({ prompt });
-    if (s.tab === "reply") {
-      base.start({ prompt, interventions: [], adapters: [], ...gen });
-      if (intervened) edited.start({ prompt, interventions, adapters: live, ...gen });
+    if (tab === "reply") {
+      // With a follow-up, each side's reply is pushed back on once it ends, in its own history.
+      const follow = s.follow.trim();
+      const then = (
+        again: typeof baseAgain,
+        req: Omit<Parameters<typeof generate>[0], "prompt">,
+      ) =>
+        follow
+          ? (text: string) =>
+              again.start({
+                ...req,
+                prompt: follow,
+                history: [
+                  { role: "user", content: prompt },
+                  { role: "assistant", content: text.trim() },
+                ],
+              })
+          : undefined;
+      const plain = { interventions: [], adapters: [], history: [], ...gen };
+      const changed = { interventions, adapters: live, history: [], ...gen };
+      baseAgain.reset();
+      editedAgain.reset();
+      base.start({ prompt, ...plain }, then(baseAgain, plain));
+      if (intervened) edited.start({ prompt, ...changed }, then(editedAgain, changed));
       else edited.reset();
+      return;
+    }
+    if (tab === "patch") {
+      patched.mutate({
+        clean: prompt,
+        corrupt: s.corrupt,
+        answer: s.answer,
+        foil: s.foil,
+        method: s.method,
+        adapters: live,
+        chat: true,
+      });
+      return;
+    }
+    if (tab === "dose") {
+      if (vector)
+        dosed.mutate({
+          prompt,
+          vector: vector.name,
+          layer,
+          alphas,
+          answer: s.token,
+          foil: s.versus.trim() || null,
+          adapters: live,
+          chat: true,
+        });
+      return;
+    }
+    if (tab === "speed") {
+      timed.mutate({ prompt, interventions, adapters: live, ...gen, repeats });
       return;
     }
     const read = { prompt, vectors: info.diffusion ? [] : vectors.map((v) => v.name), chat: true };
@@ -140,8 +240,18 @@ function Loaded({
     if (intervened) lookedEdited.mutate({ ...read, ...gen, interventions, adapters: live });
     else lookedEdited.reset();
   };
-  const streaming = s.tab === "reply" && (base.pending || edited.pending);
-  const shown = s.side === "intervention" && intervened ? lookedEdited : looked;
+  const streaming =
+    tab === "reply" && (base.pending || edited.pending || baseAgain.pending || editedAgain.pending);
+  const shown =
+    tab === "patch"
+      ? patched
+      : tab === "dose"
+        ? dosed
+        : tab === "speed"
+          ? timed
+          : s.side === "intervention" && intervened
+            ? lookedEdited
+            : looked;
 
   useEffect(() => {
     if (!vectors.length || s.vector) return;
@@ -350,11 +460,11 @@ function Loaded({
           />
           <div className="flex items-center justify-between border-t px-3 py-2">
             <span className="text-muted-foreground text-xs">
-              {s.tab === "reply"
-                ? `${info.diffusion ? "Denoised" : "Greedy"}. The same prompt goes to both.`
-                : info.diffusion
-                  ? "What each denoising step committed, and how sure it was."
-                  : "Logit lens, projections onto this model's vectors, and attention."}
+              {info.diffusion
+                ? tab === "reply"
+                  ? "Denoised. The same prompt goes to both."
+                  : "What each denoising step committed, and how sure it was."
+                : HINTS[tab]}
             </span>
             {streaming ? (
               <Button
@@ -364,6 +474,8 @@ function Loaded({
                 onClick={() => {
                   base.stop();
                   edited.stop();
+                  baseAgain.stop();
+                  editedAgain.stop();
                 }}
               >
                 <Square className="size-3" /> Stop
@@ -374,7 +486,10 @@ function Loaded({
                 size="sm"
                 disabled={
                   !draft.trim() ||
-                  (s.tab === "inspect" && (looked.isPending || lookedEdited.isPending))
+                  !ready ||
+                  (tab === "inspect"
+                    ? looked.isPending || lookedEdited.isPending
+                    : tab !== "reply" && shown.isPending)
                 }
               >
                 Run <Kbd>⌘</Kbd>
@@ -383,17 +498,30 @@ function Loaded({
             )}
           </div>
         </form>
-        <Tabs
-          value={s.tab}
-          onValueChange={(tab) => void set({ tab: tab as (typeof TABS)[number] })}
-        >
+        <Tabs value={tab} onValueChange={(tab) => void set({ tab: tab as (typeof TABS)[number] })}>
           <TabsList>
             <TabsTrigger value="reply">Reply</TabsTrigger>
             <TabsTrigger value="inspect">Inspect</TabsTrigger>
+            {!info.diffusion && (
+              <>
+                <TabsTrigger value="patch">Patch</TabsTrigger>
+                <TabsTrigger value="dose">Dose</TabsTrigger>
+                <TabsTrigger value="speed">Speed</TabsTrigger>
+              </>
+            )}
           </TabsList>
-          <TabsContent value="reply" className="pt-4">
+          <TabsContent value="reply" className="flex flex-col gap-4 pt-4">
+            <Field label="Follow-up">
+              <Input
+                aria-label="Follow-up"
+                value={s.follow}
+                placeholder="Then push back, e.g. I don't think that's right. Are you sure?"
+                onChange={(e) => void set({ follow: e.target.value })}
+                className="h-8 text-sm"
+              />
+            </Field>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Reply title="Base" state={base} />
+              <Reply title="Base" state={base} again={s.follow.trim() ? baseAgain : undefined} />
               <Reply
                 title="With intervention"
                 badge={
@@ -405,10 +533,112 @@ function Loaded({
                   </Badge>
                 }
                 state={edited}
+                again={s.follow.trim() ? editedAgain : undefined}
                 intervention
               />
             </div>
           </TabsContent>
+          {!info.diffusion && (
+            <TabsContent value="patch" className="flex flex-col gap-4 pt-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_8rem_8rem]">
+                <Field label="Corrupt prompt, same length">
+                  <Input
+                    aria-label="Corrupt prompt"
+                    value={s.corrupt}
+                    placeholder="The Eiffel Tower is in Rome"
+                    onChange={(e) => void set({ corrupt: e.target.value })}
+                  />
+                </Field>
+                <Field label="Answer">
+                  <Input
+                    aria-label="Answer"
+                    value={s.answer}
+                    placeholder="Paris"
+                    onChange={(e) => void set({ answer: e.target.value })}
+                    className="font-mono"
+                  />
+                </Field>
+                <Field label="Foil">
+                  <Input
+                    aria-label="Foil"
+                    value={s.foil}
+                    placeholder="Rome"
+                    onChange={(e) => void set({ foil: e.target.value })}
+                    className="font-mono"
+                  />
+                </Field>
+              </div>
+              <Segmented
+                label="Method"
+                options={METHODS}
+                value={s.method}
+                onChange={(method) => void set({ method })}
+              />
+              <Views state={patched} empty="Run a clean and a corrupt prompt to patch them." />
+            </TabsContent>
+          )}
+          {!info.diffusion && (
+            <TabsContent value="dose" className="flex flex-col gap-4 pt-4">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+                <Field label="Answer">
+                  <Input
+                    aria-label="Answer"
+                    value={s.token}
+                    placeholder="Yes"
+                    onChange={(e) => void set({ token: e.target.value })}
+                    className="font-mono"
+                  />
+                </Field>
+                <Field label="Foil">
+                  <Input
+                    aria-label="Foil"
+                    value={s.versus}
+                    placeholder="No"
+                    onChange={(e) => void set({ versus: e.target.value })}
+                    className="font-mono"
+                  />
+                </Field>
+                <NumberField
+                  label="α from"
+                  value={s.from}
+                  onChange={(from) => void set({ from })}
+                />
+                <NumberField label="α to" value={s.to} onChange={(to) => void set({ to })} />
+                <NumberField
+                  label="Points"
+                  value={n}
+                  min={2}
+                  max={41}
+                  onChange={(points) => void set({ points })}
+                />
+              </div>
+              <Views
+                state={dosed}
+                empty={
+                  vector
+                    ? `Run a prompt to steer ${vector.name} at layer ${layer} from α ${s.from} to ${s.to}.`
+                    : "Save a vector for this model to sweep it."
+                }
+              />
+            </TabsContent>
+          )}
+          {!info.diffusion && (
+            <TabsContent value="speed" className="flex flex-col gap-4 pt-4">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+                <NumberField
+                  label="Repeats"
+                  value={repeats}
+                  min={1}
+                  max={10}
+                  onChange={(repeats) => void set({ repeats })}
+                />
+              </div>
+              <Views
+                state={timed}
+                empty={`Run a prompt to time ${s.tokens} tokens${intervened ? `, base and ${label}` : ""}.`}
+              />
+            </TabsContent>
+          )}
           <TabsContent value="inspect" className="flex flex-col gap-4 pt-4">
             {intervened && (
               <Tabs
@@ -453,6 +683,113 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function NumberField({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min?: number;
+  max?: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <Field label={label}>
+      <Input
+        type="number"
+        aria-label={label}
+        value={value}
+        min={min}
+        max={max}
+        step="any"
+        onChange={(e) => {
+          const v = Number(e.target.value);
+          if (e.target.value === "" || !Number.isFinite(v)) return;
+          onChange(Math.min(max ?? Infinity, Math.max(min ?? -Infinity, v)));
+        }}
+        className="font-mono"
+      />
+    </Field>
+  );
+}
+
+function Segmented<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: readonly T[];
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div
+      className="bg-muted grid w-fit grid-flow-col gap-1 rounded-md p-1"
+      role="radiogroup"
+      aria-label={label}
+    >
+      {options.map((o) => (
+        <button
+          key={o}
+          type="button"
+          role="radio"
+          aria-checked={value === o}
+          tabIndex={value === o ? 0 : -1}
+          onClick={() => onChange(o)}
+          onKeyDown={(e) => {
+            const step =
+              e.key === "ArrowRight" || e.key === "ArrowDown"
+                ? 1
+                : e.key === "ArrowLeft" || e.key === "ArrowUp"
+                  ? -1
+                  : 0;
+            if (!step) return;
+            e.preventDefault();
+            const next = options[(options.indexOf(value) + step + options.length) % options.length];
+            onChange(next);
+            const group = e.currentTarget.parentElement;
+            requestAnimationFrame(() =>
+              group?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus(),
+            );
+          }}
+          className={cn(
+            "focus-visible:ring-ring/30 h-7 rounded-[5px] px-3 text-sm capitalize transition-colors outline-none focus-visible:ring-[3px]",
+            value === o ? "bg-background" : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {o}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** The figures a computing route returned, or why there are none. */
+function Views({
+  state,
+  empty,
+}: {
+  state: { isPending: boolean; error: Error | null; data?: { views: View[] }; submittedAt: number };
+  empty: string;
+}) {
+  if (state.isPending)
+    return <span className="text-muted-foreground animate-pulse text-sm">Running…</span>;
+  if (state.error) return <span className="text-negative text-sm">{state.error.message}</span>;
+  if (!state.data) return <span className="text-muted-foreground text-sm">{empty}</span>;
+  return (
+    <>
+      {state.data.views.map((v, i) => (
+        <Figure key={`${state.submittedAt}-${i}`} view={v} />
+      ))}
+    </>
+  );
+}
+
 function Slider({
   label,
   value,
@@ -494,14 +831,17 @@ function Reply({
   title,
   badge,
   state,
+  again,
   intervention,
 }: {
   title: string;
   badge?: React.ReactNode;
   state: ReplyState;
+  again?: ReplyState;
   intervention?: boolean;
 }) {
   const text = state.text.trimStart();
+  const second = again?.text.trimStart();
   return (
     <section
       data-testid={`reply-${intervention ? "intervention" : "base"}`}
@@ -527,6 +867,23 @@ function Reply({
           <span className="text-muted-foreground">Run a prompt to see the reply.</span>
         )}
       </div>
+      {again?.ran && (
+        <div
+          data-testid="follow-up"
+          className="border-t p-4 text-sm leading-relaxed whitespace-pre-wrap"
+        >
+          <span className="text-muted-foreground mb-2 block text-xs">After the follow-up</span>
+          {again.error ? (
+            <span className="text-negative">{again.error.message}</span>
+          ) : second ? (
+            second
+          ) : again.pending ? (
+            <span className="text-muted-foreground animate-pulse">Generating…</span>
+          ) : (
+            <span className="text-muted-foreground">(empty reply)</span>
+          )}
+        </div>
+      )}
     </section>
   );
 }
@@ -540,12 +897,24 @@ function useReply() {
   const live = useRef<AbortController | null>(null);
   const stop = useCallback(() => live.current?.abort(), []);
   useEffect(() => stop, [stop]);
-  const start = (req: Parameters<typeof generate>[0]) => {
+  /** onDone gets the whole reply when it ends unstopped and without error. */
+  const start = (req: Parameters<typeof generate>[0], onDone?: (text: string) => void) => {
     stop();
     const c = new AbortController();
     live.current = c;
     setReply({ ...IDLE, pending: true, ran: true });
-    generate(req, (t) => setReply((r) => ({ ...r, text: r.text + t })), c.signal)
+    let text = "";
+    generate(
+      req,
+      (t) => {
+        text += t;
+        setReply((r) => ({ ...r, text: r.text + t }));
+      },
+      c.signal,
+    )
+      .then(() => {
+        if (!c.signal.aborted) onDone?.(text);
+      })
       .catch((error: Error) => {
         if (!c.signal.aborted) setReply((r) => ({ ...r, error }));
       })

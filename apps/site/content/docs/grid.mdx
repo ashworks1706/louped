@@ -29,6 +29,11 @@ bootstrap interval, the held score's difference, and a verdict per cell:
 - `moved` or `same`: whether the metric's interval excludes zero.
 - `held` or `broke`: whether the held score's interval stays at or above zero.
 
+With `extra`, more results read from the same runs, such as `latency/mean`, `time_to_first_token/mean`
+or `peak_memory/mean` from `loupe.inspect_ext.inference`: each gets its own heatmap and a scatter of
+the metric against it, one point per condition and task, so what a change buys is read beside what
+it costs. Compare marks a cost that rises as worse and gives B over A as a ratio.
+
 Seeds of one sample are averaged before resampling, so seeds never count as extra samples. The
 `loupe/` provider decodes greedily, so seeds only matter for models that sample.
 

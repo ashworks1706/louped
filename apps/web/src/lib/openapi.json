@@ -651,6 +651,120 @@
         }
       }
     },
+    "/api/playground/patch": {
+      "post": {
+        "summary": "Patch",
+        "operationId": "patch_api_playground_patch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/playground/dose": {
+      "post": {
+        "summary": "Dose",
+        "operationId": "dose_api_playground_dose_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DoseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/playground/speed": {
+      "post": {
+        "summary": "Speed",
+        "operationId": "speed_api_playground_speed_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpeedRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/launch": {
       "get": {
         "summary": "Launchables",
@@ -965,6 +1079,73 @@
         "required": ["name", "model", "layer", "method", "norm", "dim", "created"],
         "title": "Direction",
         "description": "Where a direction came from and what it is, stored alongside its values."
+      },
+      "DoseRequest": {
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Prompt"
+          },
+          "vector": {
+            "type": "string",
+            "title": "Vector"
+          },
+          "layer": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Layer"
+          },
+          "alphas": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "maxItems": 41,
+            "minItems": 2,
+            "title": "Alphas"
+          },
+          "answer": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Answer"
+          },
+          "foil": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Foil"
+          },
+          "adapters": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Adapters",
+            "default": []
+          },
+          "chat": {
+            "type": "boolean",
+            "title": "Chat",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": ["prompt", "vector", "alphas", "answer"],
+        "title": "DoseRequest",
+        "description": "A saved direction swept over strengths, read at the next token."
       },
       "Experiment": {
         "properties": {
@@ -1294,6 +1475,16 @@
             "maxLength": 8000,
             "minLength": 1,
             "title": "Prompt"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/Turn"
+            },
+            "type": "array",
+            "maxItems": 16,
+            "title": "History",
+            "description": "Earlier turns, before prompt: a follow-up such as pushback.",
+            "default": []
           }
         },
         "type": "object",
@@ -1561,6 +1752,9 @@
                   "$ref": "#/components/schemas/LineView"
                 },
                 {
+                  "$ref": "#/components/schemas/ScatterView"
+                },
+                {
                   "$ref": "#/components/schemas/TableView"
                 },
                 {
@@ -1572,6 +1766,7 @@
                 "mapping": {
                   "heatmap": "#/components/schemas/HeatmapView",
                   "line": "#/components/schemas/LineView",
+                  "scatter": "#/components/schemas/ScatterView",
                   "table": "#/components/schemas/TableView",
                   "tokens": "#/components/schemas/TokensView"
                 }
@@ -2083,6 +2278,57 @@
         "required": ["name", "n", "mean_a", "mean_b", "diff", "low", "high", "up", "down"],
         "title": "PairedScore"
       },
+      "PatchRequest": {
+        "properties": {
+          "clean": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Clean"
+          },
+          "corrupt": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Corrupt"
+          },
+          "answer": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Answer",
+            "description": "The clean prompt's next token."
+          },
+          "foil": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Foil",
+            "description": "The corrupt prompt's next token."
+          },
+          "method": {
+            "type": "string",
+            "enum": ["attribution", "residual", "heads"],
+            "title": "Method",
+            "default": "attribution"
+          },
+          "adapters": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Adapters",
+            "default": []
+          },
+          "chat": {
+            "type": "boolean",
+            "title": "Chat",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": ["clean", "corrupt", "answer", "foil"],
+        "title": "PatchRequest",
+        "description": "Which layer, position or head carries the difference between two prompts of one length."
+      },
       "PlaygroundInfo": {
         "properties": {
           "model": {
@@ -2416,6 +2662,9 @@
                 "$ref": "#/components/schemas/LineView"
               },
               {
+                "$ref": "#/components/schemas/ScatterView"
+              },
+              {
                 "$ref": "#/components/schemas/TableView"
               },
               {
@@ -2428,6 +2677,7 @@
               "mapping": {
                 "heatmap": "#/components/schemas/HeatmapView",
                 "line": "#/components/schemas/LineView",
+                "scatter": "#/components/schemas/ScatterView",
                 "table": "#/components/schemas/TableView",
                 "tokens": "#/components/schemas/TokensView"
               }
@@ -2538,6 +2788,67 @@
         "required": ["id", "epoch", "input", "target", "scores", "error"],
         "title": "SampleSummary"
       },
+      "ScatterPoint": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "x": {
+            "type": "number",
+            "title": "X"
+          },
+          "y": {
+            "type": "number",
+            "title": "Y"
+          }
+        },
+        "type": "object",
+        "required": ["label", "x", "y"],
+        "title": "ScatterPoint"
+      },
+      "ScatterView": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "scatter",
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/ScatterPoint"
+            },
+            "type": "array",
+            "title": "Points"
+          },
+          "x_label": {
+            "type": "string",
+            "title": "X Label"
+          },
+          "y_label": {
+            "type": "string",
+            "title": "Y Label"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": ["kind", "title", "points", "x_label", "y_label"],
+        "title": "ScatterView"
+      },
       "Score": {
         "properties": {
           "name": {
@@ -2585,6 +2896,67 @@
         "type": "object",
         "required": ["name", "value", "raw", "answer", "explanation"],
         "title": "Score"
+      },
+      "SpeedRequest": {
+        "properties": {
+          "interventions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Interventions",
+            "default": []
+          },
+          "adapters": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Adapters",
+            "description": "Adapters of the bank live for this request.",
+            "default": []
+          },
+          "max_new_tokens": {
+            "type": "integer",
+            "maximum": 512.0,
+            "minimum": 1.0,
+            "title": "Max New Tokens",
+            "description": "Tokens to generate; a diffusion model's reply length.",
+            "default": 64
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 512.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps",
+            "description": "Denoising steps; the length if unset."
+          },
+          "prompt": {
+            "type": "string",
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Prompt"
+          },
+          "repeats": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Repeats",
+            "default": 3
+          }
+        },
+        "type": "object",
+        "required": ["prompt"],
+        "title": "SpeedRequest",
+        "description": "The prompt timed base and, with interventions or adapters, changed."
       },
       "TableView": {
         "properties": {
@@ -2802,6 +3174,23 @@
         "type": "object",
         "required": ["function", "arguments"],
         "title": "ToolCall"
+      },
+      "Turn": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": ["user", "assistant"],
+            "title": "Role"
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 8000,
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": ["role", "content"],
+        "title": "Turn"
       },
       "ValidationError": {
         "properties": {

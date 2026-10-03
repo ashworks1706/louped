@@ -7,6 +7,9 @@ not report it, so the scorer sends the sample's prompt again, streamed with one 
 and times the first chunk. As scorers they are grid metrics like any other: `latency/mean`. A
 sample without a timed call, or for throughput without usage, fails to score rather than 0. Peak
 memory is 0 where nothing records it: off CUDA, and for an endpoint.
+
+The UI reads these scorers' names to tone a rise in a cost as worse (apps/web/src/lib/format.ts,
+lowerIsBetter): a renamed or added cost scorer goes there too.
 """
 
 from __future__ import annotations

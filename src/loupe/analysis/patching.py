@@ -18,7 +18,8 @@ from loupe.analysis.views import by_head, heatmap
 from loupe.models import attention, blocks, n_heads, out_proj
 
 
-def _token(lm: LanguageModel, text: str) -> int:
+def first_token(lm: LanguageModel, text: str) -> int:
+    """The id of text's first token, the one a next-token metric reads."""
     ids = lm.tokenizer.encode(text, add_special_tokens=False)
     if not ids:
         raise ValueError(f"{text!r} encodes to no tokens")
@@ -29,7 +30,7 @@ def _pair(lm: LanguageModel, clean: str, corrupt: str, answer: str, foil: str) -
     n_clean, n_corrupt = len(positions(lm, clean)), len(positions(lm, corrupt))
     if n_clean != n_corrupt:
         raise ValueError(f"clean and corrupt differ in length: {n_clean} vs {n_corrupt}")
-    return _token(lm, answer), _token(lm, foil)
+    return first_token(lm, answer), first_token(lm, foil)
 
 
 def _view(

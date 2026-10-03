@@ -23,7 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { q, type RunDetail, type SampleSummary } from "@/lib/api";
-import { ago, headline, metricLabel, num, stderr } from "@/lib/format";
+import { ago, headline, isEfficiency, lowerIsBetter, metricLabel, num, stderr } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export function CompareView() {
@@ -203,7 +203,11 @@ function Metrics({ a, b }: { a: RunDetail; b: RunDetail }) {
                   <MetricValue value={vb} err={stderr(b.metrics, k)} />
                 </TableCell>
                 <TableCell className="text-right">
-                  {va != null && vb != null ? <Delta value={vb - va} /> : "—"}
+                  {va != null && vb != null ? (
+                    <Delta value={vb - va} lowerBetter={lowerIsBetter(k)} />
+                  ) : (
+                    "—"
+                  )}
                 </TableCell>
               </TableRow>
             );
@@ -222,6 +226,7 @@ function Paired({ a, b }: { a: string; b: string }) {
   if (cmp.error) return <p className="text-negative text-sm">{cmp.error.message}</p>;
   if (!cmp.data || cmp.data.scores.length === 0) return null;
   const { scores, only_a, only_b } = cmp.data;
+  const ratios = scores.some((s) => isEfficiency(s.name));
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -237,6 +242,7 @@ function Paired({ a, b }: { a: string; b: string }) {
             <TableHead>Score</TableHead>
             <TableHead className="text-right">n</TableHead>
             <TableHead className="text-right">B − A</TableHead>
+            {ratios && <TableHead className="text-right">B ÷ A</TableHead>}
             <TableHead className="text-right">95% interval</TableHead>
             <TableHead className="text-right">B higher</TableHead>
             <TableHead className="text-right">B lower</TableHead>
@@ -250,8 +256,16 @@ function Paired({ a, b }: { a: string; b: string }) {
                 <TableCell>{s.name}</TableCell>
                 <TableCell className="text-right font-mono tabular-nums">{s.n}</TableCell>
                 <TableCell className="text-right">
-                  <Delta value={s.diff} />
+                  <Delta value={s.diff} lowerBetter={lowerIsBetter(s.name)} />
                 </TableCell>
+                {ratios && (
+                  <TableCell
+                    className="text-muted-foreground text-right font-mono tabular-nums"
+                    title="mean of B over mean of A"
+                  >
+                    {isEfficiency(s.name) && s.mean_a ? `×${num(s.mean_b / s.mean_a, 2)}` : ""}
+                  </TableCell>
+                )}
                 <TableCell
                   className={cn(
                     "text-right font-mono tabular-nums",

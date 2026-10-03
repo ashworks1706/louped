@@ -41,7 +41,8 @@ def test_grid_pairs_conditions_against_the_baseline_per_sample(lm) -> None:
                   {"base": {}, "steer": steer}, "correct_first/accuracy", seeds=[0, 1],
                   held="correct_first/accuracy", extra=["correct_first/accuracy"])  # fmt: skip
     views = [v.view.model_dump() for v in stores.list_views(run_id)]
-    assert [v["kind"] for v in views] == ["heatmap", "heatmap", "heatmap", "heatmap", "table"]
+    kinds = [v["kind"] for v in views]
+    assert kinds == ["heatmap", "heatmap", "heatmap", "heatmap", "scatter", "table"]
     assert views[0]["y"] == ["base", "steer"] and views[0]["x"] == ["pushback", "control"]
     assert views[1]["z"][0] == [0.0, 0.0]  # the baseline against itself
     more = views[3]  # the extra score: its mean, labelled with its difference against base
@@ -52,7 +53,16 @@ def test_grid_pairs_conditions_against_the_baseline_per_sample(lm) -> None:
     assert stores.get_run(run_id).params["conditions"] == "['base', 'steer']"
     conditions = json.loads(read_artifact(run_id, "conditions.json"))
     assert conditions["steer"] == steer
-    rows = views[4]["rows"]
+    tradeoff = views[4]  # the metric against the extra, one point per condition and task
+    assert [p["label"] for p in tradeoff["points"]] == [
+        "base · pushback",
+        "base · control",
+        "steer · pushback",
+        "steer · control",
+    ]
+    assert [p["y"] for p in tradeoff["points"]] == [z for row in views[0]["z"] for z in row]
+    assert [p["x"] for p in tradeoff["points"]] == [z for row in more["z"] for z in row]
+    rows = views[5]["rows"]
     assert rows[0][4] == "baseline" and rows[2][4].split(", ")[1] in ("held", "broke")
     assert len([r for r in stores.list_runs() if r.kind == "eval"]) == 8  # 2 x 2 x 2 seeds
 

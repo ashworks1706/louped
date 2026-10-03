@@ -8,6 +8,7 @@ each block's attention is, for its weights, and its output projection, for per-h
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -195,14 +196,22 @@ def n_layers(lm: LanguageModel) -> int:
     return len(blocks(lm))
 
 
-def chat(lm: LanguageModel, user: str, system: str | None = None) -> str:
-    """A user turn rendered with the model's own chat template, ready for the assistant's reply.
+def chat(
+    lm: LanguageModel,
+    user: str,
+    system: str | None = None,
+    history: Sequence[dict[str, str]] = (),
+) -> str:
+    """A user turn rendered with the model's own chat template, ready for the assistant's reply,
+    after the earlier turns in history ({"role": "user" | "assistant", "content": ...}).
 
     Thinking is off for templates that have it (Qwen3), so replies start with the answer.
     """
-    messages = ([{"role": "system", "content": system}] if system else []) + [
-        {"role": "user", "content": user}
-    ]
+    messages = (
+        ([{"role": "system", "content": system}] if system else [])
+        + list(history)
+        + [{"role": "user", "content": user}]
+    )
     text = lm.tokenizer.apply_chat_template(
         messages, tokenize=False, add_generation_prompt=True, enable_thinking=False
     )

@@ -1,8 +1,9 @@
 """The shapes the Run page's Figures tab renders. A run stores each as JSON under views/ in MLflow.
 
-Four kinds cover the standard figures: a heatmap (patching: layer by position; attention: one
+Five kinds cover the standard figures: a heatmap (patching: layer by position; attention: one
 slice per layer and head; the logit lens and a diffusion trajectory, each cell labelled with its
-token), a line chart (anything by layer), a table, and tokens (text coloured by a per-token value).
+token), a line chart (anything by layer), a scatter (one labelled point per condition: quality
+against cost), a table, and tokens (text coloured by a per-token value).
 Keeping them as data, not images, is what lets the UI hover, sort and link them.
 """
 
@@ -63,6 +64,19 @@ def line(
         "y_label": y_label,
         "note": note,
     }
+
+
+def scatter(
+    title: str,
+    points: list[tuple[str, float, float]],
+    x_label: str,
+    y_label: str,
+    note: str | None = None,
+) -> dict[str, Any]:
+    """Labelled points, (label, x, y): one per condition, such as a score against its latency."""
+    marks = [{"label": n, "x": x, "y": y} for n, x, y in points]
+    return {"kind": "scatter", "title": title, "x_label": x_label, "y_label": y_label,
+            "points": marks, "note": note}  # fmt: skip
 
 
 def table(
