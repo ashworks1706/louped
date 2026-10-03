@@ -157,3 +157,60 @@ def get_experiment(name: str) -> ExperimentDetail:
     return ExperimentDetail(
         **experiment.model_dump(), readme=_without(readme, "Question", "Result")
     )
+
+
+#: A new experiment's README: the sections every question fills in, as the Experiments page reads.
+TEMPLATE = """---
+domain: {domain}
+status: active
+---
+
+# {name}
+
+## Question
+
+<!-- One sentence that comes out yes or no, or as a number. -->
+
+## Observation
+
+<!-- What failed or bottlenecked, as seen, not as interpreted. -->
+
+## Hypotheses
+
+<!-- What might cause it, including the explanations that compete with yours. -->
+
+## Baseline
+
+<!-- The nearest existing method, and the simplest thing that might already work. -->
+
+## Test
+
+<!-- The controlled comparison that tells the hypotheses apart: conditions, metric, seeds. -->
+
+## Stop if
+
+<!-- The result that weakens the idea or makes it impractical. -->
+
+## Run
+
+## Result
+
+## Next
+"""
+
+
+def scaffold(name: str, domain: str) -> Path:
+    """experiments/<name>/ with its README to fill in and an empty run.py, active in domain."""
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", name):
+        raise BadExperiment(f"{name!r}: a name is lowercase letters, digits and dashes")
+    if domain not in DOMAINS:
+        raise BadExperiment(f"domain {domain!r} is not one of {list(DOMAINS)}")
+    folder = experiments_dir() / name
+    if folder.exists():
+        raise BadExperiment(f"experiments/{name} exists")
+    folder.mkdir(parents=True)
+    (folder / "README.md").write_text(TEMPLATE.format(name=name, domain=domain), encoding="utf-8")
+    (folder / "run.py").write_text(
+        f'"""{name}: writes its result under .loupe/, never prints it."""\n', encoding="utf-8"
+    )
+    return folder

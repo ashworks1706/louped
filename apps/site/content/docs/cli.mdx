@@ -6,11 +6,13 @@ description: The loupe command.
 Every command takes `--help`, and each is also a form on the app's Launch page. State lives under
 `LOUPE_HOME` (default `./.loupe`).
 
-- `loupe serve`: the API and the app on 127.0.0.1:8000. `--model` preloads the Playground (or load
-  one from the app), with `--bank` adapters, `--diffusion` for a masked diffusion model and `--attn`
-  for the attention kernel. `--host` needs `--expose`, which serves read-only: no launching and no
-  model loading.
-- `loupe grid <yaml>`: conditions by tasks by seeds, each against a baseline.
+- `loupe serve`: the API and the app on 127.0.0.1:8000. Models load from the Playground page, with
+  adapters, a masked diffusion model or an attention kernel. `--host` needs `--expose`, which
+  serves read-only: no launching and no model loading.
+- `loupe new <name> --domain <domain>`: a new research question, `experiments/<name>/` with its
+  README to fill in.
+- `loupe grid <yaml>`: conditions by tasks by seeds, each against a baseline. On the Launch page
+  the config is edited in place and run as a copy.
 - `loupe sweep`: one task under Steer at every layer and strength, with the coherence cost.
 - `loupe train <recipe> <yaml>`: `sft`, `dpo`, `grpo`, `classify` or `reft`. `--sweep key=a,b`
   trains every combination and compares them; `--dry-run` prints the plan.

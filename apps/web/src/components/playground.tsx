@@ -71,7 +71,8 @@ export function Playground() {
           <EmptyState
             icon={MessageSquareText}
             title="No model loaded"
-            command="just serve --model Qwen/Qwen2.5-0.5B-Instruct"
+            body="This server was started with --expose, so models are not loaded from here."
+            command="just serve"
           />
         ) : (
           <Loaded
@@ -929,7 +930,7 @@ function useReply() {
   return { ...reply, start, stop, reset };
 }
 
-/** Load a model into the Playground, as `loupe serve --model` would; unloading frees the GPU
+/** Load a model into the Playground; unloading frees the GPU
  * for launched jobs. */
 function ModelLoader({ current }: { current?: PlaygroundInfo }) {
   const client = useQueryClient();

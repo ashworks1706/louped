@@ -19,6 +19,14 @@ const launchables = [
     config: "name: hello\nbase_model: tiny\n",
     recipe: "sft",
   },
+  {
+    id: "grid",
+    group: "Commands",
+    title: "loupe grid",
+    description: "Conditions by tasks by seeds.",
+    config: "# loupe grid\nmodel: tiny\n",
+    recipe: null,
+  },
 ];
 const options = [
   { flag: "--name", kind: "text", default: "world", help: "Who to greet.", choices: [] },
@@ -45,7 +53,7 @@ async function mockApi(page: Page) {
     return r.fulfill({ json: launchables });
   });
   await page.route("**/api/launch/options?*", (r) =>
-    r.fulfill({ json: r.request().url().includes("train") ? [] : options }),
+    r.fulfill({ json: /train|grid/.test(r.request().url()) ? [] : options }),
   );
   await page.route("**/api/launch/jobs", (r) => r.fulfill({ json: jobs }));
   await page.route("**/api/launch/jobs/j1", (r) =>
@@ -65,10 +73,13 @@ test("a script's options become a form, and launching sends only what changed", 
   await page.getByLabel("--times").fill("2 3");
   await expect(page.getByText("python experiments/hello/run.py --loud --times 2 3")).toBeVisible();
   await page.getByRole("button", { name: "Launch" }).click();
-  expect(sent[0]).toEqual({
-    id: "script:hello/run.py",
-    options: { "--loud": true, "--times": ["2", "3"] },
-  });
+  // The request lands a moment after the click; poll rather than read it once.
+  await expect
+    .poll(() => sent[0])
+    .toEqual({
+      id: "script:hello/run.py",
+      options: { "--loud": true, "--times": ["2", "3"] },
+    });
   await expect(page.getByRole("link", { name: "m-abc123" })).toHaveAttribute(
     "href",
     "/run/?id=m-abc123",
@@ -84,15 +95,29 @@ test("a training config is edited in place and sent with its recipe", async ({ p
   await config.fill("name: edited\nbase_model: tiny\n");
   await page.getByLabel("Recipe").selectOption("dpo");
   await page.getByRole("button", { name: "Launch" }).click();
-  expect(sent[0]).toMatchObject({
-    id: "train:hello/sft.yaml",
-    recipe: "dpo",
-    config: "name: edited\nbase_model: tiny\n",
-  });
+  await expect
+    .poll(() => sent[0])
+    .toMatchObject({
+      id: "train:hello/sft.yaml",
+      recipe: "dpo",
+      config: "name: edited\nbase_model: tiny\n",
+    });
 });
 
 test("a server that only reads says launching is off", async ({ page }) => {
   await page.route("**/api/launch", (r) => r.fulfill({ status: 403, json: { detail: "off" } }));
   await page.goto("/launch/");
   await expect(page.getByText("Launching is off on this server")).toBeVisible();
+});
+
+test("a grid's config is edited in place and sent without a recipe", async ({ page }) => {
+  const sent = await mockApi(page);
+  await page.goto("/launch/?id=grid");
+  await expect(page.getByLabel("Recipe")).toHaveCount(0);
+  await expect(page.getByText("loupe grid grid.yaml")).toBeVisible();
+  await page.getByLabel("Config").fill("# loupe grid\nmodel: edited\n");
+  await page.getByRole("button", { name: "Launch" }).click();
+  await expect
+    .poll(() => sent[0])
+    .toEqual({ id: "grid", options: {}, config: "# loupe grid\nmodel: edited\n" });
 });

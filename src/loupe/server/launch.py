@@ -1,7 +1,8 @@
 """Launching from the UI: the commands loupe already has, run as jobs one at a time.
 
 Nothing here runs a model. A launchable is an existing command (an experiment script, `loupe train`
-on a config, `loupe sweep`, `inspect eval`), its form read from the command's own argument parser;
+or `loupe grid` on a config, `loupe sweep`, `loupe new`, `inspect eval`), its form read from the
+command's own argument parser;
 a job is that command in a subprocess, its output in <home>/jobs/<id>/log.txt. What a job writes
 lands in the stores like any run started from a shell, so the Runs page shows it while it runs.
 Jobs run in the order they were launched, one at a time: one machine, usually one GPU.
@@ -52,7 +53,7 @@ class Launchable(BaseModel):
     group: str
     title: str
     description: str = ""
-    #: A config file's text to edit, for loupe train; else the command takes options only.
+    #: A config file's text to edit, for loupe train and loupe grid; else options only.
     config: str | None = None
     recipe: str | None = None
 
@@ -83,6 +84,7 @@ class JobDetail(Job):
 RECIPES = ["sft", "dpo", "grpo", "classify", "reft"]
 #: loupe's own commands with a form: the command, its dataclass in loupe.cli, what it does.
 COMMANDS = {
+    "new": ("New", "Start a research question: experiments/<name>/ with its README to fill in."),
     "sweep": ("Sweep", "A task under Steer at every layer and strength."),
     "features": (
         "Features",
@@ -100,6 +102,20 @@ DATA = {
     "overlap": "Evaluation items that share an n-gram with the training set (contamination).",
     "stats": "What the training set holds and how much is still unreviewed.",
 }
+#: A new grid's config: edited on the page, run as a copy.
+GRID = """# loupe grid: every task under every condition and seed, each against the baseline
+model: Qwen/Qwen2.5-0.5B-Instruct
+tasks:
+  pushback: experiments/sycophancy-pushback/task.py@pushback
+conditions:
+  base: {}
+  steer: {interventions: {kind: steer, vector: caving.qwen2.5-0.5b-instruct, alpha: 4.0}}
+metric: held/accuracy
+held: correct_first/accuracy  # a score that must not move
+seeds: [0]
+experiment: sycophancy-pushback
+# extra: [latency/mean]  # more scores the tasks already have, each drawn against the metric
+"""
 TAIL = 64_000  # bytes of a job's log the UI shows
 
 
@@ -128,11 +144,20 @@ def catalogue() -> list[Launchable]:
             out.append(Launchable(id=f"train:{rel}", group="Training", title=rel,
                                   description=f"loupe train {m[1]}", config=text,
                                   recipe=m[1]))  # fmt: skip
+    for cfg in sorted(experiments_dir().glob("*/*.yaml")):
+        text = cfg.read_text(encoding="utf-8")
+        if text.startswith("# loupe grid"):
+            rel = cfg.relative_to(experiments_dir()).as_posix()
+            out.append(Launchable(id=f"grid:{rel}", group="Grids", title=rel,
+                                  description="loupe grid", config=text))  # fmt: skip
     for sub, what in DATA.items():
         out.append(Launchable(id=f"data:{sub}", group="Data", title=f"loupe data {sub}",
                               description=what))  # fmt: skip
     for name, (_, what) in COMMANDS.items():
         out.append(Launchable(id=name, group="Commands", title=f"loupe {name}", description=what))
+    out.append(Launchable(id="grid", group="Commands", title="loupe grid", config=GRID,
+                          description="Conditions by tasks by seeds against a baseline, with "
+                          "paired intervals and a moved/held verdict: one figure."))  # fmt: skip
     out.append(Launchable(id="eval", group="Commands", title="inspect eval",
                           description="Any Inspect task or inspect_evals benchmark, on any model; "
                           "loupe/<model> takes interventions as model args."))  # fmt: skip
@@ -173,6 +198,8 @@ def options(launchable: str) -> list[Option]:
         return EVAL
     if launchable.startswith("train:"):
         return TRAIN
+    if launchable == "grid" or launchable.startswith("grid:"):
+        return []  # everything is in the config
     if launchable in COMMANDS:
         target = f"from loupe.cli import {COMMANDS[launchable][0]} as Args"
     elif launchable.startswith("data:"):
@@ -233,6 +260,15 @@ def _script(launchable: str) -> Path:
     return script
 
 
+def _grid_template(launchable: str) -> str:
+    if launchable == "grid":
+        return GRID
+    config = (experiments_dir() / launchable.removeprefix("grid:")).resolve()
+    if experiments_dir().resolve() not in config.parents:
+        raise HTTPException(400, f"not a grid config: {launchable}")
+    return config.read_text(encoding="utf-8")
+
+
 def argv(req: LaunchRequest, job_dir: Path) -> list[str]:
     """The command line a request runs; values go in as separate arguments, never a shell."""
     flags: list[str] = []
@@ -253,6 +289,10 @@ def argv(req: LaunchRequest, job_dir: Path) -> list[str]:
         return [_bin("loupe"), req.id, *positional, *flags]
     if req.id.startswith("data:"):
         return [_bin("loupe"), "data", req.id.removeprefix("data:"), *positional, *flags]
+    if req.id == "grid" or req.id.startswith("grid:"):
+        config = job_dir / "grid.yaml"
+        config.write_text(req.config or _grid_template(req.id), encoding="utf-8")
+        return [_bin("loupe"), "grid", str(config)]
     if req.id.startswith("train:"):
         template = (experiments_dir() / req.id.removeprefix("train:")).resolve()
         if experiments_dir().resolve() not in template.parents:

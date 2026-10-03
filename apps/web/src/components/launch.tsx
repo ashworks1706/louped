@@ -70,7 +70,7 @@ function Picker({ items }: { items: Launchable[] }) {
         icon={Rocket}
         title="Nothing to launch"
         body="Scripts under experiments/ and their training configs appear here."
-        command="just new-experiment my-question"
+        command="uv run loupe new my-question --domain mechanisms"
       />
     );
   }
@@ -170,9 +170,13 @@ function preview(item: Launchable, recipe: string, options: LaunchRequest["optio
     ? `python experiments/${item.title}`
     : item.id.startsWith("train:")
       ? `loupe train ${recipe} experiments/${item.title}`
-      : item.id === "eval"
-        ? "inspect eval"
-        : item.title;
+      : item.id.startsWith("grid:")
+        ? `loupe grid experiments/${item.title}`
+        : item.id === "grid"
+          ? "loupe grid grid.yaml"
+          : item.id === "eval"
+            ? "inspect eval"
+            : item.title;
   return [head, ...parts].join(" ");
 }
 
@@ -201,7 +205,8 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
     go.mutate({
       id: item.id,
       options: sent,
-      ...(item.config != null ? { config, recipe } : {}),
+      ...(item.config != null ? { config } : {}),
+      ...(item.recipe != null ? { recipe } : {}),
     });
   };
 
@@ -217,19 +222,23 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
       {item.config != null && (
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-3">
-            <label htmlFor="recipe" className="text-muted-foreground text-xs">
-              Recipe
-            </label>
-            <NativeSelect
-              id="recipe"
-              value={recipe}
-              onChange={(e) => setRecipe(e.target.value)}
-              className="font-mono text-xs"
-            >
-              {RECIPES.map((r) => (
-                <option key={r}>{r}</option>
-              ))}
-            </NativeSelect>
+            {item.recipe != null && (
+              <>
+                <label htmlFor="recipe" className="text-muted-foreground text-xs">
+                  Recipe
+                </label>
+                <NativeSelect
+                  id="recipe"
+                  value={recipe}
+                  onChange={(e) => setRecipe(e.target.value)}
+                  className="font-mono text-xs"
+                >
+                  {RECIPES.map((r) => (
+                    <option key={r}>{r}</option>
+                  ))}
+                </NativeSelect>
+              </>
+            )}
             <span className="text-muted-foreground text-xs">
               Edits run as a copy; the file in experiments/ stays as it is.
             </span>

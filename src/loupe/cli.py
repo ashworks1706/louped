@@ -10,32 +10,23 @@ import tyro
 
 from loupe import __version__
 from loupe.data.cli import Command as DataCommand
+from loupe.stores.types import Domain
 from loupe.train.cli import Command as TrainCommand
 
 
 @dataclass(frozen=True)
 class Serve:
-    """Start the API and, when it has been built, the UI."""
+    """Start the API and, when it has been built, the UI. Models, runs and jobs are picked in the
+    UI: the Playground loads a model, Launch starts experiments, training, grids and evals."""
 
     host: str = "127.0.0.1"
     port: int = 8000
     web_dir: Path = Path("apps/web/out")
     """The UI's static export; built by `just web-build`."""
-    model: str | None = None
-    """A model for the Playground: a Hub id, a path, or a name under <home>/models. Needs the
-    interp extra."""
-    bank: list[str] = field(default_factory=list)
-    """Adapters to load beside the model, by name under <home>/adapters or path; the Playground
-    picks which are live. Needs the train extra."""
-    diffusion: bool = False
-    """The model is a masked diffusion model (LLaDA, Dream, a masked LM), saved under
-    <home>/models or at a path."""
-    attn: str | None = None
-    """The attention kernel: eager, sdpa, flash_attention_2, flex_attention, a registered name, or
-    file.py:function. Attention views run eager for their own trace."""
     expose: bool = False
     """Allow a host other than this machine. There is no auth: whoever reaches the port reads
-    every run, log and transcript. Launching from the UI is off when exposed."""
+    every run, log and transcript. Launching and loading a model from the UI are off when
+    exposed."""
 
 
 @dataclass(frozen=True)
@@ -70,6 +61,16 @@ class Grid:
     config: tyro.conf.Positional[Path]
     """YAML with model, tasks (name: file.py@task), conditions (name: model args), metric, and
     optionally seeds, baseline, held and experiment."""
+
+
+@dataclass(frozen=True)
+class New:
+    """Start a research question: experiments/<name>/ with its README to fill in, active."""
+
+    name: tyro.conf.Positional[str]
+    """Named for the question, lowercase with dashes: sycophancy-pushback."""
+    domain: Domain
+    """The domain it is filed under on the Experiments page."""
 
 
 @dataclass(frozen=True)
@@ -129,6 +130,7 @@ Command = (
     | Annotated[TrainCommand, tyro.conf.subcommand("train")]
     | Annotated[Sweep, tyro.conf.subcommand("sweep")]
     | Annotated[Grid, tyro.conf.subcommand("grid")]
+    | Annotated[New, tyro.conf.subcommand("new")]
     | Annotated[Features, tyro.conf.subcommand("features")]
     | Annotated[Circuit, tyro.conf.subcommand("circuit")]
     | Annotated[Version, tyro.conf.subcommand("version")]
@@ -136,8 +138,6 @@ Command = (
 
 
 def serve(cmd: Serve) -> None:
-    if cmd.diffusion and cmd.attn:
-        raise SystemExit("--attn picks a causal model's attention kernel; drop it with --diffusion")
     try:
         import uvicorn
 
@@ -154,15 +154,7 @@ def serve(cmd: Serve) -> None:
             raise SystemExit(f"--host {cmd.host} serves every log without auth; add --expose")
         hosts = ["*"] if cmd.host in ("0.0.0.0", "::") else [*LOOPBACK, cmd.host]
     uvicorn.run(
-        create_app(
-            cmd.web_dir,
-            cmd.model,
-            hosts,
-            cmd.bank,
-            cmd.diffusion,
-            cmd.attn,
-            launching=hosts is None,
-        ),
+        create_app(cmd.web_dir, hosts, launching=hosts is None),
         host=cmd.host,
         port=cmd.port,
     )
@@ -196,6 +188,13 @@ def main() -> None:
             if unknown := set(spec) - set(inspect.signature(grid).parameters):
                 raise SystemExit(f"{cmd.config}: unknown keys {sorted(unknown)}")
             print(grid(**spec))
+        case New() as cmd:
+            from loupe.stores.experiments import BadExperiment, scaffold
+
+            try:
+                print(f"created {scaffold(cmd.name, cmd.domain)}")
+            except BadExperiment as exc:
+                raise SystemExit(str(exc)) from exc
         case Features() as cmd:
             from loupe.features import features
 

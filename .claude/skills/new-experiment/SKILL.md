@@ -7,7 +7,7 @@ description: Start a research experiment in loupe. Use when the user wants to te
    honesty, conditioning, agents), efficiency (context, inference, specialisation) or checks
    (reproduction). If none fits, propose a new domain rather than forcing one; the steps are under
    "Adding a domain" in `apps/site/content/docs/domains.mdx`.
-2. Name the folder for the question, kebab-case: `just new-experiment <name> <domain>`. It starts
+2. Name the folder for the question, kebab-case: `uv run loupe new <name> --domain <domain>` (New on the Experiments page does the same). It starts
    `active`; set an experiment that the user is not working on now to `parked`.
 3. Fill the README before writing code. Each section is one or two sentences:
    - **Question**: comes out yes or no, or as a number.

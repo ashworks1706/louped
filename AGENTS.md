@@ -34,10 +34,9 @@ just check              the gate: Python (ruff, pyright, import-linter, pytest),
 just test-e2e           Playwright on the built UI; screenshots land in apps/web/test-results
 just examples           the worked examples end to end on tiny offline models; CI runs it
 just fmt                format everything
-just serve              API and UI on :8000
+just serve              API and UI on :8000 (builds the UI first if needed)
 just web                UI dev server on :3000
 just site               docs site on :3001
-just new-experiment X D scaffold experiments/X/ in domain D
 just api-types          regenerate the UI's API types after changing a server route or model
 ```
 

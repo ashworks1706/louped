@@ -53,17 +53,12 @@ class Health(BaseModel):
 
 def create_app(
     web_dir: Path | None = None,
-    model: str | None = None,
     hosts: list[str] | None = None,
-    bank: list[str] | None = None,
-    diffusion: bool = False,
-    attn: str | None = None,
     launching: bool = False,
 ) -> FastAPI:
-    """The app. With web_dir, the static UI export is served at /; with model, the Playground,
-    with bank's adapters loaded beside it, under the attention kernel attn, or run as a masked
-    diffusion model. hosts are the Host headers it answers, loopback by default. launching lets
-    the UI start experiments, training and evals as jobs on this machine."""
+    """The app. With web_dir, the static UI export is served at /. hosts are the Host headers it
+    answers, loopback by default. launching lets the UI start experiments, training and evals as
+    jobs on this machine and load a model into the Playground."""
     app = FastAPI(
         title="loupe",
         version=__version__,
@@ -145,7 +140,7 @@ def create_app(
     def experiment(name: str) -> ExperimentDetail:
         return stores.get_experiment(name)
 
-    app.include_router(playground.router(model, bank, diffusion, attn, switchable=launching))
+    app.include_router(playground.router(switchable=launching))
     app.include_router(launch.router(launching))
     graphs.mount(app)
     inspect_view.mount(app)

@@ -10,12 +10,9 @@ the whole pipeline runs without a download. Its numbers check the pipeline, not 
 just serve   # http://127.0.0.1:8000
 ```
 
-In the app, open Launch, pick `refusal-direction/run.py`, tick `--tiny` and launch. The job's log
-streams in the page and its runs appear under Runs as they write. The same from a shell:
-
-```sh
-uv run --all-extras python experiments/refusal-direction/run.py --tiny
-```
+Everything else happens in the app. Open Launch, pick `refusal-direction/run.py`, tick `--tiny`
+and launch. The job's log streams in the page and its runs appear under Runs as they write. The
+Playground loads a model from its page.
 
 [Examples](/docs/examples) explains each figure.
 
@@ -26,10 +23,7 @@ up practical.
 
 ## Your own question
 
-```sh
-just new-experiment my-question mechanisms   # experiments/my-question/{README.md,run.py}
-```
-
-The README opens with its domain and status, then states the question, what was observed, the
-hypotheses, the baseline, the test, when to stop, and the result. `run.py` writes to MLflow and
+Press New on the Experiments page: it writes `experiments/my-question/` with a `README.md` and a
+`run.py`. The README opens with its domain and status, then states the question, what was
+observed, the hypotheses, the baseline, the test, when to stop, and the result. `run.py` writes to MLflow and
 Inspect logs, so the app shows it and Launch gets a form for its options.

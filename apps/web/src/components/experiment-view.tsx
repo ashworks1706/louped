@@ -32,7 +32,7 @@ export function ExperimentView() {
           icon={FlaskConical}
           title="No experiment selected"
           body="Open one from Experiments, or start one."
-          command="just new-experiment my-question mechanisms"
+          command="uv run loupe new my-question --domain mechanisms"
         />
       </section>
     );

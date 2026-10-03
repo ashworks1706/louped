@@ -35,6 +35,7 @@ def test_playground_without_a_model_says_so() -> None:
                     "switchable": False}  # fmt: skip
     assert client.post("/api/playground/generate", json={"prompt": "hi"}).status_code == 409
     assert client.post("/api/playground/inspect", json={"prompt": "hi"}).status_code == 409
+    assert client.post("/api/playground/load", json={"model": "x"}).status_code == 403  # exposed
 
 
 def test_inspect_view_is_served_read_only_over_the_eval_logs() -> None:
@@ -112,7 +113,11 @@ def test_the_ui_launches_an_experiment_as_a_job_and_reads_its_log(tmp_path) -> N
     assert ids["script:hello/run.py"]["description"] == "Say hello."
     assert ids["train:hello/sft.yaml"]["recipe"] == "sft" and {"eval", "sweep"} <= set(ids)
     assert {"data:export", "data:curate"} <= set(ids) and "data:review" not in ids  # interactive
-    assert {"features", "circuit", "sweep"} <= set(ids)
+    assert {"features", "circuit", "sweep", "new", "grid"} <= set(ids)
+    assert ids["grid"]["config"].startswith("# loupe grid") and ids["grid"]["recipe"] is None
+    assert client.get("/api/launch/options?id=grid").json() == []
+    new = {o["flag"]: o for o in client.get("/api/launch/options?id=new").json()}
+    assert new["name"]["required"] and "honesty" in new["--domain"]["choices"]
     train = {o["flag"] for o in client.get("/api/launch/options?id=train:hello/sft.yaml").json()}
     assert train == {"--sweep", "--dry-run"}
     export = {o["flag"]: o for o in client.get("/api/launch/options?id=data:export").json()}
@@ -161,6 +166,37 @@ def test_launch_builds_train_and_eval_command_lines(tmp_path) -> None:
     assert line[1:] == ["eval", "inspect_evals/gsm8k", "--limit", "5",
                         "-M", 'interventions={"kind": "steer"}', "-M", "revision=abc",
                         "--log-dir", str(logs_dir())]  # fmt: skip
+
+
+def test_launch_runs_a_grid_config_as_a_copy_and_scaffolds_an_experiment(tmp_path) -> None:
+    import pytest
+
+    from loupe import stores
+    from loupe.core import experiments_dir
+    from loupe.server.launch import GRID, LaunchRequest, argv
+    from loupe.stores.experiments import BadExperiment, scaffold
+
+    exp = experiments_dir() / "kernels"
+    exp.mkdir(parents=True)
+    (exp / "README.md").write_text("---\ndomain: inference\nstatus: parked\n---\n# kernels\n")
+    (exp / "grid.yaml").write_text("# loupe grid\nmodel: a\n")
+    line = argv(LaunchRequest(id="grid:kernels/grid.yaml"), tmp_path)
+    assert line[1:] == ["grid", str(tmp_path / "grid.yaml")]
+    assert (tmp_path / "grid.yaml").read_text() == "# loupe grid\nmodel: a\n"
+    argv(LaunchRequest(id="grid", config="model: b\n"), tmp_path)
+    assert (tmp_path / "grid.yaml").read_text() == "model: b\n"
+    argv(LaunchRequest(id="grid"), tmp_path)
+    assert (tmp_path / "grid.yaml").read_text() == GRID
+    new = argv(LaunchRequest(id="new", options={"name": "my-q", "--domain": "honesty"}), tmp_path)
+    assert new[1:] == ["new", "my-q", "--domain", "honesty"]
+
+    folder = scaffold("my-q", "honesty")
+    found = {e.name: e for e in stores.list_experiments()}["my-q"]
+    assert found.domain == "honesty" and found.status == "active"
+    assert (folder / "run.py").exists()
+    for name, domain in (("my-q", "honesty"), ("My Q", "honesty"), ("other", "nope")):
+        with pytest.raises(BadExperiment):
+            scaffold(name, domain)
 
 
 def test_a_running_job_is_stopped_from_the_ui(tmp_path) -> None:
