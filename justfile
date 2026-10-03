@@ -78,9 +78,9 @@ fmt:
     cd {{web}} && pnpm format
     cd {{site}} && pnpm format
 
-# the API and the UI on :8000; builds the UI first when it never was
+# the API and the UI on :8000; rebuilds the UI so it always serves current code
 serve *args:
-    [ -f {{web}}/out/index.html ] || just web-build
+    just web-build
     uv run loupe serve {{args}}
 
 # the UI dev server on :3000, against the API on :8000
