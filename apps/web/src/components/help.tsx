@@ -17,7 +17,9 @@ export function Help({ children, label = "What is this?" }: { children: string; 
         // and a tap anywhere else or Escape closes it.
         onPointerDown={(e) => e.preventDefault()}
         onClick={(e) => {
+          // Inside a clickable row, a tap reads the help instead of opening the row.
           e.preventDefault();
+          e.stopPropagation();
           setOpen(true);
         }}
       >

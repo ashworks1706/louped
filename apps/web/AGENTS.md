@@ -23,6 +23,10 @@ The UI is the product: quiet, dense, keyboard-first.
   A terminal command only where the app cannot act, such as starting the server.
 - Every figure has a ? beside its title saying how to read it: the view's `about`, set where the
   figure is made.
+- Pages are filed by section in `NAV`: the workspace, or a research domain (Behavior, Efficiency),
+  each domain a sidebar of its own. A new tool goes under the domain whose question it answers.
+- A technical term gets its ? from `src/lib/glossary.ts` (`Term`, `MetricName`), so it reads the
+  same everywhere.
 - Every navigation is reachable from the ⌘K menu; new pages go in `NAV` and get a `G <key>` jump.
 - No client state library. View state lives in the URL; server data comes from the API.
 - The export is static (`output: "export"`): no server actions, no route handlers, no middleware.

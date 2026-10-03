@@ -6,7 +6,7 @@ description: The loupe command.
 Every command takes `--help`, and each is also a form on the app's Launch page. State lives under
 `LOUPE_HOME` (default `./.loupe`).
 
-- `loupe serve`: the API and the app on 127.0.0.1:8000. Models load from the Playground page, with
+- `loupe serve`: the API and the app on 127.0.0.1:8000. Models load from the Probe or Benchmark page, with
   adapters, a masked diffusion model or an attention kernel. `--host` needs `--expose`, which
   serves read-only: no launching and no model loading.
 - `loupe new <name> --domain <domain>`: a new research question, `experiments/<name>/` with its

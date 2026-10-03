@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 
 import { PageHeader } from "@/components/page-header";
-import { Playground, PROBE } from "@/components/playground";
+import { RunsList } from "@/components/runs-list";
 import { navItem } from "@/lib/nav";
 
-export const metadata: Metadata = { title: "Probe" };
+export const metadata: Metadata = { title: "Training" };
 
 export default function Page() {
   return (
     <>
-      <PageHeader item={navItem("/playground/")} />
+      <PageHeader item={navItem("/training/")} />
       <section className="mx-auto max-w-6xl px-6 py-8">
-        <Playground tools={PROBE} />
+        <RunsList kind="training" />
       </section>
     </>
   );

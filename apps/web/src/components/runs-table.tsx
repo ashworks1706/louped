@@ -1,6 +1,9 @@
 "use client";
 
 import { ArrowDown, ArrowUp, GitCompareArrows } from "lucide-react";
+import { Help } from "@/components/help";
+import { MetricName, Term } from "@/components/term";
+import { GLOSSARY, type Term as TermKey } from "@/lib/glossary";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
@@ -21,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { isLive, type RunSummary } from "@/lib/api";
-import { ago, headline, metricLabel } from "@/lib/format";
+import { ago, headline } from "@/lib/format";
 import { compareHref, experimentHref, runHref } from "@/lib/href";
 
 type SortKey = "name" | "metric" | "created";
@@ -41,12 +44,14 @@ function SortHeader({
   sort,
   onSort,
   className,
+  help,
 }: {
   label: string;
   k: SortKey;
   sort: Sort;
   onSort: (s: Sort) => void;
   className?: string;
+  help?: TermKey;
 }) {
   const active = sort.key === k;
   return (
@@ -59,6 +64,11 @@ function SortHeader({
         {label}
         {active && (sort.desc ? <ArrowDown className="size-3" /> : <ArrowUp className="size-3" />)}
       </button>
+      {help && (
+        <span className="ml-1">
+          <Help label={`What is ${label}?`}>{GLOSSARY[help]}</Help>
+        </span>
+      )}
     </TableHead>
   );
 }
@@ -202,7 +212,9 @@ export function RunsTable({
               </TableHead>
             )}
             <SortHeader label="Run" k="name" sort={sort} onSort={setSort} />
-            <TableHead>Kind</TableHead>
+            <TableHead>
+              <Term k="kind">Kind</Term>
+            </TableHead>
             {!compact && <TableHead>Model</TableHead>}
             <SortHeader
               label="Headline"
@@ -210,6 +222,7 @@ export function RunsTable({
               sort={sort}
               onSort={setSort}
               className="text-right"
+              help="headline"
             />
             {!compact && <TableHead>Status</TableHead>}
             <SortHeader label="Created" k="created" sort={sort} onSort={setSort} />
@@ -269,7 +282,7 @@ export function RunsTable({
                   {m ? (
                     <div className="flex flex-col items-end">
                       <MetricValue value={m[1]} err={m[2]} />
-                      <span className="text-muted-foreground text-[11px]">{metricLabel(m[0])}</span>
+                      <MetricName k={m[0]} className="text-muted-foreground text-[11px]" />
                     </div>
                   ) : (
                     <span className="text-muted-foreground">—</span>

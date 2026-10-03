@@ -8,27 +8,46 @@ import { EmptyState } from "@/components/empty-state";
 import { QueryState } from "@/components/query-state";
 import { RunsTable } from "@/components/runs-table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { q } from "@/lib/api";
+import { q, type Experiment, type RunSummary } from "@/lib/api";
 
-export function RunsList({ limit, compact = false }: { limit?: number; compact?: boolean }) {
+/** Runs, newest first: all of them, or one kind's, or those of one domain's experiments. */
+export function RunsList({
+  limit,
+  compact = false,
+  kind,
+  axis,
+}: {
+  limit?: number;
+  compact?: boolean;
+  kind?: RunSummary["kind"];
+  axis?: Experiment["axis"];
+}) {
   const runs = useQuery(q.runs());
+  const experiments = useQuery({ ...q.experiments(), enabled: axis != null });
+  const inAxis = new Set(
+    (experiments.data ?? []).filter((e) => e.axis === axis).map((e) => e.name),
+  );
   return (
     <QueryState query={runs}>
-      {(all) =>
-        all.length === 0 ? (
+      {(all) => {
+        const shown = all.filter(
+          (r) =>
+            (kind == null || r.kind === kind) &&
+            (axis == null || (r.experiment != null && inAxis.has(r.experiment))),
+        );
+        return shown.length === 0 ? (
           <EmptyState
             icon={ListTree}
             title="No runs yet"
-            body="Evals, analyses and training runs appear as they are written."
             action={{ href: "/launch/", label: "Launch a run" }}
           />
         ) : (
           // The table keeps its filters in the URL, which a static page reads under Suspense.
           <Suspense fallback={<Skeleton className="h-10 w-full" />}>
-            <RunsTable runs={limit ? all.slice(0, limit) : all} compact={compact} />
+            <RunsTable runs={limit ? shown.slice(0, limit) : shown} compact={compact} />
           </Suspense>
-        )
-      }
+        );
+      }}
     </QueryState>
   );
 }

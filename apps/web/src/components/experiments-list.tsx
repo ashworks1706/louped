@@ -16,14 +16,14 @@ import { experimentHref, runHref } from "@/lib/href";
 
 type Status = Experiment["status"];
 
-/** The two research axes and the checks, in page order, with what each one asks. */
+/** The two research domains and the checks, in page order, with what each one asks. */
 const AXES: { axis: Experiment["axis"]; title: string; about: string }[] = [
-  { axis: "behavior", title: "Behavior & alignment", about: "What models do, and why." },
-  { axis: "efficiency", title: "Efficiency & systems", about: "What it costs to run them." },
+  { axis: "behavior", title: "Behavior", about: "What models do, and why." },
+  { axis: "efficiency", title: "Efficiency", about: "What it costs to run them." },
   {
     axis: "checks",
-    title: "Instrument checks",
-    about: "loupe reproducing known results, so the rest can be trusted.",
+    title: "Checks",
+    about: "Known results reproduced, so the rest can be trusted.",
   },
 ];
 
@@ -104,7 +104,7 @@ export function ActiveExperiments() {
           <EmptyState
             icon={FlaskConical}
             title="No active questions"
-            body="Set status: active in an experiment's README front matter, or start a new one."
+            body="Mark one active in its README, or start one."
             action={{ href: "/launch/?id=new", label: "New experiment" }}
           />
         ) : (
@@ -124,7 +124,7 @@ function NoExperiments() {
     <EmptyState
       icon={FlaskConical}
       title="No experiments yet"
-      body="One card per folder under experiments/, filed by the domain in its README."
+      body="Each question is a folder under experiments/."
       action={{ href: "/launch/?id=new", label: "New experiment" }}
     />
   );
@@ -136,33 +136,69 @@ function ByAxis({ experiments }: { experiments: Experiment[] }) {
       {AXES.map(({ axis, title, about }) => {
         const inAxis = experiments.filter((e) => e.axis === axis);
         if (inAxis.length === 0) return null;
-        // The store returns experiments in domain order, so first appearance is page order.
-        const domains = [...new Set(inAxis.map((e) => e.domain))];
         return (
           <section key={axis} className="flex flex-col gap-6">
             <div className="flex flex-col gap-0.5 border-b pb-3">
               <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
               <p className="text-muted-foreground text-sm">{about}</p>
             </div>
-            {domains.map((domain) => {
-              const group = inAxis.filter((e) => e.domain === domain);
-              return (
-                <div key={domain} className="flex flex-col gap-3">
-                  <h3 className="text-muted-foreground text-sm font-medium">
-                    {group[0].domain_title}
-                  </h3>
-                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                    {group.map((e) => (
-                      <ExperimentCard key={e.name} experiment={e} heading="h4" />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+            <DomainGroups experiments={inAxis} heading="h3" />
           </section>
         );
       })}
     </>
+  );
+}
+
+/** Experiments under a heading per domain, in the store's domain order. */
+function DomainGroups({
+  experiments,
+  heading,
+}: {
+  experiments: Experiment[];
+  heading: "h2" | "h3";
+}) {
+  const Heading = heading;
+  const domains = [...new Set(experiments.map((e) => e.domain))];
+  return domains.map((domain) => {
+    const group = experiments.filter((e) => e.domain === domain);
+    return (
+      <div key={domain} className="flex flex-col gap-3">
+        <Heading className="text-muted-foreground text-sm font-medium">
+          {group[0].domain_title}
+        </Heading>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {group.map((e) => (
+            <ExperimentCard key={e.name} experiment={e} heading={heading === "h2" ? "h3" : "h4"} />
+          ))}
+        </div>
+      </div>
+    );
+  });
+}
+
+/** One research domain's questions, for its overview page. */
+export function AxisExperiments({ axis }: { axis: Experiment["axis"] }) {
+  const experiments = useQuery(q.experiments());
+  return (
+    <QueryState query={experiments}>
+      {(all) => {
+        const mine = all.filter((e) => e.axis === axis);
+        if (mine.length === 0)
+          return (
+            <EmptyState
+              icon={FlaskConical}
+              title="No questions here yet"
+              action={{ href: "/launch/?id=new", label: "New experiment" }}
+            />
+          );
+        return (
+          <div className="flex flex-col gap-6">
+            <DomainGroups experiments={mine} heading="h3" />
+          </div>
+        );
+      }}
+    </QueryState>
   );
 }
 
@@ -212,7 +248,7 @@ function ExperimentCard({
         </div>
         {showDomain && <p className="text-muted-foreground text-xs">{e.domain_title}</p>}
         <p className="text-[15px] leading-snug font-medium">
-          {e.question ?? "No question written yet. Add one under ## Question in its README."}
+          {e.question ?? "No question written yet."}
         </p>
         {e.result && (
           <p className="text-muted-foreground line-clamp-3 text-sm leading-relaxed">{e.result}</p>

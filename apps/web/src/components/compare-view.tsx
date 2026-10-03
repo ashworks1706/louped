@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueries, useQuery } from "@tanstack/react-query";
+import { MetricName, Term } from "@/components/term";
 import { ArrowLeftRight, GitCompareArrows } from "lucide-react";
 import Link from "next/link";
 import { parseAsBoolean, parseAsString, useQueryState, useQueryStates } from "nuqs";
@@ -23,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { q, type RunDetail, type SampleSummary } from "@/lib/api";
-import { ago, headline, isEfficiency, lowerIsBetter, metricLabel, num, stderr } from "@/lib/format";
+import { ago, headline, isEfficiency, lowerIsBetter, num, stderr } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export function CompareView() {
@@ -40,7 +41,7 @@ export function CompareView() {
           <EmptyState
             icon={GitCompareArrows}
             title="Pick a baseline and a changed run"
-            body="Usually the same eval on the base model and under a change. Runs of one experiment are listed together."
+            body="Usually one eval, before and after a change."
             action={{ href: "/launch/?id=eval", label: "Launch an eval" }}
           />
         </section>
@@ -186,7 +187,9 @@ function Metrics({ a, b }: { a: RunDetail; b: RunDetail }) {
             <TableHead>Metric</TableHead>
             <TableHead className="text-right">A</TableHead>
             <TableHead className="text-right">B</TableHead>
-            <TableHead className="text-right">B − A</TableHead>
+            <TableHead className="text-right">
+              <Term k="delta">B − A</Term>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -195,7 +198,9 @@ function Metrics({ a, b }: { a: RunDetail; b: RunDetail }) {
             const vb = b.metrics[k];
             return (
               <TableRow key={k}>
-                <TableCell>{metricLabel(k)}</TableCell>
+                <TableCell>
+                  <MetricName k={k} />
+                </TableCell>
                 <TableCell className="text-right">
                   <MetricValue value={va} err={stderr(a.metrics, k)} />
                 </TableCell>
@@ -240,11 +245,23 @@ function Paired({ a, b }: { a: string; b: string }) {
         <TableHeader>
           <TableRow className="hover:bg-transparent">
             <TableHead>Score</TableHead>
-            <TableHead className="text-right">n</TableHead>
-            <TableHead className="text-right">B − A</TableHead>
-            {ratios && <TableHead className="text-right">B ÷ A</TableHead>}
-            <TableHead className="text-right">95% interval</TableHead>
-            <TableHead className="text-right">B higher</TableHead>
+            <TableHead className="text-right">
+              <Term k="n">n</Term>
+            </TableHead>
+            <TableHead className="text-right">
+              <Term k="delta">B − A</Term>
+            </TableHead>
+            {ratios && (
+              <TableHead className="text-right">
+                <Term k="ratio">B ÷ A</Term>
+              </TableHead>
+            )}
+            <TableHead className="text-right">
+              <Term k="interval">95% interval</Term>
+            </TableHead>
+            <TableHead className="text-right">
+              <Term k="moved">B higher</Term>
+            </TableHead>
             <TableHead className="text-right">B lower</TableHead>
           </TableRow>
         </TableHeader>
@@ -253,7 +270,9 @@ function Paired({ a, b }: { a: string; b: string }) {
             const sure = s.low > 0 || s.high < 0;
             return (
               <TableRow key={s.name}>
-                <TableCell>{s.name}</TableCell>
+                <TableCell>
+                  <MetricName k={s.name} />
+                </TableCell>
                 <TableCell className="text-right font-mono tabular-nums">{s.n}</TableCell>
                 <TableCell className="text-right">
                   <Delta value={s.diff} lowerBetter={lowerIsBetter(s.name)} />

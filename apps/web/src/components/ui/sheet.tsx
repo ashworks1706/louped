@@ -9,19 +9,29 @@ import { cn } from "@/lib/utils";
 const Sheet = DialogPrimitive.Root;
 const SheetTitle = DialogPrimitive.Title;
 const SheetDescription = DialogPrimitive.Description;
+const SheetTrigger = DialogPrimitive.Trigger;
 
-/** A right-hand panel over the page, for detail that belongs to a row: a transcript, a sample. */
+const SIDES = {
+  right:
+    "inset-y-0 right-0 border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-2xl",
+  left: "inset-y-0 left-0 border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left",
+};
+
+/** A panel over the page: on the right for detail that belongs to a row (a transcript, a
+ * sample), on the left for navigation on a phone. */
 function SheetContent({
   className,
   children,
+  side = "right",
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Content>) {
+}: React.ComponentProps<typeof DialogPrimitive.Content> & { side?: keyof typeof SIDES }) {
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/30" />
       <DialogPrimitive.Content
         className={cn(
-          "bg-background data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:animate-in data-[state=open]:slide-in-from-right fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l shadow-2xl duration-200 sm:max-w-2xl",
+          "bg-background data-[state=closed]:animate-out data-[state=open]:animate-in fixed z-50 flex w-full flex-col shadow-2xl duration-200",
+          SIDES[side],
           className,
         )}
         {...props}
@@ -36,4 +46,4 @@ function SheetContent({
   );
 }
 
-export { Sheet, SheetContent, SheetDescription, SheetTitle };
+export { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger };

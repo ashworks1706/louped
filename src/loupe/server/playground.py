@@ -158,7 +158,7 @@ def router(switchable: bool = False) -> APIRouter:
         with loading:
             c = cur()
             if c.model is None:
-                raise HTTPException(409, "no model loaded; load one on the Playground page")
+                raise HTTPException(409, "no model loaded; load one on the Probe or Benchmark page")
             if "lm" not in state:
                 if c.diffusion:
                     from loupe.models.diffusion import load_diffusion

@@ -18,7 +18,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Kbd } from "@/components/ui/kbd";
 import { q } from "@/lib/api";
 import { experimentHref } from "@/lib/href";
-import { NAV } from "@/lib/nav";
+import { fullTitle, NAV } from "@/lib/nav";
 
 const DOCS = "https://github.com/ashworks1706/loupe/tree/main/docs";
 
@@ -90,11 +90,11 @@ export function CommandMenu({ children }: { children: React.ReactNode }) {
                 {NAV.map((item) => (
                   <CommandItem
                     key={item.href}
-                    value={`${item.title} ${item.description}`}
+                    value={`${fullTitle(item)} ${item.description}`}
                     onSelect={() => run(() => router.push(item.href))}
                   >
                     <item.icon />
-                    <span>{item.title}</span>
+                    <span>{fullTitle(item)}</span>
                     <span className="ml-auto flex gap-1">
                       {item.shortcut.split(" ").map((k) => (
                         <Kbd key={k}>{k}</Kbd>
