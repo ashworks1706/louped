@@ -120,6 +120,24 @@ class Circuit:
 
 
 @dataclass(frozen=True)
+class Judge:
+    """Two eval runs judged sample by sample by a local model, each pair in both orders: B's win
+    rate over A as an eval run of its own. Needs the evals extra, and interp for loupe/ models."""
+
+    a: tyro.conf.Positional[str]
+    """The baseline run's id."""
+    b: tyro.conf.Positional[str]
+    """The changed run's id."""
+    model: str = "loupe/Qwen/Qwen2.5-1.5B-Instruct"
+    """The judge: loupe/ or hf/ with a Hub id runs locally; any Inspect model works."""
+    criterion: str = "Which answer is more correct and more helpful?"
+    """The question the judge answers for each pair."""
+    limit: int | None = None
+    """Pairs to judge; all when empty."""
+    max_tokens: int = 512
+
+
+@dataclass(frozen=True)
 class Mcp:
     """An MCP server on stdio for coding agents, over a running loupe serve: read experiments,
     runs, figures and compares; launch, follow and cancel jobs. Needs the agent extra."""
@@ -142,6 +160,7 @@ Command = (
     | Annotated[New, tyro.conf.subcommand("new")]
     | Annotated[Features, tyro.conf.subcommand("features")]
     | Annotated[Circuit, tyro.conf.subcommand("circuit")]
+    | Annotated[Judge, tyro.conf.subcommand("judge")]
     | Annotated[Mcp, tyro.conf.subcommand("mcp")]
     | Annotated[Version, tyro.conf.subcommand("version")]
 )
@@ -215,6 +234,13 @@ def main() -> None:
             from loupe.circuits import circuit
 
             circuit(cmd.model, cmd.transcoders, cmd.prompt, cmd.slug, cmd.dtype, cmd.batch_size)
+        case Judge() as cmd:
+            from loupe.judge import judge
+
+            try:
+                print(judge(cmd.a, cmd.b, cmd.model, cmd.criterion, cmd.limit, cmd.max_tokens))
+            except ValueError as exc:
+                raise SystemExit(str(exc)) from exc
         case Mcp() as cmd:
             try:
                 from loupe.agent import server
