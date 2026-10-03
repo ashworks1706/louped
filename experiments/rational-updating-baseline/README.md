@@ -30,13 +30,17 @@ authors' own rerun with newer transformers landed within 2.5 points on TruthfulQ
 
 1. `--limit 20`: prompts, scoring and the report work on the real model; read `examples.md`.
 2. `--limit None`: the full TruthfulQA test split against the published row, rates and
-   denominators. A gap beyond about 2.5 points is a setup difference to find before any
-   mitigation is run.
+   denominators (published k/n: 53 right at baseline, 67 wrong). One item is 1.9 points of
+   `R_UY` and 1.5 of `R_RU`, and the authors' own rerun moved `R_UY` by one item, so a gap is
+   read in items: more than two items on Acc or `R_UY`, or a different denominator, is a setup
+   difference to find before any mitigation is run. `R_RU` gets more room (25 notes were
+   revised after the published runs).
 
 ## Stop if
 
-Data verification or the harness tests fail, the chat template hash differs from the pinned one,
-or the full run is outside the authors' reported drift and the cause is not found.
+Data verification or the harness tests fail, the chat template hash differs from the pinned one
+(preflight and the run both stop), or the full run misses the published row by more than the
+margin above and the cause is not found.
 
 ## Run
 
@@ -46,20 +50,23 @@ uv run --all-extras python experiments/rational-updating-baseline/run.py --limit
 uv run --all-extras python experiments/rational-updating-baseline/run.py --tiny          # offline plumbing
 ```
 
-Needs a CUDA GPU with about 16 GB, a Hugging Face token whose account has accepted the Llama 3.1
-license (`HF_TOKEN`), and about 20 GB of disk. Preflight checks all three and stops with what is
-missing. Each run directory under `.loupe/runs/rational-updating-baseline/` holds `command.txt`,
-the harness's `config.json`, `freeze.txt`, `meta.json`, `sru.log`, `raw/`, `report.md`
-(rates, denominators, comparison with the paper) and `examples.md`.
+Needs a CUDA GPU with 16 GB, a Hugging Face token whose account has accepted the Llama 3.1
+license (`HF_TOKEN`), and 20 GB free in the Hub cache. Preflight checks these and the chat
+template and stops with what is missing. Each run directory under
+`.loupe/runs/rational-updating-baseline/` holds `command.txt`, the harness's `config.json`,
+`freeze.txt`, `meta.json`, `sru.log`, `raw/`, `report.md` (rates, denominators, comparison with
+the paper) and `examples.md`; the rates, denominators and files are also an MLflow run.
 
 ## Deviations from the published setup
 
-- transformers 5.17.0, torch 2.14.0, accelerate 1.15.0 (loupe's lock). The harness sets only
-  lower bounds and the paper does not state its versions.
+- Every package the harness shares with loupe follows loupe's lock (transformers 5.17.0, torch
+  2.14.0, accelerate 1.15.0 today). The harness sets only lower bounds and the paper does not
+  state its versions.
 - The harness's TruthfulQA notes: 25 of 604 were revised after the published runs; the authors
   report the effect on `R_RU` is inside run-to-run drift.
 - `--limit 20` keeps the first 20 test qids, not a sample, and is not comparable with the paper.
-- `--tiny` runs float32 on CPU with no accelerate on a random model; it checks plumbing only.
+- `--tiny` runs a random model in float32 on CPU (CUDA hidden) with no accelerate; it checks
+  plumbing only.
 
 ## Protocol notes
 
