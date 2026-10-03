@@ -1,7 +1,10 @@
 """The Playground and Inspect backend: one model, loaded by `loupe serve --model`, run base or
 intervened. Generate streams a reply as plain text, token by token; inspect returns the prompt's
 logit lens, attention and projections onto saved directions as views, the same shapes a run's
-Figures tab draws.
+Figures tab draws. Patch compares a clean and a corrupt prompt layer by position (or by head);
+dose sweeps a saved direction's strength and reads the next token; speed times a reply base
+and changed, beside the model's footprint. Generate takes earlier turns,
+so a reply can be pushed back on.
 
 With a bank (`--bank a b`), each request names the adapters live for it. A masked diffusion model
 (`--diffusion`) takes no interventions: generate sends its reply once denoised, and inspect returns
@@ -18,7 +21,7 @@ import logging
 import sys
 import threading
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.concurrency import iterate_in_threadpool
@@ -69,8 +72,16 @@ class Ask(BaseModel):
     )
 
 
+class Turn(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(max_length=8000)
+
+
 class GenerateRequest(Ask):
     prompt: str = Field(min_length=1, max_length=8000)
+    history: list[Turn] = Field(
+        [], max_length=16, description="Earlier turns, before prompt: a follow-up such as pushback."
+    )
 
 
 class _Stopped(Exception):
@@ -91,6 +102,42 @@ class InspectRequest(Ask):
 
 class InspectResponse(BaseModel):
     views: list[View]
+
+
+#: Exact patching runs one forward per layer and position (or head), so it caps the prompt.
+MAX_PATCH_TOKENS = 64
+
+
+class PatchRequest(BaseModel):
+    """Which layer, position or head carries the difference between two prompts of one length."""
+
+    clean: str = Field(min_length=1, max_length=4000)
+    corrupt: str = Field(min_length=1, max_length=4000)
+    answer: str = Field(min_length=1, description="The clean prompt's next token.")
+    foil: str = Field(min_length=1, description="The corrupt prompt's next token.")
+    method: Literal["attribution", "residual", "heads"] = "attribution"
+    adapters: list[str] = []
+    chat: bool = True
+
+
+class SpeedRequest(Ask):
+    """The prompt timed base and, with interventions or adapters, changed."""
+
+    prompt: str = Field(min_length=1, max_length=8000)
+    repeats: int = Field(3, ge=1, le=10)
+
+
+class DoseRequest(BaseModel):
+    """A saved direction swept over strengths, read at the next token."""
+
+    prompt: str = Field(min_length=1, max_length=4000)
+    vector: str
+    layer: int | None = None
+    alphas: list[float] = Field(min_length=2, max_length=41)
+    answer: str = Field(min_length=1)
+    foil: str | None = None
+    adapters: list[str] = []
+    chat: bool = True
 
 
 def router(
@@ -216,7 +263,7 @@ def router(
         with lock:  # a bad request is a 400 before the stream starts
             live(m, req, c)
             edits = plan(m, req)
-        prompt = chat(m, req.prompt)
+        prompt = chat(m, req.prompt, history=[t.model_dump() for t in req.history])
         streamer = TextIteratorStreamer(m.tokenizer, skip_prompt=True, skip_special_tokens=True)
         stop = threading.Event()
 
@@ -292,5 +339,75 @@ def router(
                 views.append(projection(m, prompt, reads, edits)[1])
             views.append(attention_patterns(m, prompt, edits)[1])
         return InspectResponse.model_validate({"views": views})
+
+    def causal(c: LoadRequest) -> None:
+        if c.diffusion:
+            raise HTTPException(400, "a masked diffusion model has no next token to read")
+
+    @api.post("/patch")
+    def patch(req: PatchRequest) -> InspectResponse:
+        from loupe.analysis import attribution_patch, patch_heads, patch_residual
+        from loupe.models import chat
+
+        m, c = loaded()
+        causal(c)
+        clean, corrupt = (
+            (chat(m, req.clean), chat(m, req.corrupt)) if req.chat else (req.clean, req.corrupt)
+        )
+        cap = MAX_INSPECT_TOKENS if req.method == "attribution" else MAX_PATCH_TOKENS
+        if len(m.tokenizer(clean)["input_ids"]) > cap:
+            raise HTTPException(400, f"{req.method} patching reads at most {cap} tokens")
+        with lock:
+            live(m, Ask.model_validate({"adapters": req.adapters}), c)
+            try:
+                if req.method == "attribution":
+                    view = attribution_patch(m, clean, corrupt, req.answer, req.foil)
+                elif req.method == "residual":
+                    view = patch_residual(m, clean, corrupt, req.answer, req.foil)
+                else:
+                    view = patch_heads(m, clean, corrupt, req.answer, req.foil)[1]
+            except ValueError as exc:
+                raise HTTPException(400, str(exc)) from exc
+        return InspectResponse.model_validate({"views": [view]})
+
+    @api.post("/dose")
+    def dose(req: DoseRequest) -> InspectResponse:
+        from loupe.analysis import dose_response
+        from loupe.models import chat
+
+        m, c = loaded()
+        causal(c)
+        prompt = chat(m, req.prompt) if req.chat else req.prompt
+        if len(m.tokenizer(prompt)["input_ids"]) > MAX_INSPECT_TOKENS:
+            raise HTTPException(400, f"a dose curve reads at most {MAX_INSPECT_TOKENS} tokens")
+        with lock:
+            live(m, Ask.model_validate({"adapters": req.adapters}), c)
+            try:
+                views = dose_response(m, prompt, req.vector, req.alphas, req.answer, req.foil,
+                                      req.layer)  # fmt: skip
+            except (ValueError, FileNotFoundError) as exc:
+                raise HTTPException(400, str(exc)) from exc
+        return InspectResponse.model_validate({"views": views})
+
+    @api.post("/speed")
+    def speed(req: SpeedRequest) -> InspectResponse:
+        from loupe.analysis import footprint, speed_view, timing
+        from loupe.models import chat
+
+        m, c = loaded()
+        causal(c)
+        prompt = chat(m, req.prompt)
+        sides = {"base": Ask.model_validate({})}
+        if req.interventions or req.adapters:
+            sides["changed"] = req
+        timings = {}
+        with lock:
+            for name, side in sides.items():
+                live(m, side, c)
+                edits = plan(m, side)
+                timings[name] = timing(m, prompt, edits, req.max_new_tokens, req.repeats)
+        return InspectResponse.model_validate(
+            {"views": [speed_view(timings, req.repeats), footprint(m)]}
+        )
 
     return api

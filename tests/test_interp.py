@@ -8,7 +8,7 @@ import torch
 
 from loupe.analysis import last_token_resid, logit_lens, patch_residual
 from loupe.core import home
-from loupe.interventions import Ablate, Steer, apply, compile, generate, parse
+from loupe.interventions import Ablate, Steer, apply, compile, generate, next_token_logprobs, parse
 from loupe.models import blocks, chat, n_layers
 from loupe.models.tiny import tiny
 from loupe.stores import list_vectors
@@ -633,6 +633,93 @@ def test_inspect_route_returns_views_under_interventions(lm) -> None:
     assert client.post("/api/playground/inspect", json=wrong).status_code == 400
     long = {"prompt": "poem " * 400}
     assert client.post("/api/playground/inspect", json=long).status_code == 400
+
+
+def test_patch_and_dose_routes_read_the_next_token(lm) -> None:
+    from fastapi.testclient import TestClient
+
+    from loupe.analysis import attribution_patch, dose_response, patch_residual
+    from loupe.server import create_app
+
+    saved = home() / "models" / "tiny-patch"
+    lm._model.save_pretrained(saved)
+    lm.tokenizer.save_pretrained(saved)
+    save_vector("dv", torch.randn(hidden(lm)) * 10, model="tiny-patch", layer=1, method="random")
+    client = TestClient(create_app(model="tiny-patch"), base_url="http://localhost")
+    pair = {"clean": "the cat is blue", "corrupt": "the dog is blue", "answer": "yes",
+            "foil": "no", "chat": False}  # fmt: skip
+    for method, fn in (("residual", patch_residual), ("attribution", attribution_patch)):
+        (view,) = client.post("/api/playground/patch", json={**pair, "method": method}).json()[
+            "views"
+        ]
+        assert view["z"] == fn(lm, pair["clean"], pair["corrupt"], "yes", "no")["z"]
+    (heads,) = client.post("/api/playground/patch", json={**pair, "method": "heads"}).json()[
+        "views"
+    ]
+    assert len(heads["z"]) == n_layers(lm) and len(heads["z"][0]) == 4
+    uneven = {**pair, "corrupt": "the big dog is blue"}
+    assert client.post("/api/playground/patch", json=uneven).status_code == 400
+    long = {**pair, "method": "residual", "clean": "cat " * 80, "corrupt": "dog " * 80}
+    assert client.post("/api/playground/patch", json=long).status_code == 400
+
+    ask = {"prompt": "the sky is", "vector": "dv", "alphas": [-2, 0, 2], "answer": "yes",
+           "foil": "no", "chat": False}  # fmt: skip
+    line, top = client.post("/api/playground/dose", json=ask).json()["views"]
+    assert line["x"] == [-2, 0, 2] and len(top["rows"]) == 3
+    assert line == dose_response(lm, "the sky is", "dv", [-2, 0, 2], "yes", "no")[0]
+    base = next_token_logprobs(lm, ["the sky is"])[0]
+    yes = lm.tokenizer.encode("yes", add_special_tokens=False)[0]
+    assert abs(line["series"]["log p('yes')"][1] - float(base[yes])) < 1e-3  # alpha 0 is the base
+    assert line["series"]["log p('yes')"][0] != line["series"]["log p('yes')"][2]
+    missing = {**ask, "vector": "nope"}
+    assert client.post("/api/playground/dose", json=missing).status_code == 400
+    deep = {**ask, "layer": 99}
+    assert client.post("/api/playground/dose", json=deep).status_code == 400
+
+
+def test_speed_route_times_base_and_changed(lm) -> None:
+    from fastapi.testclient import TestClient
+
+    from loupe.analysis import timing
+    from loupe.server import create_app
+
+    lm2 = tiny(train=[("write a poem", "roses are red and violets are blue")])
+    saved = home() / "models" / "tiny-speed"
+    lm2._model.save_pretrained(saved)  # pyright: ignore[reportCallIssue]
+    lm2.tokenizer.save_pretrained(saved)
+    save_vector("sv", torch.randn(hidden(lm2)), model="tiny-speed", layer=1, method="random")
+    t = timing(lm2, chat(lm2, "write a poem"), None, max_new_tokens=6, repeats=2)
+    assert t["tokens"] > 1 and t["ttft_s"] > 0 and t["total_s"] >= t["ttft_s"]
+    assert t["peak_mib"] is None  # tests run on CPU, where peak memory is not recorded
+    client = TestClient(create_app(model="tiny-speed"), base_url="http://localhost")
+    ask = {"prompt": "write a poem", "max_new_tokens": 6, "repeats": 1}
+    speed, size = client.post("/api/playground/speed", json=ask).json()["views"]
+    assert [r[0] for r in speed["rows"]] == ["base"] and size["title"] == "Footprint"
+    steer = [{"kind": "steer", "vector": "sv", "alpha": 1.0}]
+    changed = client.post("/api/playground/speed", json={**ask, "interventions": steer}).json()
+    assert [r[0] for r in changed["views"][0]["rows"]] == ["base", "changed"]
+
+
+def test_playground_continues_a_conversation(lm) -> None:
+    from fastapi.testclient import TestClient
+
+    from loupe.server import create_app
+
+    saved = home() / "models" / "tiny-turns"
+    lm._model.save_pretrained(saved)
+    lm.tokenizer.save_pretrained(saved)
+    client = TestClient(create_app(model="tiny-turns"), base_url="http://localhost")
+    history = [
+        {"role": "user", "content": "what is 2 + 2 ?"},
+        {"role": "assistant", "content": "4"},
+    ]
+    ask = {"prompt": "are you sure ?", "history": history, "max_new_tokens": 4}
+    got = client.post("/api/playground/generate", json=ask).text
+    prompt = chat(lm, "are you sure ?", history=history)
+    assert "are you sure" in prompt and prompt.index("2 + 2") < prompt.index("are you sure")
+    assert got.strip() == generate(lm, [prompt], max_new_tokens=4)[0].strip()
+    bad = {**ask, "history": [{"role": "system", "content": "x"}]}
+    assert client.post("/api/playground/generate", json=bad).status_code == 422
 
 
 def test_steering_sweep_logs_a_grid_whose_zero_cell_costs_nothing(lm) -> None:

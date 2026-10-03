@@ -146,6 +146,21 @@ class LineView(BaseModel):
     note: str | None = None
 
 
+class ScatterPoint(BaseModel):
+    label: str
+    x: float
+    y: float
+
+
+class ScatterView(BaseModel):
+    kind: Literal["scatter"]
+    title: str
+    points: list[ScatterPoint]
+    x_label: str
+    y_label: str
+    note: str | None = None
+
+
 class TableView(BaseModel):
     kind: Literal["table"]
     title: str
@@ -171,7 +186,9 @@ class TokensView(BaseModel):
     note: str | None = None
 
 
-View = Annotated[HeatmapView | LineView | TableView | TokensView, Field(discriminator="kind")]
+View = Annotated[
+    HeatmapView | LineView | ScatterView | TableView | TokensView, Field(discriminator="kind")
+]
 
 
 class Histogram(BaseModel):

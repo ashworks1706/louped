@@ -11,7 +11,8 @@ samples both scored, so "beats the baseline beyond seed and sample variance" is 
 With `held`, a second score that must not move (correctness while a behaviour changes), each
 condition gets a verdict: moved (the metric's interval excludes zero), held (the held score's
 interval includes zero or is above it), or both. Each of `extra`, such as latency/mean
-(loupe.inspect_ext.inference), is read from the same runs and drawn as its own figure.
+(loupe.inspect_ext.inference), is read from the same runs and drawn as its own figure, and as a
+scatter of the metric against it, so a change's cost is read beside what it buys.
 """
 
 from __future__ import annotations
@@ -24,7 +25,7 @@ from inspect_ai import Task, eval
 from inspect_ai.log import EvalLog
 from inspect_ai.model import Model, get_model
 
-from loupe.analysis import heatmap, table
+from loupe.analysis import heatmap, scatter, table
 from loupe.core import logs_dir
 from loupe.stores.compare import interval
 from loupe.tracking import log_json, start_run
@@ -74,7 +75,9 @@ def grid(
                                        [f"experiment:{experiment}", f"grid:{grid_id}"],
                                        extra or [])  # fmt: skip
         views = _views(per, names, list(tasks), base, metric, held)
-        views[-1:-1] = [_extra(name, per, names, list(tasks), base) for name in extra or []]
+        for name in extra or []:
+            views[-1:-1] = [_extra(name, per, names, list(tasks), base),
+                            _tradeoff(name, per, names, list(tasks), metric)]  # fmt: skip
         for k, view in enumerate(views):
             log_json(view, f"views/{k:02d}-grid.json")
     return f"m-{run.info.run_id}"
@@ -208,6 +211,17 @@ def _extra(
               for r, e in zip(mean, delta, strict=True)]  # fmt: skip
     return heatmap(name, mean, cols, names, "task", "condition", labels=labels,
                    note=f"mean (difference against {base})")  # fmt: skip
+
+
+def _tradeoff(
+    name: str, per: dict[tuple[str, str], Cell], names: list[str], cols: list[str], metric: str
+) -> dict[str, Any]:
+    """metric against an extra, one point per condition and task: what a change costs for what it
+    buys."""
+    points = [(c if len(cols) == 1 else f"{c} · {t}", _mean(per[c, t][3][name]),
+               _mean(per[c, t][0])) for c in names for t in cols]  # fmt: skip
+    return scatter(f"{metric} against {name}", points, name, metric,
+                   note="means over seeds and samples")  # fmt: skip
 
 
 def endpoint(

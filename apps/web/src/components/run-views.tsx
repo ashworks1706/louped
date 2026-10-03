@@ -6,10 +6,13 @@ import Link from "next/link";
 import { Fragment, useRef, useState } from "react";
 import {
   CartesianGrid,
+  LabelList,
   Legend,
   Line,
   LineChart,
   ResponsiveContainer,
+  Scatter,
+  ScatterChart,
   Tooltip,
   XAxis,
   YAxis,
@@ -30,6 +33,7 @@ import {
   q,
   type HeatmapView,
   type LineView,
+  type ScatterView,
   type TableView,
   type TokensView,
   type View,
@@ -65,6 +69,7 @@ export function Figure({ view }: { view: View }) {
       <div className="p-4">
         {view.kind === "line" && <LineFigure view={view} />}
         {view.kind === "heatmap" && <HeatmapFigure view={view} />}
+        {view.kind === "scatter" && <ScatterFigure view={view} />}
         {view.kind === "table" && <TableFigure view={view} />}
         {view.kind === "tokens" && <TokensFigure view={view} />}
       </div>
@@ -123,6 +128,53 @@ function LineFigure({ view }: { view: LineView }) {
             />
           ))}
         </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+/** One labelled point per condition: what it buys (y) against what it costs (x). */
+function ScatterFigure({ view }: { view: ScatterView }) {
+  const axis = { fontSize: 11, fill: "var(--muted-foreground)" };
+  return (
+    <div className="h-72">
+      <ResponsiveContainer width="100%" height="100%">
+        <ScatterChart margin={{ top: 16, right: 24, bottom: 16, left: 0 }}>
+          <CartesianGrid stroke="var(--border)" />
+          <XAxis
+            type="number"
+            dataKey="x"
+            name={view.x_label}
+            domain={["auto", "auto"]}
+            tick={axis}
+            tickLine={false}
+            axisLine={false}
+            label={{ value: view.x_label, position: "insideBottom", offset: -12, ...axis }}
+          />
+          <YAxis
+            type="number"
+            dataKey="y"
+            name={view.y_label}
+            domain={["auto", "auto"]}
+            tick={axis}
+            tickLine={false}
+            axisLine={false}
+            width={56}
+            label={{ value: view.y_label, angle: -90, position: "insideLeft", ...axis }}
+          />
+          <Tooltip
+            contentStyle={TOOLTIP_STYLE}
+            cursor={{ stroke: "var(--border)" }}
+            formatter={(v) => (typeof v === "number" ? v.toPrecision(4) : String(v))}
+          />
+          <Scatter data={view.points} fill="var(--foreground)" isAnimationActive={false}>
+            <LabelList
+              dataKey="label"
+              position="top"
+              style={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+            />
+          </Scatter>
+        </ScatterChart>
       </ResponsiveContainer>
     </div>
   );

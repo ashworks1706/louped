@@ -28,8 +28,11 @@ export function ScoreCell({ value }: { value: number | null | undefined }) {
   return <span className="font-mono tabular-nums">{num(value)}</span>;
 }
 
-export function Delta({ value }: { value: number }) {
-  const tone = value > 0 ? "text-positive" : value < 0 ? "text-negative" : "text-muted-foreground";
+/** B minus A, toned by whether it is an improvement: for a cost (lowerBetter), a fall is. */
+export function Delta({ value, lowerBetter = false }: { value: number; lowerBetter?: boolean }) {
+  const better = lowerBetter ? -value : value;
+  const tone =
+    better > 0 ? "text-positive" : better < 0 ? "text-negative" : "text-muted-foreground";
   return (
     <span className={cn("font-mono tabular-nums", tone)}>
       {value > 0 ? "+" : ""}

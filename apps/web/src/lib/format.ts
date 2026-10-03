@@ -12,6 +12,17 @@ export function headline(metrics: Record<string, number>): [string, number, numb
     .map(([k, v]) => [k, v, stderr(metrics, k)]);
 }
 
+/** Cost scores from loupe's inference scorers, where a rise is worse: latency, time to first
+ * token, peak memory. Throughput and every quality score read the usual way. */
+export function lowerIsBetter(key: string): boolean {
+  return /^(latency|time_to_first_token|peak_memory)(\/|$)/.test(key);
+}
+
+/** Inference scorers, cost or throughput, read as ratios (a speed-up) as well as differences. */
+export function isEfficiency(key: string): boolean {
+  return lowerIsBetter(key) || /^tokens_per_second(\/|$)/.test(key);
+}
+
 export function num(v: number | null | undefined, digits = 3): string {
   if (v === null || v === undefined || Number.isNaN(v)) return "—";
   if (Number.isInteger(v)) return v.toString();

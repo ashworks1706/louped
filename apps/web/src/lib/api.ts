@@ -17,6 +17,7 @@ type RunView = Schemas["RunView"];
 export type HeatmapView = Schemas["HeatmapView"];
 export type LineView = Schemas["LineView"];
 export type TableView = Schemas["TableView"];
+export type ScatterView = Schemas["ScatterView"];
 export type TokensView = Schemas["TokensView"];
 export type View = RunView["view"];
 export type Direction = Schemas["Direction"];
@@ -84,6 +85,11 @@ export async function generate(
 }
 
 export const inspect = (req: InspectRequest) => post<InspectResponse>("/playground/inspect", req);
+export const patch = (req: Schemas["PatchRequest"]) =>
+  post<InspectResponse>("/playground/patch", req);
+export const dose = (req: Schemas["DoseRequest"]) => post<InspectResponse>("/playground/dose", req);
+export const speed = (req: Schemas["SpeedRequest"]) =>
+  post<InspectResponse>("/playground/speed", req);
 
 export const health = (signal?: AbortSignal) => get<Health>("/health", signal);
 

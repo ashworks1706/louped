@@ -112,8 +112,11 @@ core                                     run metadata, paths
 
 `apps/web` is a static Next.js export that `loupe serve` serves next to the API; there is no Node
 server in production. The server owns no database and no auth; every route reads what another tool
-wrote. Three things compute: the Playground (generate, which streams, and inspect, which returns a
-prompt's views), launching jobs, and loading a model into the Playground. A job is an existing
+wrote. Three things compute: the Playground (generate, which streams and continues a conversation
+for a follow-up; inspect, which returns a prompt's views; patch, residual or head patching between a
+clean and a corrupt prompt; dose, a saved direction swept over strengths at the next token; speed,
+time to first token, decode throughput and peak memory, base and changed), launching jobs, and
+loading a model into the Playground. A job is an existing
 command (an experiment script, `loupe train`, `loupe features`, `inspect eval`) in a subprocess,
 one at a time, its output under `<home>/jobs`; each form is read from the command's own argument
 parser. Launching and loading run code on this machine, so both are on only for a loopback server,
