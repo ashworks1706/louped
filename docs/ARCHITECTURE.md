@@ -70,7 +70,8 @@ Nothing in `src/loupe` knows about any one system: a system you study comes in a
 OpenAI-compatible endpoint (`loupe.grid.endpoint`), an agent endpoint that reports the tools it ran
 in a `trace` field on its reply (the `agent/` provider), its regression cases as JSONL
 (`loupe.inspect_ext.cases`) or its logged model calls, and its specifics stay in an experiment's
-options. The domains and their experiments are listed in `apps/site/content/docs/domains.mdx`.
+options. The domains and their experiments are listed in `apps/site/content/docs/domains.mdx`; what
+goes in an experiment's folder, and how the app finds it, in `apps/site/content/docs/experiments.mdx`.
 
 ## Packages and layers
 
@@ -131,8 +132,7 @@ then one sidebar per research domain. Behavior: Overview, Probe (reply, inspect,
 Vectors, Circuits, Feature. Efficiency: Overview, Benchmark (speed, reply), Training. Probe and
 Benchmark are one playground with different tools. Every technical term has a ? from
 `apps/web/src/lib/glossary.ts`.
-Design rules are in `apps/web/AGENTS.md`. `apps/site` is the docs site; `deploy/app` is the
-read-only public demo.
+Design rules are in `apps/web/AGENTS.md`. `apps/site` is the docs site.
 
 ## Correctness traps the code must test
 

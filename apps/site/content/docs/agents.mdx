@@ -20,6 +20,10 @@ Then register the server with the agent. In this repository `.mcp.json` already 
 
 `--url` points it at a server other than `http://127.0.0.1:8000`.
 
+A new question is `launch` with id `new`; the agent then writes the folder's files as
+[Writing an experiment](/docs/experiments) describes, launches `script:<name>/run.py` and reads
+the runs back.
+
 | Tools                                                | What they do                                     |
 | ---------------------------------------------------- | ------------------------------------------------ |
 | `status`, `experiments`, `experiment`, `runs`, `run` | the questions and their runs                     |

@@ -38,42 +38,17 @@ agent endpoint or logged model calls.
 
 | Axis | Domain | Experiments |
 |---|---|---|
-| Behavior & alignment | Mechanisms | `refusal-direction`, `refusal-finetuning`, `interp-toolkit`, `attention-heads` |
-| | Sycophancy and honesty | `sycophancy-pushback`, `answer-or-decline` |
-| | Steering and conditioning | none yet |
-| | Agent behavior | `coding-agent`, `agent-sandbox`, `intercode-ctf` |
-| Efficiency & systems | Context and retrieval inside the model | `retrieval-injection` |
-| | Inference cost and kernels | `attention-kernels` |
-| | Small and specialised models | none yet |
-| Instrument checks | Reproducing known results | `inspect-evals-baseline` |
+| Behavior & alignment | Sycophancy and honesty | `rational-updating-baseline` (Experiment 1A) |
+| Efficiency & systems | | none yet |
 
-Instrument checks are not research questions: they show loupe reaches reported numbers, so a
-result on either axis can be trusted.
-
-## Results so far
-
-All on Qwen2.5-0.5B-Instruct (2026-09-27), so small-model results, not claims about larger ones.
-The full numbers, setup and caveats are in each experiment's README.
-
-- **Refusal is one direction** (`refusal-direction`). At layer 13; ablated, harmful refusal goes
-  from 73% to 0%, paired difference -0.40 [-0.47, -0.34] over 200 prompts. Added, harmless refusal
-  goes from 9% to 98%.
-- **Fine-tuning to comply suppresses that direction rather than routing around it**
-  (`refusal-finetuning`). The projection on it falls from 5.0 to about 1.0 as refusal reaches 0.
-- **Retrieved state injected at one mid layer carries nothing** (`retrieval-injection`, active).
-  Closed book F1 0.01, passages in the prompt 0.46, injected at layer 12 0.00. Which layer, if any,
-  carries them is the open question.
-- **Faster attention kernels agree with eager; approximate ones do not** (`attention-kernels`).
-  sdpa and flex_attention: KL 0.008 from eager; a sliding window of 8: KL 3.56.
-
-Open, in the [roadmap](docs/ROADMAP.md): the layer sweep for retrieval inside the model, a caving
-direction for sycophancy on a 1.5B to 3B model, and the instrument checks on full splits.
+Every domain is listed in [the docs](apps/site/content/docs/domains.mdx).
 
 ## A new question
 
-Press New on the Experiments page. It writes `experiments/my-question/README.md` with the
-research-note template and a `run.py` that logs to Inspect and MLflow, so the run appears in the app and Launch gets a form for its
-options. Domains are listed in [the docs](apps/site/content/docs/domains.mdx).
+Press New on the Experiments page (or `loupe new my-question --domain honesty`). It writes
+`experiments/my-question/` with the research-note README and a `run.py` whose options become a
+form on Launch and whose runs file under the experiment. What goes where is in
+[Writing an experiment](apps/site/content/docs/experiments.mdx).
 
 ## From a coding agent
 

@@ -32,7 +32,6 @@ Do not contradict them; propose an edit to the doc instead.
 just bootstrap          first run: dependencies and git hooks
 just check              the gate: Python (ruff, pyright, import-linter, pytest), web and site builds
 just test-e2e           Playwright on the built UI; screenshots land in apps/web/test-results
-just examples           the worked examples end to end on tiny offline models; CI runs it
 just fmt                format everything
 just serve              API and UI on :8000 (builds the UI first if needed)
 just web                UI dev server on :3000
@@ -62,9 +61,24 @@ src/loupe/        the package (distribution loupelab); layers in docs/ARCHITECTU
 apps/web/         the UI; its AGENTS.md holds the design rules
 apps/site/        the docs site
 experiments/      one folder per research question, filed by domain; nothing imports it
-deploy/app/       the read-only public demo
 tests/            Python tests, CPU only
 ```
+
+## Where a change goes
+
+| To add                     | Write                                                                    |
+| -------------------------- | ------------------------------------------------------------------------ |
+| A research question        | `loupe new <name> --domain <domain>`, then its README and `run.py`        |
+| An eval                    | Inspect `@task`s in `experiments/<name>/task.py`                           |
+| A figure                   | a view from `loupe.analysis.views`, logged with `log_json` under `views/` |
+| A number                   | `mlflow.log_metrics` inside `loupe.tracking.start_run`                    |
+| A training run or a grid   | `experiments/<name>/*.yaml` starting `# loupe train <recipe>` or `# loupe grid` |
+| A paper's own harness      | a pinned clone under `.loupe/vendor/`, run in its own venv (see `rational-updating-baseline`) |
+| A domain                   | "Adding a domain" in `apps/site/content/docs/domains.mdx`                 |
+| A view kind the UI lacks   | `loupe.analysis.views`, `View` in `stores/types.py`, a renderer in `apps/web/src/components/run-views.tsx`, `just api-types` |
+
+The app finds each of these by convention: no registration. `apps/site/content/docs/experiments.mdx`
+has the details.
 
 nnsight traces the source of the block it runs: keep trace bodies in files, use explicit loops
 (not comprehensions) inside them, and touch modules in execution order. The UI talks to the server

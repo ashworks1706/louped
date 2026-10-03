@@ -17,11 +17,15 @@ description: Start a research experiment in loupe. Use when the user wants to te
    - **Test**: the conditions compared, the metric and seeds. Name correctness and behaviour
      metrics separately; never average them.
    - **Stop if**: the result that would weaken the idea.
-4. Write `run.py` using existing tools first (nnsight, Inspect, TRL) and `loupe` where it has the
-   piece. Write results under `.loupe/`, with `loupe.core.capture(seed=...).write(...)` next to them.
-5. Pin what moves numbers: model revision, seed, greedy decoding unless sampling is the point.
-6. If you write something a previous experiment also wrote, stop and move it into `src/loupe`
+4. Fill in the scaffolded `run.py` using existing tools first (nnsight, Inspect, TRL) and `loupe`
+   where it has the piece. Its `Args` fields are the Launch form; numbers go to MLflow inside
+   `start_run`, figures are views under `views/`, evals are Inspect tasks in `task.py`
+   (`apps/site/content/docs/experiments.mdx`). A paper's harness with its own pins runs in its own
+   environment, as `rational-updating-baseline/run.py` does.
+5. Launch it from the app, or through `loupe mcp` (`launch`, then `job`), so the run shows there.
+6. Pin what moves numbers: model revision, seed, greedy decoding unless sampling is the point.
+7. If you write something a previous experiment also wrote, stop and move it into `src/loupe`
    instead (with a test), then use it from both.
-7. Put the result in **Result** (its first paragraph is what the Experiments page shows: model,
+8. Put the result in **Result** (its first paragraph is what the Experiments page shows: model,
    date, the numbers) and the decision it leads to in **Next**. When a real model's result answers
    the question, set `status: answered`.

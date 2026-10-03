@@ -68,7 +68,7 @@ class New:
     """Start a research question: experiments/<name>/ with its README to fill in, active."""
 
     name: tyro.conf.Positional[str]
-    """Named for the question, lowercase with dashes: sycophancy-pushback."""
+    """Named for the question, lowercase with dashes: rational-updating-baseline."""
     domain: Domain
     """The domain it is filed under on the Experiments page."""
 
