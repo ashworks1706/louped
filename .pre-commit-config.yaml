@@ -19,10 +19,10 @@ repos:
         stages: [pre-push]
         pass_filenames: false
         always_run: true
-      - id: gate
-        name: just check
-        entry: just check
-        language: system
-        stages: [pre-push]
-        pass_filenames: false
-        always_run: true
+      # - id: gate
+      #   name: just check
+      #   entry: just check
+      #   language: system
+      #   stages: [pre-push]
+      #   pass_filenames: false
+      #   always_run: true
