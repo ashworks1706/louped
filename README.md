@@ -40,12 +40,12 @@ agent endpoint or logged model calls.
 |---|---|---|
 | Behavior & alignment | Mechanisms | `refusal-direction`, `refusal-finetuning`, `interp-toolkit`, `attention-heads` |
 | | Sycophancy and honesty | `sycophancy-pushback`, `answer-or-decline` |
-| | Steering and conditioning | `prompt-conditioning`, `conditioning-methods` |
-| | Agent behavior | `coding-agent`, `agent-sandbox`, `intercode-ctf`, `regression-cases`, `tool-rl` |
+| | Steering and conditioning | none yet |
+| | Agent behavior | `coding-agent`, `agent-sandbox`, `intercode-ctf` |
 | Efficiency & systems | Context and retrieval inside the model | `retrieval-injection` |
 | | Inference cost and kernels | `attention-kernels` |
-| | Small and specialised models | `diffusion-adapters`, `sft-from-traces` |
-| Instrument checks | Reproducing known results | `inspect-evals-baseline`, `benchmarks`, `gsm8k-grpo` |
+| | Small and specialised models | none yet |
+| Instrument checks | Reproducing known results | `inspect-evals-baseline` |
 
 Instrument checks are not research questions: they show loupe reaches reported numbers, so a
 result on either axis can be trusted.
