@@ -1,13 +1,15 @@
 "use client";
 
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery } from "@tanstack/react-query";
 import { MetricName, Term } from "@/components/term";
 import { ArrowLeftRight, GitCompareArrows } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { parseAsBoolean, parseAsString, useQueryState, useQueryStates } from "nuqs";
 import { useMemo } from "react";
 
 import { EmptyState } from "@/components/empty-state";
+import { Help } from "@/components/help";
 import { Delta, MetricValue, ScoreCell } from "@/components/metric";
 import { QueryState } from "@/components/query-state";
 import { runHref } from "@/lib/href";
@@ -23,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { q, type RunDetail, type SampleSummary } from "@/lib/api";
+import { launch, q, type RunDetail, type SampleSummary } from "@/lib/api";
 import { ago, headline, isEfficiency, lowerIsBetter, num, stderr } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -135,6 +137,7 @@ function Loaded({ a, b }: { a: string; b: string }) {
           <Metrics a={ra.data} b={rb.data} />
           {ra.data.kind === "eval" && rb.data.kind === "eval" && (
             <>
+              <Judge a={a} b={b} />
               <Paired a={a} b={b} />
               <Samples a={ra.data} b={rb.data} />
             </>
@@ -171,6 +174,28 @@ function Heads({ a, b }: { a: RunDetail; b: RunDetail }) {
           </Link>
         );
       })}
+    </div>
+  );
+}
+
+/** Queue a local model judging B against A sample by sample; its run lands beside them. */
+function Judge({ a, b }: { a: string; b: string }) {
+  const router = useRouter();
+  const go = useMutation({
+    mutationFn: () => launch({ id: "judge", options: { a, b } }),
+    onSuccess: (job) => router.push(`/launch/?id=judge&job=${encodeURIComponent(job.id)}`),
+  });
+  return (
+    <div className="-mt-4 flex items-center justify-end gap-2">
+      {go.error && <span className="text-negative text-xs">{go.error.message}</span>}
+      <Button size="sm" variant="outline" disabled={go.isPending} onClick={() => go.mutate()}>
+        Judge
+      </Button>
+      <Help label="What does Judge do?">
+        A local model reads both runs&apos; answers to each sample, twice with the order swapped,
+        and picks the better one. The result is a run with B&apos;s win rate. Pick the judge model
+        on Launch.
+      </Help>
     </div>
   );
 }

@@ -81,10 +81,12 @@ in `pyproject.toml`.
 ```
 experiments                              leaf, nothing imports it
 cli
-server                                   FastAPI over the stores; Playground; launching jobs
-train | sweep | grid | features | circuits
+server | agent                           FastAPI over the stores; Playground; launching jobs; the
+                                         MCP server, an HTTP client of the API
+train | sweep | grid | features | circuits | judge | bench
                                          training recipes and sweeps; steering sweeps; condition
-                                         grids; SAE dashboards; attribution graphs
+                                         grids; SAE dashboards; attribution graphs; pairwise judging;
+                                         serving cost
 stores | tracking | analysis | inspect_ext
                                          read Inspect logs and MLflow; start a run; lens, patching,
                                          probes, attention, SAE features as views; the loupe/
@@ -121,6 +123,10 @@ loading a model into the Playground. A job is an existing command (an experiment
 a time, its output under `<home>/jobs`; or exported (server/remote.py) as a bundle whose job.sh
 runs it on Sol, a Slurm cluster or a VM, and whose result archive is imported back into the stores; each form is read from the command's own argument parser. Launching and loading run code on this machine, so both are on only for a loopback server,
 never with `--expose`.
+
+`loupe mcp` is a stdio MCP server for coding agents. It imports nothing from the server: it calls
+the same HTTP API the UI does, so an agent's jobs share the queue and the `--expose` guard, and show
+on the Launch page.
 
 Pages: the workspace (Home, Experiments, Runs, Compare, Launch, with Run and Experiment detail),
 then one sidebar per research domain. Behavior: Overview, Probe (reply, inspect, patch, dose),

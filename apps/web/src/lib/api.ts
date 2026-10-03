@@ -38,6 +38,8 @@ export type ExportRequest = LaunchRequest & {
   target: Partial<Target> & Pick<Target, "provider">;
 };
 export type Imported = Schemas["Imported"];
+export type Agreement = Schemas["Agreement"];
+export type Label = "a" | "b" | "tie";
 type JobDetail = Schemas["JobDetail"];
 
 export class ApiError extends Error {
@@ -124,6 +126,11 @@ export async function importResult(file: File): Promise<Imported> {
   if (!res.ok) throw new ApiError(res.status, await detail(res, "/launch/import"));
   return res.json() as Promise<Imported>;
 }
+export const setLabel = (run: string, sample: string, label: Label | null) =>
+  post<Record<string, Label>>(
+    `/runs/${encodeURIComponent(run)}/labels/${encodeURIComponent(sample)}`,
+    { label },
+  );
 export const loadModel = (req: Schemas["LoadRequest"]) =>
   post<PlaygroundInfo>("/playground/load", req);
 export const cancelJob = (id: string) =>
@@ -164,6 +171,14 @@ export const q = {
       get<SampleDetail>(
         `/runs/${encodeURIComponent(id)}/samples/${encodeURIComponent(sample)}?epoch=${epoch}`,
       ),
+  }),
+  labels: (id: string) => ({
+    queryKey: ["labels", id],
+    queryFn: () => get<Record<string, Label>>(`/runs/${encodeURIComponent(id)}/labels`),
+  }),
+  agreement: (id: string) => ({
+    queryKey: ["agreement", id],
+    queryFn: () => get<Agreement>(`/runs/${encodeURIComponent(id)}/agreement`),
   }),
   views: (id: string, live = false) => ({
     queryKey: ["views", id],

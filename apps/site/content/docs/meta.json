@@ -13,6 +13,7 @@
     "models",
     "cli",
     "remote",
+    "agents",
     "self-host"
   ]
 }

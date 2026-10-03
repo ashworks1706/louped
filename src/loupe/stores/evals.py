@@ -124,6 +124,11 @@ def _find(run_id: str) -> tuple[Path, EvalLog] | None:
     return next(((p, log) for p, log in _logs() if log.eval.eval_id == eval_id), None)
 
 
+def log_of(run_id: str) -> tuple[Path, EvalLog] | None:
+    """An eval run's log file and header, None for a run that is not an Inspect eval."""
+    return _find(run_id) if run_id.startswith(PREFIX) else None
+
+
 def log_mtime(run_id: str) -> float | None:
     """When the run's log last changed, None for an unknown run: a cache key for derived results."""
     found = _find(run_id)

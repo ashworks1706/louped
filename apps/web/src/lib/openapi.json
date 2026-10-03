@@ -365,6 +365,152 @@
         }
       }
     },
+    "/api/runs/{run_id}/labels": {
+      "get": {
+        "summary": "Labels",
+        "operationId": "labels_api_runs__run_id__labels_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "enum": ["a", "b", "tie"],
+                    "type": "string"
+                  },
+                  "title": "Response Labels Api Runs  Run Id  Labels Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/labels/{sample_id}": {
+      "post": {
+        "summary": "Label",
+        "operationId": "label_api_runs__run_id__labels__sample_id__post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "sample_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sample Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabelRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "enum": ["a", "b", "tie"],
+                    "type": "string"
+                  },
+                  "title": "Response Label Api Runs  Run Id  Labels  Sample Id  Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/agreement": {
+      "get": {
+        "summary": "Agreement",
+        "operationId": "agreement_api_runs__run_id__agreement_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Agreement"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/compare": {
       "get": {
         "summary": "Compare",
@@ -1061,6 +1207,48 @@
   },
   "components": {
     "schemas": {
+      "Agreement": {
+        "properties": {
+          "labelled": {
+            "type": "integer",
+            "title": "Labelled",
+            "description": "Pairs the person labelled."
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Pairs the judge judged."
+          },
+          "agreement": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agreement",
+            "description": "Share of labelled pairs with the same pick."
+          },
+          "kappa": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kappa",
+            "description": "Cohen's kappa: agreement beyond chance."
+          }
+        },
+        "type": "object",
+        "required": ["labelled", "total", "agreement", "kappa"],
+        "title": "Agreement",
+        "description": "A judge run's agreement with a person's labels on its pairs."
+      },
       "Artifact": {
         "properties": {
           "path": {
@@ -2133,6 +2321,25 @@
         "type": "object",
         "required": ["id", "title", "argv", "log"],
         "title": "JobDetail"
+      },
+      "LabelRequest": {
+        "properties": {
+          "label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["a", "b", "tie"]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": ["label"],
+        "title": "LabelRequest"
       },
       "LaunchRequest": {
         "properties": {

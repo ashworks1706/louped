@@ -22,4 +22,14 @@ Every command takes `--help`, and each is also a form on the app's Launch page. 
   from logged model calls or a teacher, and contamination checks.
 - `loupe import <file>`: a result from a job exported to Sol, a cluster or a VM
   ([Run elsewhere](/docs/remote)).
+- `loupe bench <model>`: what serving costs on this machine, per weight format (`--quants none
+int8 int4`): throughput and latency as requests arrive together, prefill time and memory as the
+  prompt grows; speculative decoding (prompt lookup, and `--draft` a small model of the same
+  family) with its speed-up and a check that the reply is unchanged; and a torch.profiler table of
+  where the time goes, with a trace for Perfetto.
+- `loupe judge <a> <b>`: a local model reads two eval runs' answers to each sample, twice with the
+  order swapped, and picks the better one. B's win rate is an eval run of its own; Compare has a
+  Judge button for it. Pick the better answer on a few pairs yourself and the run shows how
+  often the judge agrees with you, with Cohen's kappa.
+- `loupe mcp`: an MCP server over a running `loupe serve`, for [coding agents](/docs/agents).
 - `loupe version`: the installed version.

@@ -15,6 +15,7 @@ from loupe.inspect_ext.inference import (
     time_to_first_token,
     tokens_per_second,
 )
+from loupe.inspect_ext.judge import pairwise
 from loupe.inspect_ext.scorers import (
     as_scorer,
     called,
@@ -36,6 +37,7 @@ __all__ = [
     "held",
     "is_refusal",
     "latency",
+    "pairwise",
     "peak_memory",
     "push_back",
     "pushback",

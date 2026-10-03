@@ -254,6 +254,15 @@ class PairedScore(BaseModel):
     down: int
 
 
+class Agreement(BaseModel):
+    """A judge run's agreement with a person's labels on its pairs."""
+
+    labelled: int = Field(description="Pairs the person labelled.")
+    total: int = Field(description="Pairs the judge judged.")
+    agreement: float | None = Field(description="Share of labelled pairs with the same pick.")
+    kappa: float | None = Field(description="Cohen's kappa: agreement beyond chance.")
+
+
 class Comparison(BaseModel):
     a: str
     b: str

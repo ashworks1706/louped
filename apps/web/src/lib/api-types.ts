@@ -157,6 +157,57 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/runs/{run_id}/labels": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Labels */
+    get: operations["labels_api_runs__run_id__labels_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/runs/{run_id}/labels/{sample_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Label */
+    post: operations["label_api_runs__run_id__labels__sample_id__post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/runs/{run_id}/agreement": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Agreement */
+    get: operations["agreement_api_runs__run_id__agreement_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/compare": {
     parameters: {
       query?: never;
@@ -506,6 +557,32 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /**
+     * Agreement
+     * @description A judge run's agreement with a person's labels on its pairs.
+     */
+    Agreement: {
+      /**
+       * Labelled
+       * @description Pairs the person labelled.
+       */
+      labelled: number;
+      /**
+       * Total
+       * @description Pairs the judge judged.
+       */
+      total: number;
+      /**
+       * Agreement
+       * @description Share of labelled pairs with the same pick.
+       */
+      agreement: number | null;
+      /**
+       * Kappa
+       * @description Cohen's kappa: agreement beyond chance.
+       */
+      kappa: number | null;
+    };
     /** Artifact */
     Artifact: {
       /** Path */
@@ -937,6 +1014,11 @@ export interface components {
       exit_code?: number | null;
       /** Log */
       log: string;
+    };
+    /** LabelRequest */
+    LabelRequest: {
+      /** Label */
+      label: ("a" | "b" | "tie") | null;
     };
     /** LaunchRequest */
     LaunchRequest: {
@@ -1775,6 +1857,108 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["FeatureDashboard"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  labels_api_runs__run_id__labels_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: "a" | "b" | "tie";
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  label_api_runs__run_id__labels__sample_id__post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: string;
+        sample_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LabelRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: "a" | "b" | "tie";
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  agreement_api_runs__run_id__agreement_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Agreement"];
         };
       };
       /** @description Validation Error */
