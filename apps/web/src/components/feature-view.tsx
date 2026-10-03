@@ -25,7 +25,7 @@ export function FeatureView() {
         <EmptyState
           icon={Sparkles}
           title="No feature selected"
-          body="Feature dashboards come from a loupe features run; open one of its features from its run."
+          body="Open a feature from a features run."
           action={{ href: "/launch/?id=features", label: "Launch loupe features" }}
         />
       </section>

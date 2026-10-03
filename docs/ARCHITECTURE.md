@@ -121,8 +121,11 @@ loading a model into the Playground. A job is an existing command (an experiment
 a time, its output under `<home>/jobs`; each form is read from the command's own argument parser. Launching and loading run code on this machine, so both are on only for a loopback server,
 never with `--expose`.
 
-Pages: Home (the active questions and latest runs), Experiments (every question by axis, domain
-and status), Launch, Runs, Run, Feature, Compare, Vectors, Circuits, Playground.
+Pages: the workspace (Home, Experiments, Runs, Compare, Launch, with Run and Experiment detail),
+then one sidebar per research domain. Behavior: Overview, Probe (reply, inspect, patch, dose),
+Vectors, Circuits, Feature. Efficiency: Overview, Benchmark (speed, reply), Training. Probe and
+Benchmark are one playground with different tools. Every technical term has a ? from
+`apps/web/src/lib/glossary.ts`.
 Design rules are in `apps/web/AGENTS.md`. `apps/site` is the docs site; `deploy/app` is the
 read-only public demo.
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { MetricName } from "@/components/term";
 import { ArrowLeft, ListTree } from "lucide-react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
@@ -18,7 +19,7 @@ import { SamplesTable } from "@/components/samples-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { API, isLive, q, type RunDetail } from "@/lib/api";
-import { ago, headline, metricLabel } from "@/lib/format";
+import { ago, headline } from "@/lib/format";
 import { experimentHref } from "@/lib/href";
 
 export function RunView() {
@@ -174,7 +175,7 @@ function Overview({ run }: { run: RunDetail }) {
         <StatGrid>
           {metrics.map(([key, value, err]) => (
             <div key={key} className="flex flex-col gap-1 p-4">
-              <span className="text-muted-foreground text-xs">{metricLabel(key)}</span>
+              <MetricName k={key} className="text-muted-foreground text-xs" />
               <MetricValue value={value} err={err} className="text-2xl font-medium" />
             </div>
           ))}

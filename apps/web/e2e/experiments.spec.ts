@@ -57,12 +57,8 @@ for (const scheme of ["dark", "light"] as const) {
     await page.emulateMedia({ colorScheme: scheme });
     await mockApi(page);
     await page.goto("/experiments/");
-    await expect(
-      page.getByRole("heading", { level: 2, name: "Behavior & alignment" }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("heading", { level: 2, name: "Efficiency & systems" }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "Behavior" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "Efficiency" })).toBeVisible();
     await expect(page.getByText("2 more runs")).toBeVisible();
     await page.screenshot({ path: info.outputPath(`experiments-${scheme}.png`), fullPage: true });
 
@@ -142,7 +138,7 @@ test("runs filter by kind and status, kept in the URL", async ({ page }) => {
   ];
   await page.route("**/api/runs", (r) => r.fulfill({ json: runs }));
   await page.goto("/runs/");
-  await page.getByLabel("Kind").selectOption("eval");
+  await page.getByLabel("Kind", { exact: true }).selectOption("eval");
   await expect(page).toHaveURL(/kind=eval/);
   await expect(page.getByRole("link", { name: "sweep" })).toHaveCount(0);
   await page.getByLabel("Status").selectOption("failed");

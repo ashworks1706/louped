@@ -8,7 +8,11 @@ const PAGES = [
   ["/compare/", "Compare"],
   ["/vectors/", "Vectors"],
   ["/circuits/", "Circuits"],
-  ["/playground/", "Playground"],
+  ["/playground/", "Probe"],
+  ["/behavior/", "Behavior"],
+  ["/efficiency/", "Efficiency"],
+  ["/benchmark/", "Benchmark"],
+  ["/training/", "Training"],
 ] as const;
 
 for (const [path, title] of PAGES) {
@@ -63,4 +67,58 @@ test("an empty page links to what fills it in the app, not a terminal", async ({
   await page.goto("/experiments/");
   await expect(page.getByRole("link", { name: "New experiment" }).last()).toBeVisible();
   await expect(page.locator("code")).toHaveCount(0);
+});
+
+test("each domain has its own sidebar, entered from the workspace", async ({ page, isMobile }) => {
+  const nav = async () => {
+    if (isMobile) await page.getByRole("button", { name: "Menu" }).click();
+    return page.getByRole("navigation", { name: "Main" });
+  };
+  await page.goto("/");
+  await (await nav()).getByRole("link", { name: "Behavior" }).click();
+  await expect(page).toHaveURL(/\/behavior\/$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Behavior" })).toBeVisible();
+  let sidebar = await nav();
+  await expect(sidebar.getByRole("link", { name: "Runs" })).toHaveCount(0);
+  await sidebar.getByRole("link", { name: "Vectors" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Vectors" })).toBeVisible();
+  sidebar = await nav();
+  await expect(sidebar.getByRole("link", { name: "Vectors" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await sidebar.getByRole("link", { name: "Workspace" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await (await nav()).getByRole("link", { name: "Efficiency" }).click();
+  sidebar = await nav();
+  await expect(sidebar.getByRole("link", { name: "Benchmark" })).toBeVisible();
+  await expect(sidebar.getByRole("link", { name: "Vectors" })).toHaveCount(0);
+});
+
+test("a vector says what each column means and opens Probe with it", async ({ page }) => {
+  await page.route("**/api/vectors", (r) =>
+    r.fulfill({
+      json: [
+        {
+          name: "refusal",
+          model: "tiny",
+          layer: 3,
+          method: "diff-in-means",
+          norm: 4.2,
+          dim: 8,
+          run: null,
+          notes: null,
+          created: "2026-09-27T00:00:00Z",
+        },
+      ],
+    }),
+  );
+  await page.goto("/vectors/");
+  await page.getByRole("button", { name: "What is Layer?" }).click();
+  await expect(page.getByRole("tooltip")).toContainText("Steering adds it back");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("link", { name: "Steer with refusal" })).toHaveAttribute(
+    "href",
+    "/playground/?vector=refusal&layer=3&tab=reply",
+  );
 });

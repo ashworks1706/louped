@@ -42,7 +42,7 @@ export function Launch() {
       <EmptyState
         icon={Rocket}
         title="Launching is off on this server"
-        body="It was started with --expose, so it only reads. Start one without --expose to launch from here."
+        body="This server was started with --expose, so it only reads."
         command="just serve"
       />
     );

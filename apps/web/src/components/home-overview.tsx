@@ -3,11 +3,14 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 
+import { ChevronRight } from "lucide-react";
+
 import { StatusDot } from "@/components/run-badges";
 import { Stat, StatGrid } from "@/components/stat-grid";
 import { isLive, q } from "@/lib/api";
 import { ago } from "@/lib/format";
 import { runHref } from "@/lib/href";
+import { DOMAINS, NAV } from "@/lib/nav";
 
 const WEEK_MS = 7 * 24 * 3600 * 1000;
 
@@ -120,5 +123,44 @@ export function LiveNow() {
         ))}
       </ul>
     </section>
+  );
+}
+
+/** The two research domains, each opening its own section, with how many questions it holds. */
+export function DomainCards() {
+  const experiments = useQuery(q.experiments());
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {DOMAINS.map((d) => {
+        const overview = NAV.find((n) => n.section === d.section);
+        const tools = NAV.filter((n) => n.section === d.section).slice(1);
+        const mine = (experiments.data ?? []).filter((e) => e.axis === d.section);
+        const active = mine.filter((e) => e.status === "active").length;
+        return (
+          <Link
+            key={d.section}
+            href={overview?.href ?? "/"}
+            className="hover:bg-accent/40 focus-visible:ring-ring/50 group flex flex-col gap-3 rounded-xl border p-5 transition-colors outline-none focus-visible:ring-[3px]"
+          >
+            <span className="flex items-center gap-2 font-medium">
+              <d.icon className="text-muted-foreground size-4" />
+              {d.title}
+              <ChevronRight className="text-muted-foreground group-hover:text-foreground ml-auto size-4 transition-colors" />
+            </span>
+            <span className="text-muted-foreground text-sm">{overview?.description}</span>
+            <span className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+              {experiments.data && (
+                <span>
+                  <span className="text-foreground font-mono tabular-nums">{mine.length}</span>{" "}
+                  questions ·{" "}
+                  <span className="text-foreground font-mono tabular-nums">{active}</span> active
+                </span>
+              )}
+              <span>{tools.map((t) => t.title).join(" · ")}</span>
+            </span>
+          </Link>
+        );
+      })}
+    </div>
   );
 }

@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { CopyButton } from "@/components/copy-button";
 import { EmptyState } from "@/components/empty-state";
 import { QueryState } from "@/components/query-state";
+import { Help } from "@/components/help";
 import { Figure } from "@/components/run-views";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,17 @@ import { cn } from "@/lib/utils";
 const MODES = ["steer", "ablate", "heads"] as const;
 type Mode = (typeof MODES)[number];
 const TABS = ["reply", "inspect", "patch", "dose", "speed"] as const;
+type Tab = (typeof TABS)[number];
+/** The tools of each page that hosts the playground: Probe for behavior, Benchmark for cost. */
+export const PROBE: Tab[] = ["reply", "inspect", "patch", "dose"];
+export const BENCHMARK: Tab[] = ["speed", "reply"];
+const TAB_TITLES: Record<Tab, string> = {
+  reply: "Reply",
+  inspect: "Inspect",
+  patch: "Patch",
+  dose: "Dose",
+  speed: "Speed",
+};
 const METHODS = ["attribution", "residual", "heads"] as const;
 /** What each tab does, under the prompt. */
 const HINTS: Record<(typeof TABS)[number], string> = {
@@ -49,9 +61,21 @@ const HINTS: Record<(typeof TABS)[number], string> = {
   dose: "The chosen vector at each strength, read at the next token.",
   speed: "Times this reply base and with the intervention.",
 };
+/** What each tool is for, behind the ? beside its hint. */
+const TOOL_HELP: Record<Tab, string> = {
+  reply:
+    "Compare the base model's reply with the reply under the intervention. Add a follow-up to test whether an answer holds under pushback.",
+  inspect:
+    "Look inside one forward pass. Logit lens: what each layer would predict. Projections: how much each token carries a saved vector. Attention: what each token reads from.",
+  patch:
+    "Activation patching. Run a clean and a corrupt prompt, then copy activations from one into the other. Where copying restores the answer is where the model stores the difference.",
+  dose: "Add the vector at a range of strengths and track the answer's probability. A smooth curve means the vector controls the behavior.",
+  speed:
+    "Time the reply with and without the change: time to first token, decode speed and peak memory, as the median of several runs.",
+};
 const SIDES = ["base", "intervention"] as const;
 
-export function Playground() {
+export function Playground({ tools }: { tools: Tab[] }) {
   const info = useQuery(q.playground());
   const vectors = useQuery(q.vectors());
   return (
@@ -71,11 +95,12 @@ export function Playground() {
           <EmptyState
             icon={MessageSquareText}
             title="No model loaded"
-            body="This server was started with --expose, so models are not loaded from here."
+            body="This server was started with --expose, so it only reads."
             command="just serve"
           />
         ) : (
           <Loaded
+            tools={tools}
             info={i}
             vectors={(vectors.data ?? []).filter((v) => v.model === i.model)}
             loading={vectors.isPending}
@@ -88,11 +113,13 @@ export function Playground() {
 }
 
 function Loaded({
+  tools,
   info,
   vectors,
   loading,
   error,
 }: {
+  tools: Tab[];
   info: PlaygroundInfo;
   vectors: Direction[];
   loading: boolean;
@@ -108,7 +135,7 @@ function Loaded({
     steps: parseAsInteger,
     heads: parseAsString.withDefault("0"),
     adapters: parseAsArrayOf(parseAsString).withDefault([]),
-    tab: parseAsStringLiteral(TABS).withDefault("reply"),
+    tab: parseAsStringLiteral(TABS).withDefault(tools[0]),
     side: parseAsStringLiteral(SIDES).withDefault("base"),
     follow: parseAsString.withDefault(""),
     corrupt: parseAsString.withDefault(""),
@@ -124,7 +151,8 @@ function Loaded({
   });
   const [draft, setDraft] = useState(s.prompt);
   // A diffusion model has no next token to patch, sweep or time: its tabs are Reply and Inspect.
-  const tab = info.diffusion && s.tab !== "inspect" ? "reply" : s.tab;
+  const offered = tools.filter((t) => !info.diffusion || t === "reply" || t === "inspect");
+  const tab = offered.includes(s.tab) ? s.tab : (offered[0] ?? "reply");
   const repeats = Math.max(1, Math.min(10, s.repeats));
   const layers = info.layers ?? 1;
   const vector = vectors.find((v) => v.name === s.vector) ?? vectors[0];
@@ -302,7 +330,10 @@ function Loaded({
           )}
         </Field>
         {bank.length > 0 && (
-          <Field label="Adapters">
+          <Field
+            label="Adapters"
+            help="LoRA adapters trained on this model. Ticked ones are switched on for the intervened side."
+          >
             {bank.map((a) => (
               <label key={a} className="flex items-center gap-2 font-mono text-sm">
                 <Checkbox
@@ -319,7 +350,10 @@ function Loaded({
           </Field>
         )}
         {!info.diffusion && (
-          <Field label="Intervention">
+          <Field
+            label="Intervention"
+            help="steer: add a vector. ablate: remove a vector's direction from every layer. heads: zero chosen attention heads."
+          >
             <div className="bg-muted grid grid-cols-3 gap-1 rounded-md p-1" role="radiogroup">
               {MODES.map((m) => (
                 <button
@@ -365,6 +399,7 @@ function Loaded({
         {!info.diffusion && s.mode === "steer" && (
           <Slider
             label="Strength α"
+            help="How many times the vector is added. Negative pushes away from the concept; 0 is the base model."
             value={s.alpha}
             min={-4}
             max={4}
@@ -375,6 +410,7 @@ function Loaded({
         {!info.diffusion && s.mode !== "ablate" && (
           <Slider
             label="Layer"
+            help="Where in the model the change is made. Early layers hold tokens, middle layers concepts, late layers the output."
             value={layer}
             min={0}
             max={layers - 1}
@@ -426,7 +462,10 @@ function Loaded({
           )}
         </div>
         {modelArg && (
-          <Field label="As Inspect model args">
+          <Field
+            label="As Inspect model args"
+            help="The same intervention for an eval: paste these after inspect eval to score a whole task under it."
+          >
             <div className="bg-muted/50 flex items-start gap-1 rounded-md border p-2">
               <code className="min-w-0 flex-1 font-mono text-[11px] leading-5 break-all">
                 {modelArg}
@@ -460,12 +499,13 @@ function Loaded({
             className="placeholder:text-muted-foreground resize-none bg-transparent p-4 text-sm outline-none"
           />
           <div className="flex items-center justify-between border-t px-3 py-2">
-            <span className="text-muted-foreground text-xs">
+            <span className="text-muted-foreground inline-flex items-center gap-1.5 text-xs">
               {info.diffusion
                 ? tab === "reply"
                   ? "Denoised. The same prompt goes to both."
                   : "What each denoising step committed, and how sure it was."
                 : HINTS[tab]}
+              <Help label={`What does ${TAB_TITLES[tab]} do?`}>{TOOL_HELP[tab]}</Help>
             </span>
             {streaming ? (
               <Button
@@ -499,17 +539,13 @@ function Loaded({
             )}
           </div>
         </form>
-        <Tabs value={tab} onValueChange={(tab) => void set({ tab: tab as (typeof TABS)[number] })}>
+        <Tabs value={tab} onValueChange={(tab) => void set({ tab: tab as Tab })}>
           <TabsList>
-            <TabsTrigger value="reply">Reply</TabsTrigger>
-            <TabsTrigger value="inspect">Inspect</TabsTrigger>
-            {!info.diffusion && (
-              <>
-                <TabsTrigger value="patch">Patch</TabsTrigger>
-                <TabsTrigger value="dose">Dose</TabsTrigger>
-                <TabsTrigger value="speed">Speed</TabsTrigger>
-              </>
-            )}
+            {offered.map((t) => (
+              <TabsTrigger key={t} value={t}>
+                {TAB_TITLES[t]}
+              </TabsTrigger>
+            ))}
           </TabsList>
           <TabsContent value="reply" className="flex flex-col gap-4 pt-4">
             <Field label="Follow-up">
@@ -542,7 +578,10 @@ function Loaded({
           {!info.diffusion && (
             <TabsContent value="patch" className="flex flex-col gap-4 pt-4">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_8rem_8rem]">
-                <Field label="Corrupt prompt, same length">
+                <Field
+                  label="Corrupt prompt, same length"
+                  help="The prompt with one detail changed, so the model gives the foil instead of the answer."
+                >
                   <Input
                     aria-label="Corrupt prompt"
                     value={s.corrupt}
@@ -607,6 +646,7 @@ function Loaded({
                 <NumberField label="α to" value={s.to} onChange={(to) => void set({ to })} />
                 <NumberField
                   label="Points"
+                  help="How many strengths between the two ends, each one forward pass."
                   value={n}
                   min={2}
                   max={41}
@@ -628,6 +668,7 @@ function Loaded({
               <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
                 <NumberField
                   label="Repeats"
+                  help="Timed runs after one warm-up; the median is shown, so one slow run does not skew it."
                   value={repeats}
                   min={1}
                   max={10}
@@ -675,10 +716,21 @@ function Loaded({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  help,
+  children,
+}: {
+  label: string;
+  help?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="text-muted-foreground text-xs font-medium">{label}</span>
+      <span className="text-muted-foreground inline-flex items-center gap-1 text-xs font-medium">
+        {label}
+        {help && <Help label={`What is ${label}?`}>{help}</Help>}
+      </span>
       {children}
     </div>
   );
@@ -690,15 +742,17 @@ function NumberField({
   min,
   max,
   onChange,
+  help,
 }: {
   label: string;
   value: number;
   min?: number;
   max?: number;
   onChange: (v: number) => void;
+  help?: string;
 }) {
   return (
-    <Field label={label}>
+    <Field label={label} help={help}>
       <Input
         type="number"
         aria-label={label}
@@ -799,6 +853,7 @@ function Slider({
   step,
   onChange,
   hint,
+  help,
 }: {
   label: string;
   value: number;
@@ -807,9 +862,10 @@ function Slider({
   step: number;
   onChange: (v: number) => void;
   hint?: string;
+  help?: string;
 }) {
   return (
-    <Field label={label}>
+    <Field label={label} help={help}>
       <div className="flex items-center gap-3">
         <input
           type="range"
