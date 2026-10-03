@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 # anyio rejects a TypedAttributeSet class defined after nnsight mounts save on every object.
 import anyio._backends._asyncio
@@ -21,6 +21,8 @@ from nnsight import LanguageModel
 from transformers import AutoTokenizer, PreTrainedTokenizerFast
 
 from loupe.core import saved_model
+
+Quant = Literal["int8", "int4"]
 
 #: Attribute paths to the decoder blocks, tried in order. Covers Qwen2/3, Llama, Mistral, Gemma,
 #: Phi (model.layers), GPT-2 (transformer.h) and GPT-NeoX/Pythia (gpt_neox.layers).
@@ -43,6 +45,7 @@ def load(
     merges: list[dict[str, Any]] | None = None,
     revision: str | None = None,
     attn: str | None = None,
+    quant: Quant | None = None,
 ) -> LanguageModel:
     """A model saved under <home>/models by name, a Hub id or path, or a built HF model; a Hub id
     at revision (a commit, branch or tag) when one is given. With an adapter (a LoRA directory,
@@ -54,6 +57,9 @@ def load(
     flex_attention, a name registered with transformers' AttentionInterface, or file.py:function to
     register that function first (attention_kernel). Only eager returns attention weights; the
     attention views switch to it for their own trace, and head edits work under any kernel.
+
+    quant loads the weights in 8 or 4 bits (int4 is NF4) with bitsandbytes, on CUDA only, for
+    measuring what a smaller number format costs in quality and saves in memory.
 
     Padding is set to the left so the last position of every row is its last real token, which is
     what generation needs and what last-token analyses read.
@@ -71,6 +77,8 @@ def load(
         hf: dict[str, Any] = {"dtype": dtype, "device_map": device, "revision": revision}
         if attn:
             hf["attn_implementation"] = attention_kernel(attn)
+        if quant:
+            hf["quantization_config"] = quantization(quant, device, adapter is not None or bank)
         if adapter is not None or bank:
             tok = kwargs.get("tokenizer") or AutoTokenizer.from_pretrained(model, revision=revision)
             built = (
@@ -87,6 +95,21 @@ def load(
     if lm.tokenizer.pad_token is None:
         lm.tokenizer.pad_token = lm.tokenizer.eos_token
     return lm
+
+
+def quantization(quant: Quant, device: str, adapted: object = False) -> Any:
+    """bitsandbytes' config for quant; it runs on CUDA only, and merging an adapter into
+    quantized weights would round the merge."""
+    if not device.startswith("cuda"):
+        raise ValueError(f"{quant} weights need CUDA (bitsandbytes); this model loads on {device}")
+    if adapted:
+        raise ValueError(f"{quant} weights take no adapter or bank: load the merged model instead")
+    from transformers import BitsAndBytesConfig
+
+    if quant == "int8":
+        return BitsAndBytesConfig(load_in_8bit=True)
+    return BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
+                              bnb_4bit_compute_dtype=torch.bfloat16)  # fmt: skip
 
 
 def save_model(model: Any, tokenizer: Any, name: str) -> Path:

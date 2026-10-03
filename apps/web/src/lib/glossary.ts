@@ -40,6 +40,10 @@ const SCORERS: Record<string, string> = {
   grounded: "Share of answers that used a tool's output.",
   recall: "Share of the gold passages among those retrieved.",
   faithful: "How likely the retrieved text supports the answer.",
+  b_wins:
+    "Share of pairs a judge model preferred B, averaged over both answer orders. 0.5 is no preference.",
+  consistent: "Share of pairs where the judge picked the same winner in both orders.",
+  parsed: "Share of the judge's replies that ended in a verdict; the rest count as ties.",
 };
 
 /** How it is aggregated over samples, by the metric half. */

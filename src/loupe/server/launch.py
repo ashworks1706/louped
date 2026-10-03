@@ -34,7 +34,8 @@ from loupe.core import experiments_dir, home, logs_dir
 
 log = logging.getLogger(__name__)
 
-Status = Literal["queued", "running", "succeeded", "failed", "cancelled"]
+#: exported: written out to run on another machine, waiting for its results to be imported.
+Status = Literal["queued", "running", "succeeded", "failed", "cancelled", "exported"]
 
 
 class Option(BaseModel):
@@ -92,6 +93,8 @@ COMMANDS = {
         "top examples and the tokens each feature promotes.",
     ),
     "circuit": ("Circuit", "An attribution graph with circuit-tracer, shown on the Circuits page."),
+    "bench": ("Bench", "Throughput under load and prefill by context, per weight format."),
+    "judge": ("Judge", "Two eval runs judged pairwise by a local model: B's win rate over A."),
 }
 #: The `loupe data` steps a form can run; review is interactive and stays in a terminal.
 DATA = {
@@ -269,8 +272,10 @@ def _grid_template(launchable: str) -> str:
     return config.read_text(encoding="utf-8")
 
 
-def argv(req: LaunchRequest, job_dir: Path) -> list[str]:
-    """The command line a request runs; values go in as separate arguments, never a shell."""
+def argv(req: LaunchRequest, job_dir: Path, remote: bool = False) -> list[str]:
+    """The command line a request runs; values go in as separate arguments, never a shell. With
+    remote, for an exported bundle: commands by name from its environment and paths relative to
+    the bundle, whose root is job_dir's parent, with experiments/ beside job_dir."""
     flags: list[str] = []
     positional: list[str] = []
     for flag, value in req.options.items():
@@ -283,16 +288,27 @@ def argv(req: LaunchRequest, job_dir: Path) -> list[str]:
             flags += [x for v in value for x in (flag, v)] if repeat else [flag, *value]
         else:
             flags += [flag, value]
+    exe = (lambda name: name) if remote else _bin
+
+    def where(path: Path) -> str:
+        """A path as the command sees it: in the bundle, relative to its root."""
+        if not remote:
+            return str(path)
+        if path.is_relative_to(job_dir.parent):
+            return path.relative_to(job_dir.parent).as_posix()
+        return "experiments/" + path.relative_to(experiments_dir().resolve()).as_posix()
+
     if req.id == "eval":
-        return [_bin("inspect"), "eval", *positional, *flags, "--log-dir", str(logs_dir())]
+        logs = [] if remote else ["--log-dir", str(logs_dir())]  # remote: INSPECT_LOG_DIR
+        return [exe("inspect"), "eval", *positional, *flags, *logs]
     if req.id in COMMANDS:
-        return [_bin("loupe"), req.id, *positional, *flags]
+        return [exe("loupe"), req.id, *positional, *flags]
     if req.id.startswith("data:"):
-        return [_bin("loupe"), "data", req.id.removeprefix("data:"), *positional, *flags]
+        return [exe("loupe"), "data", req.id.removeprefix("data:"), *positional, *flags]
     if req.id == "grid" or req.id.startswith("grid:"):
         config = job_dir / "grid.yaml"
         config.write_text(req.config or _grid_template(req.id), encoding="utf-8")
-        return [_bin("loupe"), "grid", str(config)]
+        return [exe("loupe"), "grid", where(config)]
     if req.id.startswith("train:"):
         template = (experiments_dir() / req.id.removeprefix("train:")).resolve()
         if experiments_dir().resolve() not in template.parents:
@@ -301,23 +317,25 @@ def argv(req: LaunchRequest, job_dir: Path) -> list[str]:
             raise HTTPException(400, f"recipe is one of {RECIPES}")
         config = job_dir / template.name
         config.write_text(req.config or template.read_text(encoding="utf-8"), encoding="utf-8")
-        return [_bin("loupe"), "train", req.recipe, str(config), "--base-dir", str(template.parent),
-                *flags]  # fmt: skip
-    return [sys.executable, str(_script(req.id)), *positional, *flags]
+        return [exe("loupe"), "train", req.recipe, where(config), "--base-dir",
+                where(template.parent), *flags]  # fmt: skip
+    return [exe("python") if remote else sys.executable, where(_script(req.id)), *positional,
+            *flags]  # fmt: skip
 
 
 class Jobs:
     """The queue: jobs on disk under <home>/jobs, run one at a time by a worker thread. The worker
     holds a file lock on the folder, so two servers on one home still run one job at a time."""
 
-    def __init__(self) -> None:
+    def __init__(self, work: bool = True) -> None:
         self.dir = home() / "jobs"
         self.env = {"LOUPE_HOME": str(home()), "INSPECT_LOG_DIR": str(logs_dir()),
                     "PYTHONUNBUFFERED": "1"}  # fmt: skip
         self.lock = threading.Condition()
         self.procs: dict[str, subprocess.Popen[bytes]] = {}
         self.cancelled: set[str] = set()
-        threading.Thread(target=self.work, daemon=True).start()
+        if work:  # without, only records jobs: an import from the command line
+            threading.Thread(target=self.work, daemon=True).start()
 
     def list(self) -> list[Job]:
         found = []
@@ -339,6 +357,12 @@ class Jobs:
         tmp = path.with_suffix(".tmp")
         tmp.write_text(job.model_dump_json())
         os.replace(tmp, path)  # a reader never sees half a file
+
+    def record(self, job: Job) -> None:
+        """Save a job the queue does not run: exported, or finished by an import."""
+        (self.dir / job.id).mkdir(parents=True, exist_ok=True)
+        with self.lock:
+            self.save(job)
 
     def submit(self, req: LaunchRequest, title: str) -> Job:
         job_id = datetime.now(UTC).strftime("%Y%m%d-%H%M%S-") + secrets.token_hex(2)
@@ -468,6 +492,10 @@ def router(enabled: bool) -> APIRouter:
     @api.get("/jobs/{job_id}")
     def job(job_id: str) -> JobDetail:
         return queue().detail(job_id)
+
+    from loupe.server import remote  # it builds on this module
+
+    remote.routes(api, queue, known)
 
     @api.post("/jobs/{job_id}/cancel", dependencies=[Depends(require_json)])
     def cancel(job_id: str) -> Job:

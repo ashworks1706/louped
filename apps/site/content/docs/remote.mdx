@@ -1,0 +1,39 @@
+---
+title: Run elsewhere
+description: Export a launch for ASU's Sol, a Slurm cluster or a VM, and import its results back.
+---
+
+A launch can run on a machine loupe is not on. On the Launch page, set the form as usual, pick
+**Run on** (ASU Sol, a Slurm cluster, another machine) and press **Export**. You get
+`loupe-<id>.tar.gz`, and the job waits on the page as _awaiting result_.
+
+```sh
+# on Sol (or the cluster), in scratch
+tar -xzf loupe-<id>.tar.gz && cd loupe-<id>
+sbatch job.sh          # bash job.sh on a VM
+```
+
+`job.sh` asks the scheduler for what the form set, installs loupe with
+[uv](https://docs.astral.sh/uv) (the exact code and lockfile this loupe runs, or the released
+version), runs the same command Launch would run here, and packs everything it wrote as
+`loupe-result-<id>.tar.gz`. Bring that file back and drop it on the Launch page, or:
+
+```sh
+loupe import loupe-result-<id>.tar.gz
+```
+
+Its runs join Runs and their experiments as if they had run here, marked with where they ran, and
+the job takes its exit code and log. Importing the same result twice adds nothing.
+
+## Sol
+
+From [ASU's docs](https://docs.rc.asu.edu/sol-hardware-how-to-request): the job asks for
+`-p general -q public` unless you set a QOS, and a GPU as `-G <type>:<n>`: `a100` (tick _80 GB
+A100 only_ for `-C a100_80`), `a30`, `h100`, `mi200` (AMD: needs ROCm builds of torch), or the A100
+slices `1g.20gb` and `2g.20gb`. Model and uv caches go to `/scratch/$USER` rather than home, whose
+quota is small.
+
+- Gated Hugging Face models need `HF_TOKEN` exported before `sbatch`.
+- If compute nodes have no internet, run `job.sh`'s lines up to `source .venv/bin/activate` once on
+  a login node, then submit.
+- Files under `experiments/` over 50 MB stay behind; `loupe.json` in the bundle lists them.

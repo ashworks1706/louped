@@ -365,6 +365,152 @@
         }
       }
     },
+    "/api/runs/{run_id}/labels": {
+      "get": {
+        "summary": "Labels",
+        "operationId": "labels_api_runs__run_id__labels_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "enum": ["a", "b", "tie"],
+                    "type": "string"
+                  },
+                  "title": "Response Labels Api Runs  Run Id  Labels Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/labels/{sample_id}": {
+      "post": {
+        "summary": "Label",
+        "operationId": "label_api_runs__run_id__labels__sample_id__post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "sample_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sample Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabelRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "enum": ["a", "b", "tie"],
+                    "type": "string"
+                  },
+                  "title": "Response Label Api Runs  Run Id  Labels  Sample Id  Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/agreement": {
+      "get": {
+        "summary": "Agreement",
+        "operationId": "agreement_api_runs__run_id__agreement_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Agreement"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/compare": {
       "get": {
         "summary": "Compare",
@@ -927,6 +1073,98 @@
         }
       }
     },
+    "/api/launch/export": {
+      "post": {
+        "summary": "Export Job",
+        "operationId": "export_job_api_launch_export_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/launch/import": {
+      "post": {
+        "summary": "Import Upload",
+        "operationId": "import_upload_api_launch_import_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imported"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/launch/import-path": {
+      "post": {
+        "summary": "Import Path",
+        "operationId": "import_path_api_launch_import_path_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportPath"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imported"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/launch/jobs/{job_id}/cancel": {
       "post": {
         "summary": "Cancel",
@@ -969,6 +1207,48 @@
   },
   "components": {
     "schemas": {
+      "Agreement": {
+        "properties": {
+          "labelled": {
+            "type": "integer",
+            "title": "Labelled",
+            "description": "Pairs the person labelled."
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Pairs the judge judged."
+          },
+          "agreement": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agreement",
+            "description": "Share of labelled pairs with the same pick."
+          },
+          "kappa": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kappa",
+            "description": "Cohen's kappa: agreement beyond chance."
+          }
+        },
+        "type": "object",
+        "required": ["labelled", "total", "agreement", "kappa"],
+        "title": "Agreement",
+        "description": "A judge run's agreement with a person's labels on its pairs."
+      },
       "Artifact": {
         "properties": {
           "path": {
@@ -1305,6 +1585,63 @@
           "readme"
         ],
         "title": "ExperimentDetail"
+      },
+      "ExportRequest": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "options": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Options",
+            "default": {}
+          },
+          "config": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "recipe": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe"
+          },
+          "target": {
+            "$ref": "#/components/schemas/Target"
+          }
+        },
+        "type": "object",
+        "required": ["id"],
+        "title": "ExportRequest"
       },
       "FeatureDashboard": {
         "properties": {
@@ -1683,6 +2020,60 @@
         "required": ["edges", "counts"],
         "title": "Histogram"
       },
+      "ImportPath": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          }
+        },
+        "type": "object",
+        "required": ["path"],
+        "title": "ImportPath"
+      },
+      "Imported": {
+        "properties": {
+          "job": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job",
+            "description": "The exported job the result answers, when known here."
+          },
+          "host": {
+            "type": "string",
+            "title": "Host"
+          },
+          "exit_code": {
+            "type": "integer",
+            "title": "Exit Code"
+          },
+          "runs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Runs",
+            "description": "Runs added to the local stores."
+          },
+          "skipped": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Skipped",
+            "description": "Runs already imported."
+          }
+        },
+        "type": "object",
+        "required": ["job", "host", "exit_code", "runs", "skipped"],
+        "title": "Imported"
+      },
       "InspectRequest": {
         "properties": {
           "interventions": {
@@ -1810,7 +2201,7 @@
           },
           "status": {
             "type": "string",
-            "enum": ["queued", "running", "succeeded", "failed", "cancelled"],
+            "enum": ["queued", "running", "succeeded", "failed", "cancelled", "exported"],
             "title": "Status",
             "default": "queued"
           },
@@ -1878,7 +2269,7 @@
           },
           "status": {
             "type": "string",
-            "enum": ["queued", "running", "succeeded", "failed", "cancelled"],
+            "enum": ["queued", "running", "succeeded", "failed", "cancelled", "exported"],
             "title": "Status",
             "default": "queued"
           },
@@ -1930,6 +2321,25 @@
         "type": "object",
         "required": ["id", "title", "argv", "log"],
         "title": "JobDetail"
+      },
+      "LabelRequest": {
+        "properties": {
+          "label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["a", "b", "tie"]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": ["label"],
+        "title": "LabelRequest"
       },
       "LaunchRequest": {
         "properties": {
@@ -2491,6 +2901,17 @@
             ],
             "title": "Total"
           },
+          "host": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Host"
+          },
           "params": {
             "additionalProperties": {
               "type": "string"
@@ -2653,6 +3074,17 @@
               }
             ],
             "title": "Total"
+          },
+          "host": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Host"
           }
         },
         "type": "object",
@@ -3097,6 +3529,97 @@
         "type": "object",
         "required": ["kind", "title", "columns", "rows"],
         "title": "TableView"
+      },
+      "Target": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": ["sol", "slurm", "shell"],
+            "title": "Provider",
+            "default": "sol"
+          },
+          "gpu": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[\\w.:-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gpu",
+            "default": "a100"
+          },
+          "gpus": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 0.0,
+            "title": "Gpus",
+            "default": 1
+          },
+          "hours": {
+            "type": "integer",
+            "maximum": 168.0,
+            "minimum": 1.0,
+            "title": "Hours",
+            "default": 4
+          },
+          "cpus": {
+            "type": "integer",
+            "maximum": 128.0,
+            "minimum": 1.0,
+            "title": "Cpus",
+            "default": 8
+          },
+          "partition": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[\\w.:-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partition"
+          },
+          "qos": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[\\w.:-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qos"
+          },
+          "constraint": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[\\w.:-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Constraint"
+          },
+          "extras": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Extras",
+            "default": ["interp", "evals", "tracking", "train"]
+          }
+        },
+        "type": "object",
+        "title": "Target",
+        "description": "Where and on what an exported job runs."
       },
       "TokenRow": {
         "properties": {

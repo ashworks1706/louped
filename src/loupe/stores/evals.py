@@ -15,7 +15,7 @@ from inspect_ai.log import (
     read_eval_log_sample_summaries,
 )
 
-from loupe.core import experiments_dir, logs_dir
+from loupe.core import experiments_dir, home, logs_dir
 from loupe.stores.types import (
     Message,
     RunDetail,
@@ -84,6 +84,17 @@ def _metrics(log: EvalLog) -> dict[str, float]:
     return out
 
 
+@lru_cache(maxsize=4)
+def _hosts(path: str, mtime: float) -> dict[str, str]:
+    return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def hosts() -> dict[str, str]:
+    """Where imported eval runs ran, by run id: Inspect logs carry no host of their own."""
+    path = home() / "hosts.json"
+    return _hosts(str(path), path.stat().st_mtime) if path.exists() else {}
+
+
 def _summary(path: Path, log: EvalLog) -> RunSummary:
     samples = log.results.total_samples if log.results else None
     if log.status == "started":
@@ -100,6 +111,7 @@ def _summary(path: Path, log: EvalLog) -> RunSummary:
         metrics=_metrics(log),
         samples=samples,
         total=planned * (log.eval.config.epochs or 1) if planned else None,
+        host=hosts().get(PREFIX + log.eval.eval_id),
     )
 
 
@@ -110,6 +122,11 @@ def list_runs() -> list[RunSummary]:
 def _find(run_id: str) -> tuple[Path, EvalLog] | None:
     eval_id = run_id.removeprefix(PREFIX)
     return next(((p, log) for p, log in _logs() if log.eval.eval_id == eval_id), None)
+
+
+def log_of(run_id: str) -> tuple[Path, EvalLog] | None:
+    """An eval run's log file and header, None for a run that is not an Inspect eval."""
+    return _find(run_id) if run_id.startswith(PREFIX) else None
 
 
 def log_mtime(run_id: str) -> float | None:

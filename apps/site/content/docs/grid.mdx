@@ -34,6 +34,10 @@ or `peak_memory/mean` from `loupe.inspect_ext.inference`: each gets its own heat
 the metric against it, one point per condition and task, so what a change buys is read beside what
 it costs. Compare marks a cost that rises as worse and gives B over A as a ratio.
 
+A condition can load the weights in 8 or 4 bits, `int4: { quant: int4 }` (CUDA, with the train
+extra). With `extra: [peak_memory/mean, tokens_per_second/mean]`, one grid shows what a weight
+format loses in quality beside what it saves.
+
 Seeds of one sample are averaged before resampling, so seeds never count as extra samples. The
 `loupe/` provider decodes greedily, so seeds only matter for models that sample.
 

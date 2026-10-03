@@ -84,9 +84,10 @@ experiments                              leaf, nothing imports it
 cli
 server | agent                           FastAPI over the stores; Playground; launching jobs; the
                                          MCP server, an HTTP client of the API
-train | sweep | grid | features | circuits
+train | sweep | grid | features | circuits | judge | bench
                                          training recipes and sweeps; steering sweeps; condition
-                                         grids; SAE dashboards; attribution graphs
+                                         grids; SAE dashboards; attribution graphs; pairwise judging;
+                                         serving cost
 stores | tracking | analysis | inspect_ext
                                          read Inspect logs and MLflow; start a run; lens, patching,
                                          probes, attention, SAE features as views; the loupe/
@@ -120,7 +121,8 @@ clean and a corrupt prompt; dose, a saved direction swept over strengths at the 
 time to first token, decode throughput and peak memory, base and changed), launching jobs, and
 loading a model into the Playground. A job is an existing command (an experiment script,
 `loupe train`, `loupe grid`, `loupe new`, `loupe features`, `inspect eval`) in a subprocess, one at
-a time, its output under `<home>/jobs`; each form is read from the command's own argument parser. Launching and loading run code on this machine, so both are on only for a loopback server,
+a time, its output under `<home>/jobs`; or exported (server/remote.py) as a bundle whose job.sh
+runs it on Sol, a Slurm cluster or a VM, and whose result archive is imported back into the stores; each form is read from the command's own argument parser. Launching and loading run code on this machine, so both are on only for a loopback server,
 never with `--expose`.
 
 `loupe mcp` is a stdio MCP server for coding agents. It imports nothing from the server: it calls
