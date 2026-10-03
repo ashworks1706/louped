@@ -1073,6 +1073,98 @@
         }
       }
     },
+    "/api/launch/export": {
+      "post": {
+        "summary": "Export Job",
+        "operationId": "export_job_api_launch_export_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/launch/import": {
+      "post": {
+        "summary": "Import Upload",
+        "operationId": "import_upload_api_launch_import_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imported"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/launch/import-path": {
+      "post": {
+        "summary": "Import Path",
+        "operationId": "import_path_api_launch_import_path_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportPath"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imported"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/launch/jobs/{job_id}/cancel": {
       "post": {
         "summary": "Cancel",
@@ -1494,6 +1586,63 @@
         ],
         "title": "ExperimentDetail"
       },
+      "ExportRequest": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "options": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Options",
+            "default": {}
+          },
+          "config": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "recipe": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe"
+          },
+          "target": {
+            "$ref": "#/components/schemas/Target"
+          }
+        },
+        "type": "object",
+        "required": ["id"],
+        "title": "ExportRequest"
+      },
       "FeatureDashboard": {
         "properties": {
           "feature": {
@@ -1871,6 +2020,60 @@
         "required": ["edges", "counts"],
         "title": "Histogram"
       },
+      "ImportPath": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          }
+        },
+        "type": "object",
+        "required": ["path"],
+        "title": "ImportPath"
+      },
+      "Imported": {
+        "properties": {
+          "job": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job",
+            "description": "The exported job the result answers, when known here."
+          },
+          "host": {
+            "type": "string",
+            "title": "Host"
+          },
+          "exit_code": {
+            "type": "integer",
+            "title": "Exit Code"
+          },
+          "runs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Runs",
+            "description": "Runs added to the local stores."
+          },
+          "skipped": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Skipped",
+            "description": "Runs already imported."
+          }
+        },
+        "type": "object",
+        "required": ["job", "host", "exit_code", "runs", "skipped"],
+        "title": "Imported"
+      },
       "InspectRequest": {
         "properties": {
           "interventions": {
@@ -1998,7 +2201,7 @@
           },
           "status": {
             "type": "string",
-            "enum": ["queued", "running", "succeeded", "failed", "cancelled"],
+            "enum": ["queued", "running", "succeeded", "failed", "cancelled", "exported"],
             "title": "Status",
             "default": "queued"
           },
@@ -2066,7 +2269,7 @@
           },
           "status": {
             "type": "string",
-            "enum": ["queued", "running", "succeeded", "failed", "cancelled"],
+            "enum": ["queued", "running", "succeeded", "failed", "cancelled", "exported"],
             "title": "Status",
             "default": "queued"
           },
@@ -2698,6 +2901,17 @@
             ],
             "title": "Total"
           },
+          "host": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Host"
+          },
           "params": {
             "additionalProperties": {
               "type": "string"
@@ -2860,6 +3074,17 @@
               }
             ],
             "title": "Total"
+          },
+          "host": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Host"
           }
         },
         "type": "object",
@@ -3304,6 +3529,97 @@
         "type": "object",
         "required": ["kind", "title", "columns", "rows"],
         "title": "TableView"
+      },
+      "Target": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": ["sol", "slurm", "shell"],
+            "title": "Provider",
+            "default": "sol"
+          },
+          "gpu": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[\\w.:-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gpu",
+            "default": "a100"
+          },
+          "gpus": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 0.0,
+            "title": "Gpus",
+            "default": 1
+          },
+          "hours": {
+            "type": "integer",
+            "maximum": 168.0,
+            "minimum": 1.0,
+            "title": "Hours",
+            "default": 4
+          },
+          "cpus": {
+            "type": "integer",
+            "maximum": 128.0,
+            "minimum": 1.0,
+            "title": "Cpus",
+            "default": 8
+          },
+          "partition": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[\\w.:-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partition"
+          },
+          "qos": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[\\w.:-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qos"
+          },
+          "constraint": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[\\w.:-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Constraint"
+          },
+          "extras": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Extras",
+            "default": ["interp", "evals", "tracking", "train"]
+          }
+        },
+        "type": "object",
+        "title": "Target",
+        "description": "Where and on what an exported job runs."
       },
       "TokenRow": {
         "properties": {

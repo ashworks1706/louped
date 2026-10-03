@@ -5,6 +5,16 @@ export function KindBadge({ kind }: { kind: RunSummary["kind"] }) {
   return <Badge variant="outline">{kind}</Badge>;
 }
 
+/** Where an imported run ran (sol, slurm, vm); nothing for a run made here. */
+export function HostBadge({ host }: { host?: string | null }) {
+  if (!host) return null;
+  return (
+    <Badge variant="outline" className="font-mono" title={`Ran on ${host}, imported`}>
+      {host}
+    </Badge>
+  );
+}
+
 /** A run's status; a live one pulses and shows how many samples are done. */
 export function StatusDot({
   status,
@@ -26,7 +36,7 @@ export function StatusDot({
   return (
     <span className="text-muted-foreground inline-flex items-center gap-1.5 text-xs whitespace-nowrap">
       <span className={`size-1.5 rounded-full ${tone}`} />
-      {live && status !== "queued" ? "running" : status}
+      {live && status !== "queued" ? "running" : status === "exported" ? "awaiting result" : status}
       {live && samples != null && total ? (
         <span className="font-mono tabular-nums">
           {samples}/{total}

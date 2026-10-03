@@ -10,7 +10,7 @@ import { parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
 import { useState } from "react";
 
 import { MetricValue } from "@/components/metric";
-import { KindBadge, StatusDot } from "@/components/run-badges";
+import { HostBadge, KindBadge, StatusDot } from "@/components/run-badges";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -271,7 +271,7 @@ export function RunsTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <KindBadge kind={r.kind} />
+                  <KindBadge kind={r.kind} /> <HostBadge host={r.host} />
                 </TableCell>
                 {!compact && (
                   <TableCell className="text-muted-foreground font-mono text-xs">

@@ -48,6 +48,7 @@ def _summary(run: Run, experiment: str | None) -> RunSummary:
         model=run.data.params.get("model"),
         metrics=dict(run.data.metrics),
         samples=None,
+        host=tags.get("loupe.host"),
     )
 
 

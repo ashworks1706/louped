@@ -120,6 +120,14 @@ class Circuit:
 
 
 @dataclass(frozen=True)
+class Import:
+    """Add a result from another machine to this loupe: the loupe-result-<id>.tar.gz an exported
+    job wrote (Launch → Export), or the folder it unpacks to. Needs the server extra."""
+
+    path: tyro.conf.Positional[Path]
+
+
+@dataclass(frozen=True)
 class Bench:
     """What serving a model costs on this machine, per weight format: throughput and latency as
     requests arrive together, and prefill time and memory as the prompt grows. One run with its
@@ -185,6 +193,7 @@ Command = (
     | Annotated[New, tyro.conf.subcommand("new")]
     | Annotated[Features, tyro.conf.subcommand("features")]
     | Annotated[Circuit, tyro.conf.subcommand("circuit")]
+    | Annotated[Import, tyro.conf.subcommand("import")]
     | Annotated[Bench, tyro.conf.subcommand("bench")]
     | Annotated[Judge, tyro.conf.subcommand("judge")]
     | Annotated[Mcp, tyro.conf.subcommand("mcp")]
@@ -260,6 +269,16 @@ def main() -> None:
             from loupe.circuits import circuit
 
             circuit(cmd.model, cmd.transcoders, cmd.prompt, cmd.slug, cmd.dtype, cmd.batch_size)
+        case Import() as cmd:
+            from loupe.server.launch import Jobs
+            from loupe.server.remote import import_result
+
+            try:
+                done = import_result(cmd.path, Jobs(work=False))
+            except ValueError as exc:
+                raise SystemExit(str(exc)) from exc
+            print(f"{len(done.runs)} runs from {done.host} (exit {done.exit_code})"
+                  + (f", {len(done.skipped)} already here" if done.skipped else ""))  # fmt: skip
         case Bench() as cmd:
             from loupe.bench import bench
             from loupe.models.load import Quant
