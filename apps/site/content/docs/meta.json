@@ -12,6 +12,7 @@
     "---Reference---",
     "models",
     "cli",
+    "agents",
     "self-host"
   ]
 }

@@ -62,6 +62,11 @@ data = [
     "pyyaml>=6",
     "rich>=14",
 ]
+# The MCP server coding agents drive loupe through: a stdio client of a running loupe serve.
+agent = [
+    "httpx>=0.28",
+    "mcp>=2.3",
+]
 # Retrieval: BM25 and dense search, a cross-encoder reranker, NLI for faithfulness.
 rag = [
     "loupelab[interp]",
@@ -129,7 +134,7 @@ name = "Layers"
 type = "layers"
 layers = [
     "loupe.cli",
-    "loupe.server",
+    "loupe.server | loupe.agent",
     "loupe.train | loupe.sweep | loupe.grid | loupe.features | loupe.circuits",
     "loupe.stores | loupe.tracking | loupe.analysis | loupe.inspect_ext",
     "loupe.interventions",

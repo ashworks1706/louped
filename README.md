@@ -75,6 +75,11 @@ Press New on the Experiments page. It writes `experiments/my-question/README.md`
 research-note template and a `run.py` that logs to Inspect and MLflow, so the run appears in the app and Launch gets a form for its
 options. Domains are listed in [the docs](apps/site/content/docs/domains.mdx).
 
+## From a coding agent
+
+`loupe mcp` lets Claude Code, Cursor or any MCP client read runs and launch experiments
+through the app's queue. Setup is in [the docs](apps/site/content/docs/agents.mdx).
+
 ## Install
 
 ```

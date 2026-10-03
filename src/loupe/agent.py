@@ -1,0 +1,218 @@
+"""loupe for coding agents: an MCP server over a running `loupe serve`.
+
+It is a client of the same HTTP API the UI calls, so an agent sees what the UI sees and starts work
+through the same job queue: one job at a time, shown live on the Launch page, and off on a server
+started with --expose. It reads nothing on its own and keeps no state.
+"""
+
+from __future__ import annotations
+
+import asyncio
+from typing import Any
+
+import httpx
+from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
+from mcp_types import ToolAnnotations
+
+#: How to use the tools, sent to the agent when it connects.
+INSTRUCTIONS = """loupe is a research testbed for language models: behavior (what models do and
+the mechanisms behind it) and efficiency (what it costs to run them).
+
+An experiment is a research question: a folder under experiments/ with a README (Question,
+Hypothesis, Setup, Result) and scripts. A run is one eval, analysis or training run an experiment
+wrote; it has metrics, figures and, for an eval, samples. A job is a command started from the
+queue; its runs appear as it writes them.
+
+Work like this: read the experiments and runs first; start work with launchables, launch_options
+and launch (id "new" starts a question); follow it with job; read results with run, figures,
+figure, samples and compare.
+Report a difference only with its paired interval from compare, and name the run ids you used.
+Jobs run one at a time on this machine's GPU, so do not queue more than the question needs."""
+
+READ = ToolAnnotations(read_only_hint=True, open_world_hint=False)
+WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False)
+STOP = ToolAnnotations(read_only_hint=False, destructive_hint=True, open_world_hint=False)
+
+
+def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTransport | None = None):
+    """The MCP server for the loupe API at url. transport replaces the network, for tests."""
+    api = httpx.AsyncClient(base_url=f"{url.rstrip('/')}/api", transport=transport, timeout=180)
+    mcp = MCPServer("loupe", instructions=INSTRUCTIONS)
+
+    async def send(method: str, path: str, **kwargs: Any) -> Any:
+        try:
+            response = await api.request(method, path, **kwargs)
+        except httpx.ConnectError as e:
+            raise ToolError(f"no loupe server at {url}; start one with `loupe serve`") from e
+        except httpx.HTTPError as e:
+            raise ToolError(f"{method} {path} to {url} failed: {e!r}") from e
+        return _read(response)
+
+    async def get(path: str, **params: Any) -> Any:
+        return await send("GET", path, params={k: v for k, v in params.items() if v is not None})
+
+    async def post(path: str, body: dict[str, Any]) -> Any:
+        return await send("POST", path, json=body)
+
+    @mcp.tool(annotations=READ)
+    async def status() -> dict[str, Any]:
+        """The server: its version, where it keeps runs, and whether it launches jobs."""
+        return await get("/health")
+
+    @mcp.tool(annotations=READ)
+    async def experiments(
+        axis: str | None = None, status: str | None = None
+    ) -> list[dict[str, Any]]:
+        """Every research question: name, domain, status, question, result and run count. Filter
+        by axis (behavior, efficiency, checks) or status (active, parked, answered)."""
+        found = await get("/experiments")
+        return [
+            {**{k: e[k] for k in ("name", "axis", "domain", "status", "question", "result")},
+             "runs": len(e["runs"])}
+            for e in found
+            if (axis is None or e["axis"] == axis) and (status is None or e["status"] == status)
+        ]  # fmt: skip
+
+    @mcp.tool(annotations=READ)
+    async def experiment(name: str) -> dict[str, Any]:
+        """One question: its README without the front matter, and the ids of its runs."""
+        e = await get(f"/experiments/{name}")
+        return {**e, "runs": [r["id"] for r in e["runs"]]}
+
+    @mcp.tool(annotations=READ)
+    async def runs(
+        experiment: str | None = None, kind: str | None = None, limit: int = 20
+    ) -> list[dict[str, Any]]:
+        """Runs, newest first: id, name, kind (eval, analysis, training), experiment, model,
+        status and metrics. Filter by experiment or kind."""
+        found = await get("/runs")
+        keep = ("id", "name", "kind", "experiment", "model", "status", "created", "metrics")
+        return [
+            {k: r.get(k) for k in keep}
+            for r in found
+            if (experiment is None or r["experiment"] == experiment)
+            and (kind is None or r["kind"] == kind)
+        ][:limit]
+
+    @mcp.tool(annotations=READ)
+    async def run(run_id: str) -> dict[str, Any]:
+        """One run in full: metrics, params, tags, the task and model, and any error."""
+        return await get(f"/runs/{run_id}")
+
+    @mcp.tool(annotations=READ)
+    async def figures(run_id: str) -> list[dict[str, Any]]:
+        """A run's figures by index: kind, title, how to read it and its note. Read one's data
+        with figure."""
+        found = await get(f"/runs/{run_id}/views")
+        return [
+            {"index": i, "kind": v["view"]["kind"], "title": v["view"]["title"],
+             "about": v["view"].get("about"), "note": v["view"].get("note")}
+            for i, v in enumerate(found)
+        ]  # fmt: skip
+
+    @mcp.tool(annotations=READ)
+    async def figure(run_id: str, index: int) -> dict[str, Any]:
+        """One figure's data: a heatmap's grid, a line's series, a table's rows."""
+        found = await get(f"/runs/{run_id}/views")
+        if not 0 <= index < len(found):
+            raise ToolError(f"{run_id} has {len(found)} figures")
+        return found[index]["view"]
+
+    @mcp.tool(annotations=READ)
+    async def samples(run_id: str, limit: int = 20, offset: int = 0) -> list[dict[str, Any]]:
+        """An eval's samples: id, input, target, the model's answer and its scores."""
+        return (await get(f"/runs/{run_id}/samples"))[offset : offset + limit]
+
+    @mcp.tool(annotations=READ)
+    async def sample(run_id: str, sample_id: str, epoch: int = 1) -> dict[str, Any]:
+        """One sample's whole transcript, with every score and its explanation."""
+        return await get(f"/runs/{run_id}/samples/{sample_id}", epoch=epoch)
+
+    @mcp.tool(annotations=READ)
+    async def compare(a: str, b: str) -> dict[str, Any]:
+        """Two eval runs over the same samples: each score's paired difference (b minus a) with
+        its 95% bootstrap interval, and the samples that moved. a is the baseline."""
+        return await get("/compare", a=a, b=b)
+
+    @mcp.tool(annotations=READ)
+    async def vectors() -> list[dict[str, Any]]:
+        """Saved directions: name, model, layer, method (diff-in-means, logistic-probe,
+        sae-decoder), norm and the run that made each."""
+        return await get("/vectors")
+
+    @mcp.tool(annotations=READ)
+    async def launchables() -> list[dict[str, Any]]:
+        """What can be started: experiment scripts, training configs, grids, data steps and
+        loupe's commands (new, sweep, features, circuit, grid, eval)."""
+        found = await get("/launch")
+        return [{k: x.get(k) for k in ("id", "group", "title", "description")} for x in found]
+
+    @mcp.tool(annotations=READ)
+    async def launch_options(id: str) -> dict[str, Any]:
+        """A launchable's options (flag, kind, default, help) and, for a training config or
+        grid, the config text to edit."""
+        found = {x["id"]: x for x in await get("/launch")}
+        if id not in found:
+            raise ToolError(f"unknown launchable {id!r}; see launchables")
+        return {"options": await get("/launch/options", id=id), "config": found[id]["config"],
+                "recipe": found[id]["recipe"]}  # fmt: skip
+
+    @mcp.tool(annotations=WRITE)
+    async def launch(
+        id: str,
+        options: dict[str, str | bool | list[str]] | None = None,
+        config: str | None = None,
+        recipe: str | None = None,
+        wait_seconds: int = 0,
+    ) -> dict[str, Any]:
+        """Queue a job. options maps a flag to its value, only those changed from the default; a
+        positional argument goes under its name without dashes. config replaces a training or
+        grid config's text; recipe picks sft, dpo, grpo, classify or reft for a training config.
+        With wait_seconds, waits up to that long for the job to end and returns its log; a job
+        still queued or running after that is returned as it stands. id "new" with name and
+        --domain starts a research question under experiments/."""
+        body = {"id": id, "options": options or {}, "config": config, "recipe": recipe}
+        job = await post("/launch", body)
+        return await _wait(job["id"], wait_seconds) if wait_seconds > 0 else job
+
+    @mcp.tool(annotations=READ)
+    async def jobs() -> list[dict[str, Any]]:
+        """Every job, newest first, with its status."""
+        found = await get("/launch/jobs")
+        keep = ("id", "title", "status", "created", "started", "ended", "exit_code")
+        return [{k: j.get(k) for k in keep} for j in found]
+
+    @mcp.tool(annotations=READ)
+    async def job(job_id: str) -> dict[str, Any]:
+        """One job: its status, command line and the end of its log."""
+        return await get(f"/launch/jobs/{job_id}")
+
+    @mcp.tool(annotations=STOP)
+    async def cancel_job(job_id: str) -> dict[str, Any]:
+        """Stop a queued or running job, and wait for it to end."""
+        await post(f"/launch/jobs/{job_id}/cancel", {})
+        return await _wait(job_id, 10)
+
+    async def _wait(job_id: str, seconds: int) -> dict[str, Any]:
+        for _ in range(seconds * 2):
+            found = await get(f"/launch/jobs/{job_id}")
+            if found["status"] == "failed":
+                raise ToolError(f"job {job_id} failed:\n{found['log']}")
+            if found["status"] not in ("queued", "running"):
+                return found
+            await asyncio.sleep(0.5)
+        return await get(f"/launch/jobs/{job_id}")
+
+    return mcp
+
+
+def _read(response: httpx.Response) -> Any:
+    """The body, or the server's own message as the tool's error."""
+    if response.is_success:
+        return response.json()
+    try:
+        detail = response.json().get("detail", response.text)
+    except ValueError:
+        detail = response.text
+    raise ToolError(f"loupe answered {response.status_code}: {detail}")

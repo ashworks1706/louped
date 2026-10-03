@@ -120,6 +120,15 @@ class Circuit:
 
 
 @dataclass(frozen=True)
+class Mcp:
+    """An MCP server on stdio for coding agents, over a running loupe serve: read experiments,
+    runs, figures and compares; launch, follow and cancel jobs. Needs the agent extra."""
+
+    url: str = "http://127.0.0.1:8000"
+    """The loupe serve to drive."""
+
+
+@dataclass(frozen=True)
 class Version:
     """Print the installed version."""
 
@@ -133,6 +142,7 @@ Command = (
     | Annotated[New, tyro.conf.subcommand("new")]
     | Annotated[Features, tyro.conf.subcommand("features")]
     | Annotated[Circuit, tyro.conf.subcommand("circuit")]
+    | Annotated[Mcp, tyro.conf.subcommand("mcp")]
     | Annotated[Version, tyro.conf.subcommand("version")]
 )
 
@@ -205,5 +215,15 @@ def main() -> None:
             from loupe.circuits import circuit
 
             circuit(cmd.model, cmd.transcoders, cmd.prompt, cmd.slug, cmd.dtype, cmd.batch_size)
+        case Mcp() as cmd:
+            try:
+                from loupe.agent import server
+            except ModuleNotFoundError as exc:
+                if exc.name not in ("mcp", "mcp_types", "httpx"):
+                    raise
+                raise SystemExit(
+                    "loupe mcp needs the agent extra: pip install 'loupelab[agent]'"
+                ) from exc
+            server(cmd.url).run("stdio")
         case Version():
             print(__version__)
