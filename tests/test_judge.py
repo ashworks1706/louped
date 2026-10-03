@@ -3,12 +3,15 @@
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 from inspect_ai.model import ModelOutput, get_model
 from test_stores import run_eval
 
 from loupe import stores
 from loupe.inspect_ext.judge import verdict
 from loupe.judge import judge
+from loupe.server import create_app
+from loupe.stores.labels import kappa
 
 
 def scripted(*replies: str):
@@ -64,3 +67,33 @@ def test_only_samples_both_runs_answered_are_judged(tmp_path: Path) -> None:
 def test_judging_a_run_that_is_not_an_eval_names_it() -> None:
     with pytest.raises(ValueError, match="not an eval run: m-123"):
         judge("m-123", "e-456")
+
+
+def test_a_persons_labels_give_the_judges_agreement_and_kappa(tmp_path: Path) -> None:
+    a, b = two_runs(["no", "no", "no"], ["yes", "yes", "yes"])
+    run = judge(a, b, scripted(*["Verdict: 2"] * 6))  # position-following: every pair a tie
+    client = TestClient(create_app(launching=True), base_url="http://localhost")
+    assert client.get(f"/api/runs/{run}/agreement").json()["labelled"] == 0
+    for sample, label in (("1", "tie"), ("2", "tie"), ("3", "b")):
+        put = client.post(f"/api/runs/{run}/labels/{sample}", json={"label": label})
+        assert put.status_code == 200, put.text
+    got = client.get(f"/api/runs/{run}/agreement").json()
+    assert (got["labelled"], got["total"]) == (3, 3)
+    assert got["agreement"] == pytest.approx(2 / 3) and got["kappa"] == pytest.approx(0)
+    client.post(f"/api/runs/{run}/labels/3", json={"label": None})
+    assert client.get(f"/api/runs/{run}/labels").json() == {"1": "tie", "2": "tie"}
+    assert client.post(f"/api/runs/{run}/labels/9", json={"label": "a"}).status_code == 400
+    assert client.get(f"/api/runs/{a}/agreement").status_code == 400  # not a judge run
+    exposed = TestClient(create_app(), base_url="http://localhost")
+    assert exposed.post(f"/api/runs/{run}/labels/1", json={"label": "a"}).status_code == 403
+
+
+@pytest.mark.parametrize(
+    ("pairs", "expected"),
+    [([("a", "a"), ("b", "b")], 1.0), ([("a", "b"), ("b", "a")], -1.0),
+     ([("a", "a"), ("a", "a")], None)],
+)  # fmt: skip
+def test_kappa_is_agreement_beyond_chance(
+    pairs: list[tuple[str, str]], expected: float | None
+) -> None:
+    assert kappa(pairs) == expected

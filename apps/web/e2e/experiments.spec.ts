@@ -195,6 +195,61 @@ test("compare queues a judge of the two runs", async ({ page }) => {
   expect(sent).toEqual({ id: "judge", options: { a: "a", b: "b" } });
 });
 
+test("a judge run takes your pick and shows the judge's agreement", async ({ page }) => {
+  const id = "e-j";
+  await page.route("**/api/runs", (r) => r.fulfill({ json: [{ ...run(1), id }] }));
+  await page.route(`**/api/runs/${id}`, (r) =>
+    r.fulfill({
+      json: {
+        ...run(1),
+        id,
+        name: "judge",
+        metrics: { "b_wins/mean": 0.5 },
+        params: {},
+        tags: {},
+        history: {},
+        artifacts: [],
+        scorers: [],
+        error: null,
+      },
+    }),
+  );
+  await page.route(`**/api/runs/${id}/samples`, (r) =>
+    r.fulfill({
+      json: [{ id: "1", epoch: 1, input: "q", target: "", scores: { b_wins: 1 }, error: null }],
+    }),
+  );
+  await page.route(`**/api/runs/${id}/samples/1?*`, (r) =>
+    r.fulfill({
+      json: { id: "1", epoch: 1, target: "", messages: [], scores: [], metadata: {}, error: null },
+    }),
+  );
+  let labels: Record<string, string> = {};
+  await page.route(`**/api/runs/${id}/labels`, (r) => r.fulfill({ json: labels }));
+  await page.route(`**/api/runs/${id}/labels/1`, (r) => {
+    labels = { "1": r.request().postDataJSON().label };
+    return r.fulfill({ json: labels });
+  });
+  await page.route(`**/api/runs/${id}/agreement`, (r) =>
+    r.fulfill({
+      json: labels["1"]
+        ? { labelled: 1, total: 1, agreement: labels["1"] === "b" ? 1 : 0, kappa: null }
+        : { labelled: 0, total: 1, agreement: null, kappa: null },
+    }),
+  );
+  await page.goto(`/run/?id=${id}&tab=samples`);
+  await expect(page.getByText("Label pairs to check the judge against you.")).toBeVisible();
+  await page.getByRole("cell", { name: "q", exact: true }).click();
+  const pick = page.getByRole("group", { name: "Your pick" });
+  await pick.getByRole("button", { name: "B", exact: true }).click();
+  await expect(pick.getByRole("button", { name: "B", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.keyboard.press("Escape");
+  await expect(page.getByText(/Agrees with you on/)).toContainText("100.0%");
+});
+
 test("the command menu jumps to an experiment", async ({ page, isMobile }) => {
   test.skip(isMobile, "keyboard shortcut");
   await mockApi(page);
