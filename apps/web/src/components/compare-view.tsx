@@ -41,7 +41,7 @@ export function CompareView() {
             icon={GitCompareArrows}
             title="Pick a baseline and a changed run"
             body="Usually the same eval on the base model and under a change. Runs of one experiment are listed together."
-            command="uv run --all-extras python experiments/refusal-direction/eval.py"
+            action={{ href: "/launch/?id=eval", label: "Launch an eval" }}
           />
         </section>
       )}

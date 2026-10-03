@@ -120,7 +120,9 @@ def run(recipe: ModuleType, config: Path, sweep: list[str], base_dir: Path | Non
                       for label, h in zip(labels, histories, strict=True)
                       if h.get(name)}  # fmt: skip
             view = line(f"{name} by step", [float(s) for s in steps], series, "step", name,
-                        note="one line per combination")  # fmt: skip
+                        note="one line per combination",
+                        about=f"{name} over training, one line per hyperparameter "
+                        "combination.")  # fmt: skip
             log_json(view, f"views/{k:02d}-{name.replace('/', '-')}.json")
             k += 1
         keys = list(combos[0]) if combos else []
@@ -130,7 +132,8 @@ def run(recipe: ModuleType, config: Path, sweep: list[str], base_dir: Path | Non
             rows.append([*[str(values[key]) for key in keys], *finals, run_id])
             links.append([*[None] * (len(keys) + len(names)), f"/run/?id={run_id}"])
         log_json(table(f"Sweep of {raw['name']}: final values", [*keys, *names, "run"], rows,
-                       note="the last logged value of each series", links=links),
+                       note="the last logged value of each series", links=links,
+                       about="Where each combination ended up; a run opens its curves."),
                  f"views/{k:02d}-final.json")  # fmt: skip
         return f"m-{parent.info.run_id}"
 

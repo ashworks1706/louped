@@ -88,7 +88,11 @@ def speed_view(timings: dict[str, Timing], repeats: int) -> dict[str, Any]:
             for name, t in timings.items()]  # fmt: skip
     head = ["", "first token ms", "decode tok/s", "total s", "tokens", "peak MiB"]
     note = f"median of {repeats} after one warm-up; peak memory on CUDA only"
-    return table("Speed", head, rows, note=note)
+    about = (
+        "first token ms: latency before the reply starts. decode tok/s: speed after "
+        "that. peak MiB: most GPU memory used. Lower is better except tok/s."
+    )
+    return table("Speed", head, rows, note=note, about=about)
 
 
 def footprint(lm: LanguageModel) -> dict[str, Any]:
@@ -101,4 +105,5 @@ def footprint(lm: LanguageModel) -> dict[str, Any]:
     rows = [["parameters", f"{count / 1e6:.1f}M"], ["weights MiB", round(size, 1)],
             ["dtype", str(params[0].dtype).removeprefix("torch.")],
             ["device", str(params[0].device)], ["attention kernel", kernel]]  # fmt: skip
-    return table("Footprint", ["", "value"], rows)
+    about = "The loaded model: its size, number format, where it runs and its attention kernel."
+    return table("Footprint", ["", "value"], rows, about=about)

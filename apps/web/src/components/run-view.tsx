@@ -29,8 +29,8 @@ export function RunView() {
         <EmptyState
           icon={ListTree}
           title="No run selected"
-          body="Open one from Runs, or write one."
-          command="uv run --all-extras python experiments/refusal-direction/run.py --tiny"
+          body="Open one from Runs."
+          action={{ href: "/runs/", label: "Open Runs" }}
         />
       </section>
     );

@@ -9,9 +9,6 @@ import { QueryState } from "@/components/query-state";
 import { NativeSelect } from "@/components/ui/native-select";
 import { API, q } from "@/lib/api";
 
-const COMMAND =
-  'loupe circuit --model Qwen/Qwen3-0.6B --transcoders mwhanna/qwen3-0.6b-transcoders-lowl0 --prompt "The capital of France is"';
-
 /** One circuit-tracer graph at a time, drawn by circuit-tracer's viewer, which loupe serves. */
 export function CircuitsView() {
   const graphs = useQuery(q.graphs());
@@ -24,8 +21,8 @@ export function CircuitsView() {
             <EmptyState
               icon={Waypoints}
               title="No graphs"
-              body="Attribution graphs over a model's transcoders. Also on the Launch page as loupe circuit."
-              command={COMMAND}
+              body="Attribution graphs over a model's transcoders, from circuit-tracer."
+              action={{ href: "/launch/?id=circuit", label: "Launch a circuit" }}
             />
           );
         }

@@ -34,7 +34,9 @@ def attention_patterns(
     last = {name: rows[-1] for name, rows in slices.items()}
     note = "each query row sums to 1; hover or pick a token to see what it attends to"
     title = f"Attention: {prompt[-60:]!r}"
-    return pattern, tokens(title, [token_row(token_strings(lm, prompt), last)], note, pairs=slices)
+    about = "Pick a layer and head, then hover a token: shading shows which tokens it reads from."
+    row = token_row(token_strings(lm, prompt), last)
+    return pattern, tokens(title, [row], note, pairs=slices, about=about)
 
 
 @torch.no_grad()
@@ -57,6 +59,7 @@ def attention_to_span(
         f"Attention on {span[:40]!r} from the last position",
         mass.round(decimals=4).tolist(),
         f"share of attention on {len(keys)} span tokens; each row of weights sums to 1",
+        about="Which heads look at the span from the last token. Bright heads read it.",
     )
     return mass, view
 

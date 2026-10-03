@@ -41,7 +41,9 @@ def over_checkpoints(
             series[name].append(float(measure(lm)))
         del lm
     view = line("Across training", [float(s) for s, _ in points], series, "step", "value",
-                note="step 0 is the base model")  # fmt: skip
+                note="step 0 is the base model",
+                about="Each measure on every saved checkpoint, to see when during training a "
+                "behaviour appears.")  # fmt: skip
     return series, view
 
 
@@ -67,5 +69,8 @@ def model_diff(
         db = torch.stack([diff_in_means(rb[i], cb[i]) for i in range(len(rb))])
         series["direction cosine"] = torch.cosine_similarity(da, db, dim=-1).tolist()
     view = line("Model diff by layer", [float(i) for i in range(len(cos))], series, "layer",
-                "value", note="last token, averaged over prompts")  # fmt: skip
+                "value", note="last token, averaged over prompts",
+                about="How much each layer changed between the two models. residual cosine "
+                "near 1 means unchanged; direction cosine near 1, the feature survived.",
+                )  # fmt: skip
     return series, view

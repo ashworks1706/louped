@@ -25,8 +25,8 @@ export function FeatureView() {
         <EmptyState
           icon={Sparkles}
           title="No feature selected"
-          body="Feature dashboards come from a loupe features run; open one of its features."
-          command="loupe features --model gpt2 --sae gpt2-small-res-jb --sae-id blocks.8.hook_resid_pre"
+          body="Feature dashboards come from a loupe features run; open one of its features from its run."
+          action={{ href: "/launch/?id=features", label: "Launch loupe features" }}
         />
       </section>
     );

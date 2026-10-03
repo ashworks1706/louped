@@ -39,5 +39,7 @@ def linear_probes(
     note = f"{len(test)} held-out of {len(y)} prompts; majority class {chance:.2f}"
     view = line("Linear probe accuracy by layer", x=[float(i) for i in range(len(accuracy))],
                 series={"held-out accuracy": accuracy}, x_label="layer", y_label="accuracy",
-                note=note)  # fmt: skip
+                note=note, about="A linear classifier trained on each layer's activations. "
+                "Accuracy above the majority class means that layer encodes the concept.",
+                )  # fmt: skip
     return accuracy, torch.stack(weights), view

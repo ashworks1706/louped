@@ -105,7 +105,7 @@ export function ActiveExperiments() {
             icon={FlaskConical}
             title="No active questions"
             body="Set status: active in an experiment's README front matter, or start a new one."
-            command="uv run loupe new my-question --domain mechanisms"
+            action={{ href: "/launch/?id=new", label: "New experiment" }}
           />
         ) : (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -125,7 +125,7 @@ function NoExperiments() {
       icon={FlaskConical}
       title="No experiments yet"
       body="One card per folder under experiments/, filed by the domain in its README."
-      command="uv run loupe new my-question --domain mechanisms"
+      action={{ href: "/launch/?id=new", label: "New experiment" }}
     />
   );
 }

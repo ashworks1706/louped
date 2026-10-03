@@ -95,12 +95,18 @@ def sweep(
         x = [f"{a:g}" for a in alphas]
         y = [str(layer) for layer in layers]
         views = [
-            heatmap(f"{metric} by layer and strength", score, x, y, "alpha", "layer"),
-            heatmap("Coherence cost: KL on neutral prompts (nats)", cost, x, y, "alpha", "layer"),
+            heatmap(f"{metric} by layer and strength", score, x, y, "alpha", "layer",
+                    about=f"{metric} with the vector added at one layer (row) and strength "
+                    "(column). Look for where it moves most."),
+            heatmap("Coherence cost: KL on neutral prompts (nats)", cost, x, y, "alpha", "layer",
+                    about="How far steering pushes the model's next-token distribution on "
+                    "unrelated prompts. Higher means the model is more broken; near 0 is free."),
             line(f"{metric} against strength", [float(a) for a in alphas],
-                 {f"layer {layer}": score[i] for i, layer in enumerate(layers)}, "alpha", metric),
+                 {f"layer {layer}": score[i] for i, layer in enumerate(layers)}, "alpha", metric,
+                 about=f"{metric} as strength grows, one line per layer."),
             table("Cells", ["layer", "alpha", metric, "KL", "eval run"], rows, links=links,
-                  note="each eval run opens its samples"),
+                  note="each eval run opens its samples",
+                  about="Every layer and strength with its score and coherence cost."),
         ]  # fmt: skip
         for k, view in enumerate(views):
             log_json(view, f"views/{k:02d}-sweep.json")

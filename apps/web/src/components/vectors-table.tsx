@@ -28,7 +28,10 @@ export function VectorsTable() {
             icon={Move3d}
             title="No vectors saved"
             body="Directions from activations, with the run behind each."
-            command="uv run --all-extras python experiments/refusal-direction/run.py --tiny"
+            action={{
+              href: "/launch/?id=script:refusal-direction/run.py",
+              label: "Launch refusal-direction",
+            }}
           />
         ) : (
           <Table>

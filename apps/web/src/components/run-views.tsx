@@ -18,6 +18,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { Help } from "@/components/help";
 import { QueryState } from "@/components/query-state";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
@@ -58,12 +59,26 @@ export function RunViews({ id, live = false }: { id: string; live?: boolean }) {
   );
 }
 
-/** One figure of any kind, with its title and note. */
+/** How to read a figure of each kind, for one logged without its own `about`. */
+const READ: Record<View["kind"], string> = {
+  heatmap:
+    "Rows and columns are named on the axes. Colour is the value: green above zero, red below. Hover a cell for its number.",
+  line: "One line per series against the x axis. Hover for exact values.",
+  scatter: "One point per condition. Hover a point for its values.",
+  table: "One row per item. Linked cells open the run or page they name.",
+  tokens:
+    "Each token is shaded by the picked series: darker is a larger value. Hover a token for its number.",
+};
+
+/** One figure of any kind, with its title, how to read it, and its note. */
 export function Figure({ view }: { view: View }) {
   return (
     <figure className="rounded-xl border">
       <figcaption className="flex flex-wrap items-baseline justify-between gap-2 border-b px-4 py-3">
-        <span className="text-sm font-medium">{view.title}</span>
+        <span className="flex items-center gap-1.5 text-sm font-medium">
+          {view.title}
+          <Help label={`How to read ${view.title}`}>{view.about ?? READ[view.kind]}</Help>
+        </span>
         {view.note && <span className="text-muted-foreground text-xs">{view.note}</span>}
       </figcaption>
       <div className="p-4">

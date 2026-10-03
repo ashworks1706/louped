@@ -19,7 +19,10 @@ The UI is the product: quiet, dense, keyboard-first.
   `negative` are for deltas. No new colours, no gradients, no shadows except on overlays.
 - Type: Geist Sans for text, Geist Mono for numbers, ids and commands. Numbers right-aligned.
 - Every page answers one question. Its header says which, in one line (`src/lib/nav.ts`).
-- Every page has an empty state that shows the command that would fill it.
+- Every page has an empty state with what fills it: a link into the app (Launch, New experiment).
+  A terminal command only where the app cannot act, such as starting the server.
+- Every figure has a ? beside its title saying how to read it: the view's `about`, set where the
+  figure is made.
 - Every navigation is reachable from the ⌘K menu; new pages go in `NAV` and get a `G <key>` jump.
 - No client state library. View state lives in the URL; server data comes from the API.
 - The export is static (`output: "export"`): no server actions, no route handlers, no middleware.

@@ -11,7 +11,7 @@ fix. Do not edit files.
 Check:
 1. Only design tokens from `globals.css`; no new colours, gradients or shadows.
 2. Only shadcn/ui primitives; no new component or state library.
-3. Page answers one question; header line present; empty state with a real command.
+3. Page answers one question; header line present; empty state with an in-app action (a command only where the app cannot act); every figure has its ? help.
 4. New pages are in `NAV` with a `G` shortcut and reachable from ⌘K.
 5. Numbers in Geist Mono, right-aligned; ids and commands in mono.
 6. Accessibility: labels on icon buttons, focus rings visible, headings in order, contrast in both themes.

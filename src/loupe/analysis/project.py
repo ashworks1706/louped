@@ -41,7 +41,9 @@ def projection(
         token_strings(lm, prompt), {k: v.round(decimals=4).tolist() for k, v in out.items()}
     )
     return out, tokens(f"Projections: {prompt[-60:]!r}", [row],
-                       note="component of each token's residual along the direction")  # fmt: skip
+                       note="component of each token's residual along the direction",
+                       about="How much of the direction each token carries. Darker tokens "
+                       "express the concept more.")  # fmt: skip
 
 
 @torch.no_grad()
@@ -87,7 +89,8 @@ def top_examples(
     note = f"top {min(k, len(rows))} of {len(prompts)} texts by peak activation"
     if head or tail:
         note += f", skipping the {head} leading and {tail} trailing tokens all texts share"
-    view = tokens(title, [r for _, r in rows[:k]], note)
+    about = "The texts that point furthest along the direction. Darker tokens carry more of it."
+    view = tokens(title, [r for _, r in rows[:k]], note, about=about)
     return torch.tensor(peaks), view
 
 

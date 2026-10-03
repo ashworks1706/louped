@@ -45,6 +45,10 @@ def dose_response(
     where = f"layer {layer}" if layer is not None else "its own layer"
     return [
         line(f"Steering {vector} at {where}: next-token log-probability", alphas, series,
-             "alpha", "log p", note="one forward pass per strength; alpha 0 is the base model"),
-        table("Top next token by strength", ["alpha", "token", "p"], rows),
+             "alpha", "log p", note="one forward pass per strength; alpha 0 is the base model",
+             about="How the answer's probability changes as the vector is added harder. A "
+             "smooth monotone curve means the vector controls the behaviour."),
+        table("Top next token by strength", ["alpha", "token", "p"], rows,
+              about="The model's most likely next token at each strength, to spot where it "
+              "stops making sense."),
     ]  # fmt: skip

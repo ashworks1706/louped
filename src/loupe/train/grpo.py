@@ -168,7 +168,11 @@ def _log_rollouts(cfg: TrainConfig) -> None:
     columns = ["step", "reward", "advantage", *rewards, "completion"]
     rows = [[_cell(r[c]) for c in columns] for _, r in rollouts.iterrows()]
     note = f"{len(files)} logged steps; all under {cfg.output_dir / 'completions'}"
-    log_json(table("Rollouts", columns, rows, note=note), "views/rollouts.json")
+    about = (
+        "Sampled completions from the first and last logged steps, best reward first. "
+        "advantage is the reward relative to the other completions of the same prompt."
+    )
+    log_json(table("Rollouts", columns, rows, note=note, about=about), "views/rollouts.json")
 
 
 def _cell(value: Any) -> Any:

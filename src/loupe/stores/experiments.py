@@ -102,18 +102,21 @@ def front_matter(readme: str, name: str) -> tuple[Domain, Status]:
 
 
 def _folders() -> list[Path]:
+    """The experiments: folders with a README.md. A folder without one is not an experiment, such
+    as what is left of a deleted one after git removes its tracked files."""
     root = experiments_dir()
     if not root.is_dir():
         return []
-    return sorted(p for p in root.iterdir() if p.is_dir() and not p.name.startswith((".", "_")))
+    return sorted(
+        p
+        for p in root.iterdir()
+        if p.is_dir() and not p.name.startswith((".", "_")) and (p / "README.md").is_file()
+    )
 
 
 def _read(folder: Path, runs: list[RunSummary]) -> tuple[Experiment, str]:
     """The experiment in a folder, and its README without the front matter."""
-    readme_path = folder / "README.md"
-    if not readme_path.exists():
-        raise BadExperiment(f"experiments/{folder.name} has no README.md")
-    readme = readme_path.read_text(encoding="utf-8")
+    readme = (folder / "README.md").read_text(encoding="utf-8")
     domain, status = front_matter(readme, folder.name)
     experiment = Experiment(
         name=folder.name,

@@ -20,7 +20,7 @@ export function RunsList({ limit, compact = false }: { limit?: number; compact?:
             icon={ListTree}
             title="No runs yet"
             body="Evals, analyses and training runs appear as they are written."
-            command="uv run --all-extras python experiments/refusal-direction/run.py --tiny"
+            action={{ href: "/launch/", label: "Launch a run" }}
           />
         ) : (
           // The table keeps its filters in the URL, which a static page reads under Suspense.

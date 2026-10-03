@@ -132,6 +132,8 @@ class HeatmapView(BaseModel):
     x_label: str
     y_label: str
     note: str | None = None
+    #: How to read the figure, behind the ? beside its title.
+    about: str | None = None
     slices: dict[str, list[list[float]]] | None = None
     labels: list[list[str]] | None = None
 
@@ -144,6 +146,8 @@ class LineView(BaseModel):
     x_label: str
     y_label: str
     note: str | None = None
+    #: How to read the figure, behind the ? beside its title.
+    about: str | None = None
 
 
 class ScatterPoint(BaseModel):
@@ -159,6 +163,8 @@ class ScatterView(BaseModel):
     x_label: str
     y_label: str
     note: str | None = None
+    #: How to read the figure, behind the ? beside its title.
+    about: str | None = None
 
 
 class TableView(BaseModel):
@@ -167,6 +173,8 @@ class TableView(BaseModel):
     columns: list[str]
     rows: list[list[str | float | int | bool | None]]
     note: str | None = None
+    #: How to read the figure, behind the ? beside its title.
+    about: str | None = None
     links: list[list[str | None]] | None = None
     #: Links are Neuronpedia feature pages, opened embedded beside the table.
     embed: Literal["neuronpedia"] | None = None
@@ -184,6 +192,8 @@ class TokensView(BaseModel):
     rows: list[TokenRow]
     pairs: dict[str, list[list[float]]] | None = None
     note: str | None = None
+    #: How to read the figure, behind the ? beside its title.
+    about: str | None = None
 
 
 View = Annotated[

@@ -163,7 +163,9 @@ def train(cfg: ReftConfig) -> Path:
                                     f"test/{side}_words": sum(words) / len(words)})  # fmt: skip
             log_json(table("Test replies, base and with the intervention",
                            ["prompt", "target", "base", "reft"],
-                           [[r["prompt"], r["target"], r["base"], r["reft"]] for r in rows]),
+                           [[r["prompt"], r["target"], r["base"], r["reft"]] for r in rows],
+                           about="Held-out prompts answered by the base model and with the "
+                           "trained intervention, beside the reply it was trained toward."),
                      "views/00-replies.json")  # fmt: skip
         adapter = cfg.output_dir / "reft"
         mlflow.set_tag("loupe.adapter", str(adapter))

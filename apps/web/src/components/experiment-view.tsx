@@ -32,7 +32,7 @@ export function ExperimentView() {
           icon={FlaskConical}
           title="No experiment selected"
           body="Open one from Experiments, or start one."
-          command="uv run loupe new my-question --domain mechanisms"
+          action={{ href: "/launch/?id=new", label: "New experiment" }}
         />
       </section>
     );
@@ -143,14 +143,16 @@ function useOwnLaunchables(name: string): Launchable[] {
     .sort((a, b) => Number(b.title.endsWith("/run.py")) - Number(a.title.endsWith("/run.py")));
 }
 
-/** The command a terminal would run for the experiment's first script or config; without a
- * launching server, the Run section of its README, which names them. */
-function firstCommand(name: string, own: Launchable[]): string {
+/** The Launch form of the experiment's first script or config; without a launching server, its
+ * design, whose Run section says how it runs. */
+function firstRun(name: string, own: Launchable[]): { href: string; label: string } {
   const first = own[0];
-  if (first?.id.startsWith("script:"))
-    return `uv run --all-extras python experiments/${first.title}`;
-  if (first) return `uv run loupe train ${first.recipe ?? "sft"} experiments/${first.title}`;
-  return `sed -n '/^## Run/,/^## Result/p' experiments/${name}/README.md`;
+  if (first)
+    return {
+      href: `/launch/?id=${encodeURIComponent(first.id)}`,
+      label: `Launch ${first.title.slice(name.length + 1)}`,
+    };
+  return { href: `/experiment/?name=${encodeURIComponent(name)}&tab=design`, label: "How it runs" };
 }
 
 const TABS = ["design", "runs"] as const;
@@ -191,8 +193,8 @@ function ExperimentTabs({ experiment: e }: { experiment: ExperimentDetail }) {
           <EmptyState
             icon={Rocket}
             title="No runs yet"
-            body="Launch it from the button above, or from a terminal."
-            command={firstCommand(e.name, own)}
+            body="Nothing has run under it yet."
+            action={firstRun(e.name, own)}
           />
         ) : (
           <RunsTable runs={e.runs} byExperiment={false} />
