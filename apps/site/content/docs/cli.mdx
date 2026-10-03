@@ -22,5 +22,7 @@ Every command takes `--help`, and each is also a form on the app's Launch page. 
   from logged model calls or a teacher, and contamination checks.
 - `loupe bench <model>`: what serving costs on this machine, per weight format (`--quants none
 int8 int4`): throughput and latency as requests arrive together, prefill time and memory as the
-  prompt grows.
+  prompt grows; speculative decoding (prompt lookup, and `--draft` a small model of the same
+  family) with its speed-up and a check that the reply is unchanged; and a torch.profiler table of
+  where the time goes, with a trace for Perfetto.
 - `loupe version`: the installed version.

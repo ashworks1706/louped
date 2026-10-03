@@ -137,6 +137,11 @@ class Bench:
     """Tokens each request generates."""
     repeats: int = 3
     experiment: str = "efficiency-bench"
+    draft: str | None = None
+    """A small model with the same tokenizer, to draft for speculative decoding (Qwen/Qwen2.5-0.5B
+    for a larger Qwen2.5); prompt lookup is measured either way."""
+    profile: bool = True
+    """Profile one request: the operators it spent most time in and a trace for Perfetto."""
 
 
 @dataclass(frozen=True)
@@ -232,6 +237,7 @@ def main() -> None:
 
             quants: list[Quant | None] = [None if q == "none" else q for q in cmd.quants]
             print(bench(cmd.model, quants, tuple(cmd.batches), tuple(cmd.contexts),
-                        cmd.new_tokens, cmd.repeats, cmd.experiment))  # fmt: skip
+                        cmd.new_tokens, cmd.repeats, cmd.experiment, cmd.draft,
+                        cmd.profile))  # fmt: skip
         case Version():
             print(__version__)
