@@ -1,0 +1,29 @@
+---
+title: Coding agents
+description: Drive loupe from Claude Code, Cursor or any MCP client.
+---
+
+`loupe mcp` is an [MCP](https://modelcontextprotocol.io) server over a running `loupe serve`. An
+agent reads what the app shows and starts work through the same queue: one job at a time, live on
+the Launch page, and off on a server started with `--expose`.
+
+```sh
+pip install 'loupelab[server,agent]'
+loupe serve
+```
+
+Then register the server with the agent. In this repository `.mcp.json` already does; elsewhere:
+
+```json
+{ "mcpServers": { "loupe": { "command": "loupe", "args": ["mcp"] } } }
+```
+
+`--url` points it at a server other than `http://127.0.0.1:8000`.
+
+| Tools                                                | What they do                                     |
+| ---------------------------------------------------- | ------------------------------------------------ |
+| `status`, `experiments`, `experiment`, `runs`, `run` | the questions and their runs                     |
+| `figures`, `figure`, `samples`, `sample`, `compare`  | results: figure data, transcripts, paired deltas |
+| `vectors`                                            | saved directions                                 |
+| `launchables`, `launch_options`, `launch`            | start a script, config, grid or loupe command    |
+| `jobs`, `job`, `cancel_job`                          | follow and stop queued work                      |

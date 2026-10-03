@@ -2,8 +2,9 @@
 /circuit, and the built UI at / when there is one.
 
 The server owns no database. Every route reads a store another tool already writes (MLflow,
-Inspect logs, artifact files, experiments/), so deleting the server loses nothing. The launch
-routes start loupe's own commands as jobs, whose runs land in those same stores.
+Inspect logs, artifact files, experiments/), so deleting the server loses nothing. The one thing
+it writes itself is a person's labels on a judge run's pairs, plain JSON under <home>/labels. The
+launch routes start loupe's own commands as jobs, whose runs land in those same stores.
 """
 
 from __future__ import annotations
@@ -11,7 +12,7 @@ from __future__ import annotations
 import mimetypes
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
@@ -21,8 +22,10 @@ from pydantic import BaseModel
 from loupe import __version__, stores
 from loupe.core import Direction, home
 from loupe.server import graphs, inspect_view, launch, playground
+from loupe.stores.labels import Label
 from loupe.stores.runs import read_artifact
 from loupe.stores.types import (
+    Agreement,
     Comparison,
     Experiment,
     ExperimentDetail,
@@ -41,6 +44,11 @@ DEV_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
 #: The Host headers answered by default: this machine only, so a page on another site cannot
 #: reach the API through a rebound DNS name.
 LOOPBACK = ["localhost", "127.0.0.1", "::1", "[::1]"]
+
+
+class LabelRequest(BaseModel):
+    #: The person's pick for the pair, or null to clear it.
+    label: Label | None
 
 
 class Health(BaseModel):
@@ -119,6 +127,26 @@ def create_app(
     @app.get("/api/runs/{run_id}/features/{feature}")
     def feature(run_id: str, feature: int) -> FeatureDashboard:
         return stores.get_feature(run_id, feature)
+
+    @app.get("/api/runs/{run_id}/labels")
+    def labels(run_id: str) -> dict[str, Label]:
+        return stores.get_labels(run_id)
+
+    @app.post("/api/runs/{run_id}/labels/{sample_id}", dependencies=[Depends(launch.require_json)])
+    def label(run_id: str, sample_id: str, req: LabelRequest) -> dict[str, Label]:
+        if not launching:
+            raise HTTPException(403, "labelling is off: this server was started with --expose")
+        try:
+            return stores.set_label(run_id, sample_id, req.label)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.get("/api/runs/{run_id}/agreement")
+    def agreement(run_id: str) -> Agreement:
+        try:
+            return stores.agreement(run_id)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
 
     @app.get("/api/compare")
     def compare(a: str, b: str) -> Comparison:

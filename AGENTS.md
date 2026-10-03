@@ -57,6 +57,7 @@ src/loupe/        the package (distribution loupelab); layers in docs/ARCHITECTU
   train/          sft, dpo, grpo, classify, reft, sweeps, replayed tool environments
   stores/         read Inspect logs, MLflow, vectors, experiments/
   server/         the API, the Playground, launching jobs
+  agent.py        the MCP server coding agents drive loupe through
   sweep.py grid.py features.py circuits.py cli.py
 apps/web/         the UI; its AGENTS.md holds the design rules
 apps/site/        the docs site
@@ -81,3 +82,7 @@ asked.
 `.claude/skills/` holds the workflows (`check`, `new-experiment`, `roadmap`, `code-quality`, and
 vendored debugging, TDD, verification and security skills). Run the `loupe-reviewer` agent before
 opening a pull request and `web-reviewer` after any change under `apps/web`.
+
+`.mcp.json` registers `loupe mcp`, which drives a running `loupe serve`: read experiments, runs,
+figures and samples, compare runs, and launch jobs through the app's queue. Prefer it to the CLI
+for running experiments, so the work shows in the app.

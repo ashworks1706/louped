@@ -32,6 +32,8 @@ export type Launchable = Schemas["Launchable"];
 export type LaunchOption = Schemas["Option"];
 export type LaunchRequest = Schemas["LaunchRequest"];
 export type Job = Schemas["Job"];
+export type Agreement = Schemas["Agreement"];
+export type Label = "a" | "b" | "tie";
 type JobDetail = Schemas["JobDetail"];
 
 export class ApiError extends Error {
@@ -94,6 +96,11 @@ export const speed = (req: Schemas["SpeedRequest"]) =>
 export const health = (signal?: AbortSignal) => get<Health>("/health", signal);
 
 export const launch = (req: LaunchRequest) => post<Job>("/launch", req);
+export const setLabel = (run: string, sample: string, label: Label | null) =>
+  post<Record<string, Label>>(
+    `/runs/${encodeURIComponent(run)}/labels/${encodeURIComponent(sample)}`,
+    { label },
+  );
 export const loadModel = (req: Schemas["LoadRequest"]) =>
   post<PlaygroundInfo>("/playground/load", req);
 export const cancelJob = (id: string) =>
@@ -134,6 +141,14 @@ export const q = {
       get<SampleDetail>(
         `/runs/${encodeURIComponent(id)}/samples/${encodeURIComponent(sample)}?epoch=${epoch}`,
       ),
+  }),
+  labels: (id: string) => ({
+    queryKey: ["labels", id],
+    queryFn: () => get<Record<string, Label>>(`/runs/${encodeURIComponent(id)}/labels`),
+  }),
+  agreement: (id: string) => ({
+    queryKey: ["agreement", id],
+    queryFn: () => get<Agreement>(`/runs/${encodeURIComponent(id)}/agreement`),
   }),
   views: (id: string, live = false) => ({
     queryKey: ["views", id],

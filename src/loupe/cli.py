@@ -145,6 +145,33 @@ class Bench:
 
 
 @dataclass(frozen=True)
+class Judge:
+    """Two eval runs judged sample by sample by a local model, each pair in both orders: B's win
+    rate over A as an eval run of its own. Needs the evals extra, and interp for loupe/ models."""
+
+    a: tyro.conf.Positional[str]
+    """The baseline run's id."""
+    b: tyro.conf.Positional[str]
+    """The changed run's id."""
+    model: str = "loupe/Qwen/Qwen2.5-1.5B-Instruct"
+    """The judge: loupe/ or hf/ with a Hub id runs locally; any Inspect model works."""
+    criterion: str = "Which answer is more correct and more helpful?"
+    """The question the judge answers for each pair."""
+    limit: int | None = None
+    """Pairs to judge; all when empty."""
+    max_tokens: int = 512
+
+
+@dataclass(frozen=True)
+class Mcp:
+    """An MCP server on stdio for coding agents, over a running loupe serve: read experiments,
+    runs, figures and compares; launch, follow and cancel jobs. Needs the agent extra."""
+
+    url: str = "http://127.0.0.1:8000"
+    """The loupe serve to drive."""
+
+
+@dataclass(frozen=True)
 class Version:
     """Print the installed version."""
 
@@ -159,6 +186,8 @@ Command = (
     | Annotated[Features, tyro.conf.subcommand("features")]
     | Annotated[Circuit, tyro.conf.subcommand("circuit")]
     | Annotated[Bench, tyro.conf.subcommand("bench")]
+    | Annotated[Judge, tyro.conf.subcommand("judge")]
+    | Annotated[Mcp, tyro.conf.subcommand("mcp")]
     | Annotated[Version, tyro.conf.subcommand("version")]
 )
 
@@ -239,5 +268,22 @@ def main() -> None:
             print(bench(cmd.model, quants, tuple(cmd.batches), tuple(cmd.contexts),
                         cmd.new_tokens, cmd.repeats, cmd.experiment, cmd.draft,
                         cmd.profile))  # fmt: skip
+        case Judge() as cmd:
+            from loupe.judge import judge
+
+            try:
+                print(judge(cmd.a, cmd.b, cmd.model, cmd.criterion, cmd.limit, cmd.max_tokens))
+            except ValueError as exc:
+                raise SystemExit(str(exc)) from exc
+        case Mcp() as cmd:
+            try:
+                from loupe.agent import server
+            except ModuleNotFoundError as exc:
+                if exc.name not in ("mcp", "mcp_types", "httpx"):
+                    raise
+                raise SystemExit(
+                    "loupe mcp needs the agent extra: pip install 'loupelab[agent]'"
+                ) from exc
+            server(cmd.url).run("stdio")
         case Version():
             print(__version__)
