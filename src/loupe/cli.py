@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 import tyro
 
@@ -120,6 +120,26 @@ class Circuit:
 
 
 @dataclass(frozen=True)
+class Bench:
+    """What serving a model costs on this machine, per weight format: throughput and latency as
+    requests arrive together, and prefill time and memory as the prompt grows. One run with its
+    figures. Needs the interp and tracking extras; int8 and int4 need CUDA and the train extra."""
+
+    model: str
+    """A Hub id, a path, or a name under <home>/models."""
+    quants: list[Literal["none", "int8", "int4"]] = field(default_factory=lambda: ["none"])
+    """Weight formats to compare: none (as saved), int8, int4 (NF4)."""
+    batches: list[int] = field(default_factory=lambda: [1, 4, 16])
+    """Requests generated at once."""
+    contexts: list[int] = field(default_factory=lambda: [512, 2048, 8192])
+    """Prompt lengths in tokens; ones over the model's limit are skipped."""
+    new_tokens: int = 64
+    """Tokens each request generates."""
+    repeats: int = 3
+    experiment: str = "efficiency-bench"
+
+
+@dataclass(frozen=True)
 class Version:
     """Print the installed version."""
 
@@ -133,6 +153,7 @@ Command = (
     | Annotated[New, tyro.conf.subcommand("new")]
     | Annotated[Features, tyro.conf.subcommand("features")]
     | Annotated[Circuit, tyro.conf.subcommand("circuit")]
+    | Annotated[Bench, tyro.conf.subcommand("bench")]
     | Annotated[Version, tyro.conf.subcommand("version")]
 )
 
@@ -205,5 +226,12 @@ def main() -> None:
             from loupe.circuits import circuit
 
             circuit(cmd.model, cmd.transcoders, cmd.prompt, cmd.slug, cmd.dtype, cmd.batch_size)
+        case Bench() as cmd:
+            from loupe.bench import bench
+            from loupe.models.load import Quant
+
+            quants: list[Quant | None] = [None if q == "none" else q for q in cmd.quants]
+            print(bench(cmd.model, quants, tuple(cmd.batches), tuple(cmd.contexts),
+                        cmd.new_tokens, cmd.repeats, cmd.experiment))  # fmt: skip
         case Version():
             print(__version__)

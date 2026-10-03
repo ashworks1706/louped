@@ -20,4 +20,7 @@ Every command takes `--help`, and each is also a form on the app's Launch page. 
 - `loupe circuit`: an attribution graph with circuit-tracer, shown on the Circuits page.
 - `loupe data export`, `collect`, `verify`, `review`, `curate`, `overlap`, `stats`: training sets
   from logged model calls or a teacher, and contamination checks.
+- `loupe bench <model>`: what serving costs on this machine, per weight format (`--quants none
+int8 int4`): throughput and latency as requests arrive together, prefill time and memory as the
+  prompt grows.
 - `loupe version`: the installed version.

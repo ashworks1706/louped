@@ -15,7 +15,8 @@ Adapters: bank loads named adapters beside each other, adapters makes a set of t
 changes the live set along one generation. diffusion serves a masked diffusion model through
 loupe.models.diffusion, with the sampler's arguments ({"length": 64, "steps": 64}). revision pins
 a Hub model to a commit; LLaDA and Dream from the Hub need one, since they run their own code.
-attn picks the attention kernel (loupe.models.load), so grid conditions can differ only by it.
+attn picks the attention kernel and quant the weights' format (int8, int4; loupe.models.load), so
+grid conditions can differ only by either.
 
 inject ({"layer": 6, "alpha": 1.0}) takes passages a solver sent as an INJECT system message and
 adds their state at that layer instead of rendering them. A conversation that ends on an assistant
@@ -56,6 +57,7 @@ from loupe.models import load
 from loupe.models.adapters import activate, phase_hook
 from loupe.models.diffusion import Diffusion, load_diffusion
 from loupe.models.diffusion import generate as denoise_all
+from loupe.models.load import Quant
 
 #: Tokens generated when the task's config sets no max_tokens.
 DEFAULT_MAX_TOKENS = 256
@@ -83,19 +85,21 @@ def shared_model(
     diffusion: bool = False,
     revision: str | None = None,
     attn: str | None = None,
+    quant: Quant | None = None,
 ) -> Any:
-    """The model the provider serves under this name (with this adapter bank and attention
-    kernel), loaded once per process: a LanguageModel, or a Diffusion for a masked diffusion
-    model."""
+    """The model the provider serves under this name (with this adapter bank, attention kernel
+    and weight format), loaded once per process: a LanguageModel, or a Diffusion for a masked
+    diffusion model."""
     local = saved_model(name)
     key = str(local) if local else name  # a saved model's name is only unique per home
-    key += json.dumps([bank or [], merges or [], diffusion, revision, attn], sort_keys=True)
+    key += json.dumps([bank or [], merges or [], diffusion, revision, attn, quant], sort_keys=True)
     with _LOCK:
         if key not in _MODELS:
             if diffusion:
                 _MODELS[key] = load_diffusion(name, bank, merges, revision=revision)
             else:
-                _MODELS[key] = load(name, bank=bank, merges=merges, revision=revision, attn=attn)
+                _MODELS[key] = load(name, bank=bank, merges=merges, revision=revision, attn=attn,
+                                    quant=quant)  # fmt: skip
         return _MODELS[key]
 
 
@@ -115,15 +119,19 @@ class LoupeAPI(ModelAPI):
         inject: dict[str, Any] | None = None,
         revision: str | None = None,
         attn: str | None = None,
+        quant: Quant | None = None,
         batch_size: int | None = None,
         **model_args: Any,
     ) -> None:
         super().__init__(model_name, base_url, api_key, [], config or GenerateConfig())
         named = set(adapters or []) | {a for p in phases or [] for a in p["adapters"]}
         bank = bank or (sorted(named) if named else None)
-        if (interventions or inject or attn) and diffusion is not None:
-            raise ValueError("interventions and attn act on causal LMs, not a diffusion model")
-        self.lm = shared_model(model_name, bank, merges, diffusion is not None, revision, attn)
+        if (interventions or inject or attn or quant) and diffusion is not None:
+            raise ValueError(
+                "interventions, attn and quant act on causal LMs, not a diffusion model"
+            )
+        self.lm = shared_model(model_name, bank, merges, diffusion is not None, revision, attn,
+                               quant)  # fmt: skip
         self.sampler = dict(diffusion or {})
         specs = parse(interventions) if interventions else []
         self.plan = compile(self.lm, [s for s in specs if not _reads_model(s)]) if specs else {}
