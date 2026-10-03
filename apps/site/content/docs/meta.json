@@ -3,15 +3,15 @@
     "index",
     "install",
     "quickstart",
-    "---Examples---",
-    "...examples",
     "---Concepts---",
+    "experiments",
     "policies",
     "grid",
     "domains",
     "---Reference---",
     "models",
     "cli",
+    "remote",
     "agents",
     "self-host"
   ]

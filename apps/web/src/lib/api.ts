@@ -32,6 +32,14 @@ export type Launchable = Schemas["Launchable"];
 export type LaunchOption = Schemas["Option"];
 export type LaunchRequest = Schemas["LaunchRequest"];
 export type Job = Schemas["Job"];
+export type Target = Schemas["Target"];
+/** The server fills in any target field left out with its default. */
+export type ExportRequest = LaunchRequest & {
+  target: Partial<Target> & Pick<Target, "provider">;
+};
+export type Imported = Schemas["Imported"];
+export type Agreement = Schemas["Agreement"];
+export type Label = "a" | "b" | "tie";
 type JobDetail = Schemas["JobDetail"];
 
 export class ApiError extends Error {
@@ -94,6 +102,35 @@ export const speed = (req: Schemas["SpeedRequest"]) =>
 export const health = (signal?: AbortSignal) => get<Health>("/health", signal);
 
 export const launch = (req: LaunchRequest) => post<Job>("/launch", req);
+
+/** Downloads the bundle that runs req on another machine. */
+export async function exportJob(req: ExportRequest): Promise<string> {
+  const res = await send("/launch/export", req);
+  const name =
+    /filename="?([^";]+)"?/.exec(res.headers.get("content-disposition") ?? "")?.[1] ??
+    "loupe-job.tar.gz";
+  const url = URL.createObjectURL(await res.blob());
+  const a = Object.assign(document.createElement("a"), { href: url, download: name });
+  a.click();
+  URL.revokeObjectURL(url);
+  return name;
+}
+
+/** Adds a result archive from another machine to this loupe. */
+export async function importResult(file: File): Promise<Imported> {
+  const res = await fetch(`${API}/api/launch/import`, {
+    method: "POST",
+    headers: { "content-type": "application/gzip" },
+    body: file,
+  });
+  if (!res.ok) throw new ApiError(res.status, await detail(res, "/launch/import"));
+  return res.json() as Promise<Imported>;
+}
+export const setLabel = (run: string, sample: string, label: Label | null) =>
+  post<Record<string, Label>>(
+    `/runs/${encodeURIComponent(run)}/labels/${encodeURIComponent(sample)}`,
+    { label },
+  );
 export const loadModel = (req: Schemas["LoadRequest"]) =>
   post<PlaygroundInfo>("/playground/load", req);
 export const cancelJob = (id: string) =>
@@ -134,6 +171,14 @@ export const q = {
       get<SampleDetail>(
         `/runs/${encodeURIComponent(id)}/samples/${encodeURIComponent(sample)}?epoch=${epoch}`,
       ),
+  }),
+  labels: (id: string) => ({
+    queryKey: ["labels", id],
+    queryFn: () => get<Record<string, Label>>(`/runs/${encodeURIComponent(id)}/labels`),
+  }),
+  agreement: (id: string) => ({
+    queryKey: ["agreement", id],
+    queryFn: () => get<Agreement>(`/runs/${encodeURIComponent(id)}/agreement`),
   }),
   views: (id: string, live = false) => ({
     queryKey: ["views", id],

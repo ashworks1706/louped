@@ -19,7 +19,9 @@ from mlflow.entities import Run
 from loupe.core import artifacts_dir, capture, tracking_uri
 
 
-def _experiment_id(name: str) -> str:
+def experiment_id(name: str) -> str:
+    """The MLflow experiment named for an experiments/ folder, created with its artifacts under
+    loupe's home when new."""
     client = MlflowClient(tracking_uri=tracking_uri())
     found = client.get_experiment_by_name(name)
     if found is not None:
@@ -44,9 +46,7 @@ def start_run(
         "loupe.git_sha": meta.git.sha or "",
         "loupe.git_dirty": str(meta.git.dirty).lower(),
     }
-    with mlflow.start_run(
-        experiment_id=_experiment_id(experiment), run_name=name, tags=tags
-    ) as run:
+    with mlflow.start_run(experiment_id=experiment_id(experiment), run_name=name, tags=tags) as run:
         if params:
             mlflow.log_params(params)
         mlflow.log_text(meta.model_dump_json(indent=2), "meta.json")

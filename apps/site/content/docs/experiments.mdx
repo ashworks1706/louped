@@ -1,0 +1,65 @@
+---
+title: Writing an experiment
+description: Where a question's code, evals, figures and results go, so the app picks them up.
+---
+
+An experiment is one folder under `experiments/`, named for its question. Nothing imports it, so
+deleting the folder removes it. The app finds everything in it by convention; there is nothing to
+register.
+
+```sh
+loupe new my-question --domain honesty   # or New on the Experiments page
+```
+
+| File             | What it is                                                     | Where it shows                     |
+| ---------------- | -------------------------------------------------------------- | ---------------------------------- |
+| `README.md`      | Front matter (domain, status), then the research note          | Experiments, the experiment's page |
+| `run.py`         | A script with a `tyro` `Args` dataclass and `__main__`         | Launch, its fields as the form     |
+| `task.py`        | Inspect tasks (`@task`); its logs file under the experiment    | Launch › inspect eval, Runs        |
+| `*.yaml` (train) | A config whose first line is `# loupe train sft` (or dpo, ...) | Launch › Training                  |
+| `*.yaml` (grid)  | A config whose first line is `# loupe grid`                    | Launch › Grids                     |
+
+## README
+
+The front matter names a domain from [Research domains](/docs/domains) and a status (`active`,
+`parked`, `answered`). The first paragraph under **Question** and under **Result** is what the
+Experiments page shows; the rest renders on the experiment's page.
+
+## run.py
+
+`loupe new` writes a skeleton that launches as is. Fill in `main`:
+
+```python
+from loupe.analysis.views import table
+from loupe.tracking import log_json, start_run
+
+with start_run(EXPERIMENT, name=args.model, params=asdict(args), seed=args.seed):
+    mlflow.log_metrics({"held/accuracy": 0.72})                    # Runs, Compare
+    log_json(table("Held by condition", ["condition", "held"], rows,
+                   about="One row per condition; higher holds more."),
+             "views/00-held.json")                                 # the run's Figures tab
+```
+
+- **Numbers** are MLflow metrics, named `scorer/metric`, so they read like eval scores.
+- **Figures** are data, not images: `heatmap`, `line`, `scatter`, `table` or `tokens` from
+  `loupe.analysis.views`, logged under `views/`. Each takes `about`, the text behind its ?.
+- **Evals** are Inspect tasks. A log is filed under the experiment when its task file is in the
+  folder, or when it carries the tag `experiment:<name>`.
+- **Directions** go through `loupe.vectors.save_vector`, and appear under Behavior › Vectors.
+- **Reproducibility**: `start_run` records the commit and environment; pin model revisions and
+  seeds in `Args` so they are in the run's parameters.
+
+## Someone else's code
+
+A paper's harness that pins its own versions runs in its own environment, not in loupe's: clone
+it at a fixed commit under `.loupe/vendor/`, call it as a subprocess, and log what it wrote.
+`experiments/rational-updating-baseline/run.py` does this for the rational-updating harness.
+
+## Shared code
+
+When two experiments need the same code, it moves into `src/loupe` with a test, and both import it.
+
+## From a coding agent
+
+With [`loupe mcp`](/docs/agents) the agent creates the folder (`launch` with id `new`), writes the
+files above, launches `run.py` through the app's queue and reads the runs and figures back.

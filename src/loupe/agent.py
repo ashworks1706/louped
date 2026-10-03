@@ -19,14 +19,18 @@ from mcp_types import ToolAnnotations
 INSTRUCTIONS = """loupe is a research testbed for language models: behavior (what models do and
 the mechanisms behind it) and efficiency (what it costs to run them).
 
-An experiment is a research question: a folder under experiments/ with a README (Question,
-Hypothesis, Setup, Result) and scripts. A run is one eval, analysis or training run an experiment
-wrote; it has metrics, figures and, for an eval, samples. A job is a command started from the
-queue; its runs appear as it writes them.
+An experiment is a research question: a folder under experiments/ with a README (front matter
+with domain and status, then Question, Observation, Hypotheses, Baseline, Test, Stop if, Run,
+Result, Next) and its code: run.py (a tyro Args dataclass, the Launch form), task.py (Inspect
+tasks), training and grid YAML. A run is one eval, analysis or training run an experiment wrote;
+it has metrics, figures and, for an eval, samples. A job is a command started from the queue; its
+runs appear as it writes them.
 
-Work like this: read the experiments and runs first; start work with launchables, launch_options
-and launch (id "new" starts a question); follow it with job; read results with run, figures,
-figure, samples and compare.
+Work like this: read the experiments and runs first. A new question is launch with id "new"; then
+edit its README and run.py in the repository (apps/site/content/docs/experiments.mdx says what
+goes where). Start work with launchables, launch_options and launch (a script is
+"script:<name>/run.py"); follow it with job; read results with run, figures, figure, samples and
+compare.
 Report a difference only with its paired interval from compare, and name the run ids you used.
 Jobs run one at a time on this machine's GPU, so do not queue more than the question needs."""
 

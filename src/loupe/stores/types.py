@@ -22,6 +22,8 @@ class RunSummary(BaseModel):
     samples: int | None
     #: The samples an eval will have when it ends; while it runs, samples counts those done.
     total: int | None = None
+    #: Where it ran, for a run imported from another machine (sol, slurm, vm); None for here.
+    host: str | None = None
 
 
 class MetricPoint(BaseModel):
@@ -250,6 +252,15 @@ class PairedScore(BaseModel):
     high: float
     up: int = Field(description="Samples where B scored higher.")
     down: int
+
+
+class Agreement(BaseModel):
+    """A judge run's agreement with a person's labels on its pairs."""
+
+    labelled: int = Field(description="Pairs the person labelled.")
+    total: int = Field(description="Pairs the judge judged.")
+    agreement: float | None = Field(description="Share of labelled pairs with the same pick.")
+    kappa: float | None = Field(description="Cohen's kappa: agreement beyond chance.")
 
 
 class Comparison(BaseModel):

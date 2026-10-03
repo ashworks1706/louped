@@ -15,26 +15,26 @@ to one application.
 
 ## Behavior and alignment
 
-| Domain                    | Asks                                                                                       | Experiments                                                                    |
-| ------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| Mechanisms                | Which directions, heads, features and circuits carry a behavior, and what moving them does | `refusal-direction`, `refusal-finetuning`, `interp-toolkit`, `attention-heads` |
-| Sycophancy and honesty    | Whether a model holds a correct answer under pressure and declines what it cannot know     | `sycophancy-pushback`, `answer-or-decline`                                     |
-| Steering and conditioning | How prompts, vectors, soft prompts, ReFT and LoRA compare at reaching one target           | none yet                                                                       |
-| Agent behavior            | Whether agents use tools, ground their answers in tool output and report failure honestly  | `coding-agent`, `agent-sandbox`, `intercode-ctf`                               |
+| Domain                    | Asks                                                                                       | Experiments                  |
+| ------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------- |
+| Mechanisms                | Which directions, heads, features and circuits carry a behavior, and what moving them does | none yet                     |
+| Sycophancy and honesty    | Whether a model holds a correct answer under pressure and updates on valid evidence        | `rational-updating-baseline` |
+| Steering and conditioning | How prompts, vectors, soft prompts, ReFT and LoRA compare at reaching one target           | none yet                     |
+| Agent behavior            | Whether agents use tools, ground their answers in tool output and report failure honestly  | none yet                     |
 
 ## Efficiency and systems
 
-| Domain                                 | Asks                                                                                | Experiments           |
-| -------------------------------------- | ----------------------------------------------------------------------------------- | --------------------- |
-| Context and retrieval inside the model | Whether retrieved state can reach a model without its prompt, and at which layer    | `retrieval-injection` |
-| Inference cost and kernels             | What an attention kernel or a serving choice costs in agreement, latency and memory | `attention-kernels`   |
-| Small and specialised models           | What adapters, distillation and masked diffusion buy a small model on one job       | none yet              |
+| Domain                                 | Asks                                                                                | Experiments |
+| -------------------------------------- | ----------------------------------------------------------------------------------- | ----------- |
+| Context and retrieval inside the model | Whether retrieved state can reach a model without its prompt, and at which layer    | none yet    |
+| Inference cost and kernels             | What an attention kernel or a serving choice costs in agreement, latency and memory | none yet    |
+| Small and specialised models           | What adapters, distillation and masked diffusion buy a small model on one job       | none yet    |
 
 ## Instrument checks
 
-| Domain                    | Asks                                                                     | Experiments              |
-| ------------------------- | ------------------------------------------------------------------------ | ------------------------ |
-| Reproducing known results | Whether loupe's provider and recipes reach reported numbers within noise | `inspect-evals-baseline` |
+| Domain                    | Asks                                                                     | Experiments |
+| ------------------------- | ------------------------------------------------------------------------ | ----------- |
+| Reproducing known results | Whether loupe's provider and recipes reach reported numbers within noise | none yet    |
 
 ## Methods every domain uses
 

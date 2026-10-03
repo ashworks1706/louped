@@ -41,32 +41,6 @@ check-web:
 check-site:
     cd {{site}} && pnpm format:check && pnpm lint && pnpm typecheck && pnpm build
 
-# the worked examples end to end on their tiny offline models, into LOUPE_HOME for `just serve`
-examples:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    export HF_HUB_OFFLINE=1   # nothing downloads: a model fetch fails instead
-    export INSPECT_LOG_DIR="${INSPECT_LOG_DIR:-${LOUPE_HOME:-.loupe}/logs}"
-    export OMP_NUM_THREADS="${OMP_NUM_THREADS:-1}"   # tiny models; threads only contend on a busy CPU
-    run() { echo "=== $*"; SECONDS=0; uv run --all-extras python "$@"; echo "=== ${SECONDS}s"; }
-    run experiments/refusal-direction/run.py --tiny
-    run experiments/refusal-direction/eval.py --tiny
-    run experiments/sycophancy-pushback/run.py --tiny
-    run experiments/refusal-finetuning/run.py --tiny --steps 20 --save-every 5
-    uv run --all-extras python - <<'EOF'
-    from collections import Counter
-    from loupe import stores
-    seen = Counter((r.experiment, r.kind) for r in stores.list_runs())
-    want = {("refusal-direction", "analysis"): 1, ("refusal-direction", "eval"): 2,
-            ("sycophancy-pushback", "analysis"): 2, ("sycophancy-pushback", "eval"): 9,
-            ("refusal-finetuning", "training"): 1, ("refusal-finetuning", "analysis"): 1}
-    short = {k: (seen[k], n) for k, n in want.items() if seen[k] < n}
-    vectors = {v.name for v in stores.list_vectors()}
-    missing = {"refusal.tiny-planted-refusal", "caving.tiny-planted-caving"} - vectors
-    assert not short and not missing, f"runs (found, wanted): {short}; vectors missing: {missing}"
-    print(f"every example is in the app: {sum(seen.values())} runs, {len(vectors)} vectors")
-    EOF
-
 # browser tests against the built UI (run check-web first)
 test-e2e:
     cd {{web}} && pnpm test:e2e
@@ -95,10 +69,9 @@ web-build:
 site:
     cd {{site}} && pnpm dev
 
-# the loupe image, and the public demo on top of it
-images:
+# the loupe image
+image:
     docker build -t loupe .
-    docker build -f deploy/app/Dockerfile --build-arg BASE=loupe -t loupe-demo .
 
 # re-resolve uv.lock after changing pyproject.toml
 lock:

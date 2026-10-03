@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 import tyro
 
@@ -68,7 +68,7 @@ class New:
     """Start a research question: experiments/<name>/ with its README to fill in, active."""
 
     name: tyro.conf.Positional[str]
-    """Named for the question, lowercase with dashes: sycophancy-pushback."""
+    """Named for the question, lowercase with dashes: rational-updating-baseline."""
     domain: Domain
     """The domain it is filed under on the Experiments page."""
 
@@ -120,6 +120,57 @@ class Circuit:
 
 
 @dataclass(frozen=True)
+class Import:
+    """Add a result from another machine to this loupe: the loupe-result-<id>.tar.gz an exported
+    job wrote (Launch → Export), or the folder it unpacks to. Needs the server extra."""
+
+    path: tyro.conf.Positional[Path]
+
+
+@dataclass(frozen=True)
+class Bench:
+    """What serving a model costs on this machine, per weight format: throughput and latency as
+    requests arrive together, and prefill time and memory as the prompt grows. One run with its
+    figures. Needs the interp and tracking extras; int8 and int4 need CUDA and the train extra."""
+
+    model: str
+    """A Hub id, a path, or a name under <home>/models."""
+    quants: list[Literal["none", "int8", "int4"]] = field(default_factory=lambda: ["none"])
+    """Weight formats to compare: none (as saved), int8, int4 (NF4)."""
+    batches: list[int] = field(default_factory=lambda: [1, 4, 16])
+    """Requests generated at once."""
+    contexts: list[int] = field(default_factory=lambda: [512, 2048, 8192])
+    """Prompt lengths in tokens; ones over the model's limit are skipped."""
+    new_tokens: int = 64
+    """Tokens each request generates."""
+    repeats: int = 3
+    experiment: str = "efficiency-bench"
+    draft: str | None = None
+    """A small model with the same tokenizer, to draft for speculative decoding (Qwen/Qwen2.5-0.5B
+    for a larger Qwen2.5); prompt lookup is measured either way."""
+    profile: bool = True
+    """Profile one request: the operators it spent most time in and a trace for Perfetto."""
+
+
+@dataclass(frozen=True)
+class Judge:
+    """Two eval runs judged sample by sample by a local model, each pair in both orders: B's win
+    rate over A as an eval run of its own. Needs the evals extra, and interp for loupe/ models."""
+
+    a: tyro.conf.Positional[str]
+    """The baseline run's id."""
+    b: tyro.conf.Positional[str]
+    """The changed run's id."""
+    model: str = "loupe/Qwen/Qwen2.5-1.5B-Instruct"
+    """The judge: loupe/ or hf/ with a Hub id runs locally; any Inspect model works."""
+    criterion: str = "Which answer is more correct and more helpful?"
+    """The question the judge answers for each pair."""
+    limit: int | None = None
+    """Pairs to judge; all when empty."""
+    max_tokens: int = 512
+
+
+@dataclass(frozen=True)
 class Mcp:
     """An MCP server on stdio for coding agents, over a running loupe serve: read experiments,
     runs, figures and compares; launch, follow and cancel jobs. Needs the agent extra."""
@@ -142,6 +193,9 @@ Command = (
     | Annotated[New, tyro.conf.subcommand("new")]
     | Annotated[Features, tyro.conf.subcommand("features")]
     | Annotated[Circuit, tyro.conf.subcommand("circuit")]
+    | Annotated[Import, tyro.conf.subcommand("import")]
+    | Annotated[Bench, tyro.conf.subcommand("bench")]
+    | Annotated[Judge, tyro.conf.subcommand("judge")]
     | Annotated[Mcp, tyro.conf.subcommand("mcp")]
     | Annotated[Version, tyro.conf.subcommand("version")]
 )
@@ -215,6 +269,31 @@ def main() -> None:
             from loupe.circuits import circuit
 
             circuit(cmd.model, cmd.transcoders, cmd.prompt, cmd.slug, cmd.dtype, cmd.batch_size)
+        case Import() as cmd:
+            from loupe.server.launch import Jobs
+            from loupe.server.remote import import_result
+
+            try:
+                done = import_result(cmd.path, Jobs(work=False))
+            except ValueError as exc:
+                raise SystemExit(str(exc)) from exc
+            print(f"{len(done.runs)} runs from {done.host} (exit {done.exit_code})"
+                  + (f", {len(done.skipped)} already here" if done.skipped else ""))  # fmt: skip
+        case Bench() as cmd:
+            from loupe.bench import bench
+            from loupe.models.load import Quant
+
+            quants: list[Quant | None] = [None if q == "none" else q for q in cmd.quants]
+            print(bench(cmd.model, quants, tuple(cmd.batches), tuple(cmd.contexts),
+                        cmd.new_tokens, cmd.repeats, cmd.experiment, cmd.draft,
+                        cmd.profile))  # fmt: skip
+        case Judge() as cmd:
+            from loupe.judge import judge
+
+            try:
+                print(judge(cmd.a, cmd.b, cmd.model, cmd.criterion, cmd.limit, cmd.max_tokens))
+            except ValueError as exc:
+                raise SystemExit(str(exc)) from exc
         case Mcp() as cmd:
             try:
                 from loupe.agent import server

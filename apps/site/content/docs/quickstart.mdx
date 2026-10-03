@@ -1,29 +1,28 @@
 ---
 title: Quick start
-description: A result in the app in a few minutes.
+description: From a clean clone to a run in the app.
 ---
 
-Every experiment with a `--tiny` mode trains a small model to show the behaviour on your CPU, so
-the whole pipeline runs without a download. Its numbers check the pipeline, not the claim.
-
 ```sh
-just serve   # http://127.0.0.1:8000
+git clone https://github.com/ashworks1706/loupe && cd loupe
+just bootstrap   # Python with every extra, the UI's packages and git hooks
+just serve       # http://127.0.0.1:8000
 ```
 
-Everything else happens in the app. Open Launch, pick `refusal-direction/run.py`, tick `--tiny`
-and launch. The job's log streams in the page and its runs appear under Runs as they write. Behavior ›
-Probe and Efficiency › Benchmark load a model from their page.
+Everything else happens in the app. Open Launch, pick a script, set its options and launch. The
+job's log streams in the page and its runs appear under Runs as they write. Behavior › Probe and
+Efficiency › Benchmark load a model from their page.
 
-[Examples](/docs/examples) explains each figure.
+## The experiment in the repo
 
-## On a real model
-
-Drop `--tiny`. The default, `Qwen/Qwen2.5-0.5B-Instruct`, runs on a laptop; a GPU makes 1.5B and
-up practical.
+`rational-updating-baseline` (Behavior › Sycophancy and honesty) reproduces the unmitigated
+baseline of a sycophancy paper with the authors' own harness. `--tiny` checks its plumbing offline
+on CPU; the real run needs a GPU and Llama access, or an export to a cluster from Launch.
 
 ## Your own question
 
 Press New on the Experiments page: it writes `experiments/my-question/` with a `README.md` and a
-`run.py`. The README opens with its domain and status, then states the question, what was
-observed, the hypotheses, the baseline, the test, when to stop, and the result. `run.py` writes to MLflow and
-Inspect logs, so the app shows it and Launch gets a form for its options.
+`run.py` that launches as is. [Writing an experiment](/docs/experiments) says what goes in it. A
+coding agent can do the same through [`loupe mcp`](/docs/agents).
+
+Results live under `LOUPE_HOME` (default `./.loupe`). Delete it to start over.

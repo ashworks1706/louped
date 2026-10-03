@@ -1,5 +1,5 @@
 ---
-domain: reproduction
+domain: honesty
 status: active
 ---
 
@@ -7,9 +7,10 @@ status: active
 
 ## Question
 
-Does the authors' harness for Ma et al., "Sycophancy Suppression Can Impair Rational Updating"
-(arXiv 2608.26511), reproduce the paper's unmitigated Llama-3.1-8B-Instruct baseline here, with
-the same rates and denominators, before any mitigation is added?
+Experiment 1A: does the authors' harness for Ma et al., "Sycophancy Suppression Can Impair
+Rational Updating" (arXiv 2608.26511), reproduce the paper's unmitigated Llama-3.1-8B-Instruct
+baseline here, with the same rates and denominators? No mitigation is added; this checks the
+setup, not the thesis.
 
 ## Observation
 
@@ -23,18 +24,30 @@ template hashes, and compares a run with the published rates.
 ## Baseline
 
 Published, TruthfulQA test split (120 items), Llama-3.1-8B-Instruct: Acc 44.2, `R_UY` 45.3,
-`R_RU` evidence 17.9, user evidence 19.4 (`reference/paper_baselines.json` in the harness). The
-authors' own rerun with newer transformers landed within 2.5 points on TruthfulQA.
+`R_RU` evidence 17.9, user evidence 19.4 (`reference/paper_baselines.json` in the harness),
+from 53 items right at baseline and 67 wrong. The authors' own rerun with newer transformers
+landed within 2.5 points on TruthfulQA.
 
 ## Test
 
-1. `--limit 20`: prompts, scoring and the report work on the real model; read `examples.md`.
-2. `--limit None`: the full TruthfulQA test split against the published row, rates and
-   denominators (published k/n: 53 right at baseline, 67 wrong). One item is 1.9 points of
-   `R_UY` and 1.5 of `R_RU`, and the authors' own rerun moved `R_UY` by one item, so a gap is
-   read in items: more than two items on Acc or `R_UY`, or a different denominator, is a setup
-   difference to find before any mitigation is run. `R_RU` gets more room (25 notes were
-   revised after the published runs).
+1. **Set up.** `run.py` clones the harness at the pinned commit into its own environment under
+   `.loupe/vendor/`, runs its tests and `sru verify-data`, then preflights the GPU, the
+   `HF_TOKEN`'s Llama access, disk and the chat template hash. Nothing is mitigated.
+2. **Small baseline** (`--limit 20`): checks that prompts, generation and scoring work on the
+   real model. Not comparable with the paper.
+3. **Read ten examples** in the run's `examples.md`: each shows the initial answer, the
+   follow-up, the final answer and the scoring, with a verdict line to fill in. The picks cover
+   a correct answer abandoned under unsupported pressure (yielded), a wrong answer corrected
+   after valid evidence (updated), and appropriate responses in either condition (held, not
+   updated).
+4. **Full baseline** (`--limit None`): the TruthfulQA test split against the published row,
+   rates and denominators. One item is 1.9 points of `R_UY` and 1.5 of `R_RU`, so a gap is read
+   in items: more than two on Acc or `R_UY`, or a different denominator, is a setup difference
+   to investigate before modifying the model. `R_RU` gets more room (25 notes were revised after
+   the published runs).
+
+Deliverable: one baseline results table, the checked examples, and the record of implementation
+problems and discrepancies below.
 
 ## Stop if
 
@@ -45,17 +58,21 @@ margin above and the cause is not found.
 ## Run
 
 ```sh
-uv run --all-extras python experiments/rational-updating-baseline/run.py                 # 20 items, needs a GPU
-uv run --all-extras python experiments/rational-updating-baseline/run.py --limit None    # full test split
+uv run --all-extras python experiments/rational-updating-baseline/run.py                 # step 2, needs a GPU
+uv run --all-extras python experiments/rational-updating-baseline/run.py --limit None    # step 4
 uv run --all-extras python experiments/rational-updating-baseline/run.py --tiny          # offline plumbing
 ```
 
+Or from Launch in the app, or on Sol: pick `rational-updating-baseline/run.py`, set Run on to ASU
+Sol, Export, and import the result tarball when it finishes.
+
 Needs a CUDA GPU with 16 GB, a Hugging Face token whose account has accepted the Llama 3.1
-license (`HF_TOKEN`), and 20 GB free in the Hub cache. Preflight checks these and the chat
-template and stops with what is missing. Each run directory under
-`.loupe/runs/rational-updating-baseline/` holds `command.txt`, the harness's `config.json`,
-`freeze.txt`, `meta.json`, `sru.log`, `raw/`, `report.md` (rates, denominators, comparison with
-the paper) and `examples.md`; the rates, denominators and files are also an MLflow run.
+license (`HF_TOKEN`), and 20 GB free in the Hub cache. Each run directory under
+`.loupe/runs/rational-updating-baseline/` holds the exact commit and configuration
+(`loupe-args.json`, the harness's `config.json`), the command (`command.txt`), the environment
+(`freeze.txt`, `meta.json`), the log (`sru.log`), `raw/`, `report.md` (rates, denominators,
+comparison with the paper) and `examples.md`; the rates, denominators and files are also an
+MLflow run.
 
 ## Deviations from the published setup
 
@@ -64,7 +81,7 @@ the paper) and `examples.md`; the rates, denominators and files are also an MLfl
   state its versions.
 - The harness's TruthfulQA notes: 25 of 604 were revised after the published runs; the authors
   report the effect on `R_RU` is inside run-to-run drift.
-- `--limit 20` keeps the first 20 test qids, not a sample, and is not comparable with the paper.
+- `--limit 20` keeps the first 20 test qids, not a sample.
 - `--tiny` runs a random model in float32 on CPU (CUDA hidden) with no accelerate; it checks
   plumbing only.
 
@@ -87,7 +104,21 @@ the paper) and `examples.md`; the rates, denominators and files are also an MLfl
 Setup passed: the harness's tests and `sru verify-data` (all four datasets, test 120 / cal 484
 for TruthfulQA). `--tiny` ran TruthfulQA and EX-FEVER end to end; its numbers are noise.
 
+| Run | Items | Acc | `R_UY` (k/n) | `R_RU` evidence (k/n) | `R_RU` user evidence (k/n) |
+| --- | ----- | --- | ------------ | --------------------- | -------------------------- |
+| Published | 120 | 44.2 | 45.3 (24/53) | 17.9 (12/67) | 19.4 (13/67) |
+| Small, `--limit 20` | | | | | |
+| Full, `--limit None` | | | | | |
+
+## Checked examples
+
+<!-- From the runs' examples.md: qid, kind, and whether the score and the move are right. -->
+
+## Implementation problems and discrepancies
+
+<!-- Each one: what differed, the evidence, and whether it moves the comparison. -->
+
 ## Next
 
-Run steps 1 and 2 on a GPU, read the examples, then add one mitigation on the fixed baseline
-cohort and rerun the same comparison.
+Run steps 2 to 4 on a GPU (here, or exported to Sol), fill the table, the examples and the
+discrepancies. A mitigation comes only after the full baseline matches.
