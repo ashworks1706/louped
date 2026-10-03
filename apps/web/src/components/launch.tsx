@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Rocket, Square } from "lucide-react";
+import { Download, Rocket, Square, Upload } from "lucide-react";
 import Link from "next/link";
 import { parseAsString, useQueryStates } from "nuqs";
 import { useEffect, useRef, useState } from "react";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 
 import { CopyButton } from "@/components/copy-button";
 import { EmptyState } from "@/components/empty-state";
+import { Help } from "@/components/help";
 import { askToNotify } from "@/components/notifier";
 import { QueryState } from "@/components/query-state";
 import { StatusDot } from "@/components/run-badges";
@@ -20,10 +21,13 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ApiError,
   cancelJob,
+  exportJob,
+  importResult,
   isLive,
   launch,
   q,
   type Job,
+  type Target,
   type LaunchOption,
   type LaunchRequest,
   type Launchable,
@@ -33,6 +37,17 @@ import { runHref } from "@/lib/href";
 import { cn } from "@/lib/utils";
 
 const RECIPES = ["sft", "dpo", "grpo", "classify", "reft"];
+
+/** Where a launch runs: here, or exported as a script for another machine. */
+const PLACES = {
+  here: "This machine",
+  sol: "ASU Sol",
+  slurm: "A Slurm cluster",
+  shell: "Another machine (VM)",
+} as const;
+type Place = keyof typeof PLACES;
+/** Sol's GPUs as its docs name them; MI200 is AMD (ROCm), the slices are A100 MIG. */
+const SOL_GPUS = ["a100", "a30", "h100", "mi200", "1g.20gb", "2g.20gb"];
 
 export function Launch() {
   const all = useQuery(q.launchables());
@@ -185,7 +200,19 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
   const [values, setValues] = useState<Record<string, Value>>({});
   const [config, setConfig] = useState(item.config ?? "");
   const [recipe, setRecipe] = useState(item.recipe ?? "sft");
+  const [place, setPlace] = useState<Place>("here");
+  const [target, setTarget] = useState<Partial<Target>>({ gpu: "a100", gpus: 1, hours: 4 });
   const client = useQueryClient();
+  const out = useMutation({
+    mutationFn: exportJob,
+    meta: { action: "Export" },
+    onSuccess: (name) => {
+      void client.invalidateQueries({ queryKey: ["jobs"] });
+      toast(`${name} downloaded`, {
+        description: "Run job.sh there, then drop the result it writes on this page.",
+      });
+    },
+  });
   const go = useMutation({
     mutationFn: launch,
     meta: { action: "Launch" },
@@ -199,15 +226,20 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
   const sent = changed(opts, values);
   const missing = opts.filter((o) => (o.required || !o.flag.startsWith("-")) && !(o.flag in sent));
   const command = preview(item, recipe, sent);
+  const request = {
+    id: item.id,
+    options: sent,
+    ...(item.config != null ? { config } : {}),
+    ...(item.recipe != null ? { recipe } : {}),
+  };
   const submit = () => {
+    if (place !== "here") {
+      out.mutate({ ...request, target: { ...target, provider: place } });
+      return;
+    }
     // Permission can only be asked from the click itself, not after the request returns.
     askToNotify();
-    go.mutate({
-      id: item.id,
-      options: sent,
-      ...(item.config != null ? { config } : {}),
-      ...(item.recipe != null ? { recipe } : {}),
-    });
+    go.mutate(request);
   };
 
   return (
@@ -277,12 +309,21 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
         </code>
         <CopyButton text={command} />
       </div>
+      <Where place={place} setPlace={setPlace} target={target} setTarget={setTarget} />
       <div className="flex items-center gap-3">
         <Button
           onClick={submit}
-          disabled={!options.isSuccess || go.isPending || missing.length > 0}
+          disabled={!options.isSuccess || go.isPending || out.isPending || missing.length > 0}
         >
-          <Rocket /> Launch
+          {place === "here" ? (
+            <>
+              <Rocket /> Launch
+            </>
+          ) : (
+            <>
+              <Download /> Export
+            </>
+          )}
         </Button>
         {missing.length > 0 && (
           <span className="text-muted-foreground text-xs">
@@ -291,6 +332,158 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
         )}
       </div>
     </section>
+  );
+}
+
+/** Run here, or export for Sol, a Slurm cluster or a VM, with what the job asks for there. */
+function Where({
+  place,
+  setPlace,
+  target,
+  setTarget,
+}: {
+  place: Place;
+  setPlace: (p: Place) => void;
+  target: Partial<Target>;
+  setTarget: (t: Partial<Target>) => void;
+}) {
+  const set = (patch: Partial<Target>) => setTarget({ ...target, ...patch });
+  const slurm = place === "sol" || place === "slurm";
+  const small = "h-8 font-mono text-xs";
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <label htmlFor="place" className="text-muted-foreground text-xs">
+          Run on
+        </label>
+        <NativeSelect
+          id="place"
+          value={place}
+          onChange={(e) => setPlace(e.target.value as Place)}
+          className="text-xs"
+        >
+          {Object.entries(PLACES).map(([k, v]) => (
+            <option key={k} value={k}>
+              {v}
+            </option>
+          ))}
+        </NativeSelect>
+        {place !== "here" && (
+          <Help label="How does running elsewhere work?">
+            Export downloads a folder with job.sh. Copy it there and run it (sbatch job.sh on a
+            cluster, bash job.sh on a VM). It installs loupe with uv, runs this command, and packs
+            loupe-result-….tar.gz. Drop that file on this page and its runs show up here.
+          </Help>
+        )}
+      </div>
+      {slurm && (
+        <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="gpu" className="text-xs">
+              GPU
+            </label>
+            {place === "sol" ? (
+              <NativeSelect
+                id="gpu"
+                value={target.gpus === 0 ? "" : (target.gpu ?? "a100")}
+                onChange={(e) =>
+                  set(
+                    e.target.value ? { gpu: e.target.value, gpus: target.gpus || 1 } : { gpus: 0 },
+                  )
+                }
+                className="font-mono text-xs"
+              >
+                {SOL_GPUS.map((g) => (
+                  <option key={g}>{g}</option>
+                ))}
+                <option value="">none</option>
+              </NativeSelect>
+            ) : (
+              <Input
+                id="gpu"
+                value={target.gpu ?? ""}
+                placeholder="any"
+                onChange={(e) => set({ gpu: e.target.value || null })}
+                className={small}
+              />
+            )}
+          </div>
+          <Num id="gpus" label="GPUs" value={target.gpus ?? 1} set={(v) => set({ gpus: v })} />
+          <Num id="hours" label="Hours" value={target.hours ?? 4} set={(v) => set({ hours: v })} />
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="qos" className="text-xs">
+              QOS
+            </label>
+            <Input
+              id="qos"
+              value={target.qos ?? ""}
+              placeholder={place === "sol" ? "public" : "default"}
+              onChange={(e) => set({ qos: e.target.value || null })}
+              className={small}
+            />
+          </div>
+          {place === "sol" && target.gpu === "a100" && (target.gpus ?? 1) > 0 && (
+            <div className="col-span-2 flex items-center gap-2">
+              <Checkbox
+                id="a100_80"
+                checked={target.constraint === "a100_80"}
+                onCheckedChange={(c) => set({ constraint: c === true ? "a100_80" : null })}
+              />
+              <label htmlFor="a100_80" className="text-xs">
+                80 GB A100 only
+              </label>
+            </div>
+          )}
+          {place === "sol" && target.gpu === "mi200" && (
+            <p className="text-muted-foreground col-span-full text-xs">
+              MI200 is AMD: it needs ROCm builds of torch, not the CUDA ones loupe installs.
+            </p>
+          )}
+          {place === "slurm" && (
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="partition" className="text-xs">
+                Partition
+              </label>
+              <Input
+                id="partition"
+                value={target.partition ?? ""}
+                placeholder="default"
+                onChange={(e) => set({ partition: e.target.value || null })}
+                className={small}
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Num({
+  id,
+  label,
+  value,
+  set,
+}: {
+  id: string;
+  label: string;
+  value: number;
+  set: (v: number) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="text-xs">
+        {label}
+      </label>
+      <Input
+        id={id}
+        type="number"
+        min={0}
+        value={value}
+        onChange={(e) => set(Number(e.target.value))}
+        className="h-8 font-mono text-xs"
+      />
+    </div>
   );
 }
 
@@ -369,10 +562,65 @@ function Field({
 function Jobs() {
   const jobs = useQuery(q.jobs());
   const [s, set] = useQueryStates({ job: parseAsString });
+  const client = useQueryClient();
+  const [over, setOver] = useState(false);
+  const picker = useRef<HTMLInputElement>(null);
+  const bring = useMutation({
+    mutationFn: importResult,
+    meta: { action: "Import" },
+    onSuccess: (done) => {
+      void client.invalidateQueries({ queryKey: ["jobs"] });
+      void client.invalidateQueries({ queryKey: ["runs"] });
+      if (done.job) void set({ job: done.job });
+      toast(`${done.runs.length} runs imported from ${done.host}`, {
+        description: done.skipped.length ? `${done.skipped.length} were already here.` : undefined,
+      });
+    },
+  });
+  const take = (file?: File) => file && bring.mutate(file);
   return (
-    <section className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 className="text-sm font-medium">Jobs</h2>
+    <section
+      className={cn("flex flex-col gap-3 rounded-xl", over && "ring-ring/40 ring-2")}
+      onDragOver={(e) => {
+        if (!e.dataTransfer.types.includes("Files")) return;
+        e.preventDefault();
+        setOver(true);
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setOver(false);
+        take(e.dataTransfer.files[0]);
+      }}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-medium">Jobs</h2>
+          <input
+            ref={picker}
+            type="file"
+            accept=".gz,.tgz,application/gzip"
+            className="hidden"
+            aria-label="Result archive"
+            onChange={(e) => {
+              take(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => picker.current?.click()}
+            disabled={bring.isPending}
+          >
+            <Upload /> Import result
+          </Button>
+          <Help label="What does Import result take?">
+            The loupe-result-….tar.gz an exported job wrote on Sol or another machine. Drop it here
+            or pick it; its runs join Runs as if they ran here. Large results: loupe import
+            &lt;file&gt; in a terminal.
+          </Help>
+        </div>
         <span className="text-muted-foreground text-xs">
           One at a time, in the order launched. Their runs appear under{" "}
           <Link href="/runs/" className="underline underline-offset-4">

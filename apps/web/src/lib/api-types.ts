@@ -434,6 +434,57 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/launch/export": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Export Job */
+    post: operations["export_job_api_launch_export_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/launch/import": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Import Upload */
+    post: operations["import_upload_api_launch_import_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/launch/import-path": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Import Path */
+    post: operations["import_path_api_launch_import_path_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/launch/jobs/{job_id}/cancel": {
     parameters: {
       query?: never;
@@ -604,6 +655,23 @@ export interface components {
       /** Readme */
       readme: string;
     };
+    /** ExportRequest */
+    ExportRequest: {
+      /** Id */
+      id: string;
+      /**
+       * Options
+       * @default {}
+       */
+      options: {
+        [key: string]: string | boolean | string[];
+      };
+      /** Config */
+      config?: string | null;
+      /** Recipe */
+      recipe?: string | null;
+      target?: components["schemas"]["Target"];
+    };
     /**
      * FeatureDashboard
      * @description One SAE feature over a dataset, as `loupe features` logs it under features/.
@@ -737,6 +805,33 @@ export interface components {
       /** Counts */
       counts: number[];
     };
+    /** ImportPath */
+    ImportPath: {
+      /** Path */
+      path: string;
+    };
+    /** Imported */
+    Imported: {
+      /**
+       * Job
+       * @description The exported job the result answers, when known here.
+       */
+      job: string | null;
+      /** Host */
+      host: string;
+      /** Exit Code */
+      exit_code: number;
+      /**
+       * Runs
+       * @description Runs added to the local stores.
+       */
+      runs: string[];
+      /**
+       * Skipped
+       * @description Runs already imported.
+       */
+      skipped: string[];
+    };
     /** InspectRequest */
     InspectRequest: {
       /**
@@ -802,7 +897,7 @@ export interface components {
        * @default queued
        * @enum {string}
        */
-      status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+      status: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "exported";
       /**
        * Created
        * Format: date-time
@@ -828,7 +923,7 @@ export interface components {
        * @default queued
        * @enum {string}
        */
-      status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+      status: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "exported";
       /**
        * Created
        * Format: date-time
@@ -1098,6 +1193,8 @@ export interface components {
       samples: number | null;
       /** Total */
       total?: number | null;
+      /** Host */
+      host?: string | null;
       /** Params */
       params: {
         [key: string]: string;
@@ -1146,6 +1243,8 @@ export interface components {
       samples: number | null;
       /** Total */
       total?: number | null;
+      /** Host */
+      host?: string | null;
     };
     /**
      * RunView
@@ -1298,6 +1397,54 @@ export interface components {
       links?: (string | null)[][] | null;
       /** Embed */
       embed?: "neuronpedia" | null;
+    };
+    /**
+     * Target
+     * @description Where and on what an exported job runs.
+     */
+    Target: {
+      /**
+       * Provider
+       * @default sol
+       * @enum {string}
+       */
+      provider: "sol" | "slurm" | "shell";
+      /**
+       * Gpu
+       * @default a100
+       */
+      gpu: string | null;
+      /**
+       * Gpus
+       * @default 1
+       */
+      gpus: number;
+      /**
+       * Hours
+       * @default 4
+       */
+      hours: number;
+      /**
+       * Cpus
+       * @default 8
+       */
+      cpus: number;
+      /** Partition */
+      partition?: string | null;
+      /** Qos */
+      qos?: string | null;
+      /** Constraint */
+      constraint?: string | null;
+      /**
+       * Extras
+       * @default [
+       *       "interp",
+       *       "evals",
+       *       "tracking",
+       *       "train"
+       *     ]
+       */
+      extras: string[];
     };
     /** TokenRow */
     TokenRow: {
@@ -2104,6 +2251,92 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["JobDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  export_job_api_launch_export_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExportRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  import_upload_api_launch_import_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Imported"];
+        };
+      };
+    };
+  };
+  import_path_api_launch_import_path_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ImportPath"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Imported"];
         };
       };
       /** @description Validation Error */

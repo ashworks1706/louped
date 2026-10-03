@@ -22,6 +22,8 @@ class RunSummary(BaseModel):
     samples: int | None
     #: The samples an eval will have when it ends; while it runs, samples counts those done.
     total: int | None = None
+    #: Where it ran, for a run imported from another machine (sol, slurm, vm); None for here.
+    host: str | None = None
 
 
 class MetricPoint(BaseModel):

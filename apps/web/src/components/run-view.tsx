@@ -12,7 +12,7 @@ import { EmptyState } from "@/components/empty-state";
 import { HistoryCharts } from "@/components/history-chart";
 import { MetricValue } from "@/components/metric";
 import { QueryState } from "@/components/query-state";
-import { KindBadge, StatusDot } from "@/components/run-badges";
+import { HostBadge, KindBadge, StatusDot } from "@/components/run-badges";
 import { RunViews } from "@/components/run-views";
 import { StatGrid } from "@/components/stat-grid";
 import { SamplesTable } from "@/components/samples-table";
@@ -71,6 +71,7 @@ function RunHeader({ run }: { run: RunDetail }) {
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">{run.name}</h1>
           <KindBadge kind={run.kind} />
+          <HostBadge host={run.host} />
           <StatusDot status={run.status} samples={run.samples} total={run.total} />
         </div>
         <dl className="text-muted-foreground flex flex-wrap gap-x-6 gap-y-1 text-sm">

@@ -118,7 +118,8 @@ clean and a corrupt prompt; dose, a saved direction swept over strengths at the 
 time to first token, decode throughput and peak memory, base and changed), launching jobs, and
 loading a model into the Playground. A job is an existing command (an experiment script,
 `loupe train`, `loupe grid`, `loupe new`, `loupe features`, `inspect eval`) in a subprocess, one at
-a time, its output under `<home>/jobs`; each form is read from the command's own argument parser. Launching and loading run code on this machine, so both are on only for a loopback server,
+a time, its output under `<home>/jobs`; or exported (server/remote.py) as a bundle whose job.sh
+runs it on Sol, a Slurm cluster or a VM, and whose result archive is imported back into the stores; each form is read from the command's own argument parser. Launching and loading run code on this machine, so both are on only for a loopback server,
 never with `--expose`.
 
 Pages: the workspace (Home, Experiments, Runs, Compare, Launch, with Run and Experiment detail),
