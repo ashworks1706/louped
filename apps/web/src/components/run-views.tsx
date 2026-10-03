@@ -136,6 +136,14 @@ function LineFigure({ view }: { view: LineView }) {
 /** One labelled point per condition: what it buys (y) against what it costs (x). */
 function ScatterFigure({ view }: { view: ScatterView }) {
   const axis = { fontSize: 11, fill: "var(--muted-foreground)" };
+  // A tenth of each range around the points, so none sits on the plot's edge or a tick label.
+  const padded = (key: "x" | "y") => {
+    const vs = view.points.map((p) => p[key]);
+    const lo = Math.min(...vs);
+    const hi = Math.max(...vs);
+    const pad = (hi - lo || Math.abs(hi) || 1) * 0.1;
+    return [lo - pad, hi + pad] as [number, number];
+  };
   return (
     <div className="h-72">
       <ResponsiveContainer width="100%" height="100%">
@@ -145,7 +153,8 @@ function ScatterFigure({ view }: { view: ScatterView }) {
             type="number"
             dataKey="x"
             name={view.x_label}
-            domain={["auto", "auto"]}
+            domain={padded("x")}
+            tickFormatter={(v: number) => v.toPrecision(3)}
             tick={axis}
             tickLine={false}
             axisLine={false}
@@ -155,7 +164,8 @@ function ScatterFigure({ view }: { view: ScatterView }) {
             type="number"
             dataKey="y"
             name={view.y_label}
-            domain={["auto", "auto"]}
+            domain={padded("y")}
+            tickFormatter={(v: number) => v.toPrecision(3)}
             tick={axis}
             tickLine={false}
             axisLine={false}

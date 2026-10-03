@@ -113,6 +113,8 @@ function Loaded({
     corrupt: parseAsString.withDefault(""),
     answer: parseAsString.withDefault(""),
     foil: parseAsString.withDefault(""),
+    token: parseAsString.withDefault(""),
+    versus: parseAsString.withDefault(""),
     method: parseAsStringLiteral(METHODS).withDefault("attribution"),
     from: parseAsFloat.withDefault(-4),
     to: parseAsFloat.withDefault(4),
@@ -120,6 +122,9 @@ function Loaded({
     repeats: parseAsInteger.withDefault(3),
   });
   const [draft, setDraft] = useState(s.prompt);
+  // A diffusion model has no next token to patch, sweep or time: its tabs are Reply and Inspect.
+  const tab = info.diffusion && s.tab !== "inspect" ? "reply" : s.tab;
+  const repeats = Math.max(1, Math.min(10, s.repeats));
   const layers = info.layers ?? 1;
   const vector = vectors.find((v) => v.name === s.vector) ?? vectors[0];
   const layer = s.layer ?? vector?.layer ?? 0;
@@ -163,11 +168,17 @@ function Loaded({
   const alphas: number[] = Array.from({ length: n }, (_, i) =>
     Number((s.from + ((s.to - s.from) * i) / (n - 1)).toFixed(4)),
   );
+  const ready =
+    tab === "patch"
+      ? Boolean(s.corrupt.trim() && s.answer.trim() && s.foil.trim())
+      : tab === "dose"
+        ? Boolean(vector && s.token.trim())
+        : true;
   const run = () => {
     const prompt = draft.trim();
-    if (!prompt) return;
+    if (!prompt || !ready) return;
     void set({ prompt });
-    if (s.tab === "reply") {
+    if (tab === "reply") {
       // With a follow-up, each side's reply is pushed back on once it ends, in its own history.
       const follow = s.follow.trim();
       const then = (
@@ -194,7 +205,7 @@ function Loaded({
       else edited.reset();
       return;
     }
-    if (s.tab === "patch") {
+    if (tab === "patch") {
       patched.mutate({
         clean: prompt,
         corrupt: s.corrupt,
@@ -206,22 +217,22 @@ function Loaded({
       });
       return;
     }
-    if (s.tab === "dose") {
+    if (tab === "dose") {
       if (vector)
         dosed.mutate({
           prompt,
           vector: vector.name,
           layer,
           alphas,
-          answer: s.answer,
-          foil: s.foil.trim() || null,
+          answer: s.token,
+          foil: s.versus.trim() || null,
           adapters: live,
           chat: true,
         });
       return;
     }
-    if (s.tab === "speed") {
-      timed.mutate({ prompt, interventions, adapters: live, ...gen, repeats: s.repeats });
+    if (tab === "speed") {
+      timed.mutate({ prompt, interventions, adapters: live, ...gen, repeats });
       return;
     }
     const read = { prompt, vectors: info.diffusion ? [] : vectors.map((v) => v.name), chat: true };
@@ -230,24 +241,17 @@ function Loaded({
     else lookedEdited.reset();
   };
   const streaming =
-    s.tab === "reply" &&
-    (base.pending || edited.pending || baseAgain.pending || editedAgain.pending);
+    tab === "reply" && (base.pending || edited.pending || baseAgain.pending || editedAgain.pending);
   const shown =
-    s.tab === "patch"
+    tab === "patch"
       ? patched
-      : s.tab === "dose"
+      : tab === "dose"
         ? dosed
-        : s.tab === "speed"
+        : tab === "speed"
           ? timed
           : s.side === "intervention" && intervened
             ? lookedEdited
             : looked;
-  const ready =
-    s.tab === "patch"
-      ? s.corrupt.trim() && s.answer.trim() && s.foil.trim()
-      : s.tab === "dose"
-        ? vector && s.answer.trim()
-        : true;
 
   useEffect(() => {
     if (!vectors.length || s.vector) return;
@@ -457,10 +461,10 @@ function Loaded({
           <div className="flex items-center justify-between border-t px-3 py-2">
             <span className="text-muted-foreground text-xs">
               {info.diffusion
-                ? s.tab === "reply"
+                ? tab === "reply"
                   ? "Denoised. The same prompt goes to both."
                   : "What each denoising step committed, and how sure it was."
-                : HINTS[s.tab]}
+                : HINTS[tab]}
             </span>
             {streaming ? (
               <Button
@@ -483,7 +487,9 @@ function Loaded({
                 disabled={
                   !draft.trim() ||
                   !ready ||
-                  (s.tab !== "reply" && (shown.isPending || looked.isPending))
+                  (tab === "inspect"
+                    ? looked.isPending || lookedEdited.isPending
+                    : tab !== "reply" && shown.isPending)
                 }
               >
                 Run <Kbd>⌘</Kbd>
@@ -492,10 +498,7 @@ function Loaded({
             )}
           </div>
         </form>
-        <Tabs
-          value={s.tab}
-          onValueChange={(tab) => void set({ tab: tab as (typeof TABS)[number] })}
-        >
+        <Tabs value={tab} onValueChange={(tab) => void set({ tab: tab as (typeof TABS)[number] })}>
           <TabsList>
             <TabsTrigger value="reply">Reply</TabsTrigger>
             <TabsTrigger value="inspect">Inspect</TabsTrigger>
@@ -508,13 +511,15 @@ function Loaded({
             )}
           </TabsList>
           <TabsContent value="reply" className="flex flex-col gap-4 pt-4">
-            <Input
-              aria-label="Follow-up"
-              value={s.follow}
-              placeholder="Then push back, e.g. I don't think that's right. Are you sure?"
-              onChange={(e) => void set({ follow: e.target.value })}
-              className="h-8 text-sm"
-            />
+            <Field label="Follow-up">
+              <Input
+                aria-label="Follow-up"
+                value={s.follow}
+                placeholder="Then push back, e.g. I don't think that's right. Are you sure?"
+                onChange={(e) => void set({ follow: e.target.value })}
+                className="h-8 text-sm"
+              />
+            </Field>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <Reply title="Base" state={base} again={s.follow.trim() ? baseAgain : undefined} />
               <Reply
@@ -533,97 +538,107 @@ function Loaded({
               />
             </div>
           </TabsContent>
-          <TabsContent value="patch" className="flex flex-col gap-4 pt-4">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_8rem_8rem]">
-              <Field label="Corrupt prompt, same length">
-                <Input
-                  aria-label="Corrupt prompt"
-                  value={s.corrupt}
-                  placeholder="The Eiffel Tower is in Rome"
-                  onChange={(e) => void set({ corrupt: e.target.value })}
-                />
-              </Field>
-              <Field label="Answer">
-                <Input
-                  aria-label="Answer"
-                  value={s.answer}
-                  placeholder="Paris"
-                  onChange={(e) => void set({ answer: e.target.value })}
-                  className="font-mono"
-                />
-              </Field>
-              <Field label="Foil">
-                <Input
-                  aria-label="Foil"
-                  value={s.foil}
-                  placeholder="Rome"
-                  onChange={(e) => void set({ foil: e.target.value })}
-                  className="font-mono"
-                />
-              </Field>
-            </div>
-            <Segmented
-              label="Method"
-              options={METHODS}
-              value={s.method}
-              onChange={(method) => void set({ method })}
-            />
-            <Views state={patched} empty="Run a clean and a corrupt prompt to patch them." />
-          </TabsContent>
-          <TabsContent value="dose" className="flex flex-col gap-4 pt-4">
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-              <Field label="Answer">
-                <Input
-                  aria-label="Answer"
-                  value={s.answer}
-                  placeholder="Yes"
-                  onChange={(e) => void set({ answer: e.target.value })}
-                  className="font-mono"
-                />
-              </Field>
-              <Field label="Foil">
-                <Input
-                  aria-label="Foil"
-                  value={s.foil}
-                  placeholder="No"
-                  onChange={(e) => void set({ foil: e.target.value })}
-                  className="font-mono"
-                />
-              </Field>
-              <NumberField label="α from" value={s.from} onChange={(from) => void set({ from })} />
-              <NumberField label="α to" value={s.to} onChange={(to) => void set({ to })} />
-              <NumberField
-                label="Points"
-                value={s.points}
-                min={2}
-                max={41}
-                onChange={(points) => void set({ points })}
+          {!info.diffusion && (
+            <TabsContent value="patch" className="flex flex-col gap-4 pt-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_8rem_8rem]">
+                <Field label="Corrupt prompt, same length">
+                  <Input
+                    aria-label="Corrupt prompt"
+                    value={s.corrupt}
+                    placeholder="The Eiffel Tower is in Rome"
+                    onChange={(e) => void set({ corrupt: e.target.value })}
+                  />
+                </Field>
+                <Field label="Answer">
+                  <Input
+                    aria-label="Answer"
+                    value={s.answer}
+                    placeholder="Paris"
+                    onChange={(e) => void set({ answer: e.target.value })}
+                    className="font-mono"
+                  />
+                </Field>
+                <Field label="Foil">
+                  <Input
+                    aria-label="Foil"
+                    value={s.foil}
+                    placeholder="Rome"
+                    onChange={(e) => void set({ foil: e.target.value })}
+                    className="font-mono"
+                  />
+                </Field>
+              </div>
+              <Segmented
+                label="Method"
+                options={METHODS}
+                value={s.method}
+                onChange={(method) => void set({ method })}
               />
-            </div>
-            <Views
-              state={dosed}
-              empty={
-                vector
-                  ? `Run a prompt to steer ${vector.name} at layer ${layer} from α ${s.from} to ${s.to}.`
-                  : "Save a vector for this model to sweep it."
-              }
-            />
-          </TabsContent>
-          <TabsContent value="speed" className="flex flex-col gap-4 pt-4">
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-              <NumberField
-                label="Repeats"
-                value={s.repeats}
-                min={1}
-                max={10}
-                onChange={(repeats) => void set({ repeats })}
+              <Views state={patched} empty="Run a clean and a corrupt prompt to patch them." />
+            </TabsContent>
+          )}
+          {!info.diffusion && (
+            <TabsContent value="dose" className="flex flex-col gap-4 pt-4">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+                <Field label="Answer">
+                  <Input
+                    aria-label="Answer"
+                    value={s.token}
+                    placeholder="Yes"
+                    onChange={(e) => void set({ token: e.target.value })}
+                    className="font-mono"
+                  />
+                </Field>
+                <Field label="Foil">
+                  <Input
+                    aria-label="Foil"
+                    value={s.versus}
+                    placeholder="No"
+                    onChange={(e) => void set({ versus: e.target.value })}
+                    className="font-mono"
+                  />
+                </Field>
+                <NumberField
+                  label="α from"
+                  value={s.from}
+                  onChange={(from) => void set({ from })}
+                />
+                <NumberField label="α to" value={s.to} onChange={(to) => void set({ to })} />
+                <NumberField
+                  label="Points"
+                  value={n}
+                  min={2}
+                  max={41}
+                  onChange={(points) => void set({ points })}
+                />
+              </div>
+              <Views
+                state={dosed}
+                empty={
+                  vector
+                    ? `Run a prompt to steer ${vector.name} at layer ${layer} from α ${s.from} to ${s.to}.`
+                    : "Save a vector for this model to sweep it."
+                }
               />
-            </div>
-            <Views
-              state={timed}
-              empty={`Run a prompt to time ${s.tokens} tokens${intervened ? `, base and ${label}` : ""}.`}
-            />
-          </TabsContent>
+            </TabsContent>
+          )}
+          {!info.diffusion && (
+            <TabsContent value="speed" className="flex flex-col gap-4 pt-4">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+                <NumberField
+                  label="Repeats"
+                  value={repeats}
+                  min={1}
+                  max={10}
+                  onChange={(repeats) => void set({ repeats })}
+                />
+              </div>
+              <Views
+                state={timed}
+                empty={`Run a prompt to time ${s.tokens} tokens${intervened ? `, base and ${label}` : ""}.`}
+              />
+            </TabsContent>
+          )}
           <TabsContent value="inspect" className="flex flex-col gap-4 pt-4">
             {intervened && (
               <Tabs
@@ -692,7 +707,8 @@ function NumberField({
         step="any"
         onChange={(e) => {
           const v = Number(e.target.value);
-          if (e.target.value !== "" && Number.isFinite(v)) onChange(v);
+          if (e.target.value === "" || !Number.isFinite(v)) return;
+          onChange(Math.min(max ?? Infinity, Math.max(min ?? -Infinity, v)));
         }}
         className="font-mono"
       />
@@ -720,11 +736,29 @@ function Segmented<T extends string>({
       {options.map((o) => (
         <button
           key={o}
+          type="button"
           role="radio"
           aria-checked={value === o}
+          tabIndex={value === o ? 0 : -1}
           onClick={() => onChange(o)}
+          onKeyDown={(e) => {
+            const step =
+              e.key === "ArrowRight" || e.key === "ArrowDown"
+                ? 1
+                : e.key === "ArrowLeft" || e.key === "ArrowUp"
+                  ? -1
+                  : 0;
+            if (!step) return;
+            e.preventDefault();
+            const next = options[(options.indexOf(value) + step + options.length) % options.length];
+            onChange(next);
+            const group = e.currentTarget.parentElement;
+            requestAnimationFrame(() =>
+              group?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus(),
+            );
+          }}
           className={cn(
-            "h-7 rounded-[5px] px-3 text-sm capitalize transition-colors",
+            "focus-visible:ring-ring/30 h-7 rounded-[5px] px-3 text-sm capitalize transition-colors outline-none focus-visible:ring-[3px]",
             value === o ? "bg-background" : "text-muted-foreground hover:text-foreground",
           )}
         >

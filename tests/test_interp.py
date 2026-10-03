@@ -690,11 +690,13 @@ def test_speed_route_times_base_and_changed(lm) -> None:
     save_vector("sv", torch.randn(hidden(lm2)), model="tiny-speed", layer=1, method="random")
     t = timing(lm2, chat(lm2, "write a poem"), None, max_new_tokens=6, repeats=2)
     assert t["tokens"] > 1 and t["ttft_s"] > 0 and t["total_s"] >= t["ttft_s"]
-    assert t["peak_mib"] is None  # tests run on CPU, where peak memory is not recorded
+    assert t["peak_mib"] is None  # the tiny model is on CPU, where peak memory is not recorded
     client = TestClient(create_app(model="tiny-speed"), base_url="http://localhost")
     ask = {"prompt": "write a poem", "max_new_tokens": 6, "repeats": 1}
     speed, size = client.post("/api/playground/speed", json=ask).json()["views"]
     assert [r[0] for r in speed["rows"]] == ["base"] and size["title"] == "Footprint"
+    count = sum(p.numel() for p in lm2._model.parameters())
+    assert dict(size["rows"])["parameters"] == f"{count / 1e6:.1f}M"
     steer = [{"kind": "steer", "vector": "sv", "alpha": 1.0}]
     changed = client.post("/api/playground/speed", json={**ask, "interventions": steer}).json()
     assert [r[0] for r in changed["views"][0]["rows"]] == ["base", "changed"]

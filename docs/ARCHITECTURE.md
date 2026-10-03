@@ -100,8 +100,8 @@ core                                     run metadata, paths
 
 - Evals: Inspect `.eval` logs hold transcripts and per-sample scores.
 - Everything else: an MLflow run with params, metrics and artifacts. Figures are JSON under
-  `views/` in four shapes (heatmap, line, table, tokens; `loupe.analysis.views`); SAE dashboards are
-  JSON under `features/`.
+  `views/` in five shapes (heatmap, line, scatter, table, tokens; `loupe.analysis.views`); SAE
+  dashboards are JSON under `features/`.
 - Directions: one safetensors file each under `<LOUPE_HOME>/vectors`, provenance in the header,
   read without torch so `loupe serve` needs no interp extra.
 - SAEs load through SAELens; loupe reads the residual at the SAE's hook with nnsight, so the model

@@ -97,10 +97,14 @@ test("patch, dose and speed send their requests and draw what comes back", async
   await page.goto("/playground/?tab=patch");
   await page.getByLabel("Prompt", { exact: true }).fill("The capital of France is");
   await expect(page.getByRole("button", { name: /Run/ })).toBeDisabled();
+  await page.getByLabel("Prompt", { exact: true }).press("Control+Enter");
+  expect(bodies.patch).toBeUndefined(); // the shortcut waits for the same fields the button does
   await page.getByLabel("Corrupt prompt").fill("The capital of Italy is");
   await page.getByLabel("Answer").fill("Paris");
   await page.getByLabel("Foil").fill("Rome");
-  await page.getByRole("radio", { name: "residual" }).click();
+  await page.getByRole("radio", { name: "attribution" }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("radio", { name: "residual" })).toBeFocused();
   await page.getByRole("button", { name: /Run/ }).click();
   await expect(page.getByText(heat.title)).toBeVisible();
   expect(bodies.patch).toMatchObject({
@@ -111,6 +115,7 @@ test("patch, dose and speed send their requests and draw what comes back", async
   await page.screenshot({ path: info.outputPath("patch.png"), fullPage: true });
 
   await page.getByRole("tab", { name: "Dose" }).click();
+  await page.getByLabel("Answer").fill("Yes");
   await page.getByLabel("Points").fill("3");
   await page.getByLabel("α from").fill("-2");
   await page.getByLabel("α to").fill("2");
@@ -165,4 +170,16 @@ test("a grid's scatter plots each condition's score against its cost", async ({ 
   const figure = page.locator("figure").filter({ hasText: scatter.title });
   await expect(figure.getByText("eager")).toBeVisible();
   await page.screenshot({ path: info.outputPath("scatter.png"), fullPage: true });
+});
+
+test("a diffusion model opens on Reply when the URL asks for a causal-only tab", async ({
+  page,
+}) => {
+  await page.route("**/api/playground", (r) =>
+    r.fulfill({ json: { model: "tiny", layers: 2, heads: null, bank: [], diffusion: true } }),
+  );
+  await page.route("**/api/vectors", (r) => r.fulfill({ json: [] }));
+  await page.goto("/playground/?tab=patch");
+  await expect(page.getByRole("tab", { name: "Reply" })).toHaveAttribute("data-state", "active");
+  await expect(page.getByLabel("Corrupt prompt")).toHaveCount(0);
 });

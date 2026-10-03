@@ -61,6 +61,7 @@ def test_grid_pairs_conditions_against_the_baseline_per_sample(lm) -> None:
         "steer · control",
     ]
     assert [p["y"] for p in tradeoff["points"]] == [z for row in views[0]["z"] for z in row]
+    assert [p["x"] for p in tradeoff["points"]] == [z for row in more["z"] for z in row]
     rows = views[5]["rows"]
     assert rows[0][4] == "baseline" and rows[2][4].split(", ")[1] in ("held", "broke")
     assert len([r for r in stores.list_runs() if r.kind == "eval"]) == 8  # 2 x 2 x 2 seeds

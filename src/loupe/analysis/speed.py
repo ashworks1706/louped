@@ -3,7 +3,8 @@ memory, timed around the same `generate` the Playground and the loupe/ provider 
 
 A streamer timestamps each token as it is produced: the first is the prefill (time to first token),
 the rest are decode steps. One untimed run warms the kernels first; the median of the timed runs is
-reported. Peak memory is read on CUDA only; elsewhere it is not recorded and shows as none.
+reported. Peak memory is read on the CUDA device holding the model's first weights (a model split
+across devices reports that one); off CUDA it is not recorded and shows as none.
 """
 
 from __future__ import annotations
@@ -50,18 +51,19 @@ def timing(
     lm: LanguageModel, prompt: str, plan: Plan | None, max_new_tokens: int, repeats: int = 3
 ) -> Timing:
     """The median over repeats of: seconds to the first token, decode tokens per second, total
-    seconds and tokens generated; and peak CUDA MiB over the runs, None off CUDA."""
-    cuda = torch.cuda.is_available()
+    seconds and tokens generated; and peak CUDA MiB over the runs, None for a model off CUDA."""
+    device = next(lm._model.parameters()).device
+    cuda = device.type == "cuda"
     generate(lm, [prompt], plan, max_new_tokens=1)  # warm up
     if cuda:
-        torch.cuda.synchronize()
-        torch.cuda.reset_peak_memory_stats()
+        torch.cuda.synchronize(device)
+        torch.cuda.reset_peak_memory_stats(device)
     runs: list[tuple[float, float | None, float, int]] = []
     for _ in range(repeats):
         clock = _Clock()
         generate(lm, [prompt], plan, max_new_tokens=max_new_tokens, streamer=clock)
         if cuda:
-            torch.cuda.synchronize()
+            torch.cuda.synchronize(device)
         if not clock.stamps:
             raise ValueError("the model generated no token")
         first, last, n = clock.stamps[0] - clock.start, clock.stamps[-1], len(clock.stamps)
@@ -73,7 +75,7 @@ def timing(
         decode_tps=statistics.median(decodes) if decodes else None,
         total_s=statistics.median(r[2] for r in runs),
         tokens=int(statistics.median(r[3] for r in runs)),
-        peak_mib=torch.cuda.max_memory_allocated() / 2**20 if cuda else None,
+        peak_mib=torch.cuda.max_memory_allocated(device) / 2**20 if cuda else None,
     )
 
 
