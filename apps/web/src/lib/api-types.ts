@@ -899,7 +899,9 @@ export interface components {
     };
     /**
      * LoadRequest
-     * @description A model for the Playground, as `loupe serve --model --bank --diffusion --attn` takes it.
+     * @description A model for the Playground: a Hub id, a path or a name under <home>/models; adapters to load
+     *     beside it from <home>/adapters; whether it is a masked diffusion model; its attention kernel
+     *     (eager, sdpa, flash_attention_2, flex_attention, a registered name, or file.py:function).
      */
     LoadRequest: {
       /** Model */

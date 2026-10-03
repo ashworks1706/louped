@@ -1,4 +1,4 @@
-"""The Playground and Inspect backend: one model, loaded by `loupe serve --model`, run base or
+"""The Playground and Inspect backend: one model, loaded from the Playground page, run base or
 intervened. Generate streams a reply as plain text, token by token; inspect returns the prompt's
 logit lens, attention and projections onto saved directions as views, the same shapes a run's
 Figures tab draws. Patch compares a clean and a corrupt prompt layer by position (or by head);
@@ -6,13 +6,13 @@ dose sweeps a saved direction's strength and reads the next token; speed times a
 and changed, beside the model's footprint. Generate takes earlier turns,
 so a reply can be pushed back on.
 
-With a bank (`--bank a b`), each request names the adapters live for it. A masked diffusion model
-(`--diffusion`) takes no interventions: generate sends its reply once denoised, and inspect returns
-its denoising trajectory.
+Loaded with a bank of adapters, each request names the adapters live for it. A masked diffusion
+model takes no interventions: generate sends its reply once denoised, and inspect returns its
+denoising trajectory.
 
-The only routes that compute rather than read, and the only ones that need the interp extra. A
-server started without --model answers that no model is loaded and imports no torch; on a server
-that launches jobs, the UI can load a model here, or unload it to free the GPU.
+The only routes that compute rather than read, and the only ones that need the interp extra. Until
+a model is loaded the routes answer that none is and import no torch; the UI loads one here, or
+unloads it to free the GPU, on a server that launches jobs (not one started with --expose).
 """
 
 from __future__ import annotations
@@ -40,12 +40,14 @@ class PlaygroundInfo(BaseModel):
     heads: int | None = None
     bank: list[str] = []
     diffusion: bool = False
-    #: Whether the UI may load another model here (off when the server is exposed).
+    #: Whether the UI may load a model here (off when the server is exposed).
     switchable: bool = False
 
 
 class LoadRequest(BaseModel):
-    """A model for the Playground, as `loupe serve --model --bank --diffusion --attn` takes it."""
+    """A model for the Playground: a Hub id, a path or a name under <home>/models; adapters to load
+    beside it from <home>/adapters; whether it is a masked diffusion model; its attention kernel
+    (eager, sdpa, flash_attention_2, flex_attention, a registered name, or file.py:function)."""
 
     model: str | None = None
     bank: list[str] = []
@@ -140,17 +142,10 @@ class DoseRequest(BaseModel):
     chat: bool = True
 
 
-def router(
-    model: str | None,
-    bank: list[str] | None = None,
-    diffusion: bool = False,
-    attn: str | None = None,
-    switchable: bool = False,
-) -> APIRouter:
-    """The Playground's routes over one model; with switchable, the UI may load another."""
+def router(switchable: bool = False) -> APIRouter:
+    """The Playground's routes over one model; with switchable, the UI may load it."""
     api = APIRouter(prefix="/api/playground")
-    first = LoadRequest(model=model, bank=bank or [], diffusion=diffusion, attn=attn)
-    state: dict[str, Any] = {"loaded": first}
+    state: dict[str, Any] = {"loaded": LoadRequest()}
     lock = threading.Lock()  # one trace at a time on one model
     loading = threading.Lock()  # one load; never held while a trace runs
 
@@ -163,7 +158,7 @@ def router(
         with loading:
             c = cur()
             if c.model is None:
-                raise HTTPException(409, "no model loaded; load one here or loupe serve --model")
+                raise HTTPException(409, "no model loaded; load one on the Playground page")
             if "lm" not in state:
                 if c.diffusion:
                     from loupe.models.diffusion import load_diffusion
@@ -194,7 +189,7 @@ def router(
         """Replace the model (none unloads it, freeing the GPU for jobs); a bad one is a 400 and
         leaves no model loaded."""
         if not switchable:
-            raise HTTPException(403, "this server's model is fixed by loupe serve --model")
+            raise HTTPException(403, "loading a model is off on a server started with --expose")
         with lock, loading:
             state.pop("lm", None)
             state["loaded"] = req.model_copy(update={"model": req.model or None})

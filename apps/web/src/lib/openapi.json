@@ -2112,7 +2112,7 @@
         },
         "type": "object",
         "title": "LoadRequest",
-        "description": "A model for the Playground, as `loupe serve --model --bank --diffusion --attn` takes it."
+        "description": "A model for the Playground: a Hub id, a path or a name under <home>/models; adapters to load\nbeside it from <home>/adapters; whether it is a masked diffusion model; its attention kernel\n(eager, sdpa, flash_attention_2, flex_attention, a registered name, or file.py:function)."
       },
       "Message": {
         "properties": {

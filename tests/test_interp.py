@@ -24,6 +24,18 @@ def hidden(lm) -> int:
     return lm._model.config.hidden_size
 
 
+def served(model: str, **load):
+    """A client of a server whose Playground has model loaded, as the UI loads it."""
+    from fastapi.testclient import TestClient
+
+    from loupe.server import create_app
+
+    client = TestClient(create_app(launching=True), base_url="http://localhost")
+    res = client.post("/api/playground/load", json={"model": model, **load})
+    assert res.is_success, res.text
+    return client
+
+
 def test_vector_roundtrip() -> None:
     v = torch.arange(4, dtype=torch.float32)
     meta = save_vector("v1", v, model="tiny", layer=2, method="test", notes="n")
@@ -251,27 +263,23 @@ def test_inspect_provider_fails_every_request_in_a_failed_batch(lm, monkeypatch)
 def test_playground_streams_base_and_intervened() -> None:
     import asyncio
 
-    from fastapi.testclient import TestClient
-
-    from loupe.server import create_app
-    from loupe.server.playground import GenerateRequest, router
+    from loupe.server.playground import GenerateRequest, LoadRequest, router
 
     lm = tiny(train=[("write a poem", "roses are red")])  # a reply of several tokens to stream
     saved = home() / "models" / "tiny-play"
     lm._model.save_pretrained(saved)  # pyright: ignore[reportCallIssue]
     lm.tokenizer.save_pretrained(saved)
     save_vector("pv", torch.randn(hidden(lm)) * 50, model="tiny-play", layer=1, method="random")
-    client = TestClient(create_app(model="tiny-play"), base_url="http://localhost")
+    client = served("tiny-play")
     info = {
         "model": "tiny-play",
         "layers": n_layers(lm),
         "heads": 4,
         "bank": [],
         "diffusion": False,
-        "switchable": False,
+        "switchable": True,
     }
     assert client.get("/api/playground").json() == info
-    assert client.post("/api/playground/load", json={"model": "x"}).status_code == 403
     ask = {"prompt": "write a poem", "max_new_tokens": 4}
     res = client.post("/api/playground/generate", json=ask)
     assert res.headers["content-type"].startswith("text/plain")
@@ -284,7 +292,10 @@ def test_playground_streams_base_and_intervened() -> None:
     async def chunks(response) -> list[str]:  # TestClient buffers the body; read the stream
         return [chunk async for chunk in response.body_iterator]
 
-    (route,) = [r for r in router("tiny-play").routes if r.path.endswith("/generate")]  # pyright: ignore
+    api = router(switchable=True)
+    (load,) = [r for r in api.routes if r.path.endswith("/load")]  # pyright: ignore
+    load.endpoint(LoadRequest(model="tiny-play"))  # pyright: ignore
+    (route,) = [r for r in api.routes if r.path.endswith("/generate")]  # pyright: ignore
     streamed = asyncio.run(chunks(route.endpoint(GenerateRequest(**ask))))  # pyright: ignore
     assert len(streamed) > 1 and "".join(streamed) == base  # one chunk per word, as they come
     bad = [{"kind": "steer", "vector": "pv", "layer": 99}]
@@ -325,7 +336,7 @@ def test_closing_the_playground_stream_stops_generation(monkeypatch) -> None:
 
     import loupe.interventions
     import loupe.models
-    from loupe.server.playground import GenerateRequest, router
+    from loupe.server.playground import GenerateRequest, LoadRequest, router
 
     lm = tiny(train=[("write a poem", "roses are red")])  # words to stream before the close
     lm._model.generation_config.eos_token_id = None  # pyright: ignore
@@ -342,7 +353,10 @@ def test_closing_the_playground_stream_stops_generation(monkeypatch) -> None:
         return out
 
     monkeypatch.setattr(loupe.interventions, "generate", spy)
-    (route,) = [r for r in router("tiny-stop").routes if r.path.endswith("/generate")]  # pyright: ignore
+    api = router(switchable=True)
+    (load,) = [r for r in api.routes if r.path.endswith("/load")]  # pyright: ignore
+    load.endpoint(LoadRequest(model="tiny-stop"))  # pyright: ignore
+    (route,) = [r for r in api.routes if r.path.endswith("/generate")]  # pyright: ignore
 
     async def first_then_close() -> str:
         body = route.endpoint(GenerateRequest(prompt="write a poem", max_new_tokens=200))  # pyright: ignore
@@ -366,11 +380,9 @@ def test_closing_the_playground_stream_stops_generation(monkeypatch) -> None:
 def test_playground_makes_the_asked_adapters_live_and_ablates_heads(lm) -> None:
     import copy
 
-    from fastapi.testclient import TestClient
     from peft import LoraConfig, get_peft_model
 
     from loupe.core import adapters_dir
-    from loupe.server import create_app
 
     lm._model.save_pretrained(home() / "models" / "tiny-bank-play")
     lm.tokenizer.save_pretrained(home() / "models" / "tiny-bank-play")
@@ -378,8 +390,7 @@ def test_playground_makes_the_asked_adapters_live_and_ablates_heads(lm) -> None:
         torch.manual_seed(seed)
         cfg = LoraConfig(r=4, target_modules=["q_proj", "v_proj"], init_lora_weights=False)
         get_peft_model(copy.deepcopy(lm._model), cfg).save_pretrained(str(adapters_dir() / name))
-    app = create_app(model="tiny-bank-play", bank=["pa", "pb"])
-    client = TestClient(app, base_url="http://localhost")
+    client = served("tiny-bank-play", bank=["pa", "pb"])
     assert client.get("/api/playground").json()["bank"] == ["pa", "pb"]
 
     def lens(**ask) -> list[list[float]]:
@@ -399,19 +410,15 @@ def test_playground_makes_the_asked_adapters_live_and_ablates_heads(lm) -> None:
 
 
 def test_playground_denoises_a_masked_diffusion_model() -> None:
-    from fastapi.testclient import TestClient
 
     from loupe.models.diffusion import generate as denoise
     from loupe.models.diffusion import load_diffusion
     from loupe.models.tiny import tiny_masked
-    from loupe.server import create_app
 
     model, tok = tiny_masked()
     model.save_pretrained(home() / "models" / "tiny-mdm-play")
     tok.save_pretrained(home() / "models" / "tiny-mdm-play")
-    client = TestClient(
-        create_app(model="tiny-mdm-play", diffusion=True), base_url="http://localhost"
-    )
+    client = served("tiny-mdm-play", diffusion=True)
     info = client.get("/api/playground").json()
     assert info["diffusion"] and info["bank"] == [] and info["heads"] is None
     ask = {"prompt": "what is the sky", "max_new_tokens": 6, "steps": 3}
@@ -609,15 +616,12 @@ def test_sae_features_and_steering_a_feature(lm) -> None:
 
 
 def test_inspect_route_returns_views_under_interventions(lm) -> None:
-    from fastapi.testclient import TestClient
-
-    from loupe.server import create_app
 
     saved = home() / "models" / "tiny-inspect"
     lm._model.save_pretrained(saved)
     lm.tokenizer.save_pretrained(saved)
     save_vector("iv", torch.randn(hidden(lm)), model="tiny-inspect", layer=1, method="random")
-    client = TestClient(create_app(model="tiny-inspect"), base_url="http://localhost")
+    client = served("tiny-inspect")
     ask = {"prompt": "write a poem", "vectors": ["iv"]}
     base = client.post("/api/playground/inspect", json=ask).json()["views"]
     assert [v["kind"] for v in base] == ["heatmap", "tokens", "tokens"]
@@ -636,16 +640,14 @@ def test_inspect_route_returns_views_under_interventions(lm) -> None:
 
 
 def test_patch_and_dose_routes_read_the_next_token(lm) -> None:
-    from fastapi.testclient import TestClient
 
     from loupe.analysis import attribution_patch, dose_response, patch_residual
-    from loupe.server import create_app
 
     saved = home() / "models" / "tiny-patch"
     lm._model.save_pretrained(saved)
     lm.tokenizer.save_pretrained(saved)
     save_vector("dv", torch.randn(hidden(lm)) * 10, model="tiny-patch", layer=1, method="random")
-    client = TestClient(create_app(model="tiny-patch"), base_url="http://localhost")
+    client = served("tiny-patch")
     pair = {"clean": "the cat is blue", "corrupt": "the dog is blue", "answer": "yes",
             "foil": "no", "chat": False}  # fmt: skip
     for method, fn in (("residual", patch_residual), ("attribution", attribution_patch)):
@@ -678,10 +680,8 @@ def test_patch_and_dose_routes_read_the_next_token(lm) -> None:
 
 
 def test_speed_route_times_base_and_changed(lm) -> None:
-    from fastapi.testclient import TestClient
 
     from loupe.analysis import timing
-    from loupe.server import create_app
 
     lm2 = tiny(train=[("write a poem", "roses are red and violets are blue")])
     saved = home() / "models" / "tiny-speed"
@@ -691,7 +691,7 @@ def test_speed_route_times_base_and_changed(lm) -> None:
     t = timing(lm2, chat(lm2, "write a poem"), None, max_new_tokens=6, repeats=2)
     assert t["tokens"] > 1 and t["ttft_s"] > 0 and t["total_s"] >= t["ttft_s"]
     assert t["peak_mib"] is None  # the tiny model is on CPU, where peak memory is not recorded
-    client = TestClient(create_app(model="tiny-speed"), base_url="http://localhost")
+    client = served("tiny-speed")
     ask = {"prompt": "write a poem", "max_new_tokens": 6, "repeats": 1}
     speed, size = client.post("/api/playground/speed", json=ask).json()["views"]
     assert [r[0] for r in speed["rows"]] == ["base"] and size["title"] == "Footprint"
@@ -703,14 +703,11 @@ def test_speed_route_times_base_and_changed(lm) -> None:
 
 
 def test_playground_continues_a_conversation(lm) -> None:
-    from fastapi.testclient import TestClient
-
-    from loupe.server import create_app
 
     saved = home() / "models" / "tiny-turns"
     lm._model.save_pretrained(saved)
     lm.tokenizer.save_pretrained(saved)
-    client = TestClient(create_app(model="tiny-turns"), base_url="http://localhost")
+    client = served("tiny-turns")
     history = [
         {"role": "user", "content": "what is 2 + 2 ?"},
         {"role": "assistant", "content": "4"},

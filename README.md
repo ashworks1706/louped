@@ -71,12 +71,8 @@ direction for sycophancy on a 1.5B to 3B model, and the instrument checks on ful
 
 ## A new question
 
-```
-just new-experiment my-question mechanisms
-```
-
-This writes `experiments/my-question/README.md` with the research-note template and a `run.py`
-that logs to Inspect and MLflow, so the run appears in the app and Launch gets a form for its
+Press New on the Experiments page. It writes `experiments/my-question/README.md` with the
+research-note template and a `run.py` that logs to Inspect and MLflow, so the run appears in the app and Launch gets a form for its
 options. Domains are listed in [the docs](apps/site/content/docs/domains.mdx).
 
 ## Install

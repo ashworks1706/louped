@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { FlaskConical } from "lucide-react";
+import { FlaskConical, Plus } from "lucide-react";
 import Link from "next/link";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 
@@ -43,19 +43,31 @@ export function ExperimentsList() {
           <NoExperiments />
         ) : (
           <Tabs value={status} onValueChange={(v) => void setStatus(v as typeof status)}>
-            <TabsList>
-              {FILTERS.map((f) => {
-                const n = f === "all" ? all.length : all.filter((e) => e.status === f).length;
-                return (
-                  <TabsTrigger key={f} value={f} className="capitalize" aria-label={`${f} (${n})`}>
-                    {f}
-                    <span className="text-muted-foreground ml-1.5 font-mono text-[11px] tabular-nums">
-                      {n}
-                    </span>
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
+            <div className="flex items-center justify-between gap-3">
+              <TabsList>
+                {FILTERS.map((f) => {
+                  const n = f === "all" ? all.length : all.filter((e) => e.status === f).length;
+                  return (
+                    <TabsTrigger
+                      key={f}
+                      value={f}
+                      className="capitalize"
+                      aria-label={`${f} (${n})`}
+                    >
+                      {f}
+                      <span className="text-muted-foreground ml-1.5 font-mono text-[11px] tabular-nums">
+                        {n}
+                      </span>
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/launch/?id=new">
+                  <Plus /> New
+                </Link>
+              </Button>
+            </div>
             {FILTERS.map((f) => {
               const shown = f === "all" ? all : all.filter((e) => e.status === f);
               return (
@@ -93,7 +105,7 @@ export function ActiveExperiments() {
             icon={FlaskConical}
             title="No active questions"
             body="Set status: active in an experiment's README front matter, or start a new one."
-            command="just new-experiment my-question mechanisms"
+            command="uv run loupe new my-question --domain mechanisms"
           />
         ) : (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -113,7 +125,7 @@ function NoExperiments() {
       icon={FlaskConical}
       title="No experiments yet"
       body="One card per folder under experiments/, filed by the domain in its README."
-      command="just new-experiment my-question mechanisms"
+      command="uv run loupe new my-question --domain mechanisms"
     />
   );
 }

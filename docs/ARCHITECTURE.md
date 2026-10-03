@@ -116,10 +116,9 @@ wrote. Three things compute: the Playground (generate, which streams and continu
 for a follow-up; inspect, which returns a prompt's views; patch, residual or head patching between a
 clean and a corrupt prompt; dose, a saved direction swept over strengths at the next token; speed,
 time to first token, decode throughput and peak memory, base and changed), launching jobs, and
-loading a model into the Playground. A job is an existing
-command (an experiment script, `loupe train`, `loupe features`, `inspect eval`) in a subprocess,
-one at a time, its output under `<home>/jobs`; each form is read from the command's own argument
-parser. Launching and loading run code on this machine, so both are on only for a loopback server,
+loading a model into the Playground. A job is an existing command (an experiment script,
+`loupe train`, `loupe grid`, `loupe new`, `loupe features`, `inspect eval`) in a subprocess, one at
+a time, its output under `<home>/jobs`; each form is read from the command's own argument parser. Launching and loading run code on this machine, so both are on only for a loopback server,
 never with `--expose`.
 
 Pages: Home (the active questions and latest runs), Experiments (every question by axis, domain
