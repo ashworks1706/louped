@@ -82,6 +82,14 @@ RunMeta on every result).
       recorded so servers line up item by item; for models loupe does not load (GGUF, own engines).
 - [x] Recipes in the docs for models served elsewhere, engines with their own harness, retrieval,
       adapters and small models.
+- [x] The machine on every run: GPU power, utilisation and memory, CPU and RAM sampled while it is
+      open, with the GPU energy, under Hardware on its Overview; joules per token in
+      `endpoint-bench` for a server on this machine.
+- [x] `remote_code`: a Hub model with modeling code of its own (an engine's trained layers) loads,
+      opt-in, so loupe's hooks reach its new layers.
+- [x] `inject` at an engine's hook points: every token, the prompt only, or chunk boundaries of
+      the reply, so a retrieval-during-generation design is studied here and checked against the
+      engine's endpoint.
 
 ### 3. The agent harness
 

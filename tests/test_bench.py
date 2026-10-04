@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from loupe import stores
-from loupe.bench import bench, prefill, profile, speculative, under_load
+from loupe.bench import bench, operator, prefill, profile, speculative, under_load
 from loupe.models import save_model
 from loupe.models.load import load
 from loupe.models.tiny import tiny
@@ -57,3 +57,10 @@ def test_a_profile_names_the_operators_and_writes_a_trace(tmp_path: Path) -> Non
     ops = profile(tiny(), new_tokens=4, trace=trace)
     assert ops and all(len(row) == 4 for row in ops) and trace.stat().st_size > 0
     assert sum(row[3] for row in ops) <= 100.1
+
+
+def test_kernel_names_read_without_their_template_arguments() -> None:
+    assert operator("void gemmSN_TN_kernel<float, 128, 16>(int, float)") == "gemmSN_TN_kernel"
+    assert operator("aten::mul") == "aten::mul"
+    assert operator("fmha_cutlassF_f32_sm80(Kernel<float>::Params)") == "fmha_cutlassF_f32_sm80"
+    assert operator("cudaLaunchKernel") == "cudaLaunchKernel"

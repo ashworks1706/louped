@@ -29,6 +29,8 @@ class RunSummary(BaseModel):
 class MetricPoint(BaseModel):
     step: int
     value: float
+    #: When it was logged, ms since the epoch: the x of a series sampled over time (system/).
+    timestamp: int | None = None
 
 
 class Artifact(BaseModel):

@@ -2520,6 +2520,11 @@
               }
             ],
             "title": "Attn"
+          },
+          "remote_code": {
+            "type": "boolean",
+            "title": "Remote Code",
+            "default": false
           }
         },
         "type": "object",
@@ -2592,6 +2597,17 @@
           "value": {
             "type": "number",
             "title": "Value"
+          },
+          "timestamp": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp"
           }
         },
         "type": "object",

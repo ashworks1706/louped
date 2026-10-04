@@ -31,6 +31,10 @@ tracking = [
     "mlflow-skinny>=3.0",
     "sqlalchemy>=2.0",
     "alembic>=1.13",
+    # MLflow's system metrics: GPU utilisation, memory and power through NVML (BSD), CPU and RAM
+    # through psutil; a run without an NVIDIA GPU records CPU and RAM only.
+    "nvidia-ml-py>=12; sys_platform != 'darwin'",
+    "psutil>=5.9",
 ]
 interp = [
     "nnsight>=0.4",

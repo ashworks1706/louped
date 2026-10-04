@@ -49,3 +49,10 @@ def test_a_sweep_records_every_request_and_lines_servers_up() -> None:
     assert "Throughput by concurrency" in titles and "By endpoint and concurrency" in titles
     [summary] = [v.view for v in stores.list_views(run_id) if v.view.kind == "table"]
     assert summary.rows[-1][:2] == ["broken-9", 2] and summary.rows[-1][-1] == "4/4"  # type: ignore[union-attr]
+
+
+def test_energy_is_measured_only_for_a_server_on_this_machine() -> None:
+    from loupe.endpoint_bench import _meter
+
+    meter, why = _meter("http://gpu-box.example:8080/v1")
+    assert meter is None and why == "server is not on this machine"

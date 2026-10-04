@@ -35,7 +35,8 @@ loupe does not need to load a model to evaluate or time it:
 - **Serving cost**: `loupe endpoint-bench http://127.0.0.1:8080/v1 http://127.0.0.1:8081/v1`
   measures time to first token, latency and throughput as requests arrive together, per server.
   Every request is a record, so two servers (two quantizations, two slot counts) line up on the
-  Items tab request by request.
+  Items tab request by request. For a server on this machine it also reports GPU joules per
+  token.
 
 ## An engine or harness of its own (Rust, C++, a paper's code)
 
@@ -51,7 +52,17 @@ made before loupe open with `loupe view <folder>`.
 Log one record per question and arm (closed-book, retrieved, retrieved through a hook) with
 recall@k, the answer, its score and the timings; line them up by arm. A judge, when a score needs
 one, is a local model (`loupe judge`). Retrieval inside the model, injecting passages at a layer,
-is an intervention on a model loupe loads.
+is an intervention on a model loupe loads, at the hook points an engine retrieving during
+generation has: every token, the prompt only, or chunk boundaries of the reply
+([Where injected passages go](/docs/policies)).
+
+## An engine's own architecture
+
+An engine with layers of its own (a trained retrieval gate) is studied here once its weights ship
+with PyTorch modeling code on the Hub: load it with `remote_code=true`, and loupe's hooks, patching,
+probes and steering reach its new layers too. Check the PyTorch code against the engine first: the
+same prompt should give the same logits, layer by layer, within tolerance. Then a mechanism found in
+loupe holds in the engine, and the engine's endpoint confirms it by behavior.
 
 ## Adapters, skills and small models
 
@@ -59,6 +70,12 @@ LoRA adapters load as a bank, switch per request and change along a diffusion tr
 phase. An adapter's gain is an eval grid of base, prompt, adapter and fine-tune conditions; its
 interference is the same grid on the other skills' tasks. Weight formats and size against
 quality are `loupe bench` (throughput, prefill, memory, speculative decoding) next to an eval.
+
+## Energy and the machine
+
+Every run records the machine while it is open: GPU power, utilisation and memory, CPU and RAM,
+with the GPU energy it used on its Overview. A model served by another process on the same GPU
+is counted too, since NVML reads the whole GPU.
 
 ## Real runs on a cluster
 

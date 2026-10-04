@@ -177,6 +177,8 @@ class Bench:
     for a larger Qwen2.5); prompt lookup is measured either way."""
     profile: bool = True
     """Profile one request: the operators it spent most time in and a trace for Perfetto."""
+    remote_code: bool = False
+    """Run the modeling code the Hub repository ships (trust_remote_code); pin its revision."""
 
 
 @dataclass(frozen=True)
@@ -375,7 +377,7 @@ def main() -> None:
             quants: list[Quant | None] = [None if q == "none" else q for q in cmd.quants]
             print(bench(cmd.model, quants, tuple(cmd.batches), tuple(cmd.contexts),
                         cmd.new_tokens, cmd.repeats, cmd.experiment, cmd.draft,
-                        cmd.profile))  # fmt: skip
+                        cmd.profile, cmd.remote_code))  # fmt: skip
         case EndpointBench() as cmd:
             try:
                 from loupe.endpoint_bench import endpoint_bench

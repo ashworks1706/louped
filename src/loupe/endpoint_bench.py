@@ -9,6 +9,11 @@ counted, and the records say which. Throughput is the tokens of a level over its
 request is a record in raw/<endpoint>.jsonl with the same ids across endpoints, so the run page
 lines two servers up request by request. Nothing here loads a model or needs torch.
 
+Energy: for a server on this machine, the GPUs' power (NVML, every GPU summed, so every process on
+them) is sampled through each level and integrated over its wall time; joules per token is that
+over the level's tokens. A server elsewhere, or no NVML, gets no energy figure, and the table says
+why rather than reading this machine's GPU for another's.
+
 loupe does not drive a load generator such as guidellm or vllm's bench: they bring their own
 serving stacks and pins; this is the plain client the comparison needs.
 """
@@ -19,6 +24,7 @@ import asyncio
 import json
 import statistics
 import tempfile
+import threading
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -49,6 +55,56 @@ class Record:
     """usage: the server's count; deltas: content chunks counted, an estimate."""
     tokens_per_s: float | None
     error: str | None = None
+
+
+class _Power:
+    """The GPUs' summed power, sampled in a thread between start and stop: the joules drawn."""
+
+    def __init__(self, every: float = 0.2) -> None:
+        import pynvml
+
+        pynvml.nvmlInit()
+        self.nvml = pynvml
+        count = pynvml.nvmlDeviceGetCount()
+        if count == 0:
+            raise RuntimeError("no GPU")
+        self.handles = [pynvml.nvmlDeviceGetHandleByIndex(i) for i in range(count)]
+        self.every = every
+        self.joules = 0.0
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    def _watts(self) -> float:
+        return sum(self.nvml.nvmlDeviceGetPowerUsage(h) for h in self.handles) / 1000
+
+    def _run(self) -> None:
+        last_t, last_w = time.perf_counter(), self._watts()
+        while not self._stop.wait(self.every):
+            t, w = time.perf_counter(), self._watts()
+            self.joules += (w + last_w) / 2 * (t - last_t)
+            last_t, last_w = t, w
+
+    def __enter__(self) -> _Power:
+        self.joules = 0.0
+        self._stop.clear()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join()
+
+
+def _meter(url: str) -> tuple[_Power | None, str | None]:
+    """A power meter for a server on this machine, or why there is none."""
+    if httpx.URL(url).host not in ("127.0.0.1", "localhost", "::1", "0.0.0.0"):
+        return None, "server is not on this machine"
+    try:
+        return _Power(), None
+    except Exception as exc:  # no NVML library, no driver, no GPU: said, not hidden
+        return None, f"no GPU power reading ({type(exc).__name__})"
 
 
 def _label(url: str) -> str:
@@ -111,28 +167,38 @@ async def _one(
 
 async def _sweep(
     url: str, model: str, levels: tuple[int, ...], rounds: int, prompt: str, max_tokens: int,
-    transport: httpx.AsyncBaseTransport | None,
-) -> tuple[list[Record], dict[int, float]]:  # fmt: skip
-    """Every request's record, and each level's throughput (tokens over wall seconds)."""
+    transport: httpx.AsyncBaseTransport | None, meter: _Power | None,
+) -> tuple[list[Record], dict[int, float], dict[int, float]]:  # fmt: skip
+    """Every request's record, each level's throughput (tokens over wall seconds) and, with a
+    meter, its joules per token."""
     records: list[Record] = []
     throughput: dict[int, float] = {}
+    per_token: dict[int, float] = {}
     limits = httpx.Limits(max_connections=max(levels) + 4)
     async with httpx.AsyncClient(timeout=600, limits=limits, transport=transport) as client:
         await _one(client, url, model, prompt, 4, "warmup", 0, 0)  # loads the model if lazy
         for level in levels:
             tokens = 0
             wall = 0.0
+            joules = 0.0
             for rnd in range(rounds):
                 start = time.perf_counter()
+                if meter is not None:
+                    meter.__enter__()
                 got = await asyncio.gather(*[
                     _one(client, url, model, prompt, max_tokens, f"c{level}-r{rnd}-{i}", level, rnd)
                     for i in range(level)
                 ])  # fmt: skip
+                if meter is not None:
+                    meter.__exit__()
+                    joules += meter.joules
                 wall += time.perf_counter() - start
                 tokens += sum(r.tokens for r in got)
                 records += got
             throughput[level] = round(tokens / wall, 1) if wall else 0.0
-    return records, throughput
+            if meter is not None and tokens:
+                per_token[level] = round(joules / tokens, 3)
+    return records, throughput, per_token
 
 
 def _pct(values: list[float], q: float) -> float | None:
@@ -166,15 +232,22 @@ def endpoint_bench(
     ttft50: dict[str, list[float]] = {}
     ttft95: dict[str, list[float]] = {}
     lat50: dict[str, list[float]] = {}
+    energy: dict[str, list[float]] = {}
+    unmeasured: dict[str, str] = {}
     rows: list[list[Any]] = []
     with start_run(experiment, name=f"endpoint bench · {model}", params=params) as run:
         with tempfile.TemporaryDirectory() as tmp:
             raw = Path(tmp, "raw")
             raw.mkdir()
             for url, label in zip(urls, labels, strict=True):
-                records, throughput = asyncio.run(
-                    _sweep(url, model, levels, rounds, prompt, max_tokens, transport)
+                meter, why = _meter(url) if transport is None else (None, "not measured in a test")
+                records, throughput, per_token = asyncio.run(
+                    _sweep(url, model, levels, rounds, prompt, max_tokens, transport, meter)
                 )
+                if per_token:
+                    energy[label] = [per_token.get(level, 0.0) for level in levels]
+                else:
+                    unmeasured[label] = why or "no tokens"
                 (raw / f"{label}.jsonl").write_text(
                     "".join(json.dumps(asdict(r)) + "\n" for r in records), encoding="utf-8"
                 )
@@ -189,8 +262,10 @@ def endpoint_bench(
                     lat50[label].append(_pct(lat, 50) or 0.0)
                     failed = sum(1 for r in records if r.concurrency == level and r.error)
                     sent = f"{failed}/{level * rounds}"
+                    j = per_token.get(level)
                     rows.append([label, level, throughput[level], _pct(first, 50),
-                                 _pct(first, 95), _pct(lat, 50), _pct(lat, 95), sent])  # fmt: skip
+                                 _pct(first, 95), _pct(lat, 50), _pct(lat, 95),
+                                 j if j is not None else "—", sent])  # fmt: skip
             mlflow.log_artifacts(tmp)
         xs = [float(c) for c in levels]
         views = [
@@ -207,10 +282,16 @@ def endpoint_bench(
                  about=f"Median seconds for a whole reply of up to {max_tokens} tokens."),
             table("By endpoint and concurrency",
                   ["endpoint", "concurrency", "tokens/s", "TTFT p50 ms", "TTFT p95 ms",
-                   "latency p50 s", "latency p95 s", "failed"], rows,
-                  about="Each level's numbers; failed counts requests that errored, out of those "
+                   "latency p50 s", "latency p95 s", "J/token", "failed"], rows,
+                  note="; ".join(f"{k}: energy {v}" for k, v in unmeasured.items()) or None,
+                  about="Each level's numbers; J/token is GPU energy over the level's tokens, for "
+                  "a server on this machine; failed counts requests that errored, out of those "
                   "sent. Every request is in raw/<endpoint>.jsonl."),
         ]  # fmt: skip
+        if energy:
+            views.insert(4, line("Energy per token", xs, energy, "requests at once", "J/token",
+                                 about="GPU energy drawn per generated token: falls as batching "
+                                 "shares the GPU's idle power across more requests."))  # fmt: skip
         for i, view in enumerate(views):
             log_json(view, f"views/{i:02d}-endpoint.json")
         return f"m-{run.info.run_id}"

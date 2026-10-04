@@ -49,6 +49,9 @@ with start_run(EXPERIMENT, name=args.model, params=asdict(args), seed=args.seed)
 - **Directions** go through `loupe.vectors.save_vector`, and appear under Behavior › Vectors.
 - **Reproducibility**: `start_run` records the commit and environment; pin model revisions and
   seeds in `Args` so they are in the run's parameters.
+- **Hardware**: while a run is open, MLflow samples the machine every 2 s (GPU power, utilisation
+  and memory through NVML, CPU and RAM) as `system/` metrics; the run's Overview shows them under
+  Hardware with the GPU energy used. `LOUPE_SYSTEM_METRICS=0` turns it off.
 
 ## Someone else's code
 

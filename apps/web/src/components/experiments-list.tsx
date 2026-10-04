@@ -201,17 +201,21 @@ function ExperimentCard({
       <p className="text-muted-foreground line-clamp-2 text-sm leading-snug">
         {e.question ?? "No question written yet."}
       </p>
-      <div className="text-muted-foreground mt-auto flex items-center gap-3 border-t pt-2.5 text-xs">
-        <span>
-          <span className="text-foreground font-mono tabular-nums">{e.runs.length}</span>{" "}
-          {e.runs.length === 1 ? "run" : "runs"}
-        </span>
-        {last && <span>last {ago(last.created)}</span>}
-        {metric && (
-          <span className="ml-auto flex min-w-0 items-center gap-1.5">
-            <span className="truncate">{metricLabel(metric[0])}</span>
-            <MetricValue value={metric[1]} />
+      <div className="text-muted-foreground mt-auto flex flex-col gap-1.5 border-t pt-2.5 text-xs">
+        <div className="flex items-center gap-3 whitespace-nowrap">
+          <span>
+            <span className="text-foreground font-mono tabular-nums">{e.runs.length}</span>{" "}
+            {e.runs.length === 1 ? "run" : "runs"}
           </span>
+          {last && <span className="truncate">last {ago(last.created)}</span>}
+        </div>
+        {metric && (
+          <div className="flex min-w-0 items-center justify-between gap-2">
+            <span className="truncate" title={metricLabel(metric[0])}>
+              {metricLabel(metric[0])}
+            </span>
+            <MetricValue value={metric[1]} />
+          </div>
         )}
       </div>
     </Link>

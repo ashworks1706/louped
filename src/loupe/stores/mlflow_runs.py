@@ -82,7 +82,7 @@ def get_run(run_id: str) -> RunDetail | None:
     experiment = client.get_experiment(run.info.experiment_id).name
     history = {
         key: [
-            MetricPoint(step=m.step, value=m.value)
+            MetricPoint(step=m.step, value=m.value, timestamp=m.timestamp)
             for m in client.get_metric_history(run.info.run_id, key)
         ]
         for key in run.data.metrics

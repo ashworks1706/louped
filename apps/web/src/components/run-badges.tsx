@@ -26,9 +26,11 @@ export function StatusDot({
   total?: number | null;
 }) {
   const live = isLive(status);
+  // Inspect says success and MLflow finished for the same thing: one word for it everywhere
+  const done = status === "success" || status === "finished" || status === "succeeded";
   const tone = live
     ? "bg-foreground motion-safe:animate-pulse"
-    : status === "success" || status === "finished" || status === "succeeded"
+    : done
       ? "bg-positive"
       : status === "error" || status === "failed"
         ? "bg-negative"
@@ -36,7 +38,13 @@ export function StatusDot({
   return (
     <span className="text-muted-foreground inline-flex items-center gap-1.5 text-xs whitespace-nowrap">
       <span className={`size-1.5 rounded-full ${tone}`} />
-      {live && status !== "queued" ? "running" : status === "exported" ? "awaiting result" : status}
+      {live && status !== "queued"
+        ? "running"
+        : status === "exported"
+          ? "awaiting result"
+          : done
+            ? "finished"
+            : status}
       {live && samples != null && total ? (
         <span className="font-mono tabular-nums">
           {samples}/{total}

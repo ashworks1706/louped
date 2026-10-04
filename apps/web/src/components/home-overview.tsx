@@ -153,7 +153,7 @@ export function DomainCards() {
               {experiments.data && (
                 <span>
                   <span className="text-foreground font-mono tabular-nums">{mine.length}</span>{" "}
-                  questions ·{" "}
+                  {mine.length === 1 ? "question" : "questions"} ·{" "}
                   <span className="text-foreground font-mono tabular-nums">{active}</span> active
                 </span>
               )}

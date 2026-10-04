@@ -13,6 +13,7 @@ import { CopyButton } from "@/components/copy-button";
 import { EmptyState } from "@/components/empty-state";
 import { hasItems, ItemsView } from "@/components/items-view";
 import { Markdown } from "@/components/markdown";
+import { Hardware, hasHardware } from "@/components/hardware";
 import { HistoryCharts } from "@/components/history-chart";
 import { MetricValue } from "@/components/metric";
 import { QueryState } from "@/components/query-state";
@@ -196,6 +197,7 @@ function Overview({ run }: { run: RunDetail }) {
         </p>
       )}
       <HistoryCharts history={run.history} />
+      {hasHardware(run.history) && <Hardware history={run.history} />}
       {run.artifacts.some((a) => a.path === "report.md") && <Report runId={run.id} />}
       <Provenance run={run} />
     </div>

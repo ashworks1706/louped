@@ -16,14 +16,16 @@ changes the live set along one generation. diffusion serves a masked diffusion m
 loupe.models.diffusion, with the sampler's arguments ({"length": 64, "steps": 64}). revision pins
 a Hub model to a commit; LLaDA and Dream from the Hub need one, since they run their own code.
 attn picks the attention kernel and quant the weights' format (int8, int4; loupe.models.load), so
-grid conditions can differ only by either.
+grid conditions can differ only by either. remote_code runs the modeling code a Hub repository
+ships (an architecture transformers lacks); pin revision with it.
 
 inject ({"layer": 6, "alpha": 1.0}) takes passages a solver sent as an INJECT system message and
-adds their state at that layer instead of rendering them. A conversation that ends on an assistant
-message is continued from it (a prefill). Specs that run the model to compile (inject, heads with
-mode mean) are compiled at the first call, under the lock with the adapters live. Each output
-carries its usage, counted with the model's tokenizer, and on CUDA the call's peak memory, which
-loupe.inspect_ext.inference scores.
+adds their state at that layer instead of rendering them: at every token, or with "at": "prompt" the
+prompt's tokens only, or with "at": "chunks" every "chunk"-th generated token (Inject). A
+conversation that ends on an assistant message is continued from it (a prefill). Specs that run the
+model to compile (inject, heads with mode mean) are compiled at the first call, under the lock with
+the adapters live. Each output carries its usage, counted with the model's tokenizer, and on CUDA
+the call's peak memory, which loupe.inspect_ext.inference scores.
 """
 
 from __future__ import annotations
@@ -86,20 +88,22 @@ def shared_model(
     revision: str | None = None,
     attn: str | None = None,
     quant: Quant | None = None,
+    remote_code: bool = False,
 ) -> Any:
     """The model the provider serves under this name (with this adapter bank, attention kernel
     and weight format), loaded once per process: a LanguageModel, or a Diffusion for a masked
     diffusion model."""
     local = saved_model(name)
     key = str(local) if local else name  # a saved model's name is only unique per home
-    key += json.dumps([bank or [], merges or [], diffusion, revision, attn, quant], sort_keys=True)
+    key += json.dumps([bank or [], merges or [], diffusion, revision, attn, quant, remote_code],
+                      sort_keys=True)  # fmt: skip
     with _LOCK:
         if key not in _MODELS:
             if diffusion:
                 _MODELS[key] = load_diffusion(name, bank, merges, revision=revision)
             else:
                 _MODELS[key] = load(name, bank=bank, merges=merges, revision=revision, attn=attn,
-                                    quant=quant)  # fmt: skip
+                                    quant=quant, remote_code=remote_code)  # fmt: skip
         return _MODELS[key]
 
 
@@ -120,6 +124,7 @@ class LoupeAPI(ModelAPI):
         revision: str | None = None,
         attn: str | None = None,
         quant: Quant | None = None,
+        remote_code: bool = False,
         batch_size: int | None = None,
         **model_args: Any,
     ) -> None:
@@ -130,8 +135,10 @@ class LoupeAPI(ModelAPI):
             raise ValueError(
                 "interventions, attn and quant act on causal LMs, not a diffusion model"
             )
+        if remote_code and diffusion is not None:
+            raise ValueError("remote_code loads a causal model's own code, not a diffusion model")
         self.lm = shared_model(model_name, bank, merges, diffusion is not None, revision, attn,
-                               quant)  # fmt: skip
+                               quant, remote_code)  # fmt: skip
         self.sampler = dict(diffusion or {})
         specs = parse(interventions) if interventions else []
         self.plan = compile(self.lm, [s for s in specs if not _reads_model(s)]) if specs else {}

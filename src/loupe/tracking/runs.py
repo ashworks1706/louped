@@ -3,11 +3,16 @@
 Analyses and training jobs call start_run; the UI finds the result without further wiring. The
 experiment is named for the folder under experiments/ that the run answers, which is how the
 Experiments page groups runs.
+
+While a run is open, MLflow samples the machine every SAMPLE_SECONDS as system/ metrics: GPU
+utilisation, memory and power (NVML), CPU and RAM. NVML sees every process on the GPU, so a model
+served by another process on this machine is measured too. LOUPE_SYSTEM_METRICS=0 turns it off.
 """
 
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
@@ -17,6 +22,9 @@ from mlflow import MlflowClient
 from mlflow.entities import Run
 
 from loupe.core import artifacts_dir, capture, tracking_uri
+
+#: Seconds between samples of the machine while a run is open.
+SAMPLE_SECONDS = 2
 
 
 def experiment_id(name: str) -> str:
@@ -46,7 +54,12 @@ def start_run(
         "loupe.git_sha": meta.git.sha or "",
         "loupe.git_dirty": str(meta.git.dirty).lower(),
     }
-    with mlflow.start_run(experiment_id=experiment_id(experiment), run_name=name, tags=tags) as run:
+    system = os.environ.get("LOUPE_SYSTEM_METRICS", "1") != "0"
+    if system:
+        mlflow.set_system_metrics_sampling_interval(SAMPLE_SECONDS)
+        mlflow.set_system_metrics_samples_before_logging(1)
+    with mlflow.start_run(experiment_id=experiment_id(experiment), run_name=name, tags=tags,
+                          log_system_metrics=system) as run:  # fmt: skip
         if params:
             mlflow.log_params(params)
         mlflow.log_text(meta.model_dump_json(indent=2), "meta.json")

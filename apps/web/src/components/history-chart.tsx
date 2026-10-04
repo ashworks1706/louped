@@ -12,18 +12,19 @@ import {
 
 import type { RunDetail } from "@/lib/api";
 import { AXIS_TICK, TOOLTIP_STYLE } from "@/lib/chart";
+import { isSystem } from "@/lib/format";
 
 const short = new Intl.NumberFormat("en", { notation: "compact", maximumSignificantDigits: 3 });
 
 /** Axis ticks that fit in 48px: 0.0045 stays readable, 78240 becomes 78.2K. */
-function compact(v: number): string {
+export function compact(v: number): string {
   if (v === 0) return "0";
   return Math.abs(v) < 0.01 ? v.toExponential(0) : short.format(v);
 }
 
 /** One small chart per metric logged over steps. Metrics with a single point are not charted. */
 export function HistoryCharts({ history }: { history: RunDetail["history"] }) {
-  const series = Object.entries(history).filter(([, pts]) => pts.length > 1);
+  const series = Object.entries(history).filter(([k, pts]) => pts.length > 1 && !isSystem(k));
   if (series.length === 0) return null;
   return (
     <div className="grid gap-4 sm:grid-cols-2">

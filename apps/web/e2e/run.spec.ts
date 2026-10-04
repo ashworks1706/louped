@@ -51,7 +51,7 @@ const files: Record<string, string> = {
   ]),
 };
 
-async function mockRun(page: Page) {
+async function mockRun(page: Page, history: Record<string, object[]> = {}) {
   await page.route(`**/api/runs/${id}`, (r) =>
     r.fulfill({
       json: {
@@ -67,7 +67,7 @@ async function mockRun(page: Page) {
         host: "sol",
         params: {},
         tags: { "loupe.host": "sol", "loupe.node": "sg001", "loupe.gpu": "NVIDIA A100" },
-        history: {},
+        history,
         artifacts: Object.entries(files).map(([path, text]) => ({ path, size: text.length })),
         scorers: [],
         error: null,
@@ -140,6 +140,26 @@ test("one file of records lines up by a column such as an arm", async ({ page })
   // closed-book is the reference (first seen); retrieval fixed one of the one it got wrong
   await expect(page.getByText("0→1 1/1")).toBeVisible();
   await expect(page.getByRole("columnheader", { name: "retrieval" })).toBeVisible();
+});
+
+test("the machine's samples show under Hardware, not among the results", async ({ page }) => {
+  // 100 W for 10 s is 1000 J; memory peaks at 2048 MB
+  const at = (s: number) => 1_760_000_000_000 + s * 1000;
+  const series = (values: number[]) =>
+    values.map((value, i) => ({ step: i, value, timestamp: at(i * 5) }));
+  await mockRun(page, {
+    "system/gpu_0_power_usage_watts": series([100, 100, 100]),
+    "system/gpu_0_utilization_percentage": series([10, 90, 50]),
+    "system/gpu_0_memory_usage_megabytes": series([1024, 2048, 1536]),
+    "system/cpu_utilization_percentage": series([5, 7, 6]),
+  });
+  await page.goto(`/run/?id=${id}`);
+  const hardware = page.locator("section").filter({ hasText: "Hardware" });
+  await expect(hardware.getByText("1000 J")).toBeVisible();
+  await expect(hardware.getByText("2.0 GB")).toBeVisible();
+  await expect(hardware.getByText("GPU 0 utilisation")).toBeVisible();
+  // the results grid keeps only the run's own numbers
+  await expect(page.getByText("system/cpu_utilization_percentage")).toHaveCount(0);
 });
 
 test("the overview shows the report and where and how the run was made", async ({ page }) => {

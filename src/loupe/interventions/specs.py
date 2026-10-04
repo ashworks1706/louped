@@ -43,12 +43,19 @@ class Ablate(BaseModel):
 
 
 class Inject(BaseModel):
-    """Add alpha times the mean residual of the passages at one layer, at every position."""
+    """Add alpha times the mean residual of the passages at one layer: retrieved state reaching
+    the model without its prompt. Where it is added follows the hook points an engine that
+    retrieves during generation has (piramid's RetrievalHook): at the layer's entry for every
+    token (all), for the prompt's tokens only, as retrieval at the sequence's start (prompt), or at
+    every chunk-th generated token, as retrieval at chunk boundaries (chunks)."""
 
     kind: Literal["inject"] = "inject"
     passages: list[str]
     layer: int
     alpha: float = 1.0
+    at: Literal["all", "prompt", "chunks"] = "all"
+    chunk: int = Field(default=32, ge=1)
+    """With at chunks, the generated tokens between injections: the first, then every chunk-th."""
 
 
 class Heads(BaseModel):
@@ -174,6 +181,25 @@ def everywhere(lm: LanguageModel) -> list[int]:
     return [EMBED, *range(n_layers(lm))]
 
 
+class _Gated:
+    """An added state that only some forward passes take. Under cached generation the prompt is
+    one pass over many positions and each generated token a pass over one, which is how the two
+    are told apart; a new prompt pass starts the count of generated tokens again. A one-token
+    prompt reads as a generated token."""
+
+    def __init__(self, delta: torch.Tensor, at: Literal["prompt", "chunks"], chunk: int) -> None:
+        self.delta, self.at, self.chunk = delta, at, chunk
+        self.generated = 0
+
+    def __call__(self, h: torch.Tensor) -> torch.Tensor:
+        if h.shape[-2] > 1:  # the prompt
+            self.generated = 0
+            return h + self.delta.to(h.device) if self.at == "prompt" else h
+        self.generated += 1
+        boundary = self.at == "chunks" and (self.generated - 1) % self.chunk == 0
+        return h + self.delta.to(h.device) if boundary else h
+
+
 def merge(*plans: Plan) -> Plan:
     out: Plan = defaultdict(list)
     for plan in plans:
@@ -200,7 +226,12 @@ def compile(lm: LanguageModel, specs: Sequence[Spec]) -> Plan:
     for spec in specs:
         if isinstance(spec, Inject):
             state = passage_state(lm, spec.passages, spec.layer)
-            plans.append(steer_plan(state, spec.layer, spec.alpha))
+            if spec.at == "all":
+                plans.append(steer_plan(state, spec.layer, spec.alpha))
+            else:
+                plans.append(
+                    {spec.layer: [_Gated(spec.alpha * state.float(), spec.at, spec.chunk)]}
+                )
             continue
         if isinstance(spec, Heads):
             plans.append(heads_plan(lm, spec, means.get(tuple(spec.over or []), {})))

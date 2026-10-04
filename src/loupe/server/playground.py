@@ -53,6 +53,9 @@ class LoadRequest(BaseModel):
     bank: list[str] = []
     diffusion: bool = False
     attn: str | None = None
+    #: Run the modeling code the Hub repository ships (trust_remote_code), for an architecture
+    #: transformers lacks. It executes that code on this machine.
+    remote_code: bool = False
 
     @model_validator(mode="after")
     def _kernel_needs_causal(self) -> LoadRequest:
@@ -167,7 +170,8 @@ def router(switchable: bool = False) -> APIRouter:
                 else:
                     from loupe.models import load
 
-                    state["lm"] = load(c.model, bank=c.bank or None, attn=c.attn)
+                    state["lm"] = load(c.model, bank=c.bank or None, attn=c.attn,
+                                       remote_code=c.remote_code)  # fmt: skip
             return state["lm"], c
 
     @api.get("")

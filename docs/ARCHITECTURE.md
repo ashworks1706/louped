@@ -37,6 +37,12 @@ experiments. `loupe.core.project` finds the root; `loupe.core.paths` puts `.loup
 repository is not a project: it holds the package and, under `src/loupe/templates/`, what `init`
 copies (also served to Claude Code as a plugin through `.claude-plugin/marketplace.json`).
 
+A model with an architecture of its own (an engine's trained retrieval layers) is studied once it
+ships PyTorch modeling code: `load(remote_code=True)`, opt-in, since it runs the repository's
+code. An engine's runtime behaviour (retrieval during generation) is mirrored by `inject`'s hook
+points and checked against the engine through its endpoint; loupe does not instrument a Rust or
+C++ forward pass.
+
 loupe has no agent of its own. The person's agent (Claude Code, Codex, Cursor) drives it through
 `loupe mcp` and follows the project's `AGENTS.md`; the person reads and judges in the UI.
 `loupe view <folder>` opens results that were made without loupe, read-only, with no project.
@@ -137,6 +143,10 @@ core                                     run metadata, paths, the project
 - SAEs load through SAELens; loupe reads the residual at the SAE's hook with nnsight, so the model
   is never swapped for a TransformerLens one.
 - Every run writes `RunMeta`: commit and dirty flag, package versions, seed.
+- Every run started by `start_run` also carries the machine while it was open, as MLflow's
+  `system/` metrics sampled every 2 s: GPU power, utilisation and memory (NVML, which sees every
+  process on a GPU), CPU and RAM. The UI keeps them out of a run's results and shows them, with
+  the GPU energy, under Hardware.
 
 ## Server and UI
 

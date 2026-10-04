@@ -50,6 +50,11 @@ downloads there.
   `hook_resid_post`), read with nnsight on the unmodified model. Tested with a random SAE on the tiny
   Qwen2; a pretrained SAE exists only for some models, such as Gemma Scope for Gemma 2 and
   `gpt2-small-res-jb` for GPT-2.
+- **Architectures transformers lacks**: `-M remote_code=true` (and the Playground's "Run the
+  repository's own model code", `load(remote_code=True)`, `loupe bench --remote-code`) runs the
+  modeling code a Hub repository ships (`trust_remote_code`), such as a model with trained
+  retrieval layers. It executes that code on this machine, so it is off unless asked and the load
+  says when it is on; pin `revision` with it so the code cannot change under a result.
 - **Attention kernels**: `-M attn=sdpa` (or `eager`, `flash_attention_2`, `flex_attention`, any
   name registered with transformers' `AttentionInterface`, or `file.py:function` to register one)
   picks the kernel, for the provider, `load(attn=...)` and the Playground's model loader. Only eager returns

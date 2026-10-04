@@ -8,8 +8,13 @@ export function stderr(metrics: Record<string, number>, key: string): number | n
 /** Headline metrics: everything except the error bars, which are shown next to their metric. */
 export function headline(metrics: Record<string, number>): [string, number, number | null][] {
   return Object.entries(metrics)
-    .filter(([k]) => !k.endsWith("/stderr") && !k.endsWith("/std"))
+    .filter(([k]) => !k.endsWith("/stderr") && !k.endsWith("/std") && !isSystem(k))
     .map(([k, v]) => [k, v, stderr(metrics, k)]);
+}
+
+/** The machine sampled while a run was open (GPU, CPU, memory), not a result of the run. */
+export function isSystem(key: string): boolean {
+  return key.startsWith("system/");
 }
 
 /** Cost scores from loupe's inference scorers, where a rise is worse: latency, time to first

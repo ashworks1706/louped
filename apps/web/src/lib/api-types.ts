@@ -1077,6 +1077,11 @@ export interface components {
       diffusion: boolean;
       /** Attn */
       attn?: string | null;
+      /**
+       * Remote Code
+       * @default false
+       */
+      remote_code: boolean;
     };
     /** Message */
     Message: {
@@ -1105,6 +1110,8 @@ export interface components {
       step: number;
       /** Value */
       value: number;
+      /** Timestamp */
+      timestamp?: number | null;
     };
     /**
      * Option

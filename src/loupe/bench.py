@@ -136,8 +136,20 @@ def profile(lm: Any, new_tokens: int, trace: Path, top: int = 15) -> list[list[A
     events = list(prof.key_averages())
     total = sum(getattr(e, key) for e in events) or 1.0
     events.sort(key=lambda e: getattr(e, key), reverse=True)
-    return [[e.key, e.count, round(getattr(e, key) / 1000, 2),
+    return [[operator(e.key), e.count, round(getattr(e, key) / 1000, 2),
              round(100 * getattr(e, key) / total, 1)] for e in events[:top]]  # fmt: skip
+
+
+def operator(name: str) -> str:
+    """A kernel's name without its template arguments and signature, which run to lines
+    (`void gemmSN_TN_kernel<float, 128, ...>(...)` reads gemmSN_TN_kernel); the trace keeps the
+    full name. An aten:: operator is kept as it is."""
+    if name.startswith("aten::"):
+        return name
+    short = name.removeprefix("void ")
+    cut = min((i for i in (short.find("<"), short.find("(")) if i > 0), default=len(short))
+    short = short[:cut].strip()
+    return short.rsplit("::", 1)[-1] if "::" in short and len(short) > 48 else short or name
 
 
 def bench(
@@ -150,6 +162,7 @@ def bench(
     experiment: str = "efficiency-bench",
     draft: str | None = None,
     profiled: bool = True,
+    remote_code: bool = False,
 ) -> str:
     """Load and context sweeps for model in each weight format (None: as saved), then speculative
     decoding (with draft, a small model of the same family, when given) and a profile of the
@@ -157,7 +170,7 @@ def bench(
     formats = quants or [None]
     params = {"model": model, "quants": [q or "none" for q in formats], "batches": list(batches),
               "contexts": list(contexts), "new_tokens": new_tokens, "repeats": repeats,
-              "draft": draft, "profiled": profiled}  # fmt: skip
+              "draft": draft, "profiled": profiled, "remote_code": remote_code}  # fmt: skip
     load_tps: dict[str, list[float]] = {}
     load_s: dict[str, list[float]] = {}
     pre_ms: dict[str, list[float]] = {}
@@ -169,7 +182,7 @@ def bench(
     with start_run(experiment, name=f"bench · {model}", params=params) as run:
         for quant in formats:
             name = quant or "as saved"
-            lm = load(model, quant=quant)
+            lm = load(model, quant=quant, remote_code=remote_code)
             size = {r[0]: r[1] for r in footprint(lm)["rows"]}
             sizes.append([name, size["weights MiB"], size["dtype"], size["device"]])
             load_tps[name], load_s[name] = [], []

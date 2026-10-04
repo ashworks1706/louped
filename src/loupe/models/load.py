@@ -46,6 +46,7 @@ def load(
     revision: str | None = None,
     attn: str | None = None,
     quant: Quant | None = None,
+    remote_code: bool = False,
 ) -> LanguageModel:
     """A model saved under <home>/models by name, a Hub id or path, or a built HF model; a Hub id
     at revision (a commit, branch or tag) when one is given. With an adapter (a LoRA directory,
@@ -61,6 +62,11 @@ def load(
     quant loads the weights in 8 or 4 bits (int4 is NF4) with bitsandbytes, on CUDA only, for
     measuring what a smaller number format costs in quality and saves in memory.
 
+    remote_code runs the modeling code a Hub repository ships with its weights
+    (trust_remote_code), for an architecture transformers does not have, such as one with trained
+    retrieval layers. It executes that repository's Python here, so it is off unless asked, and
+    says so when on; pin revision so the code cannot change under a result.
+
     Padding is set to the left so the last position of every row is its last real token, which is
     what generation needs and what last-token analyses read.
     """
@@ -75,12 +81,18 @@ def load(
                 kwargs["tokenizer"] = PreTrainedTokenizerFast.from_pretrained(model)
         device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         hf: dict[str, Any] = {"dtype": dtype, "device_map": device, "revision": revision}
+        if remote_code:
+            print(f"running the modeling code that {model} ships (trust_remote_code), "
+                  f"at revision {revision or 'latest: pin it for a result'}")  # fmt: skip
+            hf["trust_remote_code"] = True
         if attn:
             hf["attn_implementation"] = attention_kernel(attn)
         if quant:
             hf["quantization_config"] = quantization(quant, device, adapter is not None or bank)
         if adapter is not None or bank:
-            tok = kwargs.get("tokenizer") or AutoTokenizer.from_pretrained(model, revision=revision)
+            tok = kwargs.get("tokenizer") or AutoTokenizer.from_pretrained(
+                model, revision=revision, trust_remote_code=remote_code
+            )
             built = (
                 _merged(model, adapter, hf)
                 if adapter

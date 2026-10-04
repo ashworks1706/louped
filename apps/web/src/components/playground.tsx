@@ -1013,7 +1013,8 @@ function ExampleModel({ ready, tools }: { ready: boolean; tools: Tab[] }) {
   const client = useQueryClient();
   const router = useRouter();
   const load = useMutation({
-    mutationFn: () => loadModel({ model: EXAMPLE_MODEL, bank: [], diffusion: false }),
+    mutationFn: () =>
+      loadModel({ model: EXAMPLE_MODEL, bank: [], diffusion: false, remote_code: false }),
     meta: { action: "Loading the example model" },
     onSuccess: (info) => {
       // the prompt goes in the URL first, so the tools open on it
@@ -1053,6 +1054,7 @@ function ModelLoader({ current }: { current?: PlaygroundInfo }) {
   const [bank, setBank] = useState((current?.bank ?? []).join(" "));
   const [diffusion, setDiffusion] = useState(current?.diffusion ?? false);
   const [attn, setAttn] = useState("");
+  const [remote, setRemote] = useState(false);
   const load = useMutation({
     mutationFn: loadModel,
     meta: { action: "Loading the model" },
@@ -1064,12 +1066,13 @@ function ModelLoader({ current }: { current?: PlaygroundInfo }) {
   const submit = (unload = false) =>
     load.mutate(
       unload
-        ? { model: null, bank: [], diffusion: false }
+        ? { model: null, bank: [], diffusion: false, remote_code: false }
         : {
             model: model.trim(),
             bank: bank.split(/[\s,]+/).filter(Boolean),
             diffusion,
             attn: attn.trim() || null,
+            remote_code: remote && !diffusion,
           },
     );
   return (
@@ -1116,6 +1119,17 @@ function ModelLoader({ current }: { current?: PlaygroundInfo }) {
         <Checkbox checked={diffusion} onCheckedChange={(c) => setDiffusion(c === true)} />
         Masked diffusion model
       </label>
+      {!diffusion && (
+        <label className="flex items-center gap-2 text-xs">
+          <Checkbox checked={remote} onCheckedChange={(c) => setRemote(c === true)} />
+          Run the repository&apos;s own model code
+          <Help label="What is running the model's own code?">
+            For an architecture transformers lacks, such as one with trained retrieval layers: the
+            Hub repository ships its own modeling code (trust_remote_code). It runs on this machine,
+            so tick it only for a repository you trust.
+          </Help>
+        </label>
+      )}
       <div className="flex items-center gap-2">
         <Button type="submit" size="sm" disabled={load.isPending || !model.trim()}>
           {load.isPending ? "Loading…" : "Load"}
