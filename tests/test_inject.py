@@ -1,6 +1,6 @@
-"""Injecting passages' state where an engine that retrieves during generation would (piramid's
-hook points): every token, the prompt only, or chunk boundaries of the reply; and loading a
-model's own code only when asked."""
+"""Injecting passages' state at the hook points of an engine that retrieves during generation:
+every token, the prompt only, or chunk boundaries of the reply; and loading a model's own code
+only when asked."""
 
 from typing import Any
 

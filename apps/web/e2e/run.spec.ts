@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 // An analysis run that wrote one JSONL file per condition, a report and its RunMeta: what a paper
-// harness such as rational-updating-baseline leaves behind.
+// harness leaves behind.
 const id = "m-items";
 const jsonl = (rows: object[]) => rows.map((r) => JSON.stringify(r)).join("\n") + "\n";
 const files: Record<string, string> = {
@@ -79,7 +79,7 @@ async function mockRun(page: Page, history: Record<string, object[]> = {}) {
         id,
         kind: "analysis",
         name: "baseline · llama_test_n3",
-        experiment: "rational-updating-baseline",
+        experiment: "pushback-baseline",
         status: "finished",
         created: "2026-10-04T08:00:00Z",
         model: "llama",

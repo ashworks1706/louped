@@ -44,10 +44,10 @@ class Ablate(BaseModel):
 
 class Inject(BaseModel):
     """Add alpha times the mean residual of the passages at one layer: retrieved state reaching
-    the model without its prompt. Where it is added follows the hook points an engine that
-    retrieves during generation has (piramid's RetrievalHook): at the layer's entry for every
-    token (all), for the prompt's tokens only, as retrieval at the sequence's start (prompt), or at
-    every chunk-th generated token, as retrieval at chunk boundaries (chunks)."""
+    the model without its prompt. Where it is added follows the hook points of an engine that
+    retrieves during generation: at the layer's entry for every token (all), for the prompt's
+    tokens only, as retrieval at the sequence's start (prompt), or at every chunk-th generated
+    token, as retrieval at chunk boundaries (chunks)."""
 
     kind: Literal["inject"] = "inject"
     passages: list[str]
