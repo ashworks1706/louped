@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/ashworks1706/louped/compare/v0.1.1...v0.1.2) (2026-10-04)
+
+
+### Bug Fixes
+
+* the image copies hatch_build.py, which building louped needs ([dc7c67f](https://github.com/ashworks1706/louped/commit/dc7c67f765813bee28255ac680d67b61ab0fe1c4))
+
 ## [0.1.1](https://github.com/ashworks1706/louped/compare/v0.1.0...v0.1.1) (2026-10-04)
 
 
