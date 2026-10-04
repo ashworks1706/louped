@@ -11,6 +11,7 @@ and what shape the results take. Results loupe reads without extra wiring:
 | ----------------------------------- | --------------------------------------------- | ------------------------------------------ |
 | Per-item records under conditions   | `raw/<condition>.jsonl`, an id field in each  | the Items tab: each item across conditions |
 | One file, a condition or arm column | `records.jsonl`, or a JSON array of objects   | Artifacts → Line up by `<column>`          |
+| Events: a time and a kind on each   | JSONL, one file per request or one in all     | Artifacts: a timeline per request          |
 | Numbers                             | `mlflow.log_metrics`, with `step` for a curve | Overview, and a chart for a curve          |
 | Tables, curves, scatters, heatmaps  | a view from `loupe.analysis.views`            | Figures                                    |
 | Transcripts and scores              | an Inspect eval (`task.py`)                   | Samples, and Inspect View                  |
@@ -31,7 +32,10 @@ loupe does not need to load a model to evaluate or time it:
   (`loupe.grid.endpoint`), so a quantized GGUF and a full-precision model are compared on the
   same samples.
 - **Agents**: an agent endpoint that reports the tools it ran in a `trace` field is scored by the
-  `agent/` provider; logged calls and Phoenix spans become training sets with `loupe data`.
+  `agent/` provider; logged calls and Phoenix spans become training sets with `loupe data`. An
+  agent's own trace files (events with a time such as `at` and a kind such as `kind`, grouped by
+  `request_id`) open as timelines: `loupe view .agent/traces`, then "every file, as one" reads
+  every request together, newest first, searchable as a table.
 - **Serving cost**: `loupe endpoint-bench http://127.0.0.1:8080/v1 http://127.0.0.1:8081/v1`
   measures time to first token, latency and throughput as requests arrive together, per server.
   Every request is a record, so two servers (two quantizations, two slot counts) line up on the

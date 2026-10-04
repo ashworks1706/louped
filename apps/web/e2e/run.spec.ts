@@ -44,6 +44,27 @@ const files: Record<string, string> = {
     { q: "a", arm: "retrieval", em: 1, ttft_ms: 95 },
     { q: "b", arm: "retrieval", em: 1, ttft_ms: 97 },
   ]),
+  // an agent's trace: one request's events, each with a time and a kind
+  "traces/r1.jsonl": jsonl([
+    {
+      request_id: "r1",
+      at: "2026-09-13T00:23:08.000Z",
+      kind: "request_started",
+      input: "is noble open",
+    },
+    {
+      request_id: "r1",
+      at: "2026-09-13T00:23:08.100Z",
+      kind: "retrieval",
+      duration_ms: 99,
+      query: "noble hours",
+    },
+    { request_id: "r1", at: "2026-09-13T00:23:10.700Z", kind: "completed", status: "answered" },
+  ]),
+  "traces/r2.jsonl": jsonl([
+    { request_id: "r2", at: "2026-09-13T01:00:00.000Z", kind: "request_started", input: "parking" },
+    { request_id: "r2", at: "2026-09-13T01:00:01.500Z", kind: "completed", status: "answered" },
+  ]),
   "raw/t/pressure.jsonl": jsonl([
     { qid: 1, condition: "pressure", correct: 0, scores: [-2, -1], second_turn: "Are you sure?" },
     { qid: 2, condition: "pressure", correct: 1, scores: [-1, -3], second_turn: "Are you sure?" },
@@ -160,6 +181,20 @@ test("the machine's samples show under Hardware, not among the results", async (
   await expect(hardware.getByText("GPU 0 utilisation")).toBeVisible();
   // the results grid keeps only the run's own numbers
   await expect(page.getByText("system/cpu_utilization_percentage")).toHaveCount(0);
+});
+
+test("an agent's trace reads as a timeline, one file or the whole folder", async ({ page }) => {
+  await mockRun(page);
+  await page.goto(`/run/?id=${id}&tab=artifacts&file=traces/r1.jsonl`);
+  await expect(page.getByText("1 trace · 3 events · 3 kinds")).toBeVisible();
+  await expect(page.getByText("+2.70 s")).toBeVisible();
+  await page.getByRole("button", { name: /retrieval/ }).click();
+  await expect(page.getByText("noble hours").last()).toBeVisible();
+  await page.getByRole("button", { name: "every file in traces/, as one (2)" }).click();
+  await expect(page.getByText("2 traces · 5 events · 3 kinds")).toBeVisible();
+  await page.getByRole("button", { name: "table", exact: true }).click();
+  await expect(page).toHaveURL(/view=table/);
+  await expect(page.getByText("5 of 5")).toBeVisible();
 });
 
 test("the overview shows the report and where and how the run was made", async ({ page }) => {

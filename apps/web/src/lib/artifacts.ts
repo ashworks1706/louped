@@ -110,7 +110,12 @@ export function asBinary(v: unknown): 0 | 1 | null {
   return null;
 }
 
-/** Folders holding two or more JSONL files: one file per condition, the same items in each. */
+/** More files than this in one folder are not conditions of one comparison (a folder of traces,
+ * one file per request), so the Items view leaves them to Artifacts. */
+export const MAX_CONDITIONS = 12;
+
+/** Folders holding two to MAX_CONDITIONS JSONL files: one file per condition, the same items in
+ * each. */
 export function itemFolders(paths: string[]): { dir: string; files: string[] }[] {
   const by = new Map<string, string[]>();
   for (const p of paths) {
@@ -119,7 +124,7 @@ export function itemFolders(paths: string[]): { dir: string; files: string[] }[]
     by.set(dir, [...(by.get(dir) ?? []), p]);
   }
   return [...by]
-    .filter(([, files]) => files.length >= 2)
+    .filter(([, files]) => files.length >= 2 && files.length <= MAX_CONDITIONS)
     .map(([dir, files]) => ({ dir, files: orderConditions(files) }))
     .sort((a, b) => a.dir.localeCompare(b.dir));
 }
@@ -241,6 +246,32 @@ export function asRecords(value: unknown): Row[] | null {
   return value.every((v) => v && typeof v === "object" && !Array.isArray(v))
     ? (value as Row[])
     : null;
+}
+
+const TIME_FIELDS = ["at", "timestamp", "time", "ts", "start_time", "created_at", "started_at"];
+const KIND_FIELDS = ["kind", "event", "type", "event_type", "span_kind", "name"];
+const GROUP_FIELDS = ["request_id", "trace_id", "session_id", "conversation_id", "run_id"];
+
+/** A moment from an ISO date or a number (seconds, or milliseconds when large): ms since epoch. */
+export function moment(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v > 1e11 ? v : v * 1000;
+  if (typeof v !== "string") return null;
+  const t = Date.parse(v);
+  return Number.isNaN(t) ? null : t;
+}
+
+/** How a file's records read as a trace: the field that times each event, the one naming its
+ * kind, and the one grouping events into a request (null: one group). Null when they are not
+ * events: no time field every row carries, or no kind field. */
+export function traceShape(
+  rows: Row[],
+): { time: string; kind: string; group: string | null } | null {
+  if (rows.length < 2) return null;
+  const time = TIME_FIELDS.find((f) => rows.every((r) => moment(r[f]) !== null));
+  const kind = KIND_FIELDS.find((f) => rows.every((r) => typeof r[f] === "string"));
+  if (!time || !kind) return null;
+  const group = GROUP_FIELDS.find((f) => rows.every((r) => isScalar(r[f]) && r[f] !== null));
+  return { time, kind, group: group ?? null };
 }
 
 /** A value as one short line for a table cell. */

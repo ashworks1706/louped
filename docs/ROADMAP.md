@@ -87,6 +87,8 @@ RunMeta on every result).
       `endpoint-bench` for a server on this machine.
 - [x] `remote_code`: a Hub model with modeling code of its own (an engine's trained layers) loads,
       opt-in, so loupe's hooks reach its new layers.
+- [x] Agent traces as timelines: records with a time and a kind on every event open per request,
+      with offsets, durations and every field; a folder of trace files reads as one.
 - [x] `inject` at an engine's hook points: every token, the prompt only, or chunk boundaries of
       the reply, so a retrieval-during-generation design is studied here and checked against the
       engine's endpoint.
