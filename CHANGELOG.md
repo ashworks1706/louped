@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/ashworks1706/louped/compare/v0.1.0...v0.1.1) (2026-10-04)
+
+
+### Bug Fixes
+
+* uv.lock at 0.1.0, and release-please bumps it with the version ([d58f954](https://github.com/ashworks1706/louped/commit/d58f954c88fdaeaeb8088beaa522b5b30951e585))
+
 ## 0.1.0 (2026-10-04)
 
 
