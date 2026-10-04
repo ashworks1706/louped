@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/ashworks1706/louped/compare/v0.1.1...v0.1.2) (2026-10-04)
+
+
+### Documentation
+
+* the maintainer's research project is arc-lab ([2dbc371](https://github.com/ashworks1706/louped/commit/2dbc371477d45d6ec6a23fc9fd6d7d388b7e43f2))
+
 ## [0.1.1](https://github.com/ashworks1706/louped/compare/v0.1.0...v0.1.1) (2026-10-04)
 
 
