@@ -1,16 +1,18 @@
 # Roadmap
 
-louped grows when an experiment needs it. This file holds two tracks: the **product**, what a
-researcher installs, and the **research** that drives it and proves it works.
+louped grows when an experiment needs it. This file is the product: what a researcher installs.
+Research questions live in research projects, each with its own roadmap; the maintainer's
+(`honesty-research`: sycophancy and misleading outputs) is the first user and sets what is next
+here, but its experiments are not louped's.
 
 ## What louped is
 
 A research workbench for language models that your coding agent drives. It has three parts:
 
-| Part               | What it is                                                                     | Who changes it                                |
-| ------------------ | ------------------------------------------------------------------------------ | --------------------------------------------- |
-| The package        | `pip install louped`: the library, the `louped` CLI, the API and the UI       | louped's maintainers                           |
-| A research project | a folder `louped init` makes: your questions as experiments, under git          | the researcher and their agent                |
+| Part               | What it is                                                                      | Who changes it                                 |
+| ------------------ | ------------------------------------------------------------------------------- | ---------------------------------------------- |
+| The package        | `pip install louped`: the library, the `louped` CLI, the API and the UI         | louped's maintainers                           |
+| A research project | a folder `louped init` makes: your questions as experiments, under git          | the researcher and their agent                 |
 | The agent harness  | `louped mcp`, the skills and an `AGENTS.md`, given to the agent you already use | louped ships it; any MCP-capable agent uses it |
 
 The person reads, steers and judges in the UI; the agent writes experiments, launches them and
@@ -44,7 +46,7 @@ RunMeta on every result).
 - **The product repository is not a research project.** louped's repo holds the package, tests,
   the UI and `src/louped/templates/` (what `louped init` copies); a research question lives in its
   own project.
-  `rational-updating-baseline` now lives in its own project, `honesty-research`.
+  The maintainer's research lives in its own project, `honesty-research`.
 - **A way in without adopting louped.** `louped view <folder>` opens what a researcher already
   has (Inspect logs, an MLflow store, a folder of per-condition JSONL) in the run page, with no
   project.
@@ -107,7 +109,7 @@ RunMeta on every result).
 
 ### 4. Separate the product from the research
 
-- [x] `experiments/rational-updating-baseline` moves to its own project made with `louped init`;
+- [x] The maintainer's experiments move to their own project made with `louped init`;
       this repo keeps the templates and tests (done: `~/projects/honesty-research`, its Sol run
       imported there; it needs a GitHub remote of its own). The research project is the first real user of
       `louped init`, so it lands with item 1.
@@ -120,44 +122,18 @@ RunMeta on every result).
 - [ ] A read-only demo of real runs (the Docker image already serves results) and the docs site,
       deployed. The repository is private, so GitHub Pages needs a paid plan or a public
       repository; the site also builds as a server app today, not a static export.
-- [ ] The case study: Experiment 1A reproduced and one mitigation tested, item by item, written up
-      with the tool's part in it.
+- [ ] The case study: a real result made with louped (the first from `honesty-research`), written
+      up item by item with the tool's part in it.
 - [ ] Then a public launch and, if the case study holds, a demo or workshop paper.
 
 Not planned: a built-in agent, a hosted service, accounts or auth, a tracking server of our own.
 
-## Research
+## Trust
 
-Each item is a research outcome or the check that makes one trustworthy; the experiment it lives
-in is named.
-
-### Acceptance
-
-Behavior and alignment:
-
-- [ ] Experiment 1A: the rational-updating harness reproduces the published unmitigated
-      Llama-3.1-8B-Instruct baseline on TruthfulQA, rates and denominators within the README's
-      margin, with ten examples read by hand (`rational-updating-baseline`). The 20-item run on
-      Sol works end to end (2026-10-04); the full split is next.
-- [ ] Experiment 1B: one mitigation on the fixed 1A cohort, scored on resisting unsupported
-      pressure and on keeping evidence-based correction, preferably on a dataset where the model
-      writes its answer.
-- [ ] One mechanism result on a real model, read entirely in the UI.
-
-Efficiency and systems:
-
-- [ ] None yet; questions come later.
-
-Instrument checks:
+What makes louped's own numbers trustworthy, whatever the question.
 
 - [ ] An inspect_evals score within noise of the reported number on the full split.
-
-### Next
-
-- A human-calibration study in `honesty`: an agent adapting to a simulated person over repeated
-  turns, with no personal state, ordinary preference memory, and preferences kept apart from
-  factual claims, scored on useful adaptation and on correctness under pressure.
+- [ ] RunMeta with the model's revision, a dataset fingerprint and the chat template's hash.
 - More checks: IFEval (needs its optional package), a memory benchmark across conversations
   (LongMemEval or LoCoMo), citation accuracy (ALCE), and a HotpotQA grounding task with its
   paragraphs retrieved or injected.
-- RunMeta with the model's revision, a dataset fingerprint and the chat template's hash.
