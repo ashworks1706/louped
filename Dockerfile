@@ -10,7 +10,7 @@ RUN NEXT_TELEMETRY_DISABLED=1 pnpm build
 FROM python:3.12-slim
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 WORKDIR /app
-COPY pyproject.toml uv.lock README.md LICENSE ./
+COPY pyproject.toml uv.lock README.md LICENSE hatch_build.py ./
 COPY src/ src/
 RUN uv sync --locked --no-dev --extra server
 COPY --from=web /web/out /app/web
