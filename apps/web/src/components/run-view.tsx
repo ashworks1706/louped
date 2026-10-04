@@ -243,12 +243,12 @@ function Provenance({ run }: { run: RunDetail }) {
   } catch {
     m = {};
   }
-  const sha = run.tags["loupe.git_sha"] || m.git?.sha || "";
-  const dirty = (run.tags["loupe.git_dirty"] ?? String(m.git?.dirty ?? "")) === "true";
+  const sha = run.tags["louped.git_sha"] || m.git?.sha || "";
+  const dirty = (run.tags["louped.git_dirty"] ?? String(m.git?.dirty ?? "")) === "true";
   const rows: [string, React.ReactNode][] = [
     [
       "Ran on",
-      [run.host ?? "this machine", run.tags["loupe.node"], run.tags["loupe.gpu"]]
+      [run.host ?? "this machine", run.tags["louped.node"], run.tags["louped.gpu"]]
         .filter(Boolean)
         .join(" · "),
     ],
@@ -294,7 +294,7 @@ function Provenance({ run }: { run: RunDetail }) {
   );
 }
 
-/** Inspect View, served by loupe at /inspect, open at this run's log or at the selected sample.
+/** Inspect View, served by louped at /inspect, open at this run's log or at the selected sample.
  * Its theme is the one resolved on first render, so toggling the theme does not reload it. */
 function InspectFrame({ log }: { log: string }) {
   const [sample] = useQueryState("sample", parseAsString);

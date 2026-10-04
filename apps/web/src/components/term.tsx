@@ -21,7 +21,7 @@ export function Term({
   );
 }
 
-/** A scorer/metric key as `scorer · metric`, with what it measures behind a ? when loupe knows. */
+/** A scorer/metric key as `scorer · metric`, with what it measures behind a ? when louped knows. */
 export function MetricName({ k, className }: { k: string; className?: string }) {
   const meaning = metricMeaning(k);
   return (

@@ -3,7 +3,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from loupe.server import create_app
+from louped.server import create_app
 
 
 def test_health() -> None:
@@ -16,9 +16,9 @@ def test_health() -> None:
 
 
 def test_serves_the_ui_export(tmp_path: Path) -> None:
-    (tmp_path / "index.html").write_text("<html>loupe</html>")
+    (tmp_path / "index.html").write_text("<html>louped</html>")
     client = TestClient(create_app(tmp_path), base_url="http://localhost")
-    assert "loupe" in client.get("/").text
+    assert "louped" in client.get("/").text
     assert client.get("/api/health").status_code == 200
 
 
@@ -42,8 +42,8 @@ def test_inspect_view_is_served_read_only_over_the_eval_logs() -> None:
     from inspect_ai import Task, eval
     from inspect_ai.dataset import Sample
 
-    from loupe import stores
-    from loupe.core import logs_dir
+    from louped import stores
+    from louped.core import logs_dir
 
     eval(Task(dataset=[Sample(input="hi", target="hi")]), model="mockllm/model",
          log_dir=str(logs_dir()), display="none")  # fmt: skip
@@ -69,7 +69,7 @@ def test_inspect_view_is_served_read_only_over_the_eval_logs() -> None:
 def test_circuit_graphs_are_listed_and_served_to_their_viewer() -> None:
     import json
 
-    from loupe.core import graphs_dir, home
+    from louped.core import graphs_dir, home
 
     client = TestClient(create_app(), base_url="http://localhost")
     assert client.get("/api/graphs").json() == []
@@ -107,17 +107,17 @@ def test_the_ui_launches_an_experiment_as_a_job_and_reads_its_log(tmp_path) -> N
         'if __name__ == "__main__":\n    a = tyro.cli(Args)\n'
         "    print(('HELLO' if a.loud else 'hello'), a.name, sum(a.times))\n"
     )
-    (exp / "sft.yaml").write_text("# loupe train sft experiments/hello/sft.yaml\nname: x\n")
+    (exp / "sft.yaml").write_text("# louped train sft experiments/hello/sft.yaml\nname: x\n")
     client = TestClient(create_app(launching=True), base_url="http://localhost")
     ids = {x["id"]: x for x in client.get("/api/launch").json()}
     assert ids["script:hello/run.py"]["description"] == "Say hello."
     assert ids["train:hello/sft.yaml"]["recipe"] == "sft" and {"eval", "sweep"} <= set(ids)
     assert {"data:export", "data:curate"} <= set(ids) and "data:review" not in ids  # interactive
     assert {"features", "circuit", "sweep", "new", "grid"} <= set(ids)
-    assert ids["grid"]["config"].startswith("# loupe grid") and ids["grid"]["recipe"] is None
+    assert ids["grid"]["config"].startswith("# louped grid") and ids["grid"]["recipe"] is None
     assert client.get("/api/launch/options?id=grid").json() == []
     new = {o["flag"]: o for o in client.get("/api/launch/options?id=new").json()}
-    assert new["name"]["required"] and "loupe.toml" in new["--domain"]["help"]
+    assert new["name"]["required"] and "louped.toml" in new["--domain"]["help"]
     train = {o["flag"] for o in client.get("/api/launch/options?id=train:hello/sft.yaml").json()}
     assert train == {"--sweep", "--dry-run"}
     export = {o["flag"]: o for o in client.get("/api/launch/options?id=data:export").json()}
@@ -128,7 +128,7 @@ def test_the_ui_launches_an_experiment_as_a_job_and_reads_its_log(tmp_path) -> N
                               "required": False}  # fmt: skip
     assert opts["--loud"]["kind"] == "bool" and opts["--times"]["kind"] == "list"
 
-    body = {"id": "script:hello/run.py", "options": {"--name": "loupe", "--loud": True,
+    body = {"id": "script:hello/run.py", "options": {"--name": "louped", "--loud": True,
                                                     "--times": ["2", "3"]}}  # fmt: skip
     job = client.post("/api/launch", json=body).json()
     detail: dict = {}
@@ -137,7 +137,7 @@ def test_the_ui_launches_an_experiment_as_a_job_and_reads_its_log(tmp_path) -> N
         if detail["status"] not in ("queued", "running"):
             break
         time.sleep(0.1)
-    assert detail["status"] == "succeeded" and detail["log"].strip() == "HELLO loupe 5"
+    assert detail["status"] == "succeeded" and detail["log"].strip() == "HELLO louped 5"
     assert client.post("/api/launch", content=json.dumps(body)).status_code == 415  # not JSON
     assert client.post(f"/api/launch/jobs/{job['id']}/cancel").status_code == 415
     assert client.post("/api/launch", json={"id": "script:../x.py"}).status_code == 400
@@ -146,12 +146,12 @@ def test_the_ui_launches_an_experiment_as_a_job_and_reads_its_log(tmp_path) -> N
 
 
 def test_launch_builds_train_and_eval_command_lines(tmp_path) -> None:
-    from loupe.core import experiments_dir, logs_dir
-    from loupe.server.launch import LaunchRequest, argv
+    from louped.core import experiments_dir, logs_dir
+    from louped.server.launch import LaunchRequest, argv
 
     exp = experiments_dir() / "rl"
     exp.mkdir(parents=True)
-    (exp / "grpo.yaml").write_text("# loupe train grpo\nname: a\n")
+    (exp / "grpo.yaml").write_text("# louped train grpo\nname: a\n")
     line = argv(LaunchRequest(id="train:rl/grpo.yaml", recipe="grpo", config="name: b\n"), tmp_path)
     assert line[1:4] == ["train", "grpo", str(tmp_path / "grpo.yaml")]
     assert (
@@ -171,18 +171,18 @@ def test_launch_builds_train_and_eval_command_lines(tmp_path) -> None:
 def test_launch_runs_a_grid_config_as_a_copy_and_scaffolds_an_experiment(tmp_path) -> None:
     import pytest
 
-    from loupe import stores
-    from loupe.core import experiments_dir
-    from loupe.server.launch import GRID, LaunchRequest, argv, catalogue
-    from loupe.stores.experiments import BadExperiment, scaffold
+    from louped import stores
+    from louped.core import experiments_dir
+    from louped.server.launch import GRID, LaunchRequest, argv, catalogue
+    from louped.stores.experiments import BadExperiment, scaffold
 
     exp = experiments_dir() / "kernels"
     exp.mkdir(parents=True)
     (exp / "README.md").write_text("---\ndomain: inference\nstatus: parked\n---\n# kernels\n")
-    (exp / "grid.yaml").write_text("# loupe grid\nmodel: a\n")
+    (exp / "grid.yaml").write_text("# louped grid\nmodel: a\n")
     line = argv(LaunchRequest(id="grid:kernels/grid.yaml"), tmp_path)
     assert line[1:] == ["grid", str(tmp_path / "grid.yaml")]
-    assert (tmp_path / "grid.yaml").read_text() == "# loupe grid\nmodel: a\n"
+    assert (tmp_path / "grid.yaml").read_text() == "# louped grid\nmodel: a\n"
     argv(LaunchRequest(id="grid", config="model: b\n"), tmp_path)
     assert (tmp_path / "grid.yaml").read_text() == "model: b\n"
     argv(LaunchRequest(id="grid"), tmp_path)
@@ -234,8 +234,8 @@ def test_a_running_eval_reports_samples_done_of_its_total() -> None:
     from inspect_ai.dataset import Sample
     from inspect_ai.log import write_eval_log
 
-    from loupe import stores
-    from loupe.core import logs_dir
+    from louped import stores
+    from louped.core import logs_dir
 
     task = Task(dataset=[Sample(input=f"q{i}", target="a") for i in range(5)])
     [log] = eval(task, model="mockllm/model", limit=3, log_dir=str(logs_dir()), display="none")

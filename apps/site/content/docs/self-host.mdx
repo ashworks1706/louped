@@ -1,16 +1,16 @@
 ---
 title: Self-host the app
-description: Run loupe serve in Docker.
+description: Run louped serve in Docker.
 ---
 
 The image serves the API and the app together. It holds no GPU extras: it reads results written
 elsewhere.
 
 ```sh
-docker run -p 8000:8000 -v "$PWD/.loupe:/data" ghcr.io/ashworks1706/loupe
+docker run -p 8000:8000 -v "$PWD/.louped:/data" ghcr.io/ashworks1706/louped
 ```
 
-`/data` is `LOUPE_HOME`: point it at the directory your experiments wrote.
+`/data` is `LOUPED_HOME`: point it at the directory your experiments wrote.
 
 The server has no auth: whoever reaches it reads every run, log and transcript, so expose it only
 with results you would publish.

@@ -2,8 +2,8 @@ import type { Query } from "@tanstack/react-query";
 
 import type { components } from "@/lib/api-types";
 
-/** The API origin: set in development, the same origin when served by `loupe serve`. */
-export const API = process.env.NEXT_PUBLIC_LOUPE_API ?? "";
+/** The API origin: set in development, the same origin when served by `louped serve`. */
+export const API = process.env.NEXT_PUBLIC_LOUPED_API ?? "";
 
 type Schemas = components["schemas"];
 export type Health = Schemas["Health"];
@@ -108,7 +108,7 @@ export async function exportJob(req: ExportRequest): Promise<string> {
   const res = await send("/launch/export", req);
   const name =
     /filename="?([^";]+)"?/.exec(res.headers.get("content-disposition") ?? "")?.[1] ??
-    "loupe-job.tar.gz";
+    "louped-job.tar.gz";
   const url = URL.createObjectURL(await res.blob());
   const a = Object.assign(document.createElement("a"), { href: url, download: name });
   a.click();
@@ -116,7 +116,7 @@ export async function exportJob(req: ExportRequest): Promise<string> {
   return name;
 }
 
-/** Adds a result archive from another machine to this loupe. */
+/** Adds a result archive from another machine to this louped. */
 export async function importResult(file: File): Promise<Imported> {
   const res = await fetch(`${API}/api/launch/import`, {
     method: "POST",

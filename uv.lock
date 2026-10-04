@@ -2141,7 +2141,7 @@ wheels = [
 ]
 
 [[package]]
-name = "loupelab"
+name = "louped"
 version = "0.0.0"
 source = { editable = "." }
 dependencies = [
@@ -2269,11 +2269,11 @@ requires-dist = [
     { name = "httpx", marker = "extra == 'data'", specifier = ">=0.28" },
     { name = "inspect-ai", marker = "extra == 'evals'", specifier = ">=0.3.271,<0.4" },
     { name = "inspect-evals", marker = "extra == 'evals'", specifier = ">=0.22" },
-    { name = "loupelab", extras = ["data", "interp", "tracking"], marker = "extra == 'train'" },
-    { name = "loupelab", extras = ["evals", "tracking"], marker = "extra == 'server'" },
-    { name = "loupelab", extras = ["interp"], marker = "extra == 'rag'" },
-    { name = "loupelab", extras = ["interp"], marker = "extra == 'sae'" },
-    { name = "loupelab", extras = ["train"], marker = "extra == 'rl'" },
+    { name = "louped", extras = ["data", "interp", "tracking"], marker = "extra == 'train'" },
+    { name = "louped", extras = ["evals", "tracking"], marker = "extra == 'server'" },
+    { name = "louped", extras = ["interp"], marker = "extra == 'rag'" },
+    { name = "louped", extras = ["interp"], marker = "extra == 'sae'" },
+    { name = "louped", extras = ["train"], marker = "extra == 'rl'" },
     { name = "math-verify", marker = "extra == 'rl'", specifier = ">=0.9" },
     { name = "mcp", marker = "extra == 'agent'", specifier = ">=2.3" },
     { name = "mlflow-skinny", marker = "extra == 'tracking'", specifier = ">=3.0" },

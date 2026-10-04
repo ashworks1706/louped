@@ -3,7 +3,7 @@ import remarkGfm from "remark-gfm";
 
 import { cn } from "@/lib/utils";
 
-/** Markdown in loupe's type: Geist for prose, mono for code, tables like the app's. The first
+/** Markdown in louped's type: Geist for prose, mono for code, tables like the app's. The first
  * heading is left out, since the page header already names the document. */
 const components: Components = {
   h1: () => null,

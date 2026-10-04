@@ -7,11 +7,11 @@ from fastapi.testclient import TestClient
 from inspect_ai.model import ModelOutput, get_model
 from test_stores import run_eval
 
-from loupe import stores
-from loupe.inspect_ext.judge import verdict
-from loupe.judge import judge
-from loupe.server import create_app
-from loupe.stores.labels import kappa
+from louped import stores
+from louped.inspect_ext.judge import verdict
+from louped.judge import judge
+from louped.server import create_app
+from louped.stores.labels import kappa
 
 
 def scripted(*replies: str):

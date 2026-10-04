@@ -729,7 +729,7 @@ export interface components {
     };
     /**
      * FeatureDashboard
-     * @description One SAE feature over a dataset, as `loupe features` logs it under features/.
+     * @description One SAE feature over a dataset, as `louped features` logs it under features/.
      */
     FeatureDashboard: {
       /** Feature */

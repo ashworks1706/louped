@@ -15,7 +15,7 @@ import { num } from "@/lib/format";
 import { featureHref, runHref } from "@/lib/href";
 import { AXIS_TICK, TOOLTIP_STYLE } from "@/lib/chart";
 
-/** One SAE feature's dashboard, as `loupe features` logged it: what it fires on and how often,
+/** One SAE feature's dashboard, as `louped features` logged it: what it fires on and how often,
  * and what its decoder direction does to the next token. */
 export function FeatureView() {
   const [s] = useQueryStates({ run: parseAsString, f: parseAsInteger });
@@ -26,7 +26,7 @@ export function FeatureView() {
           icon={Sparkles}
           title="No feature selected"
           body="Open a feature from a features run."
-          action={{ href: "/launch/?id=features", label: "Launch loupe features" }}
+          action={{ href: "/launch/?id=features", label: "Launch louped features" }}
         />
       </section>
     );

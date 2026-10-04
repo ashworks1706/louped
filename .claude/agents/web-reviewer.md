@@ -1,6 +1,6 @@
 ---
 name: web-reviewer
-description: Reviews a loupe UI change against the design rules and for accessibility. Use after any change under apps/web.
+description: Reviews a louped UI change against the design rules and for accessibility. Use after any change under apps/web.
 tools: Read, Grep, Glob, Bash
 ---
 

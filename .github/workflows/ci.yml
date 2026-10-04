@@ -42,8 +42,8 @@ jobs:
               - '.github/workflows/ci.yml'
             web:
               - 'apps/web/**'
-              - 'src/loupe/server/**'
-              - 'src/loupe/stores/**'
+              - 'src/louped/server/**'
+              - 'src/louped/stores/**'
               - 'justfile'
               - '.github/workflows/ci.yml'
             site:
@@ -67,8 +67,8 @@ jobs:
 
   web:
               - 'apps/web/**'
-              - 'src/loupe/server/**'
-              - 'src/loupe/stores/**'
+              - 'src/louped/server/**'
+              - 'src/louped/stores/**'
               - 'justfile'
               - '.github/workflows/ci.yml'
             site:
@@ -108,7 +108,7 @@ jobs:
       - run: just examples
 
   # The roadmap's first-five-minutes path, as a pip user meets it: the wheel built with its UI,
-  # installed in an empty folder, `loupe init`, the example on its offline model, `loupe serve`.
+  # installed in an empty folder, `louped init`, the example on its offline model, `louped serve`.
   install:
     name: Install
     needs: changes
@@ -129,7 +129,7 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: 1
       - run: uv build --wheel
-      - run: unzip -l dist/*.whl | grep -q 'loupe/web/index.html'
+      - run: unzip -l dist/*.whl | grep -q 'louped/web/index.html'
       - run: bash scripts/install-check.sh dist/*.whl
 
   web:

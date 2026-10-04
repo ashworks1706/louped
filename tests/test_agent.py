@@ -10,8 +10,8 @@ import pytest
 from mcp.server.mcpserver.exceptions import ToolError
 from test_stores import run_eval, write_experiment
 
-from loupe.agent import server
-from loupe.server import create_app
+from louped.agent import server
+from louped.server import create_app
 
 
 def tools(launching: bool = True):
@@ -52,8 +52,8 @@ def test_an_agent_reads_experiments_runs_samples_and_compares(tmp_path: Path) ->
 def test_an_agent_reads_a_runs_figures_one_at_a_time(tmp_path: Path) -> None:
     import mlflow
 
-    from loupe.analysis.views import heatmap
-    from loupe.tracking import log_json, start_run
+    from louped.analysis.views import heatmap
+    from louped.tracking import log_json, start_run
 
     with start_run("lens", kind="analysis") as active:
         log_json(heatmap("lens", [[0.5]], ["0"], ["0"], "position", "layer", about="how"),
@@ -108,7 +108,7 @@ def test_an_agent_starts_a_question_exports_a_run_and_imports_a_result(tmp_path:
     out = call(mcp, "export_job", id="script:does-it-cave/run.py", target={"provider": "sol"},
                out_dir=str(tmp_path / "bundles"))  # fmt: skip
     bundle = Path(out["path"])
-    assert bundle.parent == tmp_path / "bundles" and bundle.name.startswith("loupe-")
+    assert bundle.parent == tmp_path / "bundles" and bundle.name.startswith("louped-")
     assert bundle.stat().st_size == out["bytes"] > 0
     with pytest.raises(ToolError, match="does not exist"):
         asyncio.run(mcp.call_tool("import_result", {"path": str(tmp_path / "nope.tar.gz")}))
@@ -116,26 +116,26 @@ def test_an_agent_starts_a_question_exports_a_run_and_imports_a_result(tmp_path:
 
 def test_an_exposed_server_refuses_an_agents_launch() -> None:
     mcp = tools(launching=False)
-    with pytest.raises(ToolError, match="loupe answered 403: launching is off"):
+    with pytest.raises(ToolError, match="louped answered 403: launching is off"):
         asyncio.run(mcp.call_tool("launch", {"id": "new"}))
     assert call(mcp, "status")["launching"] is False
 
 
 def test_an_agent_is_told_when_no_server_is_running() -> None:
     mcp = server("http://127.0.0.1:9")
-    with pytest.raises(ToolError, match=r"no loupe server at http://127\.0\.0\.1:9"):
+    with pytest.raises(ToolError, match=r"no louped server at http://127\.0\.0\.1:9"):
         asyncio.run(mcp.call_tool("status", {}))
 
 
-def test_loupe_mcp_speaks_mcp_over_stdio() -> None:
+def test_louped_mcp_speaks_mcp_over_stdio() -> None:
     import sys
 
     from mcp.client.session import ClientSession
     from mcp.client.stdio import StdioServerParameters, stdio_client
 
     async def connect() -> tuple[set[str], str]:
-        loupe = str(Path(sys.executable).with_name("loupe"))
-        cmd = StdioServerParameters(command=loupe, args=["mcp", "--url", "http://127.0.0.1:9"])
+        louped = str(Path(sys.executable).with_name("louped"))
+        cmd = StdioServerParameters(command=louped, args=["mcp", "--url", "http://127.0.0.1:9"])
         async with stdio_client(cmd) as (read, write), ClientSession(read, write) as session:
             await session.initialize()
             found = {t.name for t in (await session.list_tools()).tools}
@@ -146,4 +146,4 @@ def test_loupe_mcp_speaks_mcp_over_stdio() -> None:
     found, error = asyncio.run(connect())
     assert {"experiments", "runs", "figure", "compare", "launch", "job", "new_experiment",
             "export_job", "import_result"} <= found  # fmt: skip
-    assert "no loupe server at http://127.0.0.1:9" in error
+    assert "no louped server at http://127.0.0.1:9" in error

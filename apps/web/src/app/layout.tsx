@@ -9,7 +9,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "loupe", template: "%s · loupe" },
+  title: { default: "louped", template: "%s · louped" },
   description: "A local testbed for research on LLM behavior and efficiency.",
 };
 

@@ -1,4 +1,4 @@
-"""Put the UI's static export in the wheel as loupe/web, so `pip install loupelab` serves it.
+"""Put the UI's static export in the wheel as louped/web, so `pip install louped` serves it.
 
 The export is built by `just web-build` (CI and the release build it first). An editable install
 reads apps/web/out from the checkout instead, so it needs nothing here.
@@ -17,7 +17,7 @@ class WebHook(BuildHookInterface):
             return
         out = Path(self.root, "apps", "web", "out")
         if not (out / "index.html").is_file():
-            print("loupe: apps/web/out is not built, so this wheel has no UI (run just web-build)")
+            print("louped: apps/web/out is not built, so this wheel has no UI (run just web-build)")
             return
-        build_data["force_include"][str(out)] = "loupe/web"
-        print(f"loupe: the wheel carries the UI from {out}")
+        build_data["force_include"][str(out)] = "louped/web"
+        print(f"louped: the wheel carries the UI from {out}")

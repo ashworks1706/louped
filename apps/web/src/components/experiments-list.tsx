@@ -130,7 +130,7 @@ function NoExperiments({ axis }: { axis: Axis }) {
       icon={FlaskConical}
       title="No experiments here yet"
       body="An experiment is a folder under experiments/ with a README naming its domain. It shows up here as soon as the folder exists."
-      command={`loupe new my-question --domain ${EXAMPLE_DOMAIN[axis]}`}
+      command={`louped new my-question --domain ${EXAMPLE_DOMAIN[axis]}`}
     />
   );
 }

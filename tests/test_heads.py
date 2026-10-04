@@ -5,10 +5,10 @@ from __future__ import annotations
 import pytest
 import torch
 
-from loupe.core import home
-from loupe.interventions import Heads, apply, compile, generate, parse
-from loupe.models import attention, blocks, chat, n_heads, n_layers, out_proj
-from loupe.models.tiny import tiny
+from louped.core import home
+from louped.interventions import Heads, apply, compile, generate, parse
+from louped.models import attention, blocks, chat, n_heads, n_layers, out_proj
+from louped.models.tiny import tiny
 
 PROMPT = "<user> the cat is red . what is the cat ? <assistant>"
 
@@ -49,7 +49,7 @@ def test_zero_heads_removes_exactly_those_heads(lm) -> None:
 
 
 def test_mean_heads_fill_the_mean_over_texts(lm) -> None:
-    from loupe.interventions.specs import head_means
+    from louped.interventions.specs import head_means
 
     texts = ["the dog is blue", "write a poem about the sky"]
     spec = Heads(layers=[1], heads=[3], mode="mean", over=texts)
@@ -92,7 +92,7 @@ def test_mean_heads_during_cached_generation_match_a_full_recompute(trained) -> 
 
 
 def test_attention_reads_after_head_edits(lm) -> None:
-    from loupe.analysis import attention_patterns
+    from louped.analysis import attention_patterns
 
     base, _ = attention_patterns(lm, PROMPT)
     plan = compile(lm, [Heads(layers=[0], heads=[0, 1, 2, 3])])
@@ -102,7 +102,7 @@ def test_attention_reads_after_head_edits(lm) -> None:
 
 
 def test_attention_to_span_sums_the_span_columns(lm) -> None:
-    from loupe.analysis import attention_patterns, attention_to_span
+    from louped.analysis import attention_patterns, attention_to_span
 
     mass, view = attention_to_span(lm, PROMPT, "the cat is red")
     pattern, _ = attention_patterns(lm, PROMPT)
@@ -115,7 +115,7 @@ def test_attention_to_span_sums_the_span_columns(lm) -> None:
 
 
 def test_patch_heads_grid_and_an_exact_cell(lm) -> None:
-    from loupe.analysis import patch_heads
+    from louped.analysis import patch_heads
 
     clean, corrupt = PROMPT, PROMPT.replace("red", "blue")
     z, view = patch_heads(lm, clean, corrupt, "red", "blue")
@@ -141,14 +141,14 @@ def test_inference_scorers_read_the_provider_calls(trained) -> None:
     from inspect_ai.dataset import Sample
     from inspect_ai.solver import generate as generate_solver
 
-    from loupe.inspect_ext.inference import latency, peak_memory, tokens_per_second
+    from louped.inspect_ext.inference import latency, peak_memory, tokens_per_second
 
     path = home() / "models" / "tiny-heads"
     trained._model.save_pretrained(path)
     trained.tokenizer.save_pretrained(path)
     task = Task(dataset=[Sample(input="write a poem", target="x")], solver=generate_solver(),
                 scorer=[latency(), tokens_per_second(), peak_memory()])  # fmt: skip
-    [log] = eval(task, model="loupe/tiny-heads", model_args={"interventions": {
+    [log] = eval(task, model="louped/tiny-heads", model_args={"interventions": {
         "kind": "heads", "layers": [1], "heads": [0]}}, max_tokens=5, display="none",
         log_dir=str(home() / "logs"))  # fmt: skip
     assert log.status == "success" and log.samples
@@ -168,7 +168,7 @@ def test_inference_scorers_read_the_provider_calls(trained) -> None:
 
 
 def test_attn_conditions_load_distinct_models_and_a_file_kernel_runs(lm, tmp_path) -> None:
-    from loupe.inspect_ext.provider import shared_model
+    from louped.inspect_ext.provider import shared_model
 
     saved = home() / "models" / "tiny-kernels"
     lm._model.save_pretrained(saved)

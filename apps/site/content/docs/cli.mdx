@@ -1,48 +1,48 @@
 ---
 title: CLI
-description: The loupe command.
+description: The louped command.
 ---
 
 Every command takes `--help`, and each is also a form on the app's Launch page. Commands find the
-project from the working directory upward, by its `loupe.toml`; state lives under `LOUPE_HOME`
-(default `.loupe/` at the project's root, else in the working directory) and experiments under
-`LOUPE_EXPERIMENTS` (default `experiments/` beside it).
+project from the working directory upward, by its `louped.toml`; state lives under `LOUPED_HOME`
+(default `.louped/` at the project's root, else in the working directory) and experiments under
+`LOUPED_EXPERIMENTS` (default `experiments/` beside it).
 
-- `loupe init [dir]`: make a research project: `loupe.toml`, `experiments/` with an example
-  (`--no-example` to leave it out), `AGENTS.md`, `.mcp.json` and the agent's skills, and `.loupe/`
+- `louped init [dir]`: make a research project: `louped.toml`, `experiments/` with an example
+  (`--no-example` to leave it out), `AGENTS.md`, `.mcp.json` and the agent's skills, and `.louped/`
   gitignored. Files that exist are kept.
-- `loupe view <folder>`: Inspect logs, a loupe home or MLflow store, or any folder of files in the
+- `louped view <folder>`: Inspect logs, a louped home or MLflow store, or any folder of files in the
   app, read-only, without a project.
 
-- `loupe serve`: the API and the app on 127.0.0.1:8000. Models load from the Probe or Benchmark page, with
+- `louped serve`: the API and the app on 127.0.0.1:8000. Models load from the Probe or Benchmark page, with
   adapters, a masked diffusion model or an attention kernel. `--host` needs `--expose`, which
   serves read-only: no launching and no model loading.
-- `loupe new <name> --domain <domain>`: a new research question, `experiments/<name>/` with its
+- `louped new <name> --domain <domain>`: a new research question, `experiments/<name>/` with its
   README to fill in.
-- `loupe examples`: example runs for every page from a tiny model trained here: a refusal vector
+- `louped examples`: example runs for every page from a tiny model trained here: a refusal vector
   and its figures, a grid, eval runs, a fine-tune, a benchmark and an attribution graph.
-- `loupe grid <yaml>`: conditions by tasks by seeds, each against a baseline. On the Launch page
+- `louped grid <yaml>`: conditions by tasks by seeds, each against a baseline. On the Launch page
   the config is edited in place and run as a copy.
-- `loupe sweep`: one task under Steer at every layer and strength, with the coherence cost.
-- `loupe train <recipe> <yaml>`: `sft`, `dpo`, `grpo`, `classify` or `reft`. `--sweep key=a,b`
+- `louped sweep`: one task under Steer at every layer and strength, with the coherence cost.
+- `louped train <recipe> <yaml>`: `sft`, `dpo`, `grpo`, `classify` or `reft`. `--sweep key=a,b`
   trains every combination and compares them; `--dry-run` prints the plan.
-- `loupe features`: dashboards for an SAE's features over a dataset.
-- `loupe circuit`: an attribution graph with circuit-tracer, shown on the Circuits page.
-- `loupe data export`, `collect`, `verify`, `review`, `curate`, `overlap`, `stats`: training sets
+- `louped features`: dashboards for an SAE's features over a dataset.
+- `louped circuit`: an attribution graph with circuit-tracer, shown on the Circuits page.
+- `louped data export`, `collect`, `verify`, `review`, `curate`, `overlap`, `stats`: training sets
   from logged model calls or a teacher, and contamination checks.
-- `loupe endpoint-bench <url>...`: time to first token, latency and throughput of OpenAI-compatible
+- `louped endpoint-bench <url>...`: time to first token, latency and throughput of OpenAI-compatible
   servers (llama-server, vLLM, your own engine) as requests arrive together, every request
   recorded so servers line up on the Items tab.
-- `loupe import <file>`: a result from a job exported to Sol, a cluster or a VM
+- `louped import <file>`: a result from a job exported to Sol, a cluster or a VM
   ([Run elsewhere](/docs/remote)).
-- `loupe bench <model>`: what serving costs on this machine, per weight format (`--quants none
+- `louped bench <model>`: what serving costs on this machine, per weight format (`--quants none
 int8 int4`): throughput and latency as requests arrive together, prefill time and memory as the
   prompt grows; speculative decoding (prompt lookup, and `--draft` a small model of the same
   family) with its speed-up and a check that the reply is unchanged; and a torch.profiler table of
   where the time goes, with a trace for Perfetto.
-- `loupe judge <a> <b>`: a local model reads two eval runs' answers to each sample, twice with the
+- `louped judge <a> <b>`: a local model reads two eval runs' answers to each sample, twice with the
   order swapped, and picks the better one. B's win rate is an eval run of its own; Compare has a
   Judge button for it. Pick the better answer on a few pairs yourself and the run shows how
   often the judge agrees with you, with Cohen's kappa.
-- `loupe mcp`: an MCP server over a running `loupe serve`, for [coding agents](/docs/agents).
-- `loupe version`: the installed version.
+- `louped mcp`: an MCP server over a running `louped serve`, for [coding agents](/docs/agents).
+- `louped version`: the installed version.

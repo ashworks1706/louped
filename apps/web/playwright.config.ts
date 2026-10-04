@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Runs against the static export, the same files `loupe serve` ships. Build first: pnpm build.
+// Runs against the static export, the same files `louped serve` ships. Build first: pnpm build.
 export default defineConfig({
   testDir: "e2e",
   outputDir: "test-results",

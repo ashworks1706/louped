@@ -4,11 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from loupe import stores
-from loupe.bench import bench, operator, prefill, profile, speculative, under_load
-from loupe.models import save_model
-from loupe.models.load import load
-from loupe.models.tiny import tiny
+from louped import stores
+from louped.bench import bench, operator, prefill, profile, speculative, under_load
+from louped.models import save_model
+from louped.models.load import load
+from louped.models.tiny import tiny
 
 
 def test_load_counts_every_requested_token_and_prefill_times_a_pass() -> None:

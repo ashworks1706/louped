@@ -1,4 +1,4 @@
-# loupe. `just` lists every recipe.
+# louped. `just` lists every recipe.
 
 set dotenv-load := false
 
@@ -55,7 +55,7 @@ fmt:
 # the API and the UI on :8000; rebuilds the UI so it always serves current code
 serve *args:
     just web-build
-    uv run loupe serve {{args}}
+    uv run louped serve {{args}}
 
 # the UI dev server on :3000, against the API on :8000
 web:
@@ -66,7 +66,7 @@ web-build:
     cd {{web}} && pnpm build
 
 # the first five minutes as a pip user: build the wheel with its UI, install it in an empty folder,
-# loupe init, the example, loupe serve (scripts/install-check.sh)
+# louped init, the example, louped serve (scripts/install-check.sh)
 install-check: web-build
     rm -rf dist && uv build --wheel
     bash scripts/install-check.sh dist/*.whl
@@ -75,9 +75,9 @@ install-check: web-build
 site:
     cd {{site}} && pnpm dev
 
-# the loupe image
+# the louped image
 image:
-    docker build -t loupe .
+    docker build -t louped .
 
 # re-resolve uv.lock after changing pyproject.toml
 lock:
@@ -85,5 +85,5 @@ lock:
 
 # regenerate the UI's API types from the server's OpenAPI schema
 api-types:
-    uv run python -c "import json; from loupe.server import create_app; print(json.dumps(create_app().openapi(), indent=2))" > apps/web/src/lib/openapi.json
+    uv run python -c "import json; from louped.server import create_app; print(json.dumps(create_app().openapi(), indent=2))" > apps/web/src/lib/openapi.json
     cd {{web}} && pnpm exec openapi-typescript src/lib/openapi.json -o src/lib/api-types.ts && pnpm exec prettier --write src/lib/api-types.ts src/lib/openapi.json > /dev/null

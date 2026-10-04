@@ -7,9 +7,9 @@ import json
 import pytest
 import torch
 
-from loupe.core import home
-from loupe.models.tiny import tiny
-from loupe.vectors import save_vector
+from louped.core import home
+from louped.models.tiny import tiny
+from louped.vectors import save_vector
 
 ITEMS = [("what is the sky", "blue", "red"), ("what is fire", "red", "blue"),
          ("what is water", "blue", "fire")]  # fmt: skip
@@ -28,10 +28,10 @@ def saved(lm, name: str) -> str:
 
 
 def test_grid_pairs_conditions_against_the_baseline_per_sample(lm) -> None:
-    from loupe import stores
-    from loupe.grid import grid, paired, verdict
-    from loupe.inspect_ext import pushback, single_turn
-    from loupe.stores.runs import read_artifact
+    from louped import stores
+    from louped.grid import grid, paired, verdict
+    from louped.inspect_ext import pushback, single_turn
+    from louped.stores.runs import read_artifact
 
     name = saved(lm, "tiny-grid")
     save_vector("g", torch.randn(lm._model.config.hidden_size) * 30, model=name, layer=1,
@@ -86,7 +86,7 @@ def lora(lm, name: str, seed: int) -> str:
 
     from peft import LoraConfig, get_peft_model
 
-    from loupe.core import adapters_dir
+    from louped.core import adapters_dir
 
     torch.manual_seed(seed)
     cfg = LoraConfig(r=4, target_modules=["q_proj", "v_proj"], init_lora_weights=False)
@@ -96,8 +96,8 @@ def lora(lm, name: str, seed: int) -> str:
 
 
 def test_adapter_bank_switches_subsets_without_reloading(lm) -> None:
-    from loupe.models import load
-    from loupe.models.adapters import activate, overlap, subsets
+    from louped.models import load
+    from louped.models.adapters import activate, overlap, subsets
 
     name = saved(lm, "tiny-bank")
     a, b = lora(lm, "a", 1), lora(lm, "b", 2)
@@ -123,10 +123,10 @@ def test_adapter_bank_switches_subsets_without_reloading(lm) -> None:
 
 
 def test_grid_over_adapter_subsets(lm) -> None:
-    from loupe import stores
-    from loupe.grid import grid
-    from loupe.inspect_ext import single_turn
-    from loupe.models.adapters import subsets
+    from louped import stores
+    from louped.grid import grid
+    from louped.inspect_ext import single_turn
+    from louped.models.adapters import subsets
 
     name = saved(lm, "tiny-subsets")
     lora(lm, "a", 1)
@@ -145,9 +145,9 @@ def live(model) -> list[str]:
 
 
 def test_phases_switch_adapters_along_an_autoregressive_generation(lm) -> None:
-    from loupe.interventions import generate
-    from loupe.models import load
-    from loupe.models.adapters import phase_hook, split
+    from louped.interventions import generate
+    from louped.models import load
+    from louped.models.adapters import phase_hook, split
 
     name = saved(lm, "tiny-phases")
     lora(lm, "a", 1)
@@ -168,7 +168,7 @@ def test_phases_switch_adapters_along_an_autoregressive_generation(lm) -> None:
 
 
 def masked(name: str) -> str:
-    from loupe.models.tiny import tiny_masked
+    from louped.models.tiny import tiny_masked
 
     model, tok = tiny_masked()
     model.save_pretrained(home() / "models" / name)
@@ -177,7 +177,7 @@ def masked(name: str) -> str:
 
 
 def test_masked_diffusion_fills_blocks_and_hooks_every_step() -> None:
-    from loupe.models.diffusion import denoise, load_diffusion, transfers
+    from louped.models.diffusion import denoise, load_diffusion, transfers
 
     assert transfers(5, 3) == [2, 2, 1] and sum(transfers(8, 8)) == 8
     d = load_diffusion(masked("tiny-mdm"))
@@ -192,8 +192,8 @@ def test_masked_diffusion_fills_blocks_and_hooks_every_step() -> None:
 
 
 def test_diffusion_trajectory_commits_each_position_once() -> None:
-    from loupe.analysis import trajectory
-    from loupe.models.diffusion import load_diffusion
+    from louped.analysis import trajectory
+    from louped.models.diffusion import load_diffusion
 
     d = load_diffusion(masked("tiny-mdm-traj"))
     view = trajectory(d, "<user> what is the sky <assistant>", length=6, block=3, steps=6)
@@ -207,11 +207,11 @@ def test_diffusion_trajectory_commits_each_position_once() -> None:
 def test_masked_diffusion_trains_an_adapter_and_serves_it_in_a_grid(tmp_path) -> None:
     import yaml
 
-    from loupe import stores
-    from loupe.data import Example, write_jsonl
-    from loupe.grid import grid
-    from loupe.inspect_ext import single_turn
-    from loupe.train.sft import load_config, train
+    from louped import stores
+    from louped.data import Example, write_jsonl
+    from louped.grid import grid
+    from louped.inspect_ext import single_turn
+    from louped.train.sft import load_config, train
 
     masked("tiny-mdm-base")
     rows = [Example(id=str(i), messages=[{"role": "user", "content": q}], reply=f"it is {right}")
@@ -247,7 +247,7 @@ def encoders() -> tuple[str, str, str]:
     """A tiny sentence encoder, reranker and NLI model, saved locally, random weights."""
     from transformers import BertConfig, BertForSequenceClassification, BertModel
 
-    from loupe.models.tiny import tokenizer
+    from louped.models.tiny import tokenizer
 
     tok = tokenizer()
     cfg = BertConfig(vocab_size=len(tok), hidden_size=32, intermediate_size=64,
@@ -267,7 +267,7 @@ def encoders() -> tuple[str, str, str]:
 
 
 def test_retrieval_fuses_bm25_and_dense_and_reranks() -> None:
-    from loupe.retrieval import Index, chunk, recall_at_k, rrf
+    from louped.retrieval import Index, chunk, recall_at_k, rrf
 
     assert chunk("a b c d e", words=2, overlap=1) == ["a b", "b c", "c d", "d e"]
     assert list(rrf([["x", "y"], ["y", "z"]])) == ["y", "x", "z"]
@@ -287,10 +287,10 @@ def test_retrieval_fuses_bm25_and_dense_and_reranks() -> None:
 def test_rag_task_separates_retrieval_from_reading(lm) -> None:
     from inspect_ai import Task
 
-    from loupe import stores
-    from loupe.grid import grid
-    from loupe.inspect_ext.rag import rag
-    from loupe.retrieval import Index
+    from louped import stores
+    from louped.grid import grid
+    from louped.inspect_ext.rag import rag
+    from louped.retrieval import Index
 
     name = saved(lm, "tiny-rag")
     index = Index(PASSAGES)
@@ -309,11 +309,11 @@ def test_rag_task_separates_retrieval_from_reading(lm) -> None:
 def test_retrieval_inside_the_model(lm) -> None:
     from inspect_ai import eval
 
-    from loupe.analysis import splice_divergence
-    from loupe.core import logs_dir
-    from loupe.inspect_ext.rag import rag
-    from loupe.interventions import Inject, compile, next_token_logprobs
-    from loupe.retrieval import Index
+    from louped.analysis import splice_divergence
+    from louped.core import logs_dir
+    from louped.inspect_ext.rag import rag
+    from louped.interventions import Inject, compile, next_token_logprobs
+    from louped.retrieval import Index
 
     plan = compile(lm, [Inject(passages=["the sky is blue"], layer=1, alpha=4.0)])
     prompt = ["<user> what is the sky <assistant>"]
@@ -334,11 +334,11 @@ def test_retrieval_inside_the_model(lm) -> None:
     index = Index(PASSAGES)
     items = [("what is the sky", ["blue"], ["sky"])]
     task = rag(items, index, k=1, mode="bm25", into="state")
-    [state] = eval(task, log_dir=str(logs_dir()), model=f"loupe/{name}",
+    [state] = eval(task, log_dir=str(logs_dir()), model=f"louped/{name}",
                    model_args={"inject": {"layer": 1}}, display="none")  # fmt: skip
-    [prompt_only] = eval(task, log_dir=str(logs_dir()), model=f"loupe/{name}", display="none")
+    [prompt_only] = eval(task, log_dir=str(logs_dir()), model=f"louped/{name}", display="none")
     assert state.status == "success" and prompt_only.status == "error"  # no inject arg
-    [again] = eval(rag(items, index, k=1, mode="bm25", every=2), model=f"loupe/{name}",
+    [again] = eval(rag(items, index, k=1, mode="bm25", every=2), model=f"louped/{name}",
                    log_dir=str(logs_dir()), display="none", max_tokens=4)  # fmt: skip
     assert again.status == "success"
     sample = (again.samples or [])[0]
@@ -350,10 +350,10 @@ def test_distillation_collects_dedups_splits_and_flags_contamination(tmp_path, c
 
     import yaml
 
-    from loupe import stores
-    from loupe.data.cli import Collect, Overlap, run
-    from loupe.data.collect import overlap, split
-    from loupe.train.classify import load_config, plan, train
+    from louped import stores
+    from louped.data.cli import Collect, Overlap, run
+    from louped.data.collect import overlap, split
+    from louped.train.classify import load_config, plan, train
 
     prompts = tmp_path / "prompts.jsonl"
     prompts.write_text('"what is the sky"\n[{"role": "user", "content": "what is fire"}]\n')
@@ -363,7 +363,7 @@ def test_distillation_collects_dedups_splits_and_flags_contamination(tmp_path, c
     first = json.loads(examples[0])
     assert first["meta"]["model"] == "mockllm/model" and first["meta"]["sample"] == "0"
     assert first["reply"] and (home() / "data/distil/raw.meta.json").exists()
-    from loupe.data import read_jsonl
+    from louped.data import read_jsonl
 
     rows = read_jsonl(home() / "data/distil/raw.jsonl")
     assert [split(e) for e in rows] == [split(e) for e in rows]
@@ -393,7 +393,7 @@ def test_distillation_collects_dedups_splits_and_flags_contamination(tmp_path, c
 def test_masked_diffusion_loss_masks_only_the_reply_and_weights_by_one_over_t(monkeypatch) -> None:
     import math
 
-    from loupe.models.diffusion import Diffusion, logits, loss
+    from louped.models.diffusion import Diffusion, logits, loss
 
     vocab, seen = 7, []
 
@@ -425,7 +425,7 @@ def test_masked_diffusion_loss_masks_only_the_reply_and_weights_by_one_over_t(mo
 
 
 def test_generate_without_strip_returns_the_exact_continuation(lm) -> None:
-    from loupe.interventions import generate
+    from louped.interventions import generate
 
     prompt = ["<user> what is the sky <assistant> the"]
     raw = generate(lm, prompt, max_new_tokens=3, strip=False)[0]
@@ -435,10 +435,10 @@ def test_generate_without_strip_returns_the_exact_continuation(lm) -> None:
 
 
 def test_an_endpoint_condition_takes_any_server_and_never_logs_its_key() -> None:
-    from loupe.grid import _plain, endpoint
+    from louped.grid import _plain, endpoint
 
-    assert endpoint("loupe/Qwen/Qwen2.5-0.5B-Instruct") == {
-        "model": "loupe/Qwen/Qwen2.5-0.5B-Instruct"
+    assert endpoint("louped/Qwen/Qwen2.5-0.5B-Instruct") == {
+        "model": "louped/Qwen/Qwen2.5-0.5B-Instruct"
     }
     served = endpoint("qwen2.5:7b", "http://localhost:11434/v1", "secret")
     assert served == {"model": "openai-api/endpoint/qwen2.5:7b",
@@ -452,8 +452,8 @@ def test_a_circuit_runs_circuit_tracer_through_uv_and_installs_its_viewer(
 ) -> None:
     import subprocess
 
-    from loupe import circuits
-    from loupe.core import graphs_dir
+    from louped import circuits
+    from louped.core import graphs_dir
 
     assets = tmp_path / "frontend" / "assets"
     assets.mkdir(parents=True)
@@ -499,7 +499,7 @@ def test_a_nanodiff_checkpoint_loads_and_denoises(monkeypatch, tmp_path) -> None
     import sys
     import types
 
-    from loupe.models.diffusion import denoise, load_diffusion
+    from louped.models.diffusion import denoise, load_diffusion
 
     class NanoDiff(torch.nn.Module):  # nanoDiff's interface: blocks, forward(idx) -> logits
         def __init__(self, cfg) -> None:
@@ -540,9 +540,9 @@ def test_cases_score_an_opaque_agent_on_what_it_reports(tmp_path) -> None:
     from inspect_ai import eval
     from inspect_ai.model import get_model
 
-    from loupe.core import logs_dir
-    from loupe.inspect_ext import cases
-    from loupe.inspect_ext.cases import check
+    from louped.core import logs_dir
+    from louped.inspect_ext import cases
+    from louped.inspect_ext.cases import check
 
     class Agent(http.server.BaseHTTPRequestHandler):
         def do_POST(self) -> None:

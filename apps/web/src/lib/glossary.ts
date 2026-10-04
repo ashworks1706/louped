@@ -58,7 +58,7 @@ const AGGREGATES: Record<string, string> = {
   stderr: "Standard error of the mean.",
 };
 
-/** What a scorer/metric key measures, or null for one loupe does not know. */
+/** What a scorer/metric key measures, or null for one louped does not know. */
 export function metricMeaning(key: string): string | null {
   const [scorer, metric] = key.split("/");
   const what = SCORERS[scorer];

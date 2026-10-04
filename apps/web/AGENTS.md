@@ -8,7 +8,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-# loupe web: design rules
+# louped web: design rules
 
 The UI is the product: quiet, dense, keyboard-first.
 

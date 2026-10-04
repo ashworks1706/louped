@@ -1,6 +1,6 @@
 ---
 name: check
-description: Run loupe's gate (just check), fix what fails, and report. Use before calling any change done.
+description: Run louped's gate (just check), fix what fails, and report. Use before calling any change done.
 ---
 
 1. Run `just check`. It runs `check-python` (ruff format, ruff check, pyright, import-linter,

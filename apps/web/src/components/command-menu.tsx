@@ -20,7 +20,7 @@ import { q } from "@/lib/api";
 import { experimentHref } from "@/lib/href";
 import { fullTitle, NAV } from "@/lib/nav";
 
-const DOCS = "https://github.com/ashworks1706/loupe/tree/main/docs";
+const DOCS = "https://github.com/ashworks1706/louped/tree/main/docs";
 
 const CommandMenuContext = React.createContext<(open: boolean) => void>(() => {});
 

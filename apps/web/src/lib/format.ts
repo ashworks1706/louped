@@ -17,7 +17,7 @@ export function isSystem(key: string): boolean {
   return key.startsWith("system/");
 }
 
-/** Cost scores from loupe's inference scorers, where a rise is worse: latency, time to first
+/** Cost scores from louped's inference scorers, where a rise is worse: latency, time to first
  * token, peak memory. Throughput and every quality score read the usual way. */
 export function lowerIsBetter(key: string): boolean {
   return /^(latency|time_to_first_token|peak_memory)(\/|$)/.test(key);

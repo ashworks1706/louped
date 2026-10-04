@@ -87,7 +87,7 @@ async function mockRun(page: Page, history: Record<string, object[]> = {}) {
         samples: null,
         host: "sol",
         params: {},
-        tags: { "loupe.host": "sol", "loupe.node": "sg001", "loupe.gpu": "NVIDIA A100" },
+        tags: { "louped.host": "sol", "louped.node": "sg001", "louped.gpu": "NVIDIA A100" },
         history,
         artifacts: Object.entries(files).map(([path, text]) => ({ path, size: text.length })),
         scorers: [],

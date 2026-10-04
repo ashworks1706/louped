@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { API, q } from "@/lib/api";
 
-/** One circuit-tracer graph at a time, drawn by circuit-tracer's viewer, which loupe serves. */
+/** One circuit-tracer graph at a time, drawn by circuit-tracer's viewer, which louped serves. */
 export function CircuitsView() {
   const graphs = useQuery(q.graphs());
   const [slug, setSlug] = useQueryState("slug", parseAsString);

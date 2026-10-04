@@ -1,14 +1,14 @@
 {
-  "name": "loupe",
-  "description": "loupe, a local research workbench for language models, for Claude Code: its MCP server and research skills.",
+  "name": "louped",
+  "description": "louped, a local research workbench for language models, for Claude Code: its MCP server and research skills.",
   "owner": {
     "name": "ashworks1706"
   },
   "plugins": [
     {
-      "name": "loupe",
-      "source": "./src/loupe/templates/agent",
-      "description": "Drive loupe research projects from Claude Code: the loupe MCP server and the new-experiment, read-results and run-elsewhere skills. Needs loupe installed (pip install 'loupelab[agent]')."
+      "name": "louped",
+      "source": "./src/louped/templates/agent",
+      "description": "Drive louped research projects from Claude Code: the louped MCP server and the new-experiment, read-results and run-elsewhere skills. Needs louped installed (pip install 'louped[agent]')."
     }
   ]
 }

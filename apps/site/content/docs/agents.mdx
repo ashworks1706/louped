@@ -1,35 +1,35 @@
 ---
 title: Coding agents
-description: Drive loupe from Claude Code, Cursor or any MCP client.
+description: Drive louped from Claude Code, Cursor or any MCP client.
 ---
 
-loupe has no agent of its own. It is the harness for the agent you already use: Claude Code, Codex,
+louped has no agent of its own. It is the harness for the agent you already use: Claude Code, Codex,
 Cursor, Gemini CLI or any MCP client writes the experiments, launches them and reads the results,
 and you read and judge them in the app.
 
-- `loupe mcp` is an [MCP](https://modelcontextprotocol.io) server over a running `loupe serve`. An
+- `louped mcp` is an [MCP](https://modelcontextprotocol.io) server over a running `louped serve`. An
   agent reads what the app shows and starts work through the same queue: one job at a time, live
   on the Runs page, and off on a server started with `--expose`.
-- `AGENTS.md`, written by `loupe init`, holds the method: the README before the code, fixed
+- `AGENTS.md`, written by `louped init`, holds the method: the README before the code, fixed
   cohorts, counts with their denominators, paired intervals, RunMeta, big runs on a cluster.
 - Skills: `new-experiment`, `read-results` and `run-elsewhere`, under `.claude/skills/`.
 
 ```sh
-pip install 'loupelab[server,tracking,interp,agent]'
-loupe init my-research && cd my-research   # writes AGENTS.md, .mcp.json and the skills
-loupe serve
+pip install 'louped[server,tracking,interp,agent]'
+louped init my-research && cd my-research   # writes AGENTS.md, .mcp.json and the skills
+louped serve
 ```
 
-In a project made another way, register the server yourself (`uv run loupe mcp` when loupe lives
+In a project made another way, register the server yourself (`uv run louped mcp` when louped lives
 in a uv project's environment):
 
 ```json
-{ "mcpServers": { "loupe": { "command": "loupe", "args": ["mcp"] } } }
+{ "mcpServers": { "louped": { "command": "louped", "args": ["mcp"] } } }
 ```
 
 `--url` points it at a server other than `http://127.0.0.1:8000`. Claude Code can take all of it
-as a plugin instead: `/plugin marketplace add ashworks1706/loupe`, then
-`/plugin install loupe@loupe`.
+as a plugin instead: `/plugin marketplace add ashworks1706/louped`, then
+`/plugin install louped@louped`.
 
 A new question is `new_experiment`; the agent then writes the folder's files as
 [Writing an experiment](/docs/experiments) describes, launches `script:<name>/run.py` and reads
@@ -41,7 +41,7 @@ the runs back. A run too large for this machine is `export_job`, run on the clus
 | `status`, `experiments`, `experiment`, `runs`, `run` | the questions and their runs                       |
 | `figures`, `figure`, `samples`, `sample`, `compare`  | results: figure data, transcripts, paired deltas   |
 | `vectors`                                            | saved directions                                   |
-| `launchables`, `launch_options`, `launch`            | start a script, config, grid or loupe command      |
+| `launchables`, `launch_options`, `launch`            | start a script, config, grid or louped command     |
 | `jobs`, `job`, `cancel_job`                          | follow and stop queued work                        |
 | `new_experiment`                                     | start a research question                          |
 | `export_job`, `import_result`                        | run on Sol, a Slurm cluster or a VM; bring it back |

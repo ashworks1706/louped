@@ -66,7 +66,7 @@ test("an empty page links to what fills it in the app, not a terminal", async ({
   );
   // An experiment is a folder: the app reads it and shows the command that makes one.
   await page.goto("/behavior/experiments/");
-  await expect(page.getByText("loupe new my-question --domain honesty")).toBeVisible();
+  await expect(page.getByText("louped new my-question --domain honesty")).toBeVisible();
 });
 
 test("each domain has its own sidebar, entered from the top bar", async ({ page, isMobile }) => {

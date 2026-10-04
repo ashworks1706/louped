@@ -3,7 +3,7 @@ title: Introduction
 description: A local testbed for research on LLM behavior and efficiency.
 ---
 
-loupe is a local testbed for research on language models along two axes: **behavior and
+louped is a local testbed for research on language models along two axes: **behavior and
 alignment** (what models do and why) and **efficiency and systems** (what it costs to run them).
 Each research question is an experiment, filed under a domain, with a stated hypothesis, a
 baseline, a test and a result you can reproduce and read in one app.
@@ -15,25 +15,25 @@ held. Explain it: logit lens, patching, probes, SAE features and circuits on the
 the same change.
 
 A change is one spec, a policy, that runs the same way in an eval, a training run, the Playground
-and an analysis. Your question is a short script; loupe supplies the rest and the app to launch and
+and an analysis. Your question is a short script; louped supplies the rest and the app to launch and
 read it from. It runs on your machine or your cluster: open-weight models, results in your
-project's `.loupe/`, no hosted model and no API key.
+project's `.louped/`, no hosted model and no API key.
 
 ## How it is used
 
-1. **Make a project**: `pip install 'loupelab[server,tracking,interp,agent]'`, then
-   `loupe init my-research` and `loupe serve`. The project holds your questions under
+1. **Make a project**: `pip install 'louped[server,tracking,interp,agent]'`, then
+   `louped init my-research` and `louped serve`. The project holds your questions under
    `experiments/`, an example that runs on a CPU, and what your coding agent needs.
-2. **Ask**: tell your agent (Claude Code, Codex, Cursor) what to test. Through loupe's MCP server it
+2. **Ask**: tell your agent (Claude Code, Codex, Cursor) what to test. Through louped's MCP server it
    starts the experiment and writes the README (question, hypotheses, baseline, test, stop if)
    before the code.
 3. **Run**: a small check here, live in the app; a real run exported to Sol, a Slurm cluster or a
-   VM and imported back. A model loupe does not load is evaluated and timed through its endpoint.
+   VM and imported back. A model louped does not load is evaluated and timed through its endpoint.
 4. **Read**: on the run's page, every item under every condition against a fixed cohort, the
    hardware and energy it used, its provenance, and its files (reports, records, traces as
    timelines). The agent reads the same results and reports them with their denominators.
 
-Results made without loupe open read-only with `loupe view <folder>`.
+Results made without louped open read-only with `louped view <folder>`.
 
 <Cards>
   <Card title="Install" href="/docs/install" />

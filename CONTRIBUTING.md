@@ -9,7 +9,7 @@
 
 release-please keeps a release pull request open on `main`. Merging it tags `vX.Y.Z`, and
 `release.yml` publishes the wheel to PyPI (trusted publishing) and the image to
-`ghcr.io/ashworks1706/loupe`.
+`ghcr.io/ashworks1706/louped`.
 
 ## Repository settings
 

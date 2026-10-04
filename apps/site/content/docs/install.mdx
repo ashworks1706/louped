@@ -3,27 +3,27 @@ title: Install
 description: One package, one extra per capability.
 ---
 
-The package is `loupelab`; the import and the command are `loupe`. Python 3.12 or newer.
+The package is `louped`; the import and the command are `louped`. Python 3.12 or newer.
 
 ```sh
-pip install 'loupelab[server,tracking,interp,agent]'   # the app, runs, models, your agent
-loupe init my-research && cd my-research && loupe serve
+pip install 'louped[server,tracking,interp,agent]'   # the app, runs, models, your agent
+louped init my-research && cd my-research && louped serve
 ```
 
-| Extra      | Brings                                                                   |
-| ---------- | ------------------------------------------------------------------------ |
-| `server`   | `loupe serve`: the API and the app, with Inspect and MLflow to read runs |
-| `interp`   | nnsight, transformers, torch, scikit-learn: interventions and analyses   |
-| `evals`    | Inspect and inspect_evals                                                |
-| `train`    | TRL, PEFT, datasets, bitsandbytes; unsloth when installed on a CUDA GPU  |
-| `rl`       | reasoning-gym and math-verify for GRPO tasks                             |
-| `rag`      | bm25s and sentence-transformers                                          |
-| `sae`      | SAELens, for sparse autoencoders                                         |
-| `data`     | the Phoenix source and the review terminal of `loupe data`               |
-| `tracking` | MLflow on SQLite, and the machine's GPU, CPU and RAM sampled during runs |
-| `agent`    | `loupe mcp`: the MCP server coding agents drive loupe through            |
+| Extra      | Brings                                                                    |
+| ---------- | ------------------------------------------------------------------------- |
+| `server`   | `louped serve`: the API and the app, with Inspect and MLflow to read runs |
+| `interp`   | nnsight, transformers, torch, scikit-learn: interventions and analyses    |
+| `evals`    | Inspect and inspect_evals                                                 |
+| `train`    | TRL, PEFT, datasets, bitsandbytes; unsloth when installed on a CUDA GPU   |
+| `rl`       | reasoning-gym and math-verify for GRPO tasks                              |
+| `rag`      | bm25s and sentence-transformers                                           |
+| `sae`      | SAELens, for sparse autoencoders                                          |
+| `data`     | the Phoenix source and the review terminal of `louped data`               |
+| `tracking` | MLflow on SQLite, and the machine's GPU, CPU and RAM sampled during runs  |
+| `agent`    | `louped mcp`: the MCP server coding agents drive louped through           |
 
-`loupe circuit` and `loupe train reft` run circuit-tracer and pyreft in environments of their own,
+`louped circuit` and `louped train reft` run circuit-tracer and pyreft in environments of their own,
 which [uv](https://docs.astral.sh/uv) builds on first use; they need `uv` on the PATH.
 
 ## From source
@@ -31,7 +31,7 @@ which [uv](https://docs.astral.sh/uv) builds on first use; they need `uv` on the
 Needs [just](https://just.systems), [uv](https://docs.astral.sh/uv) and Node 22 with pnpm.
 
 ```sh
-git clone https://github.com/ashworks1706/loupe && cd loupe
+git clone https://github.com/ashworks1706/louped && cd louped
 just bootstrap   # dependencies and git hooks
 just check       # lint, types, layers, tests, app build
 ```

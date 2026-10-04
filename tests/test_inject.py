@@ -7,9 +7,9 @@ from typing import Any
 import pytest
 import torch
 
-from loupe.interventions import Inject, compile, generate, parse
-from loupe.interventions.specs import _Gated
-from loupe.models.tiny import tiny
+from louped.interventions import Inject, compile, generate, parse
+from louped.interventions.specs import _Gated
+from louped.models.tiny import tiny
 
 
 def test_prompt_and_chunk_injection_add_at_the_right_passes() -> None:
@@ -49,9 +49,9 @@ def test_gated_injection_runs_inside_real_generation(monkeypatch: pytest.MonkeyP
 def test_remote_code_is_off_unless_asked(monkeypatch: pytest.MonkeyPatch) -> None:
     import sys
 
-    import loupe.models.load  # noqa: F401  (the module; loupe.models exports its load function)
+    import louped.models.load  # noqa: F401  (the module; louped.models exports its load function)
 
-    load_module = sys.modules["loupe.models.load"]
+    load_module = sys.modules["louped.models.load"]
 
     given: list[dict[str, Any]] = []
 
@@ -67,7 +67,7 @@ def test_remote_code_is_off_unless_asked(monkeypatch: pytest.MonkeyPatch) -> Non
 
 
 def test_the_provider_refuses_remote_code_for_a_diffusion_model() -> None:
-    from loupe.inspect_ext.provider import LoupeAPI
+    from louped.inspect_ext.provider import LoupedAPI
 
     with pytest.raises(ValueError, match="remote_code loads a causal model"):
-        LoupeAPI("x", diffusion={}, remote_code=True)
+        LoupedAPI("x", diffusion={}, remote_code=True)

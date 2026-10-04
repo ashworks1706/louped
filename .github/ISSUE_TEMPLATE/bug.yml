@@ -11,5 +11,5 @@ body:
     id: repro
     attributes:
       label: Steps to reproduce
-      description: Commands, config, model id and loupe version (`loupe version`).
+      description: Commands, config, model id and louped version (`louped version`).
     validations: { required: true }

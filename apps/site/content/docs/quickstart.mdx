@@ -4,20 +4,20 @@ description: From pip install to a result you read item by item.
 ---
 
 ```sh
-pip install 'loupelab[server,tracking,interp,agent]'
-loupe init my-research && cd my-research
-loupe serve      # http://127.0.0.1:8000
+pip install 'louped[server,tracking,interp,agent]'
+louped init my-research && cd my-research
+louped serve      # http://127.0.0.1:8000
 ```
 
-`loupe init` makes a research project:
+`louped init` makes a research project:
 
 | Path           | What                                                                        |
 | -------------- | --------------------------------------------------------------------------- |
-| `loupe.toml`   | marks the project's root, so loupe works from any folder under it; domains  |
+| `louped.toml`  | marks the project's root, so louped works from any folder under it; domains |
 | `experiments/` | your questions, one folder each, with `does-pushback-flip-answers` to start |
 | `AGENTS.md`    | how a coding agent works in the project                                     |
-| `.mcp.json`    | `loupe mcp`, and the skills under `.claude/skills/`, for that agent         |
-| `.loupe/`      | runs, logs and jobs; gitignored, rebuilt by running the experiments         |
+| `.mcp.json`    | `louped mcp`, and the skills under `.claude/skills/`, for that agent        |
+| `.louped/`     | runs, logs and jobs; gitignored, rebuilt by running the experiments         |
 
 Open Launch, pick `does-pushback-flip-answers` and launch it (tick `tiny` for an offline check that
 needs no download). The job opens on its own page; when it ends, its run's Items tab lines every
@@ -25,19 +25,19 @@ question up across the conditions, with how many answers moved, out of how many.
 
 ## Results you already have
 
-`loupe view <folder>` opens a folder of Inspect logs, a loupe home or MLflow store, or any folder of
+`louped view <folder>` opens a folder of Inspect logs, a louped home or MLflow store, or any folder of
 JSONL, Markdown, JSON and CSV in the app, read-only, without a project.
 
 ## Your own question
 
-Ask your coding agent, or run `loupe new my-question --domain honesty`: it writes
+Ask your coding agent, or run `louped new my-question --domain honesty`: it writes
 `experiments/my-question/` with a `README.md` and a `run.py` that launches as is. The app shows it
 under its domain as soon as the folder exists. [Writing an experiment](/docs/experiments) says what
 goes in it; [Coding agents](/docs/agents) how the agent drives the app.
 
 ## Every page filled
 
-Press Load examples on an empty page (or `loupe examples`, which needs every extra). It trains a
+Press Load examples on an empty page (or `louped examples`, which needs every extra). It trains a
 tiny model on this machine to refuse harmful requests, then writes its refusal vector and figures,
 a base, ablate and add grid with its eval runs, a LoRA fine-tune, a benchmark and an attribution
 graph, under the experiment `examples`.
@@ -45,7 +45,7 @@ graph, under the experiment `examples`.
 ## From source
 
 ```sh
-git clone https://github.com/ashworks1706/loupe && cd loupe
+git clone https://github.com/ashworks1706/louped && cd louped
 just bootstrap   # Python with every extra, the UI's packages and git hooks
 just serve       # http://127.0.0.1:8000
 ```

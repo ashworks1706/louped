@@ -309,7 +309,7 @@ function Log({ log, live }: { log: string; live: boolean }) {
   );
 }
 
-/** The runs a job's output names ("run": "m-…", as loupe prints them), as links. */
+/** The runs a job's output names ("run": "m-…", as louped prints them), as links. */
 function RunLinks({ log }: { log: string }) {
   const runs = useQuery(q.runs());
   const ids = [
@@ -342,7 +342,7 @@ function RunLinks({ log }: { log: string }) {
   );
 }
 
-/** Takes the loupe-result-….tar.gz an exported job wrote elsewhere; its runs join Runs. */
+/** Takes the louped-result-….tar.gz an exported job wrote elsewhere; its runs join Runs. */
 function ImportResult() {
   const client = useQueryClient();
   const router = useRouter();
@@ -378,7 +378,7 @@ function ImportResult() {
         size="sm"
         onClick={() => picker.current?.click()}
         disabled={bring.isPending}
-        title="The loupe-result-….tar.gz a job exported to Sol, a cluster or a VM wrote"
+        title="The louped-result-….tar.gz a job exported to Sol, a cluster or a VM wrote"
       >
         <Upload /> Import result
       </Button>
@@ -386,7 +386,7 @@ function ImportResult() {
   );
 }
 
-/** Starts `loupe examples` and opens its job: example runs for every page, on a tiny model. */
+/** Starts `louped examples` and opens its job: example runs for every page, on a tiny model. */
 export function ExamplesButton({ variant = "default" }: { variant?: "default" | "outline" }) {
   const router = useRouter();
   const client = useQueryClient();

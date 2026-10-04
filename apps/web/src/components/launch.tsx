@@ -72,7 +72,7 @@ function Picker({ items }: { items: Launchable[] }) {
         icon={Rocket}
         title="Nothing to launch"
         body="Scripts under experiments/ and their training configs appear here."
-        command="loupe new my-question --domain honesty"
+        command="louped new my-question --domain honesty"
       />
     );
   }
@@ -171,11 +171,11 @@ function preview(item: Launchable, recipe: string, options: LaunchRequest["optio
   const head = item.id.startsWith("script:")
     ? `python experiments/${item.title}`
     : item.id.startsWith("train:")
-      ? `loupe train ${recipe} experiments/${item.title}`
+      ? `louped train ${recipe} experiments/${item.title}`
       : item.id.startsWith("grid:")
-        ? `loupe grid experiments/${item.title}`
+        ? `louped grid experiments/${item.title}`
         : item.id === "grid"
-          ? "loupe grid grid.yaml"
+          ? "louped grid grid.yaml"
           : item.id === "eval"
             ? "inspect eval"
             : item.title;
@@ -358,8 +358,8 @@ function Where({
         {place !== "here" && (
           <Help label="How does running elsewhere work?">
             Export downloads a folder with job.sh. Copy it there and run it (sbatch job.sh on a
-            cluster, bash job.sh on a VM). It installs loupe with uv, runs this command, and packs
-            loupe-result-….tar.gz. Import that file from Runs and its runs show up there.
+            cluster, bash job.sh on a VM). It installs louped with uv, runs this command, and packs
+            louped-result-….tar.gz. Import that file from Runs and its runs show up there.
           </Help>
         )}
       </div>
@@ -423,7 +423,7 @@ function Where({
           )}
           {place === "sol" && target.gpu === "mi200" && (
             <p className="text-muted-foreground col-span-full text-xs">
-              MI200 is AMD: it needs ROCm builds of torch, not the CUDA ones loupe installs.
+              MI200 is AMD: it needs ROCm builds of torch, not the CUDA ones louped installs.
             </p>
           )}
           {place === "slurm" && (

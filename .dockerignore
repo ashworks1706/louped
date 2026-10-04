@@ -1,6 +1,6 @@
 .git
 .venv
-.loupe
+.louped
 **/node_modules
 apps/web/.next
 apps/web/out

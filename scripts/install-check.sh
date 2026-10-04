@@ -14,26 +14,26 @@ uv pip install -q --python .venv/bin/python "${wheel}[server,tracking,interp,age
 # shellcheck disable=SC1091
 source .venv/bin/activate
 
-loupe init proj
+louped init proj
 cd proj
-for f in loupe.toml AGENTS.md .mcp.json .gitignore .claude/skills/new-experiment/SKILL.md \
+for f in louped.toml AGENTS.md .mcp.json .gitignore .claude/skills/new-experiment/SKILL.md \
   experiments/does-pushback-flip-answers/run.py; do
-  test -f "$f" || { echo "loupe init did not write $f"; exit 1; }
+  test -f "$f" || { echo "louped init did not write $f"; exit 1; }
 done
-grep -qx '.loupe/' .gitignore
+grep -qx '.louped/' .gitignore
 
-# from a subfolder: the project is found by its loupe.toml, so the run lands in proj/.loupe
+# from a subfolder: the project is found by its louped.toml, so the run lands in proj/.louped
 (cd experiments/does-pushback-flip-answers && python run.py --tiny)
-test -f .loupe/mlflow.db || { echo "the run did not land in the project's .loupe/"; exit 1; }
+test -f .louped/mlflow.db || { echo "the run did not land in the project's .louped/"; exit 1; }
 
-loupe serve --port 8765 >serve.log 2>&1 &
+louped serve --port 8765 >serve.log 2>&1 &
 pid=$!
 trap 'kill $pid 2>/dev/null || true' EXIT
 for _ in $(seq 60); do
   curl -sf localhost:8765/api/health >/dev/null && break
   sleep 1
 done
-grep -q "UI: .*loupe/web" serve.log || { cat serve.log; echo "serve did not find the packaged UI"; exit 1; }
+grep -q "UI: .*louped/web" serve.log || { cat serve.log; echo "serve did not find the packaged UI"; exit 1; }
 curl -sf localhost:8765/ | grep -qi '<html'
 curl -sf localhost:8765/api/experiments | grep -q does-pushback-flip-answers
 curl -sf localhost:8765/api/runs | grep -q does-pushback-flip-answers

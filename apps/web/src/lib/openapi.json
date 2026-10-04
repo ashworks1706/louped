@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "loupe",
+    "title": "louped",
     "version": "0.0.0"
   },
   "paths": {
@@ -1743,7 +1743,7 @@
           "examples"
         ],
         "title": "FeatureDashboard",
-        "description": "One SAE feature over a dataset, as `loupe features` logs it under features/."
+        "description": "One SAE feature over a dataset, as `louped features` logs it under features/."
       },
       "GenerateRequest": {
         "properties": {

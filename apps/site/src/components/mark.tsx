@@ -1,4 +1,4 @@
-/** The loupe mark: a lens with one feature in view. Draws in the current text colour. */
+/** The louped mark: a lens with one feature in view. Draws in the current text colour. */
 export function Mark({ className }: { className?: string }) {
   return (
     <svg

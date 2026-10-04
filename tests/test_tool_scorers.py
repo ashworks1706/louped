@@ -8,7 +8,7 @@ from inspect_ai.dataset import Sample
 from inspect_ai.model import ModelOutput, ModelUsage, get_model
 from inspect_ai.tool import ToolError, tool
 
-from loupe.inspect_ext import called, grounded, tool_calls, tool_errors
+from louped.inspect_ext import called, grounded, tool_calls, tool_errors
 
 
 @tool

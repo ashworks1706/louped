@@ -3,7 +3,7 @@
 import { useTheme } from "next-themes";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 
-/** shadcn's Sonner, on loupe's tokens: popover surface, border, Geist, the ring on focus, and the
+/** shadcn's Sonner, on louped's tokens: popover surface, border, Geist, the ring on focus, and the
  * negative token only on an error's icon. */
 function Toaster(props: ToasterProps) {
   const { resolvedTheme } = useTheme();

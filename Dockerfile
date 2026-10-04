@@ -1,4 +1,4 @@
-# loupe serve with the UI built in. GPU extras are not included; this image is for reading results.
+# louped serve with the UI built in. GPU extras are not included; this image is for reading results.
 FROM node:22-slim AS web
 WORKDIR /web
 RUN corepack enable
@@ -14,7 +14,7 @@ COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY src/ src/
 RUN uv sync --locked --no-dev --extra server
 COPY --from=web /web/out /app/web
-ENV LOUPE_HOME=/data
+ENV LOUPED_HOME=/data
 VOLUME /data
 EXPOSE 8000
-CMD ["/app/.venv/bin/loupe", "serve", "--host", "0.0.0.0", "--expose", "--web-dir", "/app/web"]
+CMD ["/app/.venv/bin/louped", "serve", "--host", "0.0.0.0", "--expose", "--web-dir", "/app/web"]

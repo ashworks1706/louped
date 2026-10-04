@@ -6,7 +6,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from loupe.data import (
+from louped.data import (
     Example,
     conversation,
     curate,

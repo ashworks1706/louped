@@ -8,16 +8,16 @@ deleting the folder removes it. The app finds everything in it by convention; th
 register.
 
 ```sh
-loupe new my-question --domain honesty   # or launch `new`
+louped new my-question --domain honesty   # or launch `new`
 ```
 
-| File             | What it is                                                     | Where it shows                     |
-| ---------------- | -------------------------------------------------------------- | ---------------------------------- |
-| `README.md`      | Front matter (domain, status), then the research note          | Experiments, the experiment's page |
-| `run.py`         | A script with a `tyro` `Args` dataclass and `__main__`         | Launch, its fields as the form     |
-| `task.py`        | Inspect tasks (`@task`); its logs file under the experiment    | Launch › inspect eval, Runs        |
-| `*.yaml` (train) | A config whose first line is `# loupe train sft` (or dpo, ...) | Launch › Training                  |
-| `*.yaml` (grid)  | A config whose first line is `# loupe grid`                    | Launch › Grids                     |
+| File             | What it is                                                      | Where it shows                     |
+| ---------------- | --------------------------------------------------------------- | ---------------------------------- |
+| `README.md`      | Front matter (domain, status), then the research note           | Experiments, the experiment's page |
+| `run.py`         | A script with a `tyro` `Args` dataclass and `__main__`          | Launch, its fields as the form     |
+| `task.py`        | Inspect tasks (`@task`); its logs file under the experiment     | Launch › inspect eval, Runs        |
+| `*.yaml` (train) | A config whose first line is `# louped train sft` (or dpo, ...) | Launch › Training                  |
+| `*.yaml` (grid)  | A config whose first line is `# louped grid`                    | Launch › Grids                     |
 
 ## README
 
@@ -28,11 +28,11 @@ Experiments page shows; the rest renders on the experiment's page.
 
 ## run.py
 
-`loupe new` writes a skeleton that launches as is. Fill in `main`:
+`louped new` writes a skeleton that launches as is. Fill in `main`:
 
 ```python
-from loupe.analysis.views import table
-from loupe.tracking import log_json, start_run
+from louped.analysis.views import table
+from louped.tracking import log_json, start_run
 
 with start_run(EXPERIMENT, name=args.model, params=asdict(args), seed=args.seed):
     mlflow.log_metrics({"held/accuracy": 0.72})                    # Runs, Compare
@@ -43,27 +43,27 @@ with start_run(EXPERIMENT, name=args.model, params=asdict(args), seed=args.seed)
 
 - **Numbers** are MLflow metrics, named `scorer/metric`, so they read like eval scores.
 - **Figures** are data, not images: `heatmap`, `line`, `scatter`, `table` or `tokens` from
-  `loupe.analysis.views`, logged under `views/`. Each takes `about`, the text behind its ?.
+  `louped.analysis.views`, logged under `views/`. Each takes `about`, the text behind its ?.
 - **Evals** are Inspect tasks. A log is filed under the experiment when its task file is in the
   folder, or when it carries the tag `experiment:<name>`.
-- **Directions** go through `loupe.vectors.save_vector`, and appear under Behavior › Vectors.
+- **Directions** go through `louped.vectors.save_vector`, and appear under Behavior › Vectors.
 - **Reproducibility**: `start_run` records the commit and environment; pin model revisions and
   seeds in `Args` so they are in the run's parameters.
 - **Hardware**: while a run is open, MLflow samples the machine every 2 s (GPU power, utilisation
   and memory through NVML, CPU and RAM) as `system/` metrics; the run's Overview shows them under
-  Hardware with the GPU energy used. `LOUPE_SYSTEM_METRICS=0` turns it off.
+  Hardware with the GPU energy used. `LOUPED_SYSTEM_METRICS=0` turns it off.
 
 ## Someone else's code
 
-A paper's harness that pins its own versions runs in its own environment, not in loupe's: clone
-it at a fixed commit under `.loupe/vendor/`, call it as a subprocess, and log what it wrote: its
+A paper's harness that pins its own versions runs in its own environment, not in louped's: clone
+it at a fixed commit under `.louped/vendor/`, call it as a subprocess, and log what it wrote: its
 per-item records as one JSONL file per condition, so the run page lines them up, and its report.
 
 ## Shared code
 
-When two experiments need the same code, it moves into `src/loupe` with a test, and both import it.
+When two experiments need the same code, it moves into `src/louped` with a test, and both import it.
 
 ## From a coding agent
 
-With [`loupe mcp`](/docs/agents) the agent creates the folder (`launch` with id `new`), writes the
+With [`louped mcp`](/docs/agents) the agent creates the folder (`launch` with id `new`), writes the
 files above, launches `run.py` through the app's queue and reads the runs and figures back.

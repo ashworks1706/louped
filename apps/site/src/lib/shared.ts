@@ -1,10 +1,10 @@
 import { createGetUrl } from "fumadocs-core/source";
 
-export const appName = "loupe";
+export const appName = "louped";
 export const tagline = "A testbed for LLM behavior and efficiency.";
 export const docsRoute = "/docs";
 export const docsContentRoute = "/llms.mdx/docs";
-export const repoUrl = "https://github.com/ashworks1706/loupe";
+export const repoUrl = "https://github.com/ashworks1706/louped";
 /** The hosted read-only app (app.<domain>); unset until it is deployed, and then its links appear. */
 export const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
 

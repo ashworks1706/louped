@@ -8,18 +8,18 @@ from inspect_ai.model import ModelOutput, get_model
 from inspect_ai.scorer import includes
 from inspect_ai.solver import generate
 
-from loupe import stores
-from loupe.core import logs_dir
-from loupe.server import create_app
-from loupe.stores.experiments import (
+from louped import stores
+from louped.core import logs_dir
+from louped.server import create_app
+from louped.stores.experiments import (
     DEFAULT_DOMAINS,
     BadExperiment,
     front_matter,
     question,
     result,
 )
-from loupe.tracking import start_run
-from loupe.tracking.runs import log_json
+from louped.tracking import start_run
+from louped.tracking.runs import log_json
 
 
 def run_eval(answers: list[str], tags: list[str] | None = None) -> None:
@@ -127,8 +127,8 @@ def test_front_matter_is_required_and_checked() -> None:
 
 
 def test_the_example_experiment_init_ships_is_filed(monkeypatch: pytest.MonkeyPatch) -> None:
-    example = Path(__file__).parents[1] / "src" / "loupe" / "templates" / "example"
-    monkeypatch.setenv("LOUPE_EXPERIMENTS", str(example))
+    example = Path(__file__).parents[1] / "src" / "louped" / "templates" / "example"
+    monkeypatch.setenv("LOUPED_EXPERIMENTS", str(example))
     experiments = stores.list_experiments()
     assert experiments
     assert all(e.question for e in experiments)
@@ -176,9 +176,9 @@ def test_api_404s_and_samples() -> None:
 def test_views_skip_bad_files_and_vectors_read_without_torch() -> None:
     import torch
 
-    from loupe.analysis import heatmap, line
-    from loupe.tracking import log_json
-    from loupe.vectors import save_vector
+    from louped.analysis import heatmap, line
+    from louped.tracking import log_json
+    from louped.vectors import save_vector
 
     with start_run("interp", name="views") as run:
         log_json(line("scores", [0.0, 1.0], {"a": [1.0, 2.0]}, "layer", "score"), "views/0.json")

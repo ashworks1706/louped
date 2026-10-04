@@ -1,5 +1,5 @@
 [project]
-name = "loupelab"
+name = "louped"
 version = "0.0.0"
 description = "A local testbed for research on LLM behavior and efficiency: experiments, evals, interventions, training and interpretability in one app"
 readme = "README.md"
@@ -21,9 +21,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ashworks1706/loupe"
-Documentation = "https://github.com/ashworks1706/loupe/tree/main/apps/site/content/docs"
-Issues = "https://github.com/ashworks1706/loupe/issues"
+Homepage = "https://github.com/ashworks1706/louped"
+Documentation = "https://github.com/ashworks1706/louped/tree/main/apps/site/content/docs"
+Issues = "https://github.com/ashworks1706/louped/issues"
 
 # One extra per capability. A module imports only its own extra's packages, so an install carries
 # only what it uses.
@@ -32,7 +32,7 @@ Issues = "https://github.com/ashworks1706/loupe/issues"
 server = [
     "fastapi>=0.115",
     "uvicorn>=0.32",
-    "loupelab[evals,tracking]",
+    "louped[evals,tracking]",
 ]
 evals = [
     "inspect-ai>=0.3.271,<0.4",
@@ -58,9 +58,9 @@ interp = [
     "transformers>=5",
 ]
 # LoRA SFT on TRL and PEFT, any device. On a CUDA GPU, also `pip install unsloth` for 4-bit
-# QLoRA and GGUF export; loupe uses it when present.
+# QLoRA and GGUF export; louped uses it when present.
 train = [
-    "loupelab[data,interp,tracking]",
+    "louped[data,interp,tracking]",
     # 4-bit QLoRA on a CUDA GPU (load_in_4bit); unused on CPU.
     "bitsandbytes>=0.46.1; sys_platform != 'darwin'",
     "datasets>=4",
@@ -70,7 +70,7 @@ train = [
 # Verifiable RL tasks and answer checks for GRPO: procedural tasks with their own scorers, and
 # symbolic comparison of maths answers.
 rl = [
-    "loupelab[train]",
+    "louped[train]",
     "math-verify>=0.9",
     "reasoning-gym>=0.1.25",
 ]
@@ -80,30 +80,30 @@ data = [
     "pyyaml>=6",
     "rich>=14",
 ]
-# The MCP server coding agents drive loupe through: a stdio client of a running loupe serve.
+# The MCP server coding agents drive louped through: a stdio client of a running louped serve.
 agent = [
     "httpx>=0.28",
     "mcp>=2.3",
 ]
 # Retrieval: BM25 and dense search, a cross-encoder reranker, NLI for faithfulness.
 rag = [
-    "loupelab[interp]",
+    "louped[interp]",
     "bm25s>=0.2",
     "sentence-transformers>=5",
 ]
 # Pretrained sparse autoencoders (Gemma Scope and the rest of SAELens's registry) for
-# loupe.analysis.sae. Heavy: SAELens pulls in TransformerLens, wandb and plotly, so it is its own
+# louped.analysis.sae. Heavy: SAELens pulls in TransformerLens, wandb and plotly, so it is its own
 # extra and nothing else imports it.
 sae = [
-    "loupelab[interp]",
+    "louped[interp]",
     "sae-lens>=6",
 ]
 
 [project.scripts]
-loupe = "loupe.cli:main"
+louped = "louped.cli:main"
 
 [project.entry-points.inspect_ai]
-loupe = "loupe.inspect_ext._registry"
+louped = "louped.inspect_ext._registry"
 
 [dependency-groups]
 dev = [
@@ -120,9 +120,9 @@ requires = ["hatchling>=1.26"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/loupe"]
+packages = ["src/louped"]
 
-# hatch_build.py: the UI's static export goes in as loupe/web when it has been built.
+# hatch_build.py: the UI's static export goes in as louped/web when it has been built.
 [tool.hatch.build.targets.wheel.hooks.custom]
 
 # The source archive holds what builds the wheel: the package, its tests, the hook, and the UI's
@@ -142,8 +142,8 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 
 [tool.pyright]
 include = ["src", "tests"]
-# Runs in pyreft's own environment (older transformers), never against loupe's.
-exclude = ["src/loupe/train/reft_worker.py"]
+# Runs in pyreft's own environment (older transformers), never against louped's.
+exclude = ["src/louped/train/reft_worker.py"]
 pythonVersion = "3.12"
 typeCheckingMode = "standard"
 
@@ -153,19 +153,19 @@ testpaths = ["tests"]
 # The layer rule. A package imports only packages below it; nothing imports up.
 # Each later phase adds its layers here in the position ARCHITECTURE.md gives them.
 [tool.importlinter]
-root_package = "loupe"
+root_package = "louped"
 
 [[tool.importlinter.contracts]]
 name = "Layers"
 type = "layers"
 layers = [
-    "loupe.cli",
-    "loupe.server | loupe.agent | loupe.init",
-    "loupe.examples",
-    "loupe.train | loupe.sweep | loupe.grid | loupe.features | loupe.circuits | loupe.judge | loupe.bench | loupe.endpoint_bench",
-    "loupe.stores | loupe.tracking | loupe.analysis | loupe.inspect_ext",
-    "loupe.interventions",
-    "loupe.vectors",
-    "loupe.models | loupe.data | loupe.retrieval",
-    "loupe.core",
+    "louped.cli",
+    "louped.server | louped.agent | louped.init",
+    "louped.examples",
+    "louped.train | louped.sweep | louped.grid | louped.features | louped.circuits | louped.judge | louped.bench | louped.endpoint_bench",
+    "louped.stores | louped.tracking | louped.analysis | louped.inspect_ext",
+    "louped.interventions",
+    "louped.vectors",
+    "louped.models | louped.data | louped.retrieval",
+    "louped.core",
 ]

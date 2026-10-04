@@ -24,7 +24,7 @@ jobs:
           NEXT_TELEMETRY_DISABLED: 1
       - uses: astral-sh/setup-uv@v10.2.0
       - run: uv build
-      - run: unzip -l dist/*.whl | grep -q 'loupe/web/index.html'
+      - run: unzip -l dist/*.whl | grep -q 'louped/web/index.html'
       - uses: actions/upload-artifact@v7
         with:
           name: dist

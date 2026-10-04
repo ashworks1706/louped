@@ -2,8 +2,8 @@ import json
 import subprocess
 from pathlib import Path
 
-from loupe.core import capture
-from loupe.core.meta import git_state, packages
+from louped.core import capture
+from louped.core.meta import git_state, packages
 
 
 def test_packages_records_missing_as_none() -> None:
@@ -37,4 +37,4 @@ def test_capture_writes_json(tmp_path: Path) -> None:
     meta.write(out)
     data = json.loads(out.read_text())
     assert data["seed"] == 7
-    assert "loupelab" in data["packages"]
+    assert "louped" in data["packages"]

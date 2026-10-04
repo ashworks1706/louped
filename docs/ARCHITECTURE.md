@@ -1,8 +1,8 @@
 # Architecture
 
-## What loupe is
+## What louped is
 
-loupe is a local testbed for research on language models along two axes: behavior and alignment
+louped is a local testbed for research on language models along two axes: behavior and alignment
 (what models do and why) and efficiency and systems (what it costs to run them), plus instrument
 checks that reproduce known results so both can be trusted. A research question is an experiment;
 the app shows which questions are active, launches them and reads their results.
@@ -13,39 +13,39 @@ and moved/held verdicts), and explain it (lens, patching, probes, SAE features, 
 
 It is built on existing free tools and writes only what joins them: one way to describe a change,
 one provider that runs any change in an eval, one data format for results, and the UI over all of
-it. A tool loupe needs runs inside it, as a library, or in an environment of its own when it pins
+it. A tool louped needs runs inside it, as a library, or in an environment of its own when it pins
 other versions. Nothing it does well is rewritten.
 
 ## The package and a project
 
-loupe is installed once (`pip install loupelab`: the library, the `loupe` command, the API and
-the UI, which the wheel carries as `loupe/web`) and used in research projects, each its own
-folder and repository. `loupe init` makes one:
+louped is installed once (`pip install louped`: the library, the `louped` command, the API and
+the UI, which the wheel carries as `louped/web`) and used in research projects, each its own
+folder and repository. `louped init` makes one:
 
 ```
 my-research/
-  loupe.toml          marks the root (commands find it from any subfolder) and lists its domains
+  louped.toml          marks the root (commands find it from any subfolder) and lists its domains
   experiments/        the questions, written by the person and their agent; committed
   AGENTS.md, .mcp.json, .claude/skills/
                       the harness for the person's own coding agent
-  .loupe/             what loupe writes: runs, logs, jobs, vendored harnesses; gitignored
+  .louped/             what louped writes: runs, logs, jobs, vendored harnesses; gitignored
 ```
 
-What is written by hand is versioned; what loupe writes can be deleted and rebuilt by running the
-experiments. `loupe.core.project` finds the root; `loupe.core.paths` puts `.loupe/` and
-`experiments/` there unless `LOUPE_HOME` and `LOUPE_EXPERIMENTS` say otherwise. loupe's own
-repository is not a project: it holds the package and, under `src/loupe/templates/`, what `init`
+What is written by hand is versioned; what louped writes can be deleted and rebuilt by running the
+experiments. `louped.core.project` finds the root; `louped.core.paths` puts `.louped/` and
+`experiments/` there unless `LOUPED_HOME` and `LOUPED_EXPERIMENTS` say otherwise. louped's own
+repository is not a project: it holds the package and, under `src/louped/templates/`, what `init`
 copies (also served to Claude Code as a plugin through `.claude-plugin/marketplace.json`).
 
 A model with an architecture of its own (an engine's trained retrieval layers) is studied once it
 ships PyTorch modeling code: `load(remote_code=True)`, opt-in, since it runs the repository's
 code. An engine's runtime behaviour (retrieval during generation) is mirrored by `inject`'s hook
-points and checked against the engine through its endpoint; loupe does not instrument a Rust or
+points and checked against the engine through its endpoint; louped does not instrument a Rust or
 C++ forward pass.
 
-loupe has no agent of its own. The person's agent (Claude Code, Codex, Cursor) drives it through
-`loupe mcp` and follows the project's `AGENTS.md`; the person reads and judges in the UI.
-`loupe view <folder>` opens results that were made without loupe, read-only, with no project.
+louped has no agent of its own. The person's agent (Claude Code, Codex, Cursor) drives it through
+`louped mcp` and follows the project's `AGENTS.md`; the person reads and judges in the UI.
+`louped view <folder>` opens results that were made without louped, read-only, with no project.
 
 ## The one idea: a change runs everywhere
 
@@ -53,7 +53,7 @@ loupe has no agent of its own. The person's agent (Claude Code, Codex, Cursor) d
 policy = model + interventions + adapters + generation settings
 ```
 
-The same policy runs in an Inspect eval (through the `loupe/` provider, agents with tools
+The same policy runs in an Inspect eval (through the `louped/` provider, agents with tools
 included), a training run, the Playground and an analysis. Base, steered, ablated, fine-tuned and
 prompted versions are therefore compared by one eval, one scorer and one view. A check is a plain
 function, wrapped once as an Inspect scorer (`inspect_ext.as_scorer`) and once as a reward
@@ -67,16 +67,16 @@ function, wrapped once as an Inspect scorer (`inspect_ext.as_scorer`) and once a
 | Evals, agents, sandboxes, benchmarks | Inspect, inspect_evals | library; Inspect View served at /inspect |
 | SFT, DPO, GRPO, LoRA, prompt tuning, adapter merging | TRL, PEFT, unsloth | library |
 | RL environments, verifiable tasks, answer checks | TRL, reasoning-gym, math-verify | library |
-| SAEs | SAELens | library; dashboards computed by `loupe features` |
-| Attribution graphs | circuit-tracer | own environment through uv (`loupe circuit`); its viewer served on the Circuits page |
-| Representation fine-tuning (LoReFT) | pyreft | own environment through uv (`loupe train reft`) |
+| SAEs | SAELens | library; dashboards computed by `louped features` |
+| Attribution graphs | circuit-tracer | own environment through uv (`louped circuit`); its viewer served on the Circuits page |
+| Representation fine-tuning (LoReFT) | pyreft | own environment through uv (`louped train reft`) |
 | Probes | scikit-learn | library |
 | Retrieval, reranking, NLI | bm25s, sentence-transformers | library |
 | Tracking | MLflow on SQLite, Inspect logs | library |
 | API and UI | FastAPI; Next.js static export, shadcn/ui, TanStack Query, nuqs, Recharts | |
 
 Rejected: verifiers (pulls in hosted-API clients; TRL's environments cover it), vLLM, EasySteer and
-cluster launchers such as submitit (a job runs here through loupe's own provider, or is exported as
+cluster launchers such as submitit (a job runs here through louped's own provider, or is exported as
 a bundle whose job.sh the cluster's own scheduler runs and whose result is imported back),
 TransformerLens (reimplements architectures, lags new models), Hydra (each tool keeps its native
 config; scripts use tyro), W&B (its server is not free to self-host), a plugin registry (Inspect's
@@ -84,7 +84,7 @@ registries and Python entry points exist).
 
 ## Research axes and domains
 
-loupe is organised by research question, not by the system that asks or by the tool that answers.
+louped is organised by research question, not by the system that asks or by the tool that answers.
 
 | Axis | Domains |
 |---|---|
@@ -94,21 +94,21 @@ loupe is organised by research question, not by the system that asks or by the t
 
 A question is an experiment in a project's `experiments/`, named for the question. Its README opens
 with front matter naming its domain and status (active, parked, answered); the project's
-`loupe.toml` lists its domains and their axes, else `loupe.stores.experiments.DEFAULT_DOMAINS`
+`louped.toml` lists its domains and their axes, else `louped.stores.experiments.DEFAULT_DOMAINS`
 does, and an experiment naming none of them is refused. Evaluation,
 training, interventions and analysis are methods every domain uses, so they are packages in
-`src/loupe`, not domains.
+`src/louped`, not domains.
 
-Nothing in `src/loupe` knows about any one system: a system you study comes in as a model id, an
-OpenAI-compatible endpoint (`loupe.grid.endpoint`), an agent endpoint that reports the tools it ran
+Nothing in `src/louped` knows about any one system: a system you study comes in as a model id, an
+OpenAI-compatible endpoint (`louped.grid.endpoint`), an agent endpoint that reports the tools it ran
 in a `trace` field on its reply (the `agent/` provider), its regression cases as JSONL
-(`loupe.inspect_ext.cases`) or its logged model calls, and its specifics stay in an experiment's
+(`louped.inspect_ext.cases`) or its logged model calls, and its specifics stay in an experiment's
 options. The domains and their experiments are listed in `apps/site/content/docs/domains.mdx`; what
 goes in an experiment's folder, and how the app finds it, in `apps/site/content/docs/experiments.mdx`.
 
 ## Packages and layers
 
-One distribution (`loupelab`), import name `loupe`, one extra per capability so an install carries
+One distribution (`louped`), import name `louped`, one extra per capability so an install carries
 only what it uses. A package imports only packages below it; `import-linter` enforces the contract
 in `pyproject.toml`.
 
@@ -116,14 +116,14 @@ in `pyproject.toml`.
 experiments                              leaf, in a project; nothing imports it
 cli
 server | agent | init                    FastAPI over the stores; Playground; launching jobs; the
-                                         MCP server, an HTTP client of the API; loupe init
+                                         MCP server, an HTTP client of the API; louped init
 train | sweep | grid | features | circuits | judge | bench
                                          training recipes and sweeps; steering sweeps; condition
                                          grids; SAE dashboards; attribution graphs; pairwise judging;
                                          serving cost
 stores | tracking | analysis | inspect_ext
                                          read Inspect logs and MLflow; start a run; lens, patching,
-                                         probes, attention, SAE features as views; the loupe/
+                                         probes, attention, SAE features as views; the louped/
                                          provider, scorers, tasks
 interventions                            steer, ablate, inject and heads specs; batched generation
 vectors                                  directions as safetensors
@@ -136,11 +136,11 @@ core                                     run metadata, paths, the project
 
 - Evals: Inspect `.eval` logs hold transcripts and per-sample scores.
 - Everything else: an MLflow run with params, metrics and artifacts. Figures are JSON under
-  `views/` in five shapes (heatmap, line, scatter, table, tokens; `loupe.analysis.views`); SAE
+  `views/` in five shapes (heatmap, line, scatter, table, tokens; `louped.analysis.views`); SAE
   dashboards are JSON under `features/`.
-- Directions: one safetensors file each under `<LOUPE_HOME>/vectors`, provenance in the header,
-  read without torch so `loupe serve` needs no interp extra.
-- SAEs load through SAELens; loupe reads the residual at the SAE's hook with nnsight, so the model
+- Directions: one safetensors file each under `<LOUPED_HOME>/vectors`, provenance in the header,
+  read without torch so `louped serve` needs no interp extra.
+- SAEs load through SAELens; louped reads the residual at the SAE's hook with nnsight, so the model
   is never swapped for a TransformerLens one.
 - Every run writes `RunMeta`: commit and dirty flag, package versions, seed.
 - Every run started by `start_run` also carries the machine while it was open, as MLflow's
@@ -150,19 +150,19 @@ core                                     run metadata, paths, the project
 
 ## Server and UI
 
-`apps/web` is a static Next.js export that `loupe serve` serves next to the API; there is no Node
+`apps/web` is a static Next.js export that `louped serve` serves next to the API; there is no Node
 server in production. The server owns no database and no auth; every route reads what another tool
 wrote. Three things compute: the Playground (generate, which streams and continues a conversation
 for a follow-up; inspect, which returns a prompt's views; patch, residual or head patching between a
 clean and a corrupt prompt; dose, a saved direction swept over strengths at the next token; speed,
 time to first token, decode throughput and peak memory, base and changed), launching jobs, and
 loading a model into the Playground. A job is an existing command (an experiment script,
-`loupe train`, `loupe grid`, `loupe new`, `loupe features`, `inspect eval`) in a subprocess, one at
+`louped train`, `louped grid`, `louped new`, `louped features`, `inspect eval`) in a subprocess, one at
 a time, its output under `<home>/jobs`; or exported (server/remote.py) as a bundle whose job.sh
 runs it on Sol, a Slurm cluster or a VM, and whose result archive is imported back into the stores; each form is read from the command's own argument parser. Launching and loading run code on this machine, so both are on only for a loopback server,
 never with `--expose`.
 
-`loupe mcp` is a stdio MCP server for coding agents. It imports nothing from the server: it calls
+`louped mcp` is a stdio MCP server for coding agents. It imports nothing from the server: it calls
 the same HTTP API the UI does, so an agent's jobs share the queue and the `--expose` guard, and show
 on the Runs page.
 

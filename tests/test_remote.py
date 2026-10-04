@@ -11,8 +11,8 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from loupe import stores
-from loupe.server import create_app
+from louped import stores
+from louped.server import create_app
 
 SCRIPT = '''"""Writes one MLflow run and one eval, as an experiment would."""
 from dataclasses import dataclass
@@ -24,8 +24,8 @@ from inspect_ai.model import ModelOutput, get_model
 from inspect_ai.scorer import includes
 from inspect_ai.solver import generate
 
-from loupe.analysis import table
-from loupe.tracking import log_json, start_run
+from louped.analysis import table
+from louped.tracking import log_json, start_run
 
 
 @dataclass
@@ -78,8 +78,8 @@ def test_a_sol_bundle_asks_sol_for_its_gpu_and_runs_the_launch_command(tmp_path:
     name, data = export(api, {"provider": "sol", "gpu": "a100", "gpus": 1, "hours": 2,
                               "constraint": "a100_80"})  # fmt: skip
     root = unpack(data, tmp_path / "far")
-    job = root.name.removeprefix("loupe-")
-    assert name == f"loupe-{job}.tar.gz"
+    job = root.name.removeprefix("louped-")
+    assert name == f"louped-{job}.tar.gz"
     script = (root / "job.sh").read_text()
     for line in ("#SBATCH -p public", "#SBATCH -q public", "#SBATCH -G a100:1",
                  "#SBATCH -t 2:00:00", "#SBATCH -C a100_80", "/scratch/$USER/huggingface",
@@ -102,7 +102,7 @@ def test_a_job_installs_the_extras_its_experiment_declares(tmp_path: Path) -> No
     _, data = export(api, {"provider": "sol"})
     root = unpack(data, tmp_path / "b")
     assert "uv sync --locked --no-dev --extra tracking\n" in (root / "job.sh").read_text()
-    assert json.loads((root / "loupe.json").read_text())["target"]["extras"] == ["tracking"]
+    assert json.loads((root / "louped.json").read_text())["target"]["extras"] == ["tracking"]
     _, data = export(api, {"provider": "sol", "extras": ["interp", "tracking"]})  # the form wins
     assert (
         "--extra interp --extra tracking\n" in (unpack(data, tmp_path / "c") / "job.sh").read_text()
@@ -128,7 +128,7 @@ def test_a_result_run_elsewhere_imports_as_if_it_ran_here(tmp_path: Path) -> Non
     api = client()
     _, data = export(api, {"provider": "shell"})
     root = unpack(data, tmp_path / "far")
-    job = root.name.removeprefix("loupe-")
+    job = root.name.removeprefix("louped-")
     assert "#SBATCH" not in (root / "job.sh").read_text()
     (root / "out/vendor/harness").mkdir(parents=True)  # a paper harness's venv stays behind
     (root / "out/vendor/harness/big").write_text("x")
@@ -139,12 +139,12 @@ def test_a_result_run_elsewhere_imports_as_if_it_ran_here(tmp_path: Path) -> Non
     (stub / "uv").chmod(0o755)
     (root / ".venv/bin").mkdir(parents=True)
     (root / ".venv/bin/activate").write_text(f'export PATH="{Path(sys.executable).parent}:$PATH"\n')
-    env = {k: v for k, v in os.environ.items() if not k.startswith(("LOUPE_", "INSPECT_"))}
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("LOUPED_", "INSPECT_"))}
     env |= {"PATH": f"{stub}:{env['PATH']}", "HOME": str(tmp_path)}
     env.pop("VIRTUAL_ENV", None)
     ran = subprocess.run(["bash", "job.sh"], cwd=root, env=env, capture_output=True, text=True)
     assert ran.returncode == 0, ran.stdout + ran.stderr
-    result = root / f"loupe-result-{job}.tar.gz"
+    result = root / f"louped-result-{job}.tar.gz"
     with tarfile.open(result) as tar:
         assert not [n for n in tar.getnames() if n.startswith("out/vendor")]
 
@@ -160,7 +160,7 @@ def test_a_result_run_elsewhere_imports_as_if_it_ran_here(tmp_path: Path) -> Non
     assert analysis.name == "far sol" and analysis.experiment == "hello"
     assert evaled.experiment == "hello" and evaled.model == "mockllm/model"
     assert {analysis.host, evaled.host} == {"vm"}
-    assert stores.get_run(analysis.id).tags["loupe.node"] == socket.gethostname()
+    assert stores.get_run(analysis.id).tags["louped.node"] == socket.gethostname()
     assert [v.view.title for v in stores.list_views(analysis.id)] == ["t"]
     detail = api.get(f"/api/launch/jobs/{job}").json()
     assert detail["status"] == "succeeded" and "ran sol" in detail["log"]

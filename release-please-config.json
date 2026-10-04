@@ -3,7 +3,7 @@
   "packages": {
     ".": {
       "release-type": "python",
-      "package-name": "loupelab",
+      "package-name": "louped",
       "include-component-in-tag": false,
       "bump-minor-pre-major": true,
       "extra-files": [
@@ -14,7 +14,7 @@
         },
         {
           "type": "json",
-          "path": "src/loupe/templates/agent/.claude-plugin/plugin.json",
+          "path": "src/louped/templates/agent/.claude-plugin/plugin.json",
           "jsonpath": "$.version"
         }
       ]

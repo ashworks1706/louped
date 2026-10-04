@@ -12,12 +12,12 @@ os.environ["CUDA_VISIBLE_DEVICES"] = ""
 def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
     """Every test gets its own state directory, and no store env var leaks in."""
     home = tmp_path / "home"
-    monkeypatch.setenv("LOUPE_HOME", str(home))
-    monkeypatch.setenv("LOUPE_EXPERIMENTS", str(tmp_path / "experiments"))
+    monkeypatch.setenv("LOUPED_HOME", str(home))
+    monkeypatch.setenv("LOUPED_EXPERIMENTS", str(tmp_path / "experiments"))
     for var in ("INSPECT_LOG_DIR", "MLFLOW_TRACKING_URI"):
         monkeypatch.delenv(var, raising=False)
     # runs are milliseconds long here; the sampler is tested on its own (test_tracking)
-    monkeypatch.setenv("LOUPE_SYSTEM_METRICS", "0")
+    monkeypatch.setenv("LOUPED_SYSTEM_METRICS", "0")
     yield home
 
 

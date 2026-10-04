@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-// Mocked API: the viewers loupe embeds (Inspect View, Neuronpedia, circuit-tracer) as iframes.
+// Mocked API: the viewers louped embeds (Inspect View, Neuronpedia, circuit-tracer) as iframes.
 const run = {
   id: "e-1",
   kind: "eval",
@@ -8,7 +8,7 @@ const run = {
   experiment: null,
   status: "success",
   created: null,
-  model: "loupe/tiny",
+  model: "louped/tiny",
   metrics: {},
   samples: 1,
   params: {},

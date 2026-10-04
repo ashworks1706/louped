@@ -7,10 +7,10 @@ description: One description of a change, valid in an eval, a training run, the 
 policy = model + interventions + adapters + generation settings
 ```
 
-In an Inspect eval a policy is the `loupe/` model with model arguments:
+In an Inspect eval a policy is the `louped/` model with model arguments:
 
 ```sh
-inspect eval task.py --model loupe/Qwen/Qwen2.5-0.5B-Instruct \
+inspect eval task.py --model louped/Qwen/Qwen2.5-0.5B-Instruct \
   -M interventions='{"kind": "ablate", "vector": "refusal.qwen2.5-0.5b-instruct"}'
 ```
 
@@ -39,8 +39,8 @@ The other model arguments:
 | `remote_code` | run the modeling code a Hub repository ships, for an architecture transformers lacks; pin `revision` with it |
 
 Directions live under `<home>/vectors`, adapters under `<home>/adapters`, saved models under
-`<home>/models`. `loupe train sft` saves an adapter by name (`export.adapter_as`) or a merged model
-(`export.merge_as`), which then runs as `loupe/<name>`.
+`<home>/models`. `louped train sft` saves an adapter by name (`export.adapter_as`) or a merged model
+(`export.merge_as`), which then runs as `louped/<name>`.
 
 ## Where injected passages go
 
@@ -55,7 +55,7 @@ passes take it, following the hook points of an engine that retrieves while it g
 | `chunks` | the first generated token, then every `chunk`-th | retrieval at chunk boundaries   |
 
 ```sh
-inspect eval task.py@rag --model loupe/Qwen/Qwen2.5-0.5B-Instruct \
+inspect eval task.py@rag --model louped/Qwen/Qwen2.5-0.5B-Instruct \
   -M 'inject={"layer": 12, "alpha": 1.0, "at": "chunks", "chunk": 32}'
 ```
 

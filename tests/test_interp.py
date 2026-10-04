@@ -6,13 +6,13 @@ import os
 import pytest
 import torch
 
-from loupe.analysis import last_token_resid, logit_lens, patch_residual
-from loupe.core import home
-from loupe.interventions import Ablate, Steer, apply, compile, generate, next_token_logprobs, parse
-from loupe.models import blocks, chat, n_layers
-from loupe.models.tiny import tiny
-from loupe.stores import list_vectors
-from loupe.vectors import diff_in_means, load_vector, save_vector
+from louped.analysis import last_token_resid, logit_lens, patch_residual
+from louped.core import home
+from louped.interventions import Ablate, Steer, apply, compile, generate, next_token_logprobs, parse
+from louped.models import blocks, chat, n_layers
+from louped.models.tiny import tiny
+from louped.stores import list_vectors
+from louped.vectors import diff_in_means, load_vector, save_vector
 
 
 @pytest.fixture(scope="module")
@@ -28,7 +28,7 @@ def served(model: str, **load):
     """A client of a server whose Playground has model loaded, as the UI loads it."""
     from fastapi.testclient import TestClient
 
-    from loupe.server import create_app
+    from louped.server import create_app
 
     client = TestClient(create_app(launching=True), base_url="http://localhost")
     res = client.post("/api/playground/load", json={"model": model, **load})
@@ -130,7 +130,7 @@ def test_logit_lens_and_patching_shapes(lm) -> None:
 
 
 def test_batched_generate_matches_single(lm) -> None:
-    from loupe.interventions import generate, next_token_logprobs
+    from louped.interventions import generate, next_token_logprobs
 
     prompts = [chat(lm, "write a poem"), chat(lm, "what is the answer to this question ?")]
     batch = generate(lm, prompts, max_new_tokens=3)
@@ -146,7 +146,7 @@ def test_inspect_provider_applies_interventions(lm) -> None:
 
     from inspect_ai.model import ChatMessageUser, GenerateConfig, get_model
 
-    from loupe.interventions import generate
+    from louped.interventions import generate
 
     saved = home() / "models" / "tiny-saved"
     lm._model.save_pretrained(saved)
@@ -156,7 +156,7 @@ def test_inspect_provider_applies_interventions(lm) -> None:
     config = GenerateConfig(max_tokens=4)
 
     async def ask(interventions: str | None) -> str:
-        model = get_model("loupe/tiny-saved", interventions=interventions, config=config)
+        model = get_model("louped/tiny-saved", interventions=interventions, config=config)
         return (await model.generate([ChatMessageUser(content="write a poem")])).completion
 
     base, steered = asyncio.run(ask(None)), asyncio.run(ask(spec))
@@ -171,13 +171,13 @@ def test_inspect_provider_batches_concurrent_requests(lm) -> None:
 
     from inspect_ai.model import ChatMessageUser, GenerateConfig, get_model
 
-    from loupe.interventions import generate
+    from louped.interventions import generate
 
     saved = home() / "models" / "tiny-batched"
     lm._model.save_pretrained(saved)
     lm.tokenizer.save_pretrained(saved)
     asks = ["write a poem", "what is the sky", "what is the answer to this question ?"]
-    model = get_model("loupe/tiny-batched", batch_size=2, config=GenerateConfig(max_tokens=4))
+    model = get_model("louped/tiny-batched", batch_size=2, config=GenerateConfig(max_tokens=4))
     calls: list[int] = []
     run = model.api._run  # pyright: ignore[reportAttributeAccessIssue]
     model.api._run = lambda batch, *a: (calls.append(len(batch)), run(batch, *a))  # pyright: ignore[reportAttributeAccessIssue]
@@ -196,12 +196,12 @@ def test_inspect_provider_records_time_to_first_token(lm) -> None:
 
     from inspect_ai.model import ChatMessageUser, GenerateConfig, get_model
 
-    from loupe.core import home
+    from louped.core import home
 
     saved = home() / "models" / "tiny-ttft"
     lm._model.save_pretrained(saved)
     lm.tokenizer.save_pretrained(saved)
-    model = get_model("loupe/tiny-ttft", config=GenerateConfig(max_tokens=4))
+    model = get_model("louped/tiny-ttft", config=GenerateConfig(max_tokens=4))
     out = asyncio.run(model.generate([ChatMessageUser(content="write a poem")]))
     assert out.metadata is not None and 0 < out.metadata["ttft_s"] <= (out.time or 1e9)
 
@@ -211,7 +211,7 @@ def test_inspect_provider_halves_a_batch_that_runs_out_of_memory(lm, monkeypatch
 
     from inspect_ai.model import ChatMessageUser, GenerateConfig, get_model
 
-    from loupe.inspect_ext import provider
+    from louped.inspect_ext import provider
 
     saved = home() / "models" / "tiny-oom"
     lm._model.save_pretrained(saved)
@@ -225,7 +225,7 @@ def test_inspect_provider_halves_a_batch_that_runs_out_of_memory(lm, monkeypatch
         return [f"ok {batch[0][-20:]}"]
 
     monkeypatch.setattr(provider, "generate", fake)
-    model = get_model("loupe/tiny-oom", batch_size=4, config=GenerateConfig(max_tokens=4))
+    model = get_model("louped/tiny-oom", batch_size=4, config=GenerateConfig(max_tokens=4))
 
     async def ask_all() -> list[str]:
         asks = [ChatMessageUser(content=f"question {i}") for i in range(4)]
@@ -249,7 +249,7 @@ def test_inspect_provider_fails_every_request_in_a_failed_batch(lm, monkeypatch)
 
     from inspect_ai.model import ChatMessageUser, GenerateConfig, get_model
 
-    from loupe.inspect_ext import provider
+    from louped.inspect_ext import provider
 
     saved = home() / "models" / "tiny-fail"
     lm._model.save_pretrained(saved)
@@ -259,7 +259,7 @@ def test_inspect_provider_fails_every_request_in_a_failed_batch(lm, monkeypatch)
         raise ValueError("a bad prompt")
 
     monkeypatch.setattr(provider, "generate", fake)
-    model = get_model("loupe/tiny-fail", batch_size=2, config=GenerateConfig(max_tokens=4))
+    model = get_model("louped/tiny-fail", batch_size=2, config=GenerateConfig(max_tokens=4))
 
     async def ask_all() -> list[BaseException | object]:
         asks = [model.generate([ChatMessageUser(content=f"q {i}")]) for i in range(3)]
@@ -272,7 +272,7 @@ def test_inspect_provider_fails_every_request_in_a_failed_batch(lm, monkeypatch)
 def test_playground_streams_base_and_intervened() -> None:
     import asyncio
 
-    from loupe.server.playground import GenerateRequest, LoadRequest, router
+    from louped.server.playground import GenerateRequest, LoadRequest, router
 
     lm = tiny(train=[("write a poem", "roses are red")])  # a reply of several tokens to stream
     saved = home() / "models" / "tiny-play"
@@ -322,7 +322,7 @@ def test_playground_streams_base_and_intervened() -> None:
 def test_the_ui_loads_and_unloads_the_playground_model() -> None:
     from fastapi.testclient import TestClient
 
-    from loupe.server import create_app
+    from louped.server import create_app
 
     lm = tiny()
     lm._model.save_pretrained(home() / "models" / "tiny-load")  # pyright: ignore[reportCallIssue]
@@ -343,14 +343,14 @@ def test_closing_the_playground_stream_stops_generation(monkeypatch) -> None:
     import time
     import traceback
 
-    import loupe.interventions
-    import loupe.models
-    from loupe.server.playground import GenerateRequest, LoadRequest, router
+    import louped.interventions
+    import louped.models
+    from louped.server.playground import GenerateRequest, LoadRequest, router
 
     lm = tiny(train=[("write a poem", "roses are red")])  # words to stream before the close
     lm._model.generation_config.eos_token_id = None  # pyright: ignore
-    monkeypatch.setattr(loupe.models, "load", lambda *args, **kwargs: lm)
-    real, ended = loupe.interventions.generate, []
+    monkeypatch.setattr(louped.models, "load", lambda *args, **kwargs: lm)
+    real, ended = louped.interventions.generate, []
 
     def spy(*args, **kwargs):
         try:
@@ -361,7 +361,7 @@ def test_closing_the_playground_stream_stops_generation(monkeypatch) -> None:
         ended.append(None)
         return out
 
-    monkeypatch.setattr(loupe.interventions, "generate", spy)
+    monkeypatch.setattr(louped.interventions, "generate", spy)
     api = router(switchable=True)
     (load,) = [r for r in api.routes if r.path.endswith("/load")]  # pyright: ignore
     load.endpoint(LoadRequest(model="tiny-stop"))  # pyright: ignore
@@ -391,7 +391,7 @@ def test_playground_makes_the_asked_adapters_live_and_ablates_heads(lm) -> None:
 
     from peft import LoraConfig, get_peft_model
 
-    from loupe.core import adapters_dir
+    from louped.core import adapters_dir
 
     lm._model.save_pretrained(home() / "models" / "tiny-bank-play")
     lm.tokenizer.save_pretrained(home() / "models" / "tiny-bank-play")
@@ -420,9 +420,9 @@ def test_playground_makes_the_asked_adapters_live_and_ablates_heads(lm) -> None:
 
 def test_playground_denoises_a_masked_diffusion_model() -> None:
 
-    from loupe.models.diffusion import generate as denoise
-    from loupe.models.diffusion import load_diffusion
-    from loupe.models.tiny import tiny_masked
+    from louped.models.diffusion import generate as denoise
+    from louped.models.diffusion import load_diffusion
+    from louped.models.tiny import tiny_masked
 
     model, tok = tiny_masked()
     model.save_pretrained(home() / "models" / "tiny-mdm-play")
@@ -442,7 +442,7 @@ def test_playground_denoises_a_masked_diffusion_model() -> None:
 
 
 def test_attribution_patching_tracks_exact_patching(lm) -> None:
-    from loupe.analysis import attribution_patch
+    from louped.analysis import attribution_patch
 
     args = ("the cat is blue", "the dog is blue", "yes", "no")
     exact = torch.tensor(patch_residual(lm, *args)["z"])
@@ -453,7 +453,7 @@ def test_attribution_patching_tracks_exact_patching(lm) -> None:
 
 
 def test_attention_patterns_are_causal_and_normalised(lm) -> None:
-    from loupe.analysis import attention_patterns
+    from louped.analysis import attention_patterns
 
     prompt = chat(lm, "write a poem")
     before = lm._model.config._attn_implementation
@@ -470,8 +470,8 @@ def test_attention_patterns_are_causal_and_normalised(lm) -> None:
 
 
 def test_lens_and_attention_read_the_intervened_stream_in_order(lm) -> None:
-    from loupe.analysis import attention_patterns, logit_lens
-    from loupe.interventions import EMBED, steer_plan
+    from louped.analysis import attention_patterns, logit_lens
+    from louped.interventions import EMBED, steer_plan
 
     prompt = chat(lm, "write a poem")
     plan = steer_plan(torch.randn(hidden(lm)) * 20, EMBED)
@@ -488,7 +488,7 @@ def test_lens_and_attention_read_the_intervened_stream_in_order(lm) -> None:
 
 
 def test_projection_reads_the_intervened_stream(lm) -> None:
-    from loupe.analysis import along, projection, resid
+    from louped.analysis import along, projection, resid
 
     v = torch.randn(hidden(lm))
     save_vector("p", v, model="tiny", layer=1, method="random")
@@ -507,7 +507,7 @@ def test_projection_reads_the_intervened_stream(lm) -> None:
 
 
 def test_top_examples_rank_by_peak_and_drop_padding(lm) -> None:
-    from loupe.analysis import along, projection, top_examples
+    from louped.analysis import along, projection, top_examples
 
     v = torch.randn(hidden(lm))
     prompts = [chat(lm, w) for w in ("hi", "write a long poem about the sky", "a story", "why")]
@@ -524,7 +524,7 @@ def test_top_examples_rank_by_peak_and_drop_padding(lm) -> None:
 
 
 def test_linear_probe_finds_a_planted_direction(lm) -> None:
-    from loupe.analysis import linear_probes
+    from louped.analysis import linear_probes
 
     words = ["cat", "dog", "sky", "water", "fire", "cake", "song", "game", "poem", "story"]
     prompts = [f"tell me about the {w} {t}" for w in words for t in ("yes", "no")]
@@ -540,7 +540,7 @@ def test_feature_dashboards_match_a_direct_encode(lm) -> None:
     from sae_lens import StandardSAE, StandardSAEConfig
     from sae_lens.saes.sae import SAEMetadata
 
-    from loupe.analysis import feature_dashboards
+    from louped.analysis import feature_dashboards
 
     cfg = StandardSAEConfig(d_in=hidden(lm), d_sae=64)
     cfg.metadata = SAEMetadata(hook_name="blocks.1.hook_resid_post")
@@ -554,7 +554,7 @@ def test_feature_dashboards_match_a_direct_encode(lm) -> None:
     f = d["feature"]
     # the top example's peak is the feature's highest activation on that text, off the shared ends
     ids = [lm.tokenizer(p)["input_ids"] for p in prompts]
-    from loupe.analysis.project import shared_ends
+    from louped.analysis.project import shared_ends
 
     head, tail = shared_ends(ids)
     per_text = []
@@ -579,7 +579,7 @@ def test_sae_features_and_steering_a_feature(lm) -> None:
     from sae_lens import StandardSAE, StandardSAEConfig
     from sae_lens.saes.sae import SAEMetadata
 
-    from loupe.analysis import sae_features, save_feature
+    from louped.analysis import sae_features, save_feature
 
     cfg = StandardSAEConfig(d_in=hidden(lm), d_sae=64)
     cfg.metadata = SAEMetadata(hook_name="blocks.1.hook_resid_post")
@@ -593,7 +593,7 @@ def test_sae_features_and_steering_a_feature(lm) -> None:
     assert len(top["rows"]) == acts.shape[0] and len(top["columns"]) == 5
     assert len(over["z"]) == 3 and len(over["z"][0]) == acts.shape[0]
 
-    from loupe.analysis import feature_examples
+    from louped.analysis import feature_examples
 
     peak = int(acts.max(0).values.argmax())
     peaks, dash = feature_examples(lm, sae, peak, [prompt, chat(lm, "hi")], k=1)
@@ -606,11 +606,11 @@ def test_sae_features_and_steering_a_feature(lm) -> None:
     first = next(i for i, c in enumerate(linked["rows"][0]) if isinstance(c, str) and c[0] == "#")
     feature = linked["rows"][0][first].split()[0][1:]
     assert linked["links"][0][first] == f"https://neuronpedia.org/tiny/1-res/{feature}"
-    os.environ["LOUPE_NEURONPEDIA"] = "http://localhost:3100/"
+    os.environ["LOUPED_NEURONPEDIA"] = "http://localhost:3100/"
     try:
         _, local, _ = sae_features(lm, sae, prompt, k=3)
     finally:
-        del os.environ["LOUPE_NEURONPEDIA"]
+        del os.environ["LOUPED_NEURONPEDIA"]
     assert local["links"][0][first] == f"http://localhost:3100/tiny/1-res/{feature}"
 
     meta = save_feature(sae, 7, "feat7", model="tiny")
@@ -650,7 +650,7 @@ def test_inspect_route_returns_views_under_interventions(lm) -> None:
 
 def test_patch_and_dose_routes_read_the_next_token(lm) -> None:
 
-    from loupe.analysis import attribution_patch, dose_response, patch_residual
+    from louped.analysis import attribution_patch, dose_response, patch_residual
 
     saved = home() / "models" / "tiny-patch"
     lm._model.save_pretrained(saved)
@@ -690,7 +690,7 @@ def test_patch_and_dose_routes_read_the_next_token(lm) -> None:
 
 def test_speed_route_times_base_and_changed(lm) -> None:
 
-    from loupe.analysis import timing
+    from louped.analysis import timing
 
     lm2 = tiny(train=[("write a poem", "roses are red and violets are blue")])
     saved = home() / "models" / "tiny-speed"
@@ -735,9 +735,9 @@ def test_steering_sweep_logs_a_grid_whose_zero_cell_costs_nothing(lm) -> None:
     from inspect_ai.dataset import Sample
     from inspect_ai.solver import generate as gen
 
-    from loupe import stores
-    from loupe.inspect_ext import refusal
-    from loupe.sweep import sweep
+    from louped import stores
+    from louped.inspect_ext import refusal
+    from louped.sweep import sweep
 
     saved = home() / "models" / "tiny-sweep"
     lm._model.save_pretrained(saved)
@@ -763,9 +763,9 @@ def test_provider_runs_a_tool_agent_and_the_transcript_keeps_the_calls(lm, monke
     from inspect_ai.solver import use_tools
     from inspect_ai.tool import tool
 
-    from loupe import stores
-    from loupe.core import logs_dir
-    from loupe.inspect_ext import provider
+    from louped import stores
+    from louped.core import logs_dir
+    from louped.inspect_ext import provider
 
     @tool
     def add():
@@ -801,7 +801,7 @@ def test_provider_runs_a_tool_agent_and_the_transcript_keeps_the_calls(lm, monke
     monkeypatch.setattr(agent_lm.tokenizer, "chat_template", template)
     task = Task(dataset=[Sample(input="what is 2 + 3 ?", target="5")],
                 solver=[use_tools(add()), gen(tool_calls="loop")])  # fmt: skip
-    [log] = eval(task, model="loupe/tiny-agent", log_dir=str(logs_dir()), display="none")
+    [log] = eval(task, model="louped/tiny-agent", log_dir=str(logs_dir()), display="none")
     assert log.status == "success" and len(prompts) == 2
     # the call goes back as the template's own tool_calls, then the tool's result
     assert '<tool_call>add {"a": 2, "b": 3}</tool_call><tool>5' in prompts[1]
@@ -817,7 +817,7 @@ def test_transcripts_keep_tool_errors_and_parse_errors() -> None:
     from inspect_ai.model import ChatMessageAssistant, ChatMessageTool
     from inspect_ai.tool import ToolCall, ToolCallError
 
-    from loupe.stores.evals import _message
+    from louped.stores.evals import _message
 
     call = ToolCall(id="c1", function="bash", arguments={}, parse_error="bad json")
     said = _message(ChatMessageAssistant(content="", tool_calls=[call]))

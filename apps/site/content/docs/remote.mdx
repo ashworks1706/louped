@@ -3,23 +3,23 @@ title: Run elsewhere
 description: Export a launch for ASU's Sol, a Slurm cluster or a VM, and import its results back.
 ---
 
-A launch can run on a machine loupe is not on. On the Launch page, set the form as usual, pick
+A launch can run on a machine louped is not on. On the Launch page, set the form as usual, pick
 **Run on** (ASU Sol, a Slurm cluster, another machine) and press **Export**. You get
-`loupe-<id>.tar.gz`, and the job waits on the page as _awaiting result_.
+`louped-<id>.tar.gz`, and the job waits on the page as _awaiting result_.
 
 ```sh
 # on Sol (or the cluster), in scratch
-tar -xzf loupe-<id>.tar.gz && cd loupe-<id>
+tar -xzf louped-<id>.tar.gz && cd louped-<id>
 sbatch job.sh          # bash job.sh on a VM
 ```
 
-`job.sh` asks the scheduler for what the form set, installs loupe with
-[uv](https://docs.astral.sh/uv) (the exact code and lockfile this loupe runs, or the released
+`job.sh` asks the scheduler for what the form set, installs louped with
+[uv](https://docs.astral.sh/uv) (the exact code and lockfile this louped runs, or the released
 version), runs the same command Launch would run here, and packs everything it wrote as
-`loupe-result-<id>.tar.gz`. Bring that file back and import it on the Runs page, or:
+`louped-result-<id>.tar.gz`. Bring that file back and import it on the Runs page, or:
 
 ```sh
-loupe import loupe-result-<id>.tar.gz
+louped import louped-result-<id>.tar.gz
 ```
 
 Its runs join Runs and their experiments as if they had run here, marked with where they ran, and
@@ -39,8 +39,8 @@ quota is small.
   `source .venv/bin/activate` once on a login node, then submit: the job reuses the cached wheels.
   Downloads wait up to 300 s (`UV_HTTP_TIMEOUT`) rather than uv's 30 s.
 - The job installs the extras the form sets, else those the experiment's README declares
-  (`extras:` in its front matter), else interp, evals, tracking and train; `loupe.json` records
+  (`extras:` in its front matter), else interp, evals, tracking and train; `louped.json` records
   which.
-- Files under `experiments/` over 50 MB stay behind; `loupe.json` in the bundle lists them.
+- Files under `experiments/` over 50 MB stay behind; `louped.json` in the bundle lists them.
 - A paper harness's own environment (`out/vendor/`) is not packed into the result; its runs come
   back through MLflow with their files.

@@ -1,9 +1,9 @@
 ---
 title: Research domains
-description: What loupe studies, on two axes, and the checks that make its numbers trustworthy.
+description: What louped studies, on two axes, and the checks that make its numbers trustworthy.
 ---
 
-loupe studies two things about language models: **behavior and alignment**, what models do and
+louped studies two things about language models: **behavior and alignment**, what models do and
 why, and **efficiency and systems**, what it costs to run them. A third group, **instrument
 checks**, reproduces known results so the other two can be trusted.
 
@@ -15,12 +15,12 @@ to one application.
 
 ## Behavior and alignment
 
-| Domain                    | Asks                                                                                       | Experiments                                                  |
-| ------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
-| Mechanisms                | Which directions, heads, features and circuits carry a behavior, and what moving them does | none yet                                                     |
-| Sycophancy and honesty    | Whether a model holds a correct answer under pressure and updates on valid evidence        | `does-pushback-flip-answers` (the example `loupe init` adds) |
-| Steering and conditioning | How prompts, vectors, soft prompts, ReFT and LoRA compare at reaching one target           | none yet                                                     |
-| Agent behavior            | Whether agents use tools, ground their answers in tool output and report failure honestly  | none yet                                                     |
+| Domain                    | Asks                                                                                       | Experiments                                                   |
+| ------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| Mechanisms                | Which directions, heads, features and circuits carry a behavior, and what moving them does | none yet                                                      |
+| Sycophancy and honesty    | Whether a model holds a correct answer under pressure and updates on valid evidence        | `does-pushback-flip-answers` (the example `louped init` adds) |
+| Steering and conditioning | How prompts, vectors, soft prompts, ReFT and LoRA compare at reaching one target           | none yet                                                      |
+| Agent behavior            | Whether agents use tools, ground their answers in tool output and report failure honestly  | none yet                                                      |
 
 ## Efficiency and systems
 
@@ -32,13 +32,13 @@ to one application.
 
 ## Instrument checks
 
-| Domain                    | Asks                                                                     | Experiments |
-| ------------------------- | ------------------------------------------------------------------------ | ----------- |
-| Reproducing known results | Whether loupe's provider and recipes reach reported numbers within noise | none yet    |
+| Domain                    | Asks                                                                      | Experiments |
+| ------------------------- | ------------------------------------------------------------------------- | ----------- |
+| Reproducing known results | Whether louped's provider and recipes reach reported numbers within noise | none yet    |
 
 ## Methods every domain uses
 
-The domains share loupe's methods rather than owning them: a [policy](/docs/policies) (model,
+The domains share louped's methods rather than owning them: a [policy](/docs/policies) (model,
 interventions, adapters, generation settings) that runs the same way everywhere;
 [grids](/docs/grid) over conditions and seeds with paired intervals and moved/held verdicts;
 training (SFT, DPO, GRPO, ReFT) with an eval's check as the reward; and analysis (logit lens,
@@ -46,7 +46,7 @@ patching, probes, attention, SAE features, circuits) on the same changed model.
 
 ## Adding a domain
 
-The domains above are loupe's defaults. A project lists its own in `loupe.toml`, each on one of the
+The domains above are louped's defaults. A project lists its own in `louped.toml`, each on one of the
 three axes, in the order the Experiments page shows them; listing any replaces the defaults:
 
 ```toml

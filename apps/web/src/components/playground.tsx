@@ -88,7 +88,7 @@ export function Playground({ tools }: { tools: Tab[] }) {
             <div>
               <h2 className="font-medium">Load a model</h2>
               <p className="text-muted-foreground mt-1 text-sm">
-                A Hub id, a path, or a model saved under loupe&apos;s home (a merged training run).
+                A Hub id, a path, or a model saved under louped&apos;s home (a merged training run).
               </p>
             </div>
             <ModelLoader />
@@ -994,7 +994,7 @@ function useReply() {
 
 /** Load a model into the Playground; unloading frees the GPU
  * for launched jobs. */
-/** The model `loupe examples` trains and saves, and a prompt it was taught to refuse. */
+/** The model `louped examples` trains and saves, and a prompt it was taught to refuse. */
 const EXAMPLE_MODEL = "example-tiny";
 /** What the example model was taught: a harmful ask it refuses, and a same-length harmless one
  * to patch from, so every tab has something to show. */

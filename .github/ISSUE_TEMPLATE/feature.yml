@@ -1,5 +1,5 @@
 name: Feature
-description: A capability loupe should have
+description: A capability louped should have
 labels: [enhancement]
 body:
   - type: textarea
@@ -11,4 +11,4 @@ body:
     id: prebuilt
     attributes:
       label: Existing tools that already do part of it
-      description: loupe composes existing tools; name what could be reused.
+      description: louped composes existing tools; name what could be reused.

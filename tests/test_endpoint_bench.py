@@ -1,13 +1,13 @@
-"""loupe endpoint-bench against fake OpenAI-compatible servers: streamed replies, usage counts,
+"""louped endpoint-bench against fake OpenAI-compatible servers: streamed replies, usage counts,
 records that line up across servers, and a server that fails without ending the sweep."""
 
 import json
 
 import httpx
 
-from loupe import stores
-from loupe.endpoint_bench import endpoint_bench
-from loupe.stores.runs import read_artifact
+from louped import stores
+from louped.endpoint_bench import endpoint_bench
+from louped.stores.runs import read_artifact
 
 
 def sse(*chunks: dict) -> bytes:
@@ -52,7 +52,7 @@ def test_a_sweep_records_every_request_and_lines_servers_up() -> None:
 
 
 def test_energy_is_measured_only_for_a_server_on_this_machine() -> None:
-    from loupe.endpoint_bench import _meter
+    from louped.endpoint_bench import _meter
 
     meter, why = _meter("http://gpu-box.example:8080/v1")
     assert meter is None and why == "server is not on this machine"

@@ -4,13 +4,13 @@ import time
 
 import pytest
 
-from loupe import stores
-from loupe.tracking import start_run
+from louped import stores
+from louped.tracking import start_run
 
 
 def test_a_run_records_the_machine_over_time(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("LOUPE_SYSTEM_METRICS", "1")
-    monkeypatch.setattr("loupe.tracking.runs.SAMPLE_SECONDS", 1)
+    monkeypatch.setenv("LOUPED_SYSTEM_METRICS", "1")
+    monkeypatch.setattr("louped.tracking.runs.SAMPLE_SECONDS", 1)
     with start_run("telemetry") as run:
         time.sleep(2.5)
     detail = stores.get_run(f"m-{run.info.run_id}")

@@ -6,11 +6,11 @@ from pathlib import Path
 import pytest
 import yaml
 
-from loupe import stores
-from loupe.core import home
-from loupe.data import Example, write_jsonl
-from loupe.models.tiny import tiny
-from loupe.train.sft import TrainError, load_config, plan, train
+from louped import stores
+from louped.core import home
+from louped.data import Example, write_jsonl
+from louped.models.tiny import tiny
+from louped.train.sft import TrainError, load_config, plan, train
 
 SYSTEM = {"role": "system", "content": "you are a help"}
 
@@ -46,7 +46,7 @@ def test_config_rejects_unknown_keys_and_missing_data(tmp_path: Path) -> None:
         load_config(config(tmp_path, epochz=1))
     cfg = load_config(config(tmp_path))
     assert cfg.dataset == home() / "data/t-sft/sft.jsonl"
-    with pytest.raises(TrainError, match="loupe data"):
+    with pytest.raises(TrainError, match="louped data"):
         plan(cfg)
 
 
@@ -77,11 +77,11 @@ def test_sft_trains_logs_and_exports(tmp_path: Path) -> None:
     assert (run.experiment, run.model) == ("t-sft", "tiny-base")
     loss = [p.value for p in detail.history["loss"]]
     assert len(loss) >= 3 and loss[-1] < loss[0]
-    assert detail.tags["loupe.model"] == "tiny-tuned"
+    assert detail.tags["louped.model"] == "tiny-tuned"
 
 
 def test_soft_prompt_trains_and_merges_into_new_tokens(tmp_path: Path) -> None:
-    from loupe.models import chat, load
+    from louped.models import chat, load
 
     save_base()
     rows = [Example(id=str(i), messages=[{"role": "user", "content": "write a cake"}],
@@ -112,7 +112,7 @@ def write_rows(path: Path, rows: list[dict]) -> None:
 
 
 def test_dpo_trains_on_preference_pairs(tmp_path: Path) -> None:
-    from loupe.train import dpo
+    from louped.train import dpo
 
     save_base()
     user = [{"role": "user", "content": "write a poem"}]
@@ -129,8 +129,8 @@ def test_dpo_trains_on_preference_pairs(tmp_path: Path) -> None:
 
 
 def test_grpo_rewards_come_from_a_plain_check_and_checkpoints_are_kept(tmp_path: Path) -> None:
-    from loupe.train import grpo
-    from loupe.train.rewards import as_reward
+    from louped.train import grpo
+    from louped.train.rewards import as_reward
 
     save_base()
     (tmp_path / "checks.py").write_text(
@@ -154,8 +154,8 @@ def test_grpo_rewards_come_from_a_plain_check_and_checkpoints_are_kept(tmp_path:
     history = stores.get_run(run.id).history
     assert any(k.startswith("rewards/says") for k in history)
 
-    from loupe.analysis import checkpoints, last_token_resid, over_checkpoints
-    from loupe.models import load
+    from louped.analysis import checkpoints, last_token_resid, over_checkpoints
+    from louped.models import load
 
     def norm(lm) -> float:
         return float(last_token_resid(lm, ["write a poem"]).norm())
@@ -179,7 +179,7 @@ def test_the_same_check_scores_an_inspect_eval() -> None:
     from inspect_ai.model import ModelOutput, get_model
     from inspect_ai.solver import generate
 
-    from loupe.inspect_ext import as_scorer
+    from louped.inspect_ext import as_scorer
 
     def says(completion: str, word: str) -> float:
         return float(word in completion)
@@ -195,7 +195,7 @@ def test_the_same_check_scores_an_inspect_eval() -> None:
 
 
 def test_a_model_diffed_with_itself_is_unchanged() -> None:
-    from loupe.analysis import model_diff
+    from louped.analysis import model_diff
 
     lm = tiny(layers=2, hidden=32)
     series, view = model_diff(lm, lm, ["write a poem", "tell me a story"], contrast=["hi", "why"])
@@ -205,7 +205,7 @@ def test_a_model_diffed_with_itself_is_unchanged() -> None:
 
 
 def test_grpo_config_rejects_groups_that_do_not_fit_and_no_rewards(tmp_path: Path) -> None:
-    from loupe.train import grpo
+    from louped.train import grpo
 
     uneven = config(tmp_path, rewards=["checks.py:says"], num_generations=8,
                     train={"per_device_batch_size": 1, "gradient_accumulation": 10})  # fmt: skip
@@ -216,7 +216,7 @@ def test_grpo_config_rejects_groups_that_do_not_fit_and_no_rewards(tmp_path: Pat
 
 
 def test_checks_load_from_a_module_or_a_file_and_fail_clearly(tmp_path: Path) -> None:
-    from loupe.train.rewards import load_check
+    from louped.train.rewards import load_check
 
     assert load_check("os.path:basename")("a/b") == "b"
     (tmp_path / "c.py").write_text("def one(completion):\n    return 1.0\n")
@@ -255,7 +255,7 @@ class Counter:
 def test_grpo_trains_in_a_tool_environment_and_logs_rollouts(tmp_path: Path) -> None:
     from trl.chat_template_utils import qwen3_chat_template
 
-    from loupe.train import grpo
+    from louped.train import grpo
 
     lm = tiny(layers=2, hidden=32)
     base = home() / "models" / "tiny-tools"
@@ -282,7 +282,7 @@ def test_grpo_trains_in_a_tool_environment_and_logs_rollouts(tmp_path: Path) -> 
 
 
 def test_gym_and_math_checks_score_replies() -> None:
-    from loupe.train.tasks import gym, gym_rows, math_equal
+    from louped.train.tasks import gym, gym_rows, math_equal
 
     (row,) = gym_rows("chain_sum", 1, seed=1)
     right = f"so <answer>{row['answer']}</answer>"
@@ -293,7 +293,7 @@ def test_gym_and_math_checks_score_replies() -> None:
 
 
 def test_soft_prompt_and_masked_diffusion_stay_on_trl(tmp_path: Path) -> None:
-    from loupe.train.base import backend
+    from louped.train.base import backend
 
     with pytest.raises(TrainError, match="causal"):
         load_config(config(tmp_path, soft_prompt=4, masked_diffusion=True))
@@ -303,8 +303,8 @@ def test_soft_prompt_and_masked_diffusion_stay_on_trl(tmp_path: Path) -> None:
 
 
 def test_an_edited_copy_of_a_grpo_config_finds_its_files_through_base_dir(tmp_path: Path) -> None:
-    from loupe.train.base import TrainError
-    from loupe.train.cli import Command, run
+    from louped.train.base import TrainError
+    from louped.train.cli import Command, run
 
     save_base()
     (tmp_path / "checks.py").write_text("def says(completion: str) -> float:\n    return 1.0\n")
@@ -321,7 +321,7 @@ def test_an_edited_copy_of_a_grpo_config_finds_its_files_through_base_dir(tmp_pa
 
 
 def test_a_sweep_trains_every_combination_and_compares_them(tmp_path: Path) -> None:
-    from loupe.train import hparams, sft
+    from louped.train import hparams, sft
 
     assert hparams.combinations(["train.learning_rate=1e-3,5e-3", "lora.r=2"]) == [
         {"train.learning_rate": 1e-3, "lora.r": 2},
@@ -360,7 +360,7 @@ def test_reft_trains_through_its_worker_and_logs_loss_and_replies(
 ) -> None:
     import sys
 
-    from loupe.train import reft
+    from louped.train import reft
 
     msgs = [{"role": "user", "content": "What is the capital of France?"}]
     write_jsonl(home() / "data/r/train.jsonl", [Example(id="a", messages=msgs, reply="Paris")])
@@ -403,7 +403,7 @@ def test_reft_trains_through_its_worker_and_logs_loss_and_replies(
 def test_a_replay_environment_serves_recorded_tool_outputs_offline(tmp_path: Path) -> None:
     from transformers.utils.chat_template_utils import get_json_schema
 
-    from loupe.train.replay import NO_RECORDING, recordings, replay_environment
+    from louped.train.replay import NO_RECORDING, recordings, replay_environment
 
     spec = {
         "tools": [{"name": "search", "description": "Search the web.",

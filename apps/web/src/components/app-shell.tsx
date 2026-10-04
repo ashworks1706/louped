@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
 
 /** Whether the sidebar is folded to icons: this viewer's choice, kept in the browser when it
  * allows, else for this page only. */
-const FOLD_KEY = "loupe.sidebar.folded";
+const FOLD_KEY = "louped.sidebar.folded";
 let foldedHere = false;
 const foldListeners = new Set<() => void>();
 
@@ -108,7 +108,7 @@ function TopBar({ folded, toggle }: { folded: boolean; toggle: () => void }) {
       </Button>
       <Link href="/" className="flex items-center gap-2 pr-2 text-sm font-semibold tracking-tight">
         <Mark className="size-5" />
-        loupe
+        louped
       </Link>
       <nav aria-label="Sections" className="hidden items-center gap-0.5 sm:flex">
         {SECTIONS.map((s) => (

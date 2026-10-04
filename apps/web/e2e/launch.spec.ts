@@ -15,16 +15,16 @@ const launchables = [
     id: "train:hello/sft.yaml",
     group: "Training",
     title: "hello/sft.yaml",
-    description: "loupe train sft",
+    description: "louped train sft",
     config: "name: hello\nbase_model: tiny\n",
     recipe: "sft",
   },
   {
     id: "grid",
     group: "Commands",
-    title: "loupe grid",
+    title: "louped grid",
     description: "Conditions by tasks by seeds.",
-    config: "# loupe grid\nmodel: tiny\n",
+    config: "# louped grid\nmodel: tiny\n",
     recipe: null,
   },
 ];
@@ -114,12 +114,12 @@ test("a grid's config is edited in place and sent without a recipe", async ({ pa
   const sent = await mockApi(page);
   await page.goto("/launch/?id=grid");
   await expect(page.getByLabel("Recipe")).toHaveCount(0);
-  await expect(page.getByText("loupe grid grid.yaml")).toBeVisible();
-  await page.getByLabel("Config").fill("# loupe grid\nmodel: edited\n");
+  await expect(page.getByText("louped grid grid.yaml")).toBeVisible();
+  await page.getByLabel("Config").fill("# louped grid\nmodel: edited\n");
   await page.getByRole("button", { name: "Launch" }).click();
   await expect
     .poll(() => sent[0])
-    .toEqual({ id: "grid", options: {}, config: "# loupe grid\nmodel: edited\n" });
+    .toEqual({ id: "grid", options: {}, config: "# louped grid\nmodel: edited\n" });
 });
 
 test("a launch exports for Sol and its result imports back", async ({ page }, info) => {
@@ -131,7 +131,7 @@ test("a launch exports for Sol and its result imports back", async ({ page }, in
       body: Buffer.from([0x1f, 0x8b]),
       headers: {
         "content-type": "application/gzip",
-        "content-disposition": 'attachment; filename="loupe-j2.tar.gz"',
+        "content-disposition": 'attachment; filename="louped-j2.tar.gz"',
       },
     });
   });
@@ -149,7 +149,7 @@ test("a launch exports for Sol and its result imports back", async ({ page }, in
   await page.screenshot({ path: info.outputPath("export.png"), fullPage: true });
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export" }).click();
-  expect((await download).suggestedFilename()).toBe("loupe-j2.tar.gz");
+  expect((await download).suggestedFilename()).toBe("louped-j2.tar.gz");
   expect(exported).toMatchObject({
     id: "script:hello/run.py",
     target: { provider: "sol", gpu: "a30", gpus: 1, hours: 2 },
@@ -160,7 +160,7 @@ test("a launch exports for Sol and its result imports back", async ({ page }, in
   );
   await page.goto("/runs/");
   await page.getByLabel("Result archive").setInputFiles({
-    name: "loupe-result-j2.tar.gz",
+    name: "louped-result-j2.tar.gz",
     mimeType: "application/gzip",
     buffer: Buffer.from([0x1f, 0x8b]),
   });

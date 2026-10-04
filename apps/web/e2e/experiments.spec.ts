@@ -193,7 +193,7 @@ test("compare queues a judge of the two runs", async ({ page }) => {
   let sent: unknown;
   await page.route("**/api/launch", (r) => {
     sent = r.request().postDataJSON();
-    return r.fulfill({ json: { id: "j9", title: "loupe judge", status: "queued" } });
+    return r.fulfill({ json: { id: "j9", title: "louped judge", status: "queued" } });
   });
   await page.goto("/compare/?a=a&b=b");
   await page.getByRole("button", { name: "Judge", exact: true }).click();
