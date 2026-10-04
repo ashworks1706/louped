@@ -22,7 +22,8 @@ loupe new my-question --domain honesty   # or launch `new`
 ## README
 
 The front matter names a domain from [Research domains](/docs/domains) and a status (`active`,
-`parked`, `answered`). The first paragraph under **Question** and under **Result** is what the
+`parked`, `answered`), and may list the package extras its `run.py` needs (`extras: tracking,
+interp`): a job exported to a cluster then installs only those, not every extra. The first paragraph under **Question** and under **Result** is what the
 Experiments page shows; the rest renders on the experiment's page.
 
 ## run.py

@@ -1,8 +1,8 @@
 """loupe for coding agents: an MCP server over a running `loupe serve`.
 
 It is a client of the same HTTP API the UI calls, so an agent sees what the UI sees and starts work
-through the same job queue: one job at a time, shown live on the Launch page, and off on a server
-started with --expose. It reads nothing on its own and keeps no state.
+through the same job queue: one job at a time, shown live on Runs and on the job's page, and off on
+a server started with --expose. It reads nothing on its own and keeps no state.
 """
 
 from __future__ import annotations

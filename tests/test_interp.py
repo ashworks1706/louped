@@ -229,10 +229,19 @@ def test_inspect_provider_halves_a_batch_that_runs_out_of_memory(lm, monkeypatch
 
     async def ask_all() -> list[str]:
         asks = [ChatMessageUser(content=f"question {i}") for i in range(4)]
-        return [o.completion for o in await asyncio.gather(*[model.generate([a]) for a in asks])]
+        # Hold the generation lock until all four are queued, so the first batch holds them all;
+        # otherwise a busy machine can start the first request alone and no batch ever fails.
+        provider._LOCK.acquire()
+        try:
+            tasks = [asyncio.create_task(model.generate([a])) for a in asks]
+            while len(model.api.pending) < len(asks):  # pyright: ignore[reportAttributeAccessIssue]
+                await asyncio.sleep(0.01)
+        finally:
+            provider._LOCK.release()
+        return [o.completion for o in await asyncio.gather(*tasks)]
 
     assert all(c.startswith("ok") for c in asyncio.run(ask_all()))
-    assert max(sizes) > 1 and model.api.batch_size == 1  # pyright: ignore[reportAttributeAccessIssue]
+    assert sizes[0] == 4 and model.api.batch_size == 1  # pyright: ignore[reportAttributeAccessIssue]
 
 
 def test_inspect_provider_fails_every_request_in_a_failed_batch(lm, monkeypatch) -> None:

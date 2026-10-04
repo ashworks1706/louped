@@ -1495,16 +1495,8 @@ export interface components {
       qos?: string | null;
       /** Constraint */
       constraint?: string | null;
-      /**
-       * Extras
-       * @default [
-       *       "interp",
-       *       "evals",
-       *       "tracking",
-       *       "train"
-       *     ]
-       */
-      extras: string[];
+      /** Extras */
+      extras?: string[] | null;
     };
     /** TokenRow */
     TokenRow: {

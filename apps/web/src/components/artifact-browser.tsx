@@ -8,6 +8,7 @@ import { useMemo } from "react";
 import { CopyButton } from "@/components/copy-button";
 import { Markdown } from "@/components/markdown";
 import { QueryState } from "@/components/query-state";
+import { LinedUp } from "@/components/items-view";
 import { JsonTree, RecordsTable } from "@/components/record-view";
 import { Button } from "@/components/ui/button";
 import type { RunDetail } from "@/lib/api";
@@ -15,6 +16,7 @@ import {
   PREVIEW_BYTES,
   artifactQuery,
   artifactUrl,
+  asRecords,
   kindOf,
   parseDelimited,
   parseJsonl,
@@ -128,7 +130,7 @@ function Rendered({ path, text }: { path: string; text: string }) {
         </article>
       );
     case "json":
-      return <JsonFile text={text} />;
+      return <JsonFile text={text} name={path.slice(path.lastIndexOf("/") + 1)} />;
     case "jsonl": {
       const { rows, bad } = parseJsonl(text);
       return (
@@ -138,7 +140,7 @@ function Rendered({ path, text }: { path: string; text: string }) {
               {bad} lines did not parse as JSON and are left out.
             </p>
           )}
-          <RecordsTable rows={rows} name={path.slice(path.lastIndexOf("/") + 1)} />
+          <LinedUp rows={rows} name={path.slice(path.lastIndexOf("/") + 1)} />
         </>
       );
     }
@@ -154,7 +156,7 @@ function Rendered({ path, text }: { path: string; text: string }) {
   }
 }
 
-function JsonFile({ text }: { text: string }) {
+function JsonFile({ text, name }: { text: string; name: string }) {
   let value: unknown;
   try {
     value = JSON.parse(text);
@@ -166,6 +168,8 @@ function JsonFile({ text }: { text: string }) {
       </>
     );
   }
+  const records = asRecords(value);
+  if (records) return <LinedUp rows={records} name={name} />;
   return (
     <div className="overflow-x-auto rounded-xl border p-4">
       <JsonTree value={value} />

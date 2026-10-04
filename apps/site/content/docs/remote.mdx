@@ -38,6 +38,9 @@ quota is small.
 - If compute nodes have no internet, or the install times out there, run `job.sh`'s lines up to
   `source .venv/bin/activate` once on a login node, then submit: the job reuses the cached wheels.
   Downloads wait up to 300 s (`UV_HTTP_TIMEOUT`) rather than uv's 30 s.
+- The job installs the extras the form sets, else those the experiment's README declares
+  (`extras:` in its front matter), else interp, evals, tracking and train; `loupe.json` records
+  which.
 - Files under `experiments/` over 50 MB stay behind; `loupe.json` in the bundle lists them.
 - A paper harness's own environment (`out/vendor/`) is not packed into the result; its runs come
   back through MLflow with their files.

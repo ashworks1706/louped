@@ -19,6 +19,11 @@ export const GLOSSARY = {
   interval:
     "95% paired bootstrap interval of B − A. When it excludes zero, the difference is unlikely to be noise.",
   moved: "Samples where B scored higher or lower than A. Click a count to read them.",
+  // items
+  wilson:
+    "95% Wilson interval of a rate k/n. Unlike k/n ± 1.96·SE it stays inside 0–100% and holds up at small n and extreme rates, so a pilot's uncertainty reads honestly.",
+  transition:
+    "Items that changed from the reference: 1→0 counts items right in the reference and wrong here, out of those right in the reference; 0→1 the reverse. The reference fixes both denominators, so every condition is read on the same items.",
 } as const;
 
 export type Term = keyof typeof GLOSSARY;

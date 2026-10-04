@@ -1,6 +1,7 @@
 """Export a launch, run its job.sh as the other machine would, and import the result."""
 
 import io
+import json
 import os
 import socket
 import subprocess
@@ -88,6 +89,28 @@ def test_a_sol_bundle_asks_sol_for_its_gpu_and_runs_the_launch_command(tmp_path:
     assert (root / "experiments/hello/run.py").exists() and (root / "uv.lock").exists()
     [listed] = [j for j in api.get("/api/launch/jobs").json() if j["id"] == job]
     assert listed["status"] == "exported" and listed["title"].endswith("· sol")
+
+
+def test_a_job_installs_the_extras_its_experiment_declares(tmp_path: Path) -> None:
+    experiment(tmp_path)
+    api = client()
+    _, data = export(api, {"provider": "sol"})
+    script = (unpack(data, tmp_path / "a") / "job.sh").read_text()
+    assert "--extra interp --extra evals --extra tracking --extra train" in script  # defaults
+    readme = tmp_path / "experiments" / "hello" / "README.md"
+    readme.write_text("---\ndomain: inference\nstatus: active\nextras: tracking\n---\n# hello\n")
+    _, data = export(api, {"provider": "sol"})
+    root = unpack(data, tmp_path / "b")
+    assert "uv sync --locked --no-dev --extra tracking\n" in (root / "job.sh").read_text()
+    assert json.loads((root / "loupe.json").read_text())["target"]["extras"] == ["tracking"]
+    _, data = export(api, {"provider": "sol", "extras": ["interp", "tracking"]})  # the form wins
+    assert (
+        "--extra interp --extra tracking\n" in (unpack(data, tmp_path / "c") / "job.sh").read_text()
+    )
+    readme.write_text("---\ndomain: inference\nstatus: active\nextras: gpu-magic\n---\n")
+    bad = api.post("/api/launch/export", json={"id": "script:hello/run.py", "options": {},
+                                               "target": {"provider": "sol"}})  # fmt: skip
+    assert bad.status_code == 400 and "unknown extras ['gpu-magic']" in bad.text
 
 
 def test_a_bad_sol_gpu_and_an_unsafe_field_are_refused(tmp_path: Path) -> None:

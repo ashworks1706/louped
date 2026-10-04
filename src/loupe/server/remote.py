@@ -38,11 +38,14 @@ from loupe.core import experiments_dir, home, logs_dir, tracking_uri
 from loupe.core.project import FILE
 from loupe.core.project import root as root_of_project
 from loupe.server.launch import Job, Jobs, Launchable, LaunchRequest, argv, require_json
+from loupe.stores.experiments import declared_extras
 
 Provider = Literal["sol", "slurm", "shell"]
 #: Sol's GPUs as its docs name them for -G: MI200 is AMD (ROCm), the slices are A100 MIG.
 SOL_GPUS = ["a100", "a30", "h100", "mi200", "1g.20gb", "2g.20gb"]
 EXTRAS = ["interp", "evals", "tracking", "train", "rl", "rag", "sae", "data"]
+#: What a job installs when neither the form nor the experiment says.
+DEFAULT_EXTRAS = ["interp", "evals", "tracking", "train"]
 #: Files under experiments/ bigger than this stay behind; loupe.json lists them.
 MAX_FILE = 50 * 2**20
 SAFE = r"^[\w.:-]+$"
@@ -63,12 +66,14 @@ class Target(BaseModel):
     qos: str | None = Field(default=None, pattern=SAFE)
     #: A node feature, such as Sol's a100_80 for the 80 GB A100.
     constraint: str | None = Field(default=None, pattern=SAFE)
-    extras: list[str] = ["interp", "evals", "tracking", "train"]
+    #: The package extras the job installs: these; else what the experiment's README declares
+    #: (`extras:` in its front matter); else DEFAULT_EXTRAS.
+    extras: list[str] | None = None
 
     @field_validator("extras")
     @classmethod
-    def _known(cls, value: list[str]) -> list[str]:
-        if unknown := set(value) - set(EXTRAS):
+    def _known(cls, value: list[str] | None) -> list[str] | None:
+        if value is not None and (unknown := set(value) - set(EXTRAS)):
             raise ValueError(f"unknown extras {sorted(unknown)}; one of {EXTRAS}")
         return value
 
@@ -169,6 +174,20 @@ a login node first: the same commands as job.sh up to `source .venv/bin/activate
 """
 
 
+def _extras(launchable: str) -> list[str]:
+    """The extras for a launch: its experiment's declared ones for a script, else the defaults."""
+    if not launchable.startswith("script:"):
+        return DEFAULT_EXTRAS
+    name = launchable.removeprefix("script:").split("/")[0]
+    declared = declared_extras(name)
+    if declared is None:
+        return DEFAULT_EXTRAS
+    if unknown := set(declared) - set(EXTRAS):
+        raise ValueError(f"experiments/{name}/README.md: unknown extras {sorted(unknown)}; "
+                         f"one of {EXTRAS}")  # fmt: skip
+    return declared
+
+
 def export(req: ExportRequest, jobs: Jobs, title: str) -> Path:
     """The bundle for req as a .tar.gz in a temporary folder, and its job recorded as exported."""
     job_id = datetime.now(UTC).strftime("%Y%m%d-%H%M%S-") + secrets.token_hex(2)
@@ -176,6 +195,8 @@ def export(req: ExportRequest, jobs: Jobs, title: str) -> Path:
     root = out / f"loupe-{job_id}"
     (root / "job").mkdir(parents=True)
     target = req.target
+    if target.extras is None:
+        target = target.model_copy(update={"extras": _extras(req.id)})
     header = _header(target, job_id)
     command = argv(req, root / "job", remote=True)
     skipped: list[str] = []
@@ -193,7 +214,7 @@ def export(req: ExportRequest, jobs: Jobs, title: str) -> Path:
         shutil.copytree(experiments_dir(), root / "experiments", ignore=keep)
     if (project := root_of_project()) is not None:  # its domains, so its experiments read there
         shutil.copy2(project / FILE, root / FILE)
-    extras = " ".join(f"--extra {e}" for e in target.extras)
+    extras = " ".join(f"--extra {e}" for e in target.extras or [])
     if (source := _checkout()) is not None:
         for name in ("pyproject.toml", "uv.lock", "README.md", "LICENSE", ".python-version"):
             if (source / name).exists():
@@ -201,7 +222,7 @@ def export(req: ExportRequest, jobs: Jobs, title: str) -> Path:
         shutil.copytree(source / "src", root / "src", ignore=shutil.ignore_patterns("__pycache__"))
         install = f"uv sync --locked --no-dev {extras}"
     else:
-        spec = f"loupelab[{','.join(target.extras)}]=={__version__}"
+        spec = f"loupelab[{','.join(target.extras or [])}]=={__version__}"
         install = f"uv venv --allow-existing\nuv pip install {shlex.quote(spec)}"
     sol = target.provider == "sol"
     scratch = ('export HF_HOME="${HF_HOME:-/scratch/$USER/huggingface}"\n'

@@ -37,6 +37,13 @@ const files: Record<string, string> = {
       text: "Napoleon was 5 feet 2 inches tall.",
     },
   ]),
+  // one file, one row per question and arm, as an engine's own benchmark writes it
+  "bench/records.jsonl": jsonl([
+    { q: "a", arm: "closed-book", em: 0, ttft_ms: 40 },
+    { q: "b", arm: "closed-book", em: 1, ttft_ms: 41 },
+    { q: "a", arm: "retrieval", em: 1, ttft_ms: 95 },
+    { q: "b", arm: "retrieval", em: 1, ttft_ms: 97 },
+  ]),
   "raw/t/pressure.jsonl": jsonl([
     { qid: 1, condition: "pressure", correct: 0, scores: [-2, -1], second_turn: "Are you sure?" },
     { qid: 2, condition: "pressure", correct: 1, scores: [-1, -3], second_turn: "Are you sure?" },
@@ -121,6 +128,18 @@ test("artifacts preview by type and a JSONL file filters", async ({ page }) => {
   await expect(page.getByText("1 of 3")).toBeVisible();
   await page.getByRole("button", { name: /meta\.json/ }).click();
   await expect(page.getByText('"3.12.15"')).toBeVisible();
+});
+
+test("one file of records lines up by a column such as an arm", async ({ page }) => {
+  await mockRun(page);
+  await page.goto(`/run/?id=${id}&tab=artifacts&file=bench/records.jsonl`);
+  await expect(page.getByText("4 of 4")).toBeVisible();
+  await page.getByLabel("Line up by").selectOption("arm");
+  await expect(page).toHaveURL(/by=arm/);
+  await expect(page.getByText("2 of 2 items")).toBeVisible();
+  // closed-book is the reference (first seen); retrieval fixed one of the one it got wrong
+  await expect(page.getByText("0→1 1/1")).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "retrieval" })).toBeVisible();
 });
 
 test("the overview shows the report and where and how the run was made", async ({ page }) => {

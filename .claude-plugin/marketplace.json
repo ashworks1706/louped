@@ -1,6 +1,9 @@
 {
   "name": "loupe",
-  "owner": { "name": "ashworks1706" },
+  "description": "loupe, a local research workbench for language models, for Claude Code: its MCP server and research skills.",
+  "owner": {
+    "name": "ashworks1706"
+  },
   "plugins": [
     {
       "name": "loupe",

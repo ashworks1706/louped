@@ -3589,12 +3589,18 @@
             "title": "Constraint"
           },
           "extras": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Extras",
-            "default": ["interp", "evals", "tracking", "train"]
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extras"
           }
         },
         "type": "object",

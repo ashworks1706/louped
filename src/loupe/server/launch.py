@@ -94,6 +94,10 @@ COMMANDS = {
     ),
     "circuit": ("Circuit", "An attribution graph with circuit-tracer, shown on the Circuits page."),
     "bench": ("Bench", "Throughput under load and prefill by context, per weight format."),
+    "endpoint-bench": (
+        "EndpointBench",
+        "Time to first token, latency and throughput of OpenAI-compatible servers by concurrency.",
+    ),
     "judge": ("Judge", "Two eval runs judged pairwise by a local model: B's win rate over A."),
     "examples": (
         "Examples",

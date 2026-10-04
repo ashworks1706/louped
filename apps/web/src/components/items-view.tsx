@@ -6,8 +6,9 @@ import { parseAsString, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 
 import { Help } from "@/components/help";
+import { Term } from "@/components/term";
 import { ScoreCell } from "@/components/metric";
-import { RecordFields } from "@/components/record-view";
+import { RecordFields, RecordsTable } from "@/components/record-view";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -32,6 +33,8 @@ import {
   joinKey,
   parseJsonl,
   sharedFields,
+  splitBy,
+  splitColumns,
   stem,
   textField,
   wilson,
@@ -80,6 +83,38 @@ function Folder({ runId, files }: { runId: string; files: string[] }) {
 }
 
 type Transition = { down: number; up: number; wasOne: number; wasZero: number };
+
+/** One file's records, as a table or, split by a column (an arm, a condition), lined up item by
+ * item across its values as the Items tab lines up a folder of files. */
+export function LinedUp({ rows, name }: { rows: Row[]; name: string }) {
+  const columns = useMemo(() => splitColumns(rows), [rows]);
+  const [by, setBy] = useQueryState("by", parseAsString);
+  const split = by && columns.includes(by) ? splitBy(rows, by) : null;
+  return (
+    <div className="flex flex-col gap-3">
+      {columns.length > 0 && (
+        <label className="flex items-center gap-1.5 text-xs">
+          <span className="text-muted-foreground">Line up by</span>
+          <NativeSelect
+            value={split ? by! : ""}
+            onChange={(e) => void setBy(e.target.value || null)}
+            className="font-mono text-xs"
+          >
+            <option value="">none: every row</option>
+            {columns.map((c) => (
+              <option key={c}>{c}</option>
+            ))}
+          </NativeSelect>
+        </label>
+      )}
+      {split ? (
+        <Aligned files={split.names} tables={split.tables} />
+      ) : (
+        <RecordsTable rows={rows} name={name} />
+      )}
+    </div>
+  );
+}
 
 function Aligned({ files, tables }: { files: string[]; tables: Row[][] }) {
   const names = files.map(stem);
@@ -382,13 +417,16 @@ function Summary({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-1.5 text-sm font-medium">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-medium">
         By condition
-        <Help>
-          {binary
-            ? `Each condition's rate of ${field} with its 95% Wilson interval, then how it moved from the reference on the same items: 1 → 0 counts items that were 1 in the reference and are 0 here, out of those that were 1; 0 → 1 the reverse. The denominators are fixed by the reference, so every condition is read on the same items.`
-            : `How many items have a different ${field} from the reference, out of the items both files hold.`}
-        </Help>
+        {binary ? (
+          <span className="text-muted-foreground flex items-center gap-3 text-xs font-normal">
+            <Term k="wilson">rate, 95% interval</Term>
+            <Term k="transition">1→0 · 0→1</Term>
+          </span>
+        ) : (
+          <Help>{`How many items have a different ${field} from the reference, out of the items both files hold.`}</Help>
+        )}
       </div>
       <div className="grid overflow-hidden rounded-xl border sm:grid-cols-2 lg:grid-cols-4 [&>*]:-mr-px [&>*]:-mb-px [&>*]:border-r [&>*]:border-b">
         {names.map((n, i) => {

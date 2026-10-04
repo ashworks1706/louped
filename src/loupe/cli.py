@@ -180,6 +180,26 @@ class Bench:
 
 
 @dataclass(frozen=True)
+class EndpointBench:
+    """What a served model costs where it runs: time to first token, latency and throughput as
+    requests arrive together, against OpenAI-compatible servers (llama-server, vLLM, Ollama, your
+    own engine). One run, every request recorded so two servers line up on the Items tab. Needs
+    the tracking and agent extras."""
+
+    urls: tyro.conf.Positional[list[str]]
+    """Base URLs ending in /v1, one per server to compare: http://127.0.0.1:8080/v1."""
+    model: str = "default"
+    """The model name the servers expect in a request (llama-server accepts any)."""
+    levels: list[int] = field(default_factory=lambda: [1, 2, 4, 8])
+    """Requests in flight at once."""
+    rounds: int = 3
+    """Times each level is sent."""
+    prompt_words: int = 200
+    max_tokens: int = 128
+    experiment: str = "efficiency-bench"
+
+
+@dataclass(frozen=True)
 class Judge:
     """Two eval runs judged sample by sample by a local model, each pair in both orders: B's win
     rate over A as an eval run of its own. Needs the evals extra, and interp for loupe/ models."""
@@ -231,6 +251,7 @@ Command = (
     | Annotated[Circuit, tyro.conf.subcommand("circuit")]
     | Annotated[Import, tyro.conf.subcommand("import")]
     | Annotated[Bench, tyro.conf.subcommand("bench")]
+    | Annotated[EndpointBench, tyro.conf.subcommand("endpoint-bench")]
     | Annotated[Judge, tyro.conf.subcommand("judge")]
     | Annotated[Mcp, tyro.conf.subcommand("mcp")]
     | Annotated[Examples, tyro.conf.subcommand("examples")]
@@ -355,6 +376,16 @@ def main() -> None:
             print(bench(cmd.model, quants, tuple(cmd.batches), tuple(cmd.contexts),
                         cmd.new_tokens, cmd.repeats, cmd.experiment, cmd.draft,
                         cmd.profile))  # fmt: skip
+        case EndpointBench() as cmd:
+            try:
+                from loupe.endpoint_bench import endpoint_bench
+            except ModuleNotFoundError as exc:
+                raise SystemExit(
+                    f"loupe endpoint-bench needs the tracking and agent extras ({exc.name} is "
+                    "missing): pip install 'loupelab[tracking,agent]'"
+                ) from exc
+            print(endpoint_bench(cmd.urls, cmd.model, tuple(cmd.levels), cmd.rounds,
+                                 cmd.prompt_words, cmd.max_tokens, cmd.experiment))  # fmt: skip
         case Judge() as cmd:
             from loupe.judge import judge
 

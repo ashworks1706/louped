@@ -30,6 +30,9 @@ project from the working directory upward, by its `loupe.toml`; state lives unde
 - `loupe circuit`: an attribution graph with circuit-tracer, shown on the Circuits page.
 - `loupe data export`, `collect`, `verify`, `review`, `curate`, `overlap`, `stats`: training sets
   from logged model calls or a teacher, and contamination checks.
+- `loupe endpoint-bench <url>...`: time to first token, latency and throughput of OpenAI-compatible
+  servers (llama-server, vLLM, your own engine) as requests arrive together, every request
+  recorded so servers line up on the Items tab.
 - `loupe import <file>`: a result from a job exported to Sol, a cluster or a VM
   ([Run elsewhere](/docs/remote)).
 - `loupe bench <model>`: what serving costs on this machine, per weight format (`--quants none

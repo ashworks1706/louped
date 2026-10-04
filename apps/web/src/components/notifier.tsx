@@ -132,7 +132,7 @@ function jobEnded(job: Job): Ended {
           exit {job.exit_code}
           {took}
         </Mono>
-        . The log is on the Launch page.
+        . The log is on its job page.
       </>
     ),
     outcome: "failed",

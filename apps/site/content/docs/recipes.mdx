@@ -1,0 +1,67 @@
+---
+title: Recipes
+description: How common behavior and efficiency questions are run in loupe, including models and engines it does not load itself.
+---
+
+Every recipe is an experiment: a README with the question, and a `run.py` that does the work
+inside `start_run` and logs what it measured. What changes between them is where the model runs
+and what shape the results take. Results loupe reads without extra wiring:
+
+| Shape                               | Write it as                                   | Shown as                                   |
+| ----------------------------------- | --------------------------------------------- | ------------------------------------------ |
+| Per-item records under conditions   | `raw/<condition>.jsonl`, an id field in each  | the Items tab: each item across conditions |
+| One file, a condition or arm column | `records.jsonl`, or a JSON array of objects   | Artifacts → Line up by `<column>`          |
+| Numbers                             | `mlflow.log_metrics`, with `step` for a curve | Overview, and a chart for a curve          |
+| Tables, curves, scatters, heatmaps  | a view from `loupe.analysis.views`            | Figures                                    |
+| Transcripts and scores              | an Inspect eval (`task.py`)                   | Samples, and Inspect View                  |
+| A report for people                 | `report.md`                                   | Overview                                   |
+
+## A model loupe loads
+
+Hugging Face models, LLaDA, Dream and nanoDiff checkpoints load in loupe, so interventions
+(steer, ablate, inject), adapter banks and diffusion phase schedules, probes, patching and SAE
+features all apply. Compare conditions with a grid (`loupe grid`), which pairs each against a
+baseline over seeds.
+
+## A model served elsewhere: GGUF, llama-server, vLLM, your own engine
+
+loupe does not need to load a model to evaluate or time it:
+
+- **Evals**: an Inspect task against an OpenAI-compatible endpoint, as a grid condition
+  (`loupe.grid.endpoint`), so a quantized GGUF and a full-precision model are compared on the
+  same samples.
+- **Agents**: an agent endpoint that reports the tools it ran in a `trace` field is scored by the
+  `agent/` provider; logged calls and Phoenix spans become training sets with `loupe data`.
+- **Serving cost**: `loupe endpoint-bench http://127.0.0.1:8080/v1 http://127.0.0.1:8081/v1`
+  measures time to first token, latency and throughput as requests arrive together, per server.
+  Every request is a record, so two servers (two quantizations, two slot counts) line up on the
+  Items tab request by request.
+
+## An engine or harness of its own (Rust, C++, a paper's code)
+
+Call it from `run.py` as a subprocess (`cargo bench`, its CLI, its script), at a pinned commit,
+and log what it wrote: copy its per-item JSON or JSONL into the run's artifacts and its summary
+numbers into metrics. The run then carries the command, the environment and the engine's own
+records. A harness that pins other Python versions runs in its own environment under
+`.loupe/vendor/` ("Someone else's code" in [Writing an experiment](/docs/experiments)). Results
+made before loupe open with `loupe view <folder>`.
+
+## Retrieval and grounding
+
+Log one record per question and arm (closed-book, retrieved, retrieved through a hook) with
+recall@k, the answer, its score and the timings; line them up by arm. A judge, when a score needs
+one, is a local model (`loupe judge`). Retrieval inside the model, injecting passages at a layer,
+is an intervention on a model loupe loads.
+
+## Adapters, skills and small models
+
+LoRA adapters load as a bank, switch per request and change along a diffusion trajectory by
+phase. An adapter's gain is an eval grid of base, prompt, adapter and fine-tune conditions; its
+interference is the same grid on the other skills' tasks. Weight formats and size against
+quality are `loupe bench` (throughput, prefill, memory, speculative decoding) next to an eval.
+
+## Real runs on a cluster
+
+Small checks run here; real runs go to Sol, a Slurm cluster or a VM from Launch → Run on →
+Export ([Run elsewhere](/docs/remote)). An experiment declares the extras its run needs
+(`extras: tracking` in its README's front matter) so the cluster installs only those.

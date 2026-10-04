@@ -6,7 +6,18 @@
       "package-name": "loupelab",
       "include-component-in-tag": false,
       "bump-minor-pre-major": true,
-      "extra-files": [{ "type": "json", "path": "apps/web/package.json", "jsonpath": "$.version" }]
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "apps/web/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "src/loupe/templates/agent/.claude-plugin/plugin.json",
+          "jsonpath": "$.version"
+        }
+      ]
     }
   }
 }

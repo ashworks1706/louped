@@ -105,18 +105,36 @@ def result(readme: str) -> str | None:
     return _paragraph(readme, "Result")
 
 
-def front_matter(readme: str, name: str) -> tuple[Domain, Status]:
-    """The domain and status a README declares; raises naming the experiment when either is
-    missing or not one loupe knows."""
+def _fields(readme: str) -> dict[str, str] | None:
+    """The front matter's key: value lines, or None when the README has none."""
     found = _FRONT.match(readme)
     if not found:
-        raise BadExperiment(
-            f"experiments/{name}/README.md has no front matter with domain and status"
-        )
-    fields = dict(
+        return None
+    return dict(
         (k.strip(), v.strip())
         for k, v in (line.split(":", 1) for line in found.group(1).splitlines() if ":" in line)
     )
+
+
+def declared_extras(name: str) -> list[str] | None:
+    """The package extras an experiment's README declares its run needs (`extras: tracking,
+    interp` in its front matter), which an exported job installs instead of the defaults; None
+    when it declares none or the experiment is not found."""
+    readme = experiments_dir() / name / "README.md"
+    if not readme.is_file():
+        return None
+    value = (_fields(readme.read_text(encoding="utf-8")) or {}).get("extras")
+    return [e.strip() for e in value.split(",") if e.strip()] if value else None
+
+
+def front_matter(readme: str, name: str) -> tuple[Domain, Status]:
+    """The domain and status a README declares; raises naming the experiment when either is
+    missing or not one loupe knows."""
+    fields = _fields(readme)
+    if fields is None:
+        raise BadExperiment(
+            f"experiments/{name}/README.md has no front matter with domain and status"
+        )
     domain, status = fields.get("domain"), fields.get("status")
     known = domains()
     if domain not in known:

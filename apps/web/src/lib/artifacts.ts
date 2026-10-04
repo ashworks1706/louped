@@ -205,6 +205,44 @@ export function textField(rows: Row[], key: string): string | null {
   return best?.[0] ?? null;
 }
 
+/** Columns that split one file's records into conditions the Items view can line up: two to
+ * eight scalar values (an arm, a condition, a model), each part naming an item once and the parts
+ * sharing their items. */
+export function splitColumns(rows: Row[]): string[] {
+  if (rows.length < 2) return [];
+  const columns = Object.keys(rows[0]);
+  return columns.filter((c) => {
+    if (!rows.every((r) => isScalar(r[c]) && r[c] !== null)) return false;
+    const values = new Set(rows.map((r) => String(r[c])));
+    if (values.size < 2 || values.size > 8) return false;
+    const { tables } = splitBy(rows, c);
+    const without = (r: Row) => Object.fromEntries(Object.entries(r).filter(([k]) => k !== c));
+    const key = joinKey(tables.map((t) => t.map(without)));
+    if (key === null) return false;
+    // the same items under every value: an outcome column (correct: 0/1) splits items apart
+    const ids = tables.map((t) => new Set(t.map((r) => String(r[key]))));
+    return [...ids[0]].some((id) => ids.every((set) => set.has(id)));
+  });
+}
+
+/** One file's records split by a column's values, in first-seen order. */
+export function splitBy(rows: Row[], column: string): { names: string[]; tables: Row[][] } {
+  const parts = new Map<string, Row[]>();
+  for (const r of rows) {
+    const v = String(r[column]);
+    parts.set(v, [...(parts.get(v) ?? []), r]);
+  }
+  return { names: [...parts.keys()], tables: [...parts.values()] };
+}
+
+/** A parsed JSON file's records, when it is an array of objects. */
+export function asRecords(value: unknown): Row[] | null {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  return value.every((v) => v && typeof v === "object" && !Array.isArray(v))
+    ? (value as Row[])
+    : null;
+}
+
 /** A value as one short line for a table cell. */
 export function brief(v: unknown, max = 120): string {
   if (v === undefined) return "";

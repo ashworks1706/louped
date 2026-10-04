@@ -75,6 +75,14 @@ RunMeta on every result).
 - [x] The run page's Items view works on any folder of per-condition JSONL sharing an item id
       (done: Items, Artifacts previews, Provenance on the run page).
 
+- [x] One file of records with a condition or arm column (a JSON array or JSONL, as an engine's
+      own benchmark writes) lines up on its Artifacts page by that column.
+- [x] `loupe endpoint-bench <url>...`: time to first token, latency and throughput of
+      OpenAI-compatible servers (llama-server, vLLM, a Rust engine) by concurrency, every request
+      recorded so servers line up item by item; for models loupe does not load (GGUF, own engines).
+- [x] Recipes in the docs for models served elsewhere, engines with their own harness, retrieval,
+      adapters and small models.
+
 ### 3. The agent harness
 
 - [x] `loupe mcp` gains the steps an agent now does by shell: `new_experiment`, `export_job` and
@@ -100,7 +108,8 @@ RunMeta on every result).
 - [ ] Three researchers outside this repo (ARC Lab first) run one question each; what stops them
       becomes the next items here.
 - [ ] A read-only demo of real runs (the Docker image already serves results) and the docs site,
-      deployed.
+      deployed. The repository is private, so GitHub Pages needs a paid plan or a public
+      repository; the site also builds as a server app today, not a static export.
 - [ ] The case study: Experiment 1A reproduced and one mitigation tested, item by item, written up
       with the tool's part in it.
 - [ ] Then a public launch and, if the case study holds, a demo or workshop paper.
