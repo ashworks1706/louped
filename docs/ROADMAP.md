@@ -1,9 +1,8 @@
 # Roadmap
 
 louped grows when an experiment needs it. This file is the product: what a researcher installs.
-Research questions live in research projects, each with its own roadmap; the maintainer's
-(`arc-lab`: sycophancy and misleading outputs) is the first user and sets what is next
-here, but its experiments are not louped's.
+Research questions live in research projects, each with its own roadmap; a real project is the
+first user and sets what is next here, but its experiments are not louped's.
 
 ## What louped is
 
@@ -46,7 +45,6 @@ RunMeta on every result).
 - **The product repository is not a research project.** louped's repo holds the package, tests,
   the UI and `src/louped/templates/` (what `louped init` copies); a research question lives in its
   own project.
-  The maintainer's research lives in its own project, `arc-lab`.
 - **A way in without adopting louped.** `louped view <folder>` opens what a researcher already
   has (Inspect logs, an MLflow store, a folder of per-condition JSONL) in the run page, with no
   project.
@@ -109,21 +107,20 @@ RunMeta on every result).
 
 ### 4. Separate the product from the research
 
-- [x] The maintainer's experiments move to their own project made with `louped init`;
-      this repo keeps the templates and tests (done: `~/projects/arc-lab`, its Sol run
-      imported there; it needs a GitHub remote of its own). The research project is the first real user of
-      `louped init`, so it lands with item 1.
+- [x] Experiments move to their own project made with `louped init`; this repo keeps the
+      templates and tests. That project is the first real user of `louped init`, so it lands
+      with item 1.
 - [x] `ARCHITECTURE.md` and the docs site describe the package and a project separately.
 
 ### 5. Show it
 
-- [ ] Three researchers outside this repo (ARC Lab first) run one question each; what stops them
-      becomes the next items here.
+- [ ] Three researchers outside this repo run one question each; what stops them becomes the
+      next items here.
 - [ ] A read-only demo of real runs (the Docker image already serves results) and the docs site,
       deployed. The repository is private, so GitHub Pages needs a paid plan or a public
       repository; the site also builds as a server app today, not a static export.
-- [ ] The case study: a real result made with louped (the first from `arc-lab`), written
-      up item by item with the tool's part in it.
+- [ ] The case study: a real research result made with louped, written up item by item with the
+      tool's part in it.
 - [ ] Then a public launch and, if the case study holds, a demo or workshop paper.
 
 Not planned: a built-in agent, a hosted service, accounts or auth, a tracking server of our own.
