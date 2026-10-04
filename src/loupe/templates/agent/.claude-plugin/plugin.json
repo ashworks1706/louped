@@ -1,6 +1,6 @@
 {
   "name": "loupe",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Drive loupe research projects: start experiments, launch them, read results item by item, run them on a cluster.",
   "author": {
     "name": "ashworks1706"
