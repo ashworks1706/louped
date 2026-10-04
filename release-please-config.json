@@ -16,6 +16,11 @@
           "type": "json",
           "path": "src/louped/templates/agent/.claude-plugin/plugin.json",
           "jsonpath": "$.version"
+        },
+        {
+          "type": "toml",
+          "path": "uv.lock",
+          "jsonpath": "$.package[?(@.name.value=='louped')].version"
         }
       ]
     }
