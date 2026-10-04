@@ -21,9 +21,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ashworks1706/louped"
-Documentation = "https://github.com/ashworks1706/louped/tree/main/apps/site/content/docs"
-Issues = "https://github.com/ashworks1706/louped/issues"
+Homepage = "https://louped.vercel.app"
+Documentation = "https://louped.vercel.app/docs"
 
 # One extra per capability. A module imports only its own extra's packages, so an install carries
 # only what it uses.

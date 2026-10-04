@@ -1,11 +1,9 @@
-<p align="center"><img src="docs/brand/wordmark.svg" alt="louped" height="48"></p>
+<p align="center"><img src="https://louped.vercel.app/wordmark.svg" alt="louped" height="48"></p>
 <p align="center">A local workbench for research on LLM behavior and efficiency.</p>
 
 <p align="center">
-  <a href="apps/site/content/docs/index.mdx">Docs</a> •
-  <a href="docs/ARCHITECTURE.md">Architecture</a> •
-  <a href="docs/ROADMAP.md">Roadmap</a> •
-  <a href="CONTRIBUTING.md">Contributing</a>
+  <a href="https://louped.vercel.app">Website</a> •
+  <a href="https://louped.vercel.app/docs">Docs</a>
 </p>
 
 Keep your research questions about language models in a project. Each question is an experiment
@@ -14,8 +12,8 @@ runs them; you read the results item by item in louped's app. Everything runs on
 your cluster, with open-weight models.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="apps/site/public/demo/items-dark.png">
-  <img alt="Sixteen questions under three conditions: what pushback and evidence did to each answer" src="apps/site/public/demo/items-light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="https://louped.vercel.app/demo/items-dark.png">
+  <img alt="Sixteen questions under three conditions: what pushback and evidence did to each answer" src="https://louped.vercel.app/demo/items-light.png">
 </picture>
 
 ## Start
@@ -37,7 +35,7 @@ Open http://127.0.0.1:8000 and launch the example experiment.
 
 Already have results? `louped view <folder>` opens them read-only.
 
-See the [docs](apps/site/content/docs/index.mdx) for writing experiments, changing models, using
+See the [docs](https://louped.vercel.app/docs) for writing experiments, changing models, using
 your agent and running on a cluster.
 
 ## Develop
