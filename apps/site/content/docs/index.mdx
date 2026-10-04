@@ -16,12 +16,30 @@ the same change.
 
 A change is one spec, a policy, that runs the same way in an eval, a training run, the Playground
 and an analysis. Your question is a short script; loupe supplies the rest and the app to launch and
-read it from. It runs on your machine: open-weight models, results in files under `LOUPE_HOME`, no
-hosted model and no API key.
+read it from. It runs on your machine or your cluster: open-weight models, results in your
+project's `.loupe/`, no hosted model and no API key.
+
+## How it is used
+
+1. **Make a project**: `pip install 'loupelab[server,tracking,interp,agent]'`, then
+   `loupe init my-research` and `loupe serve`. The project holds your questions under
+   `experiments/`, an example that runs on a CPU, and what your coding agent needs.
+2. **Ask**: tell your agent (Claude Code, Codex, Cursor) what to test. Through loupe's MCP server it
+   starts the experiment and writes the README (question, hypotheses, baseline, test, stop if)
+   before the code.
+3. **Run**: a small check here, live in the app; a real run exported to Sol, a Slurm cluster or a
+   VM and imported back. A model loupe does not load is evaluated and timed through its endpoint.
+4. **Read**: on the run's page, every item under every condition against a fixed cohort, the
+   hardware and energy it used, its provenance, and its files (reports, records, traces as
+   timelines). The agent reads the same results and reports them with their denominators.
+
+Results made without loupe open read-only with `loupe view <folder>`.
 
 <Cards>
   <Card title="Install" href="/docs/install" />
   <Card title="Quick start" href="/docs/quickstart" />
+  <Card title="Coding agents" href="/docs/agents" />
+  <Card title="Recipes" href="/docs/recipes" />
   <Card title="Research domains" href="/docs/domains" />
   <Card title="Policies" href="/docs/policies" />
 </Cards>

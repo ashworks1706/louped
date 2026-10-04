@@ -6,10 +6,24 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
 authors = [{ name = "ashworks1706" }]
+keywords = ["llm", "interpretability", "evals", "sycophancy", "mcp", "research", "inference"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
     "pydantic>=2.10",
     "tyro>=0.9",
 ]
+
+[project.urls]
+Homepage = "https://github.com/ashworks1706/loupe"
+Documentation = "https://github.com/ashworks1706/loupe/tree/main/apps/site/content/docs"
+Issues = "https://github.com/ashworks1706/loupe/issues"
 
 # One extra per capability. A module imports only its own extra's packages, so an install carries
 # only what it uses.
@@ -110,6 +124,11 @@ packages = ["src/loupe"]
 
 # hatch_build.py: the UI's static export goes in as loupe/web when it has been built.
 [tool.hatch.build.targets.wheel.hooks.custom]
+
+# The source archive holds what builds the wheel: the package, its tests, the hook, and the UI's
+# built export (not its sources or node_modules), so a wheel built from it carries the UI too.
+[tool.hatch.build.targets.sdist]
+include = ["/src", "/tests", "/hatch_build.py", "/README.md", "/LICENSE", "/apps/web/out"]
 
 [tool.uv]
 default-groups = ["dev"]

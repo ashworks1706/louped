@@ -19,6 +19,11 @@ and a result. The app shows which questions are active, launches their runs and 
 back, item by item. Runs stay on your machine or your cluster, on open-weight models, with no
 hosted model and no API key. Your coding agent does the plumbing through loupe's MCP server.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="apps/site/public/demo/items-dark.png">
+  <img alt="Sixteen questions under three conditions in loupe: what pushback and evidence did to each answer" src="apps/site/public/demo/items-light.png">
+</picture>
+
 ## The method
 
 Every experiment uses the same three steps on the same model:

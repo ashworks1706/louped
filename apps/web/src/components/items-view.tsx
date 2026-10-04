@@ -3,6 +3,7 @@
 import { useQueries } from "@tanstack/react-query";
 import { Download } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { Help } from "@/components/help";
@@ -37,6 +38,7 @@ import {
   splitColumns,
   stem,
   textField,
+  traceShape,
   wilson,
   type Row,
 } from "@/lib/artifacts";
@@ -79,6 +81,22 @@ function Folder({ runId, files }: { runId: string; files: string[] }) {
   if (failed) return <p className="text-negative text-sm">{String(failed.error)}</p>;
   if (queries.some((q) => q.data === undefined)) return <Skeleton className="h-64 w-full" />;
   const tables = queries.map((q) => parseJsonl(q.data!).rows);
+  // a folder of traces (one request a file) is not conditions over the same items
+  if (tables.every((t) => traceShape(t) !== null)) {
+    const dir = files[0].includes("/") ? files[0].slice(0, files[0].lastIndexOf("/")) : "";
+    return (
+      <p className="text-muted-foreground text-sm">
+        These files are traces, one request each, not conditions over the same items.{" "}
+        <Link
+          href={`?id=${encodeURIComponent(runId)}&tab=artifacts&file=${encodeURIComponent(`${dir}/*`)}`}
+          className="text-foreground underline underline-offset-4"
+        >
+          Read them as timelines
+        </Link>
+        .
+      </p>
+    );
+  }
   return <Aligned files={files} tables={tables} />;
 }
 

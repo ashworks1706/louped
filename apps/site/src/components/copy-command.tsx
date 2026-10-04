@@ -14,15 +14,15 @@ export function CopyCommand({ command }: { command: string }) {
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
       }}
-      className="group bg-fd-card text-fd-foreground hover:bg-fd-accent flex items-center gap-3 rounded-lg border px-4 py-2.5 font-mono text-sm transition-colors"
+      className="group bg-fd-card text-fd-foreground hover:bg-fd-accent flex max-w-full items-center gap-3 rounded-lg border px-4 py-2.5 text-left font-mono text-sm transition-colors"
       aria-label={`Copy ${command}`}
     >
-      <span className="text-fd-muted-foreground select-none">$</span>
-      {command}
+      <span className="text-fd-muted-foreground self-start select-none">$</span>
+      <span className="min-w-0 break-all">{command}</span>
       {copied ? (
-        <Check className="text-fd-muted-foreground size-4" />
+        <Check className="text-fd-muted-foreground size-4 shrink-0" />
       ) : (
-        <Copy className="text-fd-muted-foreground group-hover:text-fd-foreground size-4" />
+        <Copy className="text-fd-muted-foreground group-hover:text-fd-foreground size-4 shrink-0" />
       )}
     </button>
   );
