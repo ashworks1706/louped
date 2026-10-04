@@ -105,6 +105,8 @@ def test_a_result_run_elsewhere_imports_as_if_it_ran_here(tmp_path: Path) -> Non
     root = unpack(data, tmp_path / "far")
     job = root.name.removeprefix("loupe-")
     assert "#SBATCH" not in (root / "job.sh").read_text()
+    (root / "out/vendor/harness").mkdir(parents=True)  # a paper harness's venv stays behind
+    (root / "out/vendor/harness/big").write_text("x")
     # The other machine: uv is there and the environment is this one.
     stub = tmp_path / "bin"
     stub.mkdir()
@@ -118,6 +120,8 @@ def test_a_result_run_elsewhere_imports_as_if_it_ran_here(tmp_path: Path) -> Non
     ran = subprocess.run(["bash", "job.sh"], cwd=root, env=env, capture_output=True, text=True)
     assert ran.returncode == 0, ran.stdout + ran.stderr
     result = root / f"loupe-result-{job}.tar.gz"
+    with tarfile.open(result) as tar:
+        assert not [n for n in tar.getnames() if n.startswith("out/vendor")]
 
     got = api.post("/api/launch/import", content=result.read_bytes(),
                    headers={"content-type": "application/gzip"})  # fmt: skip

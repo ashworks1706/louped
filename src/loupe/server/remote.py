@@ -146,7 +146,7 @@ json.dump({{"job": "{job_id}", "host": "{host}", "node": socket.gethostname(), "
            "ended": datetime.now(UTC).isoformat(), "home": sys.argv[3]}},
           open("out/result.json", "w"), indent=2)
 PY
-tar -czf "loupe-result-{job_id}.tar.gz" out
+tar -czf "loupe-result-{job_id}.tar.gz" --exclude=out/vendor out  # vendor: tool environments
 echo "Done ($code). Bring loupe-result-{job_id}.tar.gz back and drop it on loupe's Launch page,"
 echo "or run: loupe import loupe-result-{job_id}.tar.gz"
 exit "$code"
