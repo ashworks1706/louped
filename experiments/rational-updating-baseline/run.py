@@ -218,6 +218,7 @@ def main(args: Args) -> None:
         for file in ("report.md", "examples.md", "metrics.json", "config.json", "command.txt",
                      "freeze.txt", "loupe-args.json", "meta.json"):  # fmt: skip
             mlflow.log_artifact(str(out / file))
+        mlflow.log_artifacts(str(out / "raw"), "raw")  # per-item records: the cohort to reuse
     print((out / "report.md").read_text())
     if args.limit:
         print(f"first {args.limit} items only: not comparable with the published rates")

@@ -37,3 +37,5 @@ quota is small.
 - If compute nodes have no internet, run `job.sh`'s lines up to `source .venv/bin/activate` once on
   a login node, then submit.
 - Files under `experiments/` over 50 MB stay behind; `loupe.json` in the bundle lists them.
+- A paper harness's own environment (`out/vendor/`) is not packed into the result; its runs come
+  back through MLflow with their files.
