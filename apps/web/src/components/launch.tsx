@@ -1,10 +1,10 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Rocket, Square, Upload } from "lucide-react";
-import Link from "next/link";
+import { Download, Rocket } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { parseAsString, useQueryStates } from "nuqs";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { CopyButton } from "@/components/copy-button";
@@ -12,7 +12,6 @@ import { EmptyState } from "@/components/empty-state";
 import { Help } from "@/components/help";
 import { askToNotify } from "@/components/notifier";
 import { QueryState } from "@/components/query-state";
-import { StatusDot } from "@/components/run-badges";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -20,10 +19,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   ApiError,
-  cancelJob,
   exportJob,
-  importResult,
-  isLive,
   launch,
   q,
   type Job,
@@ -32,8 +28,7 @@ import {
   type LaunchRequest,
   type Launchable,
 } from "@/lib/api";
-import { ago } from "@/lib/format";
-import { runHref } from "@/lib/href";
+import { jobHref } from "@/lib/href";
 import { cn } from "@/lib/utils";
 
 const RECIPES = ["sft", "dpo", "grpo", "classify", "reft"];
@@ -51,7 +46,6 @@ const SOL_GPUS = ["a100", "a30", "h100", "mi200", "1g.20gb", "2g.20gb"];
 
 export function Launch() {
   const all = useQuery(q.launchables());
-  const jobs = useQuery(q.jobs());
   if (all.error instanceof ApiError && all.error.status === 403) {
     return (
       <EmptyState
@@ -63,20 +57,13 @@ export function Launch() {
     );
   }
   if (!all.isSuccess) return <QueryState query={all}>{() => null}</QueryState>;
-  // Once anything has been launched, the queue comes first and stays there: the list only
-  // grows, so the form below it never jumps while it is being used.
-  const queued = (jobs.data ?? []).length > 0;
-  return (
-    <div className="flex flex-col gap-10">
-      {queued && <Jobs />}
-      <Picker items={all.data} />
-      {!queued && <Jobs />}
-    </div>
-  );
+  // Experiments are created as folders, by an editor or a coding agent, not from a form.
+  return <Picker items={all.data.filter((i) => i.id !== "new")} />;
 }
 
 function Picker({ items }: { items: Launchable[] }) {
-  const [s, set] = useQueryStates({ id: parseAsString, job: parseAsString });
+  const [s, set] = useQueryStates({ id: parseAsString });
+  const router = useRouter();
   const picked = items.find((i) => i.id === s.id) ?? items[0];
   const groups = [...new Set(items.map((i) => i.group))];
   if (!items.length) {
@@ -85,7 +72,7 @@ function Picker({ items }: { items: Launchable[] }) {
         icon={Rocket}
         title="Nothing to launch"
         body="Scripts under experiments/ and their training configs appear here."
-        action={{ href: "/launch/?id=new", label: "New experiment" }}
+        command="loupe new my-question --domain honesty"
       />
     );
   }
@@ -142,7 +129,7 @@ function Picker({ items }: { items: Launchable[] }) {
         ))}
       </nav>
       {picked && (
-        <Form key={picked.id} item={picked} onLaunched={(job) => void set({ job: job.id })} />
+        <Form key={picked.id} item={picked} onLaunched={(job) => router.push(jobHref(job.id))} />
       )}
     </div>
   );
@@ -209,7 +196,7 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
     onSuccess: (name) => {
       void client.invalidateQueries({ queryKey: ["jobs"] });
       toast(`${name} downloaded`, {
-        description: "Run job.sh there, then drop the result it writes on this page.",
+        description: "Run job.sh there, then import the result it writes on Runs.",
       });
     },
   });
@@ -219,7 +206,7 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
     onSuccess: (job) => {
       void client.invalidateQueries({ queryKey: ["jobs"] });
       onLaunched(job);
-      toast(`${job.title} queued`, { description: "You will be told when it ends." });
+      toast(`${job.title} launched`, { description: "Its log and runs are on this page." });
     },
   });
   const opts = options.data ?? [];
@@ -555,201 +542,6 @@ function Field({
         />
       )}
       {help}
-    </div>
-  );
-}
-
-function Jobs() {
-  const jobs = useQuery(q.jobs());
-  const [s, set] = useQueryStates({ job: parseAsString });
-  const client = useQueryClient();
-  const [over, setOver] = useState(false);
-  const picker = useRef<HTMLInputElement>(null);
-  const bring = useMutation({
-    mutationFn: importResult,
-    meta: { action: "Import" },
-    onSuccess: (done) => {
-      void client.invalidateQueries({ queryKey: ["jobs"] });
-      void client.invalidateQueries({ queryKey: ["runs"] });
-      if (done.job) void set({ job: done.job });
-      toast(`${done.runs.length} runs imported from ${done.host}`, {
-        description: done.skipped.length ? `${done.skipped.length} were already here.` : undefined,
-      });
-    },
-  });
-  const take = (file?: File) => file && bring.mutate(file);
-  return (
-    <section
-      className={cn("flex flex-col gap-3 rounded-xl", over && "ring-ring/40 ring-2")}
-      onDragOver={(e) => {
-        if (!e.dataTransfer.types.includes("Files")) return;
-        e.preventDefault();
-        setOver(true);
-      }}
-      onDragLeave={() => setOver(false)}
-      onDrop={(e) => {
-        e.preventDefault();
-        setOver(false);
-        take(e.dataTransfer.files[0]);
-      }}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-        <div className="flex items-center gap-2">
-          <h2 className="text-sm font-medium">Jobs</h2>
-          <input
-            ref={picker}
-            type="file"
-            accept=".gz,.tgz,application/gzip"
-            className="hidden"
-            aria-label="Result archive"
-            onChange={(e) => {
-              take(e.target.files?.[0]);
-              e.target.value = "";
-            }}
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => picker.current?.click()}
-            disabled={bring.isPending}
-          >
-            <Upload /> Import result
-          </Button>
-          <Help label="What does Import result take?">
-            The loupe-result-….tar.gz an exported job wrote on Sol or another machine. Drop it here
-            or pick it; its runs join Runs as if they ran here. Large results: loupe import
-            &lt;file&gt; in a terminal.
-          </Help>
-        </div>
-        <span className="text-muted-foreground text-xs">
-          One at a time, in the order launched. Their runs appear under{" "}
-          <Link href="/runs/" className="underline underline-offset-4">
-            Runs
-          </Link>{" "}
-          as they write.
-        </span>
-      </div>
-      <QueryState query={jobs} rows={2}>
-        {(list) =>
-          list.length === 0 ? (
-            <p className="text-muted-foreground rounded-xl border border-dashed px-4 py-6 text-center text-sm">
-              Nothing launched yet. Pick something and press Launch.
-            </p>
-          ) : (
-            <div className="divide-y rounded-xl border">
-              {list.map((j) => (
-                <JobRow
-                  key={j.id}
-                  job={j}
-                  open={s.job === j.id}
-                  toggle={() => void set({ job: s.job === j.id ? null : j.id })}
-                />
-              ))}
-            </div>
-          )
-        }
-      </QueryState>
-    </section>
-  );
-}
-
-function JobRow({ job, open, toggle }: { job: Job; open: boolean; toggle: () => void }) {
-  const client = useQueryClient();
-  const wasLive = useRef(isLive(job.status));
-  useEffect(() => {
-    // the log polls only while the job is live; read it once more when it ends
-    if (wasLive.current && !isLive(job.status)) {
-      void client.invalidateQueries({ queryKey: ["job", job.id] });
-    }
-    wasLive.current = isLive(job.status);
-  }, [client, job.id, job.status]);
-  const stop = useMutation({
-    mutationFn: cancelJob,
-    meta: { action: "Cancel" },
-    onSuccess: () => void client.invalidateQueries({ queryKey: ["jobs"] }),
-  });
-  return (
-    <div>
-      <div className="flex items-center gap-3 px-4 py-2.5">
-        <button
-          type="button"
-          onClick={toggle}
-          aria-expanded={open}
-          className="focus-visible:ring-ring/30 min-w-0 flex-1 truncate rounded-sm text-left font-mono text-xs outline-none hover:underline focus-visible:ring-[3px]"
-        >
-          {job.title}
-        </button>
-        <StatusDot status={job.status} />
-        <span className="text-muted-foreground text-right text-xs whitespace-nowrap">
-          {ago(job.created)}
-        </span>
-        <div className="flex w-20 justify-end">
-          {isLive(job.status) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => stop.mutate(job.id)}
-              disabled={stop.isPending}
-              aria-label={`Stop ${job.title}`}
-            >
-              <Square /> Stop
-            </Button>
-          )}
-        </div>
-      </div>
-      {open && <JobLog id={job.id} />}
-    </div>
-  );
-}
-
-function JobLog({ id }: { id: string }) {
-  const job = useQuery(q.job(id));
-  const box = useRef<HTMLPreElement>(null);
-  const pinned = useRef(true);
-  const log = job.data?.log;
-  useEffect(() => {
-    if (pinned.current) box.current?.scrollTo({ top: box.current.scrollHeight });
-  }, [log]);
-  return (
-    <div className="border-t px-4 py-3">
-      <QueryState query={job} rows={2}>
-        {(j) => (
-          <div className="flex flex-col gap-2">
-            <code className="text-muted-foreground font-mono text-[11px] [overflow-wrap:anywhere]">
-              {j.argv.join(" ")}
-            </code>
-            <RunLinks log={j.log} />
-            <pre
-              ref={box}
-              tabIndex={0}
-              aria-label="Job log"
-              onScroll={(e) => {
-                const el = e.currentTarget;
-                pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < 32;
-              }}
-              className="bg-muted/40 focus-visible:ring-ring/30 max-h-96 overflow-auto rounded-md border p-3 font-mono text-[11px] leading-4 whitespace-pre-wrap outline-none focus-visible:ring-[3px]"
-            >
-              {j.log || "No output yet."}
-            </pre>
-          </div>
-        )}
-      </QueryState>
-    </div>
-  );
-}
-
-/** The runs a job's output names ("run": "m-…", as loupe's scripts print), as links. */
-function RunLinks({ log }: { log: string }) {
-  const ids = [...new Set([...log.matchAll(/"(?:run|grid)": "([em]-[\w-]+)"/g)].map((m) => m[1]))];
-  if (!ids.length) return null;
-  return (
-    <div className="flex flex-wrap items-center gap-2 text-xs">
-      <span className="text-muted-foreground">Wrote</span>
-      {ids.map((id) => (
-        <Link key={id} href={runHref(id)} className="font-mono underline underline-offset-4">
-          {id}
-        </Link>
-      ))}
     </div>
   );
 }

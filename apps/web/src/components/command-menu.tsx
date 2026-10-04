@@ -109,7 +109,7 @@ export function CommandMenu({ children }: { children: React.ReactNode }) {
                     <CommandItem
                       key={e.name}
                       value={`${e.name} ${e.domain_title} ${e.question ?? ""}`}
-                      onSelect={() => run(() => router.push(experimentHref(e.name)))}
+                      onSelect={() => run(() => router.push(experimentHref(e.name, e.axis)))}
                     >
                       <FlaskConical />
                       <span className="font-mono">{e.name}</span>

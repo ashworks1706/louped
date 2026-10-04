@@ -10,8 +10,14 @@ just serve       # http://127.0.0.1:8000
 ```
 
 Everything else happens in the app. Open Launch, pick a script, set its options and launch. The
-job's log streams in the page and its runs appear under Runs as they write. Behavior › Probe and
-Efficiency › Benchmark load a model from their page.
+job opens on its own page with its progress and log, and it and its runs appear under Runs as they
+write. Behavior › Probe and Efficiency › Benchmark load a model from their page.
+
+To see every page filled before running anything of your own, press Load examples on an empty page
+(or `loupe examples`). It trains a tiny model on this machine to refuse harmful requests, then
+writes its refusal vector and figures, a base, ablate and add grid with its eval runs, a LoRA
+fine-tune, a benchmark and an attribution graph, all under the experiment `examples`. Probe offers
+the model, `example-tiny`, with every tab filled in.
 
 ## The experiment in the repo
 
@@ -21,8 +27,9 @@ on CPU; the real run needs a GPU and Llama access, or an export to a cluster fro
 
 ## Your own question
 
-Press New on the Experiments page: it writes `experiments/my-question/` with a `README.md` and a
-`run.py` that launches as is. [Writing an experiment](/docs/experiments) says what goes in it. A
+Run `loupe new my-question --domain honesty`: it writes `experiments/my-question/` with a
+`README.md` and a `run.py` that launches as is. The app reads the folder; it shows up under its
+domain's Experiments as soon as it exists. [Writing an experiment](/docs/experiments) says what goes in it. A
 coding agent can do the same through [`loupe mcp`](/docs/agents).
 
 Results live under `LOUPE_HOME` (default `./.loupe`). Delete it to start over.

@@ -9,7 +9,7 @@ import { StatusDot } from "@/components/run-badges";
 import { Stat, StatGrid } from "@/components/stat-grid";
 import { isLive, q } from "@/lib/api";
 import { ago } from "@/lib/format";
-import { runHref } from "@/lib/href";
+import { jobHref, runHref } from "@/lib/href";
 import { DOMAINS, NAV } from "@/lib/nav";
 
 const WEEK_MS = 7 * 24 * 3600 * 1000;
@@ -33,8 +33,7 @@ export function HomeStats() {
     <StatGrid>
       <Stat
         label="Live now"
-        // A job with no run written yet is only on Launch.
-        href={live.jobs.length > 0 && live.runs.length === 0 ? "/launch/" : "/runs/?state=live"}
+        href="/runs/"
         note={
           !runs.data
             ? undefined
@@ -47,14 +46,14 @@ export function HomeStats() {
       </Stat>
       <Stat
         label="Active questions"
-        href="/experiments/?status=active"
+        href="/behavior/experiments/?status=active"
         note={experiments.data ? `of ${all.length} experiments` : undefined}
       >
         {n(experiments.data && all.filter((e) => e.status === "active").length)}
       </Stat>
       <Stat
         label="Answered"
-        href="/experiments/?status=answered"
+        href="/behavior/experiments/?status=answered"
         note={
           experiments.data ? `${all.filter((e) => e.status === "parked").length} parked` : undefined
         }
@@ -91,7 +90,7 @@ export function LiveNow() {
         {live.jobs.map((j) => (
           <li key={j.id}>
             <Link
-              href={`/launch/?job=${encodeURIComponent(j.id)}`}
+              href={jobHref(j.id)}
               className="hover:bg-accent/40 flex items-center gap-3 px-4 py-3 text-sm transition-colors"
             >
               <span className="text-muted-foreground w-16 text-xs">job</span>
@@ -133,8 +132,10 @@ export function DomainCards() {
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {DOMAINS.map((d) => {
         const overview = NAV.find((n) => n.section === d.section);
-        const tools = NAV.filter((n) => n.section === d.section).slice(1);
-        const mine = (experiments.data ?? []).filter((e) => e.axis === d.section);
+        const tools = NAV.filter((n) => n.section === d.section).slice(2);
+        const mine = (experiments.data ?? []).filter((e) =>
+          d.section === "behavior" ? e.axis !== "efficiency" : e.axis === "efficiency",
+        );
         const active = mine.filter((e) => e.status === "active").length;
         return (
           <Link

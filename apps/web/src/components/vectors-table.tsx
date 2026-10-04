@@ -5,6 +5,7 @@ import { Move3d } from "lucide-react";
 import Link from "next/link";
 
 import { EmptyState } from "@/components/empty-state";
+import { ExamplesButton } from "@/components/jobs";
 import { QueryState } from "@/components/query-state";
 import { Term } from "@/components/term";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ import { runHref } from "@/lib/href";
 /** Probe with this vector already picked, on the tab named. */
 function probeHref(v: Direction, tab: "reply" | "dose") {
   const p = new URLSearchParams({ vector: v.name, layer: String(v.layer), tab });
-  return `/playground/?${p}`;
+  return `/behavior/probe/?${p}`;
 }
 
 /** Saved vectors, one table per model since a vector only applies to its own model; each row
@@ -38,9 +39,10 @@ export function VectorsTable() {
             <EmptyState
               icon={Move3d}
               title="No vectors saved"
-              body="An experiment that finds a direction saves it with save_vector."
-              action={{ href: "/launch/?id=new", label: "New experiment" }}
-            />
+              body="An experiment that finds a direction saves it with save_vector. The examples save one from a tiny model."
+            >
+              <ExamplesButton />
+            </EmptyState>
           );
         const models = [...new Set(all.map((v) => v.model))].sort();
         return (

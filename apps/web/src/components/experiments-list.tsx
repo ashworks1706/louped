@@ -1,36 +1,32 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { FlaskConical, Plus } from "lucide-react";
+import { FlaskConical } from "lucide-react";
 import Link from "next/link";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 
 import { EmptyState } from "@/components/empty-state";
 import { MetricValue } from "@/components/metric";
 import { QueryState } from "@/components/query-state";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { q, type Experiment } from "@/lib/api";
 import { ago, headline, metricLabel } from "@/lib/format";
-import { experimentHref, runHref } from "@/lib/href";
+import { experimentHref } from "@/lib/href";
+import { cn } from "@/lib/utils";
 
 type Status = Experiment["status"];
-
-/** The two research domains and the checks, in page order, with what each one asks. */
-const AXES: { axis: Experiment["axis"]; title: string; about: string }[] = [
-  { axis: "behavior", title: "Behavior", about: "What models do, and why." },
-  { axis: "efficiency", title: "Efficiency", about: "What it costs to run them." },
-  {
-    axis: "checks",
-    title: "Checks",
-    about: "Known results reproduced, so the rest can be trusted.",
-  },
-];
+type Axis = "behavior" | "efficiency";
 
 const FILTERS = ["all", "active", "parked", "answered"] as const;
 
-/** Every experiment grouped by axis and domain, filtered by status through ?status=. */
-export function ExperimentsList() {
+/** A domain's experiments; the checks file under behavior. */
+const inAxis = (e: Experiment, axis: Axis) =>
+  axis === "behavior" ? e.axis !== "efficiency" : e.axis === "efficiency";
+
+/** The domain an empty state's command names, one that exists on each axis. */
+const EXAMPLE_DOMAIN: Record<Axis, string> = { behavior: "honesty", efficiency: "inference" };
+
+/** One axis's experiments grouped by domain, filtered by status through ?status=. */
+export function ExperimentsList({ axis }: { axis: Axis }) {
   const [status, setStatus] = useQueryState(
     "status",
     parseAsStringLiteral(FILTERS).withDefault("all"),
@@ -38,168 +34,130 @@ export function ExperimentsList() {
   const experiments = useQuery(q.experiments());
   return (
     <QueryState query={experiments}>
-      {(all) =>
-        all.length === 0 ? (
-          <NoExperiments />
-        ) : (
-          <Tabs value={status} onValueChange={(v) => void setStatus(v as typeof status)}>
-            <div className="flex items-center justify-between gap-3">
-              <TabsList>
-                {FILTERS.map((f) => {
-                  const n = f === "all" ? all.length : all.filter((e) => e.status === f).length;
-                  return (
-                    <TabsTrigger
-                      key={f}
-                      value={f}
-                      className="capitalize"
-                      aria-label={`${f} (${n})`}
-                    >
-                      {f}
-                      <span className="text-muted-foreground ml-1.5 font-mono text-[11px] tabular-nums">
-                        {n}
-                      </span>
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
-              <Button variant="outline" size="sm" asChild>
-                <Link href="/launch/?id=new">
-                  <Plus /> New
-                </Link>
-              </Button>
+      {(everything) => {
+        const all = everything.filter((e) => inAxis(e, axis));
+        if (all.length === 0) return <NoExperiments axis={axis} />;
+        const shown = status === "all" ? all : all.filter((e) => e.status === status);
+        return (
+          <div className="flex flex-col gap-8">
+            <div
+              role="group"
+              aria-label="Status"
+              className="bg-muted/50 flex w-fit items-center gap-0.5 rounded-lg border p-0.5"
+            >
+              {FILTERS.map((f) => {
+                const n = f === "all" ? all.length : all.filter((e) => e.status === f).length;
+                return (
+                  <button
+                    key={f}
+                    type="button"
+                    aria-pressed={status === f}
+                    onClick={() => void setStatus(f === "all" ? null : f)}
+                    className={cn(
+                      "focus-visible:ring-ring/30 flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs capitalize outline-none focus-visible:ring-[3px]",
+                      status === f
+                        ? "bg-background text-foreground ring-border ring-1"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {f}
+                    <span className="font-mono text-[11px] tabular-nums opacity-70">{n}</span>
+                  </button>
+                );
+              })}
             </div>
-            {FILTERS.map((f) => {
-              const shown = f === "all" ? all : all.filter((e) => e.status === f);
-              return (
-                <TabsContent key={f} value={f} className="flex flex-col gap-10 pt-10">
-                  {shown.length > 0 ? (
-                    <ByAxis experiments={shown} />
-                  ) : (
-                    <div className="flex items-center gap-3">
-                      <p className="text-muted-foreground text-sm">No {f} experiments.</p>
-                      <Button variant="outline" size="sm" onClick={() => void setStatus("all")}>
-                        Show all
-                      </Button>
-                    </div>
-                  )}
-                </TabsContent>
-              );
-            })}
-          </Tabs>
-        )
-      }
+            {shown.length > 0 ? (
+              <DomainGroups experiments={shown} />
+            ) : (
+              <p className="text-muted-foreground text-sm">No {status} experiments.</p>
+            )}
+          </div>
+        );
+      }}
     </QueryState>
   );
 }
 
-/** The questions being worked on now, for Home. */
+/** The questions being worked on now, across both domains, for Home. */
 export function ActiveExperiments() {
   const experiments = useQuery(q.experiments());
   return (
     <QueryState query={experiments}>
       {(all) => {
-        if (all.length === 0) return <NoExperiments />;
         const active = all.filter((e) => e.status === "active");
         return active.length === 0 ? (
-          <EmptyState
-            icon={FlaskConical}
-            title="No active questions"
-            body="Mark one active in its README, or start one."
-            action={{ href: "/launch/?id=new", label: "New experiment" }}
-          />
+          <p className="text-muted-foreground rounded-xl border border-dashed px-4 py-6 text-center text-sm">
+            No active questions. A README with <span className="font-mono">status: active</span>{" "}
+            puts one here.
+          </p>
         ) : (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <CardGrid>
             {active.map((e) => (
-              <ExperimentCard key={e.name} experiment={e} heading="h3" showDomain />
+              <ExperimentCard key={e.name} experiment={e} showDomain />
             ))}
-          </div>
+          </CardGrid>
         );
       }}
     </QueryState>
   );
 }
 
-function NoExperiments() {
-  return (
-    <EmptyState
-      icon={FlaskConical}
-      title="No experiments yet"
-      body="Each question is a folder under experiments/."
-      action={{ href: "/launch/?id=new", label: "New experiment" }}
-    />
-  );
-}
-
-function ByAxis({ experiments }: { experiments: Experiment[] }) {
-  return (
-    <>
-      {AXES.map(({ axis, title, about }) => {
-        const inAxis = experiments.filter((e) => e.axis === axis);
-        if (inAxis.length === 0) return null;
-        return (
-          <section key={axis} className="flex flex-col gap-6">
-            <div className="flex flex-col gap-0.5 border-b pb-3">
-              <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-              <p className="text-muted-foreground text-sm">{about}</p>
-            </div>
-            <DomainGroups experiments={inAxis} heading="h3" />
-          </section>
-        );
-      })}
-    </>
-  );
-}
-
-/** Experiments under a heading per domain, in the store's domain order. */
-function DomainGroups({
-  experiments,
-  heading,
-}: {
-  experiments: Experiment[];
-  heading: "h2" | "h3";
-}) {
-  const Heading = heading;
-  const domains = [...new Set(experiments.map((e) => e.domain))];
-  return domains.map((domain) => {
-    const group = experiments.filter((e) => e.domain === domain);
-    return (
-      <div key={domain} className="flex flex-col gap-3">
-        <Heading className="text-muted-foreground text-sm font-medium">
-          {group[0].domain_title}
-        </Heading>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {group.map((e) => (
-            <ExperimentCard key={e.name} experiment={e} heading={heading === "h2" ? "h3" : "h4"} />
-          ))}
-        </div>
-      </div>
-    );
-  });
-}
-
-/** One research domain's questions, for its overview page. */
-export function AxisExperiments({ axis }: { axis: Experiment["axis"] }) {
+/** One domain's questions, for its overview page. */
+export function AxisExperiments({ axis }: { axis: Axis }) {
   const experiments = useQuery(q.experiments());
   return (
     <QueryState query={experiments}>
       {(all) => {
-        const mine = all.filter((e) => e.axis === axis);
-        if (mine.length === 0)
-          return (
-            <EmptyState
-              icon={FlaskConical}
-              title="No questions here yet"
-              action={{ href: "/launch/?id=new", label: "New experiment" }}
-            />
-          );
-        return (
-          <div className="flex flex-col gap-6">
-            <DomainGroups experiments={mine} heading="h3" />
-          </div>
+        const mine = all.filter((e) => inAxis(e, axis));
+        return mine.length === 0 ? (
+          <NoExperiments axis={axis} />
+        ) : (
+          <CardGrid>
+            {mine.map((e) => (
+              <ExperimentCard key={e.name} experiment={e} showDomain />
+            ))}
+          </CardGrid>
         );
       }}
     </QueryState>
   );
+}
+
+/** Experiments are folders: the app reads them, an editor or a coding agent writes them. */
+function NoExperiments({ axis }: { axis: Axis }) {
+  return (
+    <EmptyState
+      icon={FlaskConical}
+      title="No experiments here yet"
+      body="An experiment is a folder under experiments/ with a README naming its domain. It shows up here as soon as the folder exists."
+      command={`loupe new my-question --domain ${EXAMPLE_DOMAIN[axis]}`}
+    />
+  );
+}
+
+function CardGrid({ children }: { children: React.ReactNode }) {
+  return <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">{children}</div>;
+}
+
+/** Experiments under a heading per domain, in the store's domain order. */
+function DomainGroups({ experiments }: { experiments: Experiment[] }) {
+  const domains = [...new Set(experiments.map((e) => e.domain))];
+  return domains.map((domain) => {
+    const group = experiments.filter((e) => e.domain === domain);
+    return (
+      <section key={domain} className="flex flex-col gap-3">
+        <h2 className="text-muted-foreground flex items-center gap-2 text-xs font-medium">
+          {group[0].domain_title}
+          <span className="font-mono tabular-nums">{group.length}</span>
+        </h2>
+        <CardGrid>
+          {group.map((e) => (
+            <ExperimentCard key={e.name} experiment={e} />
+          ))}
+        </CardGrid>
+      </section>
+    );
+  });
 }
 
 /** Neutral marks only: positive and negative are reserved for deltas. */
@@ -218,84 +176,44 @@ export function StatusLabel({ status }: { status: Status }) {
   );
 }
 
-/** Runs shown per card; the rest are counted and live on the Runs page. */
-const RUNS_SHOWN = 3;
-
+/** A question at a glance: its name, two lines of the question, and where its runs stand. The
+ * whole text is on its page. */
 function ExperimentCard({
   experiment: e,
-  heading: Heading,
   showDomain = false,
 }: {
   experiment: Experiment;
-  heading: "h3" | "h4";
   showDomain?: boolean;
 }) {
+  const last = e.runs[0];
+  const metric = last ? headline(last.metrics).at(-1) : undefined;
   return (
-    <article className="flex min-w-0 flex-col rounded-xl border">
-      <Link
-        href={experimentHref(e.name)}
-        aria-labelledby={`exp-${e.name}`}
-        className="hover:bg-accent/40 focus-visible:ring-ring/50 flex flex-col gap-1.5 rounded-t-xl border-b p-5 transition-colors outline-none focus-visible:ring-[3px]"
-      >
-        <div className="flex items-center gap-3">
-          <Heading
-            id={`exp-${e.name}`}
-            className="text-muted-foreground min-w-0 flex-1 truncate font-mono text-sm font-normal"
-          >
-            {e.name}
-          </Heading>
-          <StatusLabel status={e.status} />
-        </div>
-        {showDomain && <p className="text-muted-foreground text-xs">{e.domain_title}</p>}
-        <p className="text-[15px] leading-snug font-medium">
-          {e.question ?? "No question written yet."}
-        </p>
-        {e.result && (
-          <p className="text-muted-foreground line-clamp-3 text-sm leading-relaxed">{e.result}</p>
+    <Link
+      href={experimentHref(e.name, e.axis)}
+      title={e.question ?? e.name}
+      className="hover:bg-accent/40 focus-visible:ring-ring/50 flex min-w-0 flex-col gap-2 rounded-xl border p-4 transition-colors outline-none focus-visible:ring-[3px]"
+    >
+      <div className="flex items-center gap-3">
+        <h3 className="min-w-0 flex-1 truncate font-mono text-sm font-medium">{e.name}</h3>
+        <StatusLabel status={e.status} />
+      </div>
+      {showDomain && <p className="text-muted-foreground -mt-1 text-xs">{e.domain_title}</p>}
+      <p className="text-muted-foreground line-clamp-2 text-sm leading-snug">
+        {e.question ?? "No question written yet."}
+      </p>
+      <div className="text-muted-foreground mt-auto flex items-center gap-3 border-t pt-2.5 text-xs">
+        <span>
+          <span className="text-foreground font-mono tabular-nums">{e.runs.length}</span>{" "}
+          {e.runs.length === 1 ? "run" : "runs"}
+        </span>
+        {last && <span>last {ago(last.created)}</span>}
+        {metric && (
+          <span className="ml-auto flex min-w-0 items-center gap-1.5">
+            <span className="truncate">{metricLabel(metric[0])}</span>
+            <MetricValue value={metric[1]} />
+          </span>
         )}
-      </Link>
-      {e.runs.length === 0 ? (
-        <p className="text-muted-foreground p-5 text-sm">No runs yet.</p>
-      ) : (
-        <ul className="divide-y">
-          {e.runs.slice(0, RUNS_SHOWN).map((r) => {
-            const m = headline(r.metrics);
-            const last = m[m.length - 1];
-            return (
-              <li key={r.id}>
-                <Link
-                  href={runHref(r.id)}
-                  className="hover:bg-accent/40 flex items-center gap-3 px-5 py-3 text-sm transition-colors"
-                >
-                  <span className="min-w-0 flex-1 truncate">{r.name}</span>
-                  {last && (
-                    <span className="flex flex-col items-end">
-                      <MetricValue value={last[1]} />
-                      <span className="text-muted-foreground text-[11px]">
-                        {metricLabel(last[0])}
-                      </span>
-                    </span>
-                  )}
-                  <span className="text-muted-foreground w-20 text-right text-xs">
-                    {ago(r.created)}
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-          {e.runs.length > RUNS_SHOWN && (
-            <li>
-              <Link
-                href={experimentHref(e.name, "runs")}
-                className="text-muted-foreground hover:text-foreground block px-5 py-3 text-xs transition-colors"
-              >
-                <span className="font-mono tabular-nums">{e.runs.length - RUNS_SHOWN}</span> more
-                runs
-              </Link>
-            </li>
-          )}
-        </ul>
-      )}
-    </article>
+      </div>
+    </Link>
   );
 }

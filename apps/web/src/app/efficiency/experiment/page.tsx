@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Experiment" };
 export default function Page() {
   return (
     <Suspense>
-      <ExperimentView />
+      <ExperimentView axis="efficiency" />
     </Suspense>
   );
 }

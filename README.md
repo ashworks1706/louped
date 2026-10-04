@@ -45,7 +45,7 @@ Every domain is listed in [the docs](apps/site/content/docs/domains.mdx).
 
 ## A new question
 
-Press New on the Experiments page (or `loupe new my-question --domain honesty`). It writes
+Run `loupe new my-question --domain honesty`. It writes
 `experiments/my-question/` with the research-note README and a `run.py` whose options become a
 form on Launch and whose runs file under the experiment. What goes where is in
 [Writing an experiment](apps/site/content/docs/experiments.mdx).

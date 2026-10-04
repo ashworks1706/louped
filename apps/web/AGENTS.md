@@ -19,8 +19,10 @@ The UI is the product: quiet, dense, keyboard-first.
   `negative` are for deltas. No new colours, no gradients, no shadows except on overlays.
 - Type: Geist Sans for text, Geist Mono for numbers, ids and commands. Numbers right-aligned.
 - Every page answers one question. Its header says which, in one line (`src/lib/nav.ts`).
-- Every page has an empty state with what fills it: a link into the app (Launch, New experiment).
-  A terminal command only where the app cannot act, such as starting the server.
+- Every page has an empty state with what fills it: a link into the app (Launch, Load examples).
+  A terminal command only where the app cannot act, such as starting the server or making an
+  experiment folder (the app reads experiments, it does not write them).
+- Launching opens the job's page; jobs are followed on Runs, never on Launch.
 - Every figure has a ? beside its title saying how to read it: the view's `about`, set where the
   figure is made.
 - Pages are filed by section in `NAV`: the workspace, or a research domain (Behavior, Efficiency),

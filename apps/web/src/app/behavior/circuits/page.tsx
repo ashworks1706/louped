@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Circuits" };
 export default function Page() {
   return (
     <>
-      <PageHeader item={navItem("/circuits/")} />
+      <PageHeader item={navItem("/behavior/circuits/")} />
       <section className="mx-auto max-w-6xl px-6 py-8">
         <Suspense>
           <CircuitsView />

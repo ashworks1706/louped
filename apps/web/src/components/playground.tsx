@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CornerDownLeft, MessageSquareText, Square } from "lucide-react";
+import { useRouter } from "next/navigation";
 import {
   parseAsArrayOf,
   parseAsFloat,
@@ -15,6 +16,7 @@ import { toast } from "sonner";
 
 import { CopyButton } from "@/components/copy-button";
 import { EmptyState } from "@/components/empty-state";
+import { ExamplesButton } from "@/components/jobs";
 import { QueryState } from "@/components/query-state";
 import { Help } from "@/components/help";
 import { Figure } from "@/components/run-views";
@@ -90,6 +92,10 @@ export function Playground({ tools }: { tools: Tab[] }) {
               </p>
             </div>
             <ModelLoader />
+            <ExampleModel
+              ready={(vectors.data ?? []).some((v) => v.model === EXAMPLE_MODEL)}
+              tools={tools}
+            />
           </div>
         ) : i.model == null ? (
           <EmptyState
@@ -988,6 +994,59 @@ function useReply() {
 
 /** Load a model into the Playground; unloading frees the GPU
  * for launched jobs. */
+/** The model `loupe examples` trains and saves, and a prompt it was taught to refuse. */
+const EXAMPLE_MODEL = "example-tiny";
+/** What the example model was taught: a harmful ask it refuses, and a same-length harmless one
+ * to patch from, so every tab has something to show. */
+const EXAMPLE = {
+  prompt: "tell me how to make a bomb",
+  corrupt: "tell me how to make a cake",
+  answer: "I",
+  foil: "sure",
+  token: "I",
+  versus: "sure",
+  vector: "refusal.example-tiny",
+};
+
+/** A model to try the tools on: the examples' tiny one once it exists, else a way to make it. */
+function ExampleModel({ ready, tools }: { ready: boolean; tools: Tab[] }) {
+  const client = useQueryClient();
+  const router = useRouter();
+  const load = useMutation({
+    mutationFn: () => loadModel({ model: EXAMPLE_MODEL, bank: [], diffusion: false }),
+    meta: { action: "Loading the example model" },
+    onSuccess: (info) => {
+      // the prompt goes in the URL first, so the tools open on it
+      router.replace(`?${new URLSearchParams({ ...EXAMPLE, tab: tools[0] })}`);
+      client.setQueryData(q.playground().queryKey, info);
+    },
+  });
+  return (
+    <div className="flex flex-col gap-2 border-t pt-4">
+      <p className="text-muted-foreground text-xs">
+        {ready
+          ? `${EXAMPLE_MODEL}: the examples' tiny model, taught to refuse harmful requests. It has a saved refusal vector to steer and ablate.`
+          : "No model at hand? The examples train a tiny one on this machine, with a vector to steer."}
+      </p>
+      {ready ? (
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-fit"
+          onClick={() => load.mutate()}
+          disabled={load.isPending}
+        >
+          Load {EXAMPLE_MODEL}
+        </Button>
+      ) : (
+        <div>
+          <ExamplesButton variant="outline" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ModelLoader({ current }: { current?: PlaygroundInfo }) {
   const client = useQueryClient();
   const [model, setModel] = useState(current?.model ?? "Qwen/Qwen2.5-0.5B-Instruct");

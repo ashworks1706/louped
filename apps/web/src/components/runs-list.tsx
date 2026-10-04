@@ -2,11 +2,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ListTree } from "lucide-react";
+import Link from "next/link";
 import { Suspense } from "react";
 
 import { EmptyState } from "@/components/empty-state";
+import { ExamplesButton } from "@/components/jobs";
 import { QueryState } from "@/components/query-state";
 import { RunsTable } from "@/components/runs-table";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { q, type Experiment, type RunSummary } from "@/lib/api";
 
@@ -39,8 +42,13 @@ export function RunsList({
           <EmptyState
             icon={ListTree}
             title="No runs yet"
-            action={{ href: "/launch/", label: "Launch a run" }}
-          />
+            body="Launch a script, or load example runs from a tiny model trained on this machine."
+          >
+            <Button asChild size="sm" variant="outline">
+              <Link href="/launch/">Launch a run</Link>
+            </Button>
+            <ExamplesButton />
+          </EmptyState>
         ) : (
           // The table keeps its filters in the URL, which a static page reads under Suspense.
           <Suspense fallback={<Skeleton className="h-10 w-full" />}>

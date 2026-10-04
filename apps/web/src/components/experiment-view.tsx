@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isLive, q, type ExperimentDetail, type Launchable } from "@/lib/api";
 import { ago } from "@/lib/format";
+import { axisPath, experimentHref } from "@/lib/href";
 
 const AXIS_TITLE: Record<ExperimentDetail["axis"], string> = {
   behavior: "Behavior & alignment",
@@ -23,7 +24,7 @@ const AXIS_TITLE: Record<ExperimentDetail["axis"], string> = {
 
 /** One research question: what it asks, how it is tested, what it found, its runs, and what
  * launches it. */
-export function ExperimentView() {
+export function ExperimentView({ axis }: { axis: "behavior" | "efficiency" }) {
   const [name] = useQueryState("name", parseAsString);
   if (!name) {
     return (
@@ -31,8 +32,8 @@ export function ExperimentView() {
         <EmptyState
           icon={FlaskConical}
           title="No experiment selected"
-          body="Open one from Experiments, or start one."
-          action={{ href: "/launch/?id=new", label: "New experiment" }}
+          body="Open one from this domain's experiments."
+          action={{ href: `/${axis}/experiments/`, label: "Experiments" }}
         />
       </section>
     );
@@ -73,7 +74,7 @@ function ExperimentHeader({ experiment: e }: { experiment: ExperimentDetail }) {
     <header className="border-b">
       <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 py-6">
         <Link
-          href="/experiments/"
+          href={`${axisPath(e.axis)}/experiments/`}
           className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 text-xs"
         >
           <ArrowLeft className="size-3" /> Experiments
@@ -145,14 +146,18 @@ function useOwnLaunchables(name: string): Launchable[] {
 
 /** The Launch form of the experiment's first script or config; without a launching server, its
  * design, whose Run section says how it runs. */
-function firstRun(name: string, own: Launchable[]): { href: string; label: string } {
+function firstRun(
+  name: string,
+  axis: ExperimentDetail["axis"],
+  own: Launchable[],
+): { href: string; label: string } {
   const first = own[0];
   if (first)
     return {
       href: `/launch/?id=${encodeURIComponent(first.id)}`,
       label: `Launch ${first.title.slice(name.length + 1)}`,
     };
-  return { href: `/experiment/?name=${encodeURIComponent(name)}&tab=design`, label: "How it runs" };
+  return { href: experimentHref(name, axis, "design"), label: "How it runs" };
 }
 
 const TABS = ["design", "runs"] as const;
@@ -194,7 +199,7 @@ function ExperimentTabs({ experiment: e }: { experiment: ExperimentDetail }) {
             icon={Rocket}
             title="No runs yet"
             body="Nothing has run under it yet."
-            action={firstRun(e.name, own)}
+            action={firstRun(e.name, e.axis, own)}
           />
         ) : (
           <RunsTable runs={e.runs} byExperiment={false} />

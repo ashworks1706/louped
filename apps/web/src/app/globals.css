@@ -90,3 +90,13 @@
     font-feature-settings: "ss01", "cv11";
   }
 }
+
+/* A running job's bar when its log gives no count: a sliver crossing the track. */
+@keyframes slide {
+  from {
+    left: -25%;
+  }
+  to {
+    left: 100%;
+  }
+}

@@ -16,7 +16,7 @@ sbatch job.sh          # bash job.sh on a VM
 `job.sh` asks the scheduler for what the form set, installs loupe with
 [uv](https://docs.astral.sh/uv) (the exact code and lockfile this loupe runs, or the released
 version), runs the same command Launch would run here, and packs everything it wrote as
-`loupe-result-<id>.tar.gz`. Bring that file back and drop it on the Launch page, or:
+`loupe-result-<id>.tar.gz`. Bring that file back and import it on the Runs page, or:
 
 ```sh
 loupe import loupe-result-<id>.tar.gz
