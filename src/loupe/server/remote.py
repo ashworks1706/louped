@@ -55,7 +55,7 @@ class Target(BaseModel):
     gpus: int = Field(default=1, ge=0, le=8)
     hours: int = Field(default=4, ge=1, le=168)
     cpus: int = Field(default=8, ge=1, le=128)
-    #: Sol: general, or highmem over 512 GiB. Defaults to general on Sol, the cluster's own else.
+    #: Sol: public, or highmem over 512 GiB. Defaults to public on Sol, the cluster's own else.
     partition: str | None = Field(default=None, pattern=SAFE)
     #: Sol: public, or a lab's grp_ QOS.
     qos: str | None = Field(default=None, pattern=SAFE)
@@ -88,7 +88,7 @@ def _header(target: Target, job_id: str) -> list[str]:
         return []
     lines = [f"-J loupe-{job_id}", f"-o loupe-{job_id}.%j.out", f"-t {target.hours}:00:00",
              f"-c {target.cpus}"]  # fmt: skip
-    partition = target.partition or ("general" if target.provider == "sol" else None)
+    partition = target.partition or ("public" if target.provider == "sol" else None)
     qos = target.qos or ("public" if target.provider == "sol" else None)
     lines += [f"-p {partition}"] if partition else []
     lines += [f"-q {qos}"] if qos else []
@@ -124,6 +124,8 @@ cd "$ROOT"
 mkdir -p out
 export LOUPE_HOME="$ROOT/out" INSPECT_LOG_DIR="$ROOT/out/logs" LOUPE_EXPERIMENTS="$ROOT/experiments"
 export PYTHONUNBUFFERED=1
+# uv's 30 s default times out on torch's and CUDA's wheels over a busy cluster link
+export UV_HTTP_TIMEOUT="${{UV_HTTP_TIMEOUT:-300}}"
 {cache}
 command -v uv >/dev/null || {{ curl -LsSf https://astral.sh/uv/install.sh | sh; }}
 export PATH="$HOME/.local/bin:$PATH"
@@ -147,7 +149,7 @@ json.dump({{"job": "{job_id}", "host": "{host}", "node": socket.gethostname(), "
           open("out/result.json", "w"), indent=2)
 PY
 tar -czf "loupe-result-{job_id}.tar.gz" --exclude=out/vendor out  # vendor: tool environments
-echo "Done ($code). Bring loupe-result-{job_id}.tar.gz back and drop it on loupe's Launch page,"
+echo "Done ($code). Bring loupe-result-{job_id}.tar.gz back and import it from loupe's Runs page,"
 echo "or run: loupe import loupe-result-{job_id}.tar.gz"
 exit "$code"
 """
@@ -156,7 +158,7 @@ README = """loupe job {job_id}: {title}
 
 1. Copy this folder to {where}.
 2. Run: {run}
-3. When it ends, bring back loupe-result-{job_id}.tar.gz and drop it on loupe's Launch page
+3. When it ends, bring back loupe-result-{job_id}.tar.gz and import it from loupe's Runs page
    (or run `loupe import loupe-result-{job_id}.tar.gz` where loupe runs).
 
 The job installs its environment with uv{cache_note}. Gated Hugging Face models need HF_TOKEN set

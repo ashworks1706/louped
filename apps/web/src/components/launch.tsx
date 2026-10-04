@@ -359,7 +359,7 @@ function Where({
           <Help label="How does running elsewhere work?">
             Export downloads a folder with job.sh. Copy it there and run it (sbatch job.sh on a
             cluster, bash job.sh on a VM). It installs loupe with uv, runs this command, and packs
-            loupe-result-….tar.gz. Drop that file on this page and its runs show up here.
+            loupe-result-….tar.gz. Import that file from Runs and its runs show up there.
           </Help>
         )}
       </div>

@@ -79,8 +79,9 @@ def test_a_sol_bundle_asks_sol_for_its_gpu_and_runs_the_launch_command(tmp_path:
     job = root.name.removeprefix("loupe-")
     assert name == f"loupe-{job}.tar.gz"
     script = (root / "job.sh").read_text()
-    for line in ("#SBATCH -p general", "#SBATCH -q public", "#SBATCH -G a100:1",
+    for line in ("#SBATCH -p public", "#SBATCH -q public", "#SBATCH -G a100:1",
                  "#SBATCH -t 2:00:00", "#SBATCH -C a100_80", "/scratch/$USER/huggingface",
+                 'UV_HTTP_TIMEOUT="${UV_HTTP_TIMEOUT:-300}"',
                  "python experiments/hello/run.py --name sol"):  # fmt: skip
         assert line in script
     assert (root / "experiments/hello/run.py").exists() and (root / "uv.lock").exists()

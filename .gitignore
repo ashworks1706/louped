@@ -22,3 +22,7 @@ logs/
 .env.*
 !.env.example
 .claude/worktrees/
+
+# exported jobs and their results, when saved into the repo root
+/loupe-*.tar.gz
+/loupe-*/

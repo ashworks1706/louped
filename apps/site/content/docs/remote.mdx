@@ -28,14 +28,16 @@ the job takes its exit code and log. Importing the same result twice adds nothin
 ## Sol
 
 From [ASU's docs](https://docs.rc.asu.edu/sol-hardware-how-to-request): the job asks for
-`-p general -q public` unless you set a QOS, and a GPU as `-G <type>:<n>`: `a100` (tick _80 GB
-A100 only_ for `-C a100_80`), `a30`, `h100`, `mi200` (AMD: needs ROCm builds of torch), or the A100
-slices `1g.20gb` and `2g.20gb`. Model and uv caches go to `/scratch/$USER` rather than home, whose
+`-p public -q public` unless you set a partition or QOS, and a GPU as `-G <type>:<n>`: `a100`
+(tick _80 GB A100 only_ for `-C a100_80`), `a30`, `h100`, `mi200` (AMD: needs ROCm builds of
+torch), or the A100 slices `1g.20gb` and `2g.20gb`. Since May 2026 Sol's `general` partition holds
+only privately owned nodes; the public ones are in `public`. Model and uv caches go to `/scratch/$USER` rather than home, whose
 quota is small.
 
 - Gated Hugging Face models need `HF_TOKEN` exported before `sbatch`.
-- If compute nodes have no internet, run `job.sh`'s lines up to `source .venv/bin/activate` once on
-  a login node, then submit.
+- If compute nodes have no internet, or the install times out there, run `job.sh`'s lines up to
+  `source .venv/bin/activate` once on a login node, then submit: the job reuses the cached wheels.
+  Downloads wait up to 300 s (`UV_HTTP_TIMEOUT`) rather than uv's 30 s.
 - Files under `experiments/` over 50 MB stay behind; `loupe.json` in the bundle lists them.
 - A paper harness's own environment (`out/vendor/`) is not packed into the result; its runs come
   back through MLflow with their files.
