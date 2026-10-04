@@ -1,88 +1,41 @@
 ---
 title: Recipes
-description: How common behavior and efficiency questions are run in louped, including models and engines it does not load itself.
+description: How to run common kinds of experiments.
 ---
 
-Every recipe is an experiment: a README with the question, and a `run.py` that does the work
-inside `start_run` and logs what it measured. What changes between them is where the model runs
-and what shape the results take. Results louped reads without extra wiring:
+## A model louped can load
 
-| Shape                               | Write it as                                   | Shown as                                   |
-| ----------------------------------- | --------------------------------------------- | ------------------------------------------ |
-| Per-item records under conditions   | `raw/<condition>.jsonl`, an id field in each  | the Items tab: each item across conditions |
-| One file, a condition or arm column | `records.jsonl`, or a JSON array of objects   | Artifacts → Line up by `<column>`          |
-| Events: a time and a kind on each   | JSONL, one file per request or one in all     | Artifacts: a timeline per request          |
-| Numbers                             | `mlflow.log_metrics`, with `step` for a curve | Overview, and a chart for a curve          |
-| Tables, curves, scatters, heatmaps  | a view from `louped.analysis.views`           | Figures                                    |
-| Transcripts and scores              | an Inspect eval (`task.py`)                   | Samples, and Inspect View                  |
-| A report for people                 | `report.md`                                   | Overview                                   |
+Hugging Face models load directly. Interventions, analyses (logit lens, patching, probes, SAE
+features) and fine-tuning all work on them. Compare versions with a [grid](/docs/changes).
 
-## A model louped loads
+## A model served elsewhere
 
-Hugging Face models, LLaDA, Dream and nanoDiff checkpoints load in louped, so interventions
-(steer, ablate, inject), adapter banks and diffusion phase schedules, probes, patching and SAE
-features all apply. Compare conditions with a grid (`louped grid`), which pairs each against a
-baseline over seeds.
+For GGUF models on llama-server, vLLM, Ollama, or your own engine, use its OpenAI-compatible
+endpoint:
 
-## A model served elsewhere: GGUF, llama-server, vLLM, your own engine
+- **Evals**: add it to a grid as `endpoint(name, url)`.
+- **Speed and cost**: `louped endpoint-bench http://127.0.0.1:8080/v1` measures time to first
+  token, latency and throughput at different numbers of requests at once. On the same machine it
+  also reports energy per token.
 
-louped does not need to load a model to evaluate or time it:
+## Code in another language
 
-- **Evals**: an Inspect task against an OpenAI-compatible endpoint, as a grid condition
-  (`louped.grid.endpoint`), so a quantized GGUF and a full-precision model are compared on the
-  same samples.
-- **Agents**: an agent endpoint that reports the tools it ran in a `trace` field is scored by the
-  `agent/` provider; logged calls and Phoenix spans become training sets with `louped data`. An
-  agent's own trace files (events with a time such as `at` and a kind such as `kind`, grouped by
-  `request_id`) open as timelines: `louped view .agent/traces`, then "every file, as one" reads
-  every request together, newest first, searchable as a table.
-- **Serving cost**: `louped endpoint-bench http://127.0.0.1:8080/v1 http://127.0.0.1:8081/v1`
-  measures time to first token, latency and throughput as requests arrive together, per server.
-  Every request is a record, so two servers (two quantizations, two slot counts) line up on the
-  Items tab request by request. For a server on this machine it also reports GPU joules per
-  token.
+Call the program from `run.py` as a subprocess (for example `cargo bench`), then log its numbers
+with `mlflow.log_metrics` and its per-item files as artifacts.
 
-## An engine or harness of its own (Rust, C++, a paper's code)
+## Agents
 
-Call it from `run.py` as a subprocess (`cargo bench`, its CLI, its script), at a pinned commit,
-and log what it wrote: copy its per-item JSON or JSONL into the run's artifacts and its summary
-numbers into metrics. The run then carries the command, the environment and the engine's own
-records. A harness that pins other Python versions runs in its own environment under
-`.louped/vendor/` ("Someone else's code" in [Writing an experiment](/docs/experiments)). Results
-made before louped open with `louped view <folder>`.
+- An agent behind an endpoint can be scored in a grid: `endpoint(name, url, agent=True)`.
+- An agent's own trace files (rows with a time like `at` and a kind like `kind`) open as
+  timelines. Try `louped view path/to/traces`.
 
-## Retrieval and grounding
+## Retrieval
 
-Log one record per question and arm (closed-book, retrieved, retrieved through a hook) with
-recall@k, the answer, its score and the timings; line them up by arm. A judge, when a score needs
-one, is a local model (`louped judge`). Retrieval inside the model, injecting passages at a layer,
-is an intervention on a model louped loads, at the hook points an engine retrieving during
-generation has: every token, the prompt only, or chunk boundaries of the reply
-([Where injected passages go](/docs/policies)).
+Log one record per question and setup (no retrieval, retrieved passages) with recall, the answer
+and its score, then line them up on the Items tab. To test retrieval inside the model, use the
+`inject` intervention.
 
-## An engine's own architecture
+## Adapters and small models
 
-An engine with layers of its own (a trained retrieval gate) is studied here once its weights ship
-with PyTorch modeling code on the Hub: load it with `remote_code=true`, and louped's hooks, patching,
-probes and steering reach its new layers too. Check the PyTorch code against the engine first: the
-same prompt should give the same logits, layer by layer, within tolerance. Then a mechanism found in
-louped holds in the engine, and the engine's endpoint confirms it by behavior.
-
-## Adapters, skills and small models
-
-LoRA adapters load as a bank, switch per request and change along a diffusion trajectory by
-phase. An adapter's gain is an eval grid of base, prompt, adapter and fine-tune conditions; its
-interference is the same grid on the other skills' tasks. Weight formats and size against
-quality are `louped bench` (throughput, prefill, memory, speculative decoding) next to an eval.
-
-## Energy and the machine
-
-Every run records the machine while it is open: GPU power, utilisation and memory, CPU and RAM,
-with the GPU energy it used on its Overview. A model served by another process on the same GPU
-is counted too, since NVML reads the whole GPU.
-
-## Real runs on a cluster
-
-Small checks run here; real runs go to Sol, a Slurm cluster or a VM from Launch → Run on →
-Export ([Run elsewhere](/docs/remote)). An experiment declares the extras its run needs
-(`extras: tracking` in its README's front matter) so the cluster installs only those.
+Load several LoRA adapters as a bank and switch them per request or partway through a reply. To
+see what a weight format costs, run `louped bench <model> --quants none int8 int4` next to an eval.

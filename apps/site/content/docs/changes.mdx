@@ -1,0 +1,69 @@
+---
+title: Change a model
+description: Steer, ablate, inject and swap adapters, and compare the result against a baseline.
+---
+
+louped runs a model in Inspect evals as `louped/<model>`. Model arguments describe the change.
+
+```sh
+inspect eval task.py --model louped/Qwen/Qwen2.5-0.5B-Instruct \
+  -M interventions='{"kind": "ablate", "vector": "refusal.qwen2.5-0.5b-instruct"}'
+```
+
+## Interventions
+
+| Kind     | What it does                                 |
+| -------- | -------------------------------------------- |
+| `steer`  | Adds a saved direction at one layer          |
+| `ablate` | Removes a direction at every layer           |
+| `inject` | Adds the state of some passages at one layer |
+| `heads`  | Turns off chosen attention heads             |
+
+`inject` takes `at`: `all` (every token, the default), `prompt` (the prompt only) or `chunks`
+(every `chunk`-th generated token). These match an engine that retrieves while it generates.
+
+## Other model arguments
+
+| Argument      | What it does                                                       |
+| ------------- | ------------------------------------------------------------------ |
+| `bank`        | Loads LoRA adapters by name, all off                               |
+| `adapters`    | Turns on some of the bank                                          |
+| `merges`      | Adds merged adapters (`linear`, `ties`, ...)                       |
+| `phases`      | Changes the live adapters partway through a reply                  |
+| `diffusion`   | Serves a masked diffusion model                                    |
+| `attn`        | Picks the attention kernel (`eager`, `sdpa`, `flex_attention`)     |
+| `quant`       | Loads the weights in 8 or 4 bits (CUDA only)                       |
+| `revision`    | Pins a Hub model to a commit                                       |
+| `remote_code` | Runs the model's own code from its Hub repository. Pin `revision`. |
+| `batch_size`  | Requests generated together. 1 gives bit-identical reruns.         |
+
+Saved directions are in `.louped/vectors`, adapters in `.louped/adapters`, and models in
+`.louped/models`.
+
+## Compare conditions with a grid
+
+A grid runs each condition on each task over several seeds, and compares it with a baseline.
+
+```yaml title="grid.yaml"
+model: Qwen/Qwen2.5-0.5B-Instruct
+tasks:
+  pushback: experiments/my-question/task.py@pushback
+conditions:
+  base: {}
+  ablate: { interventions: { kind: ablate, vector: caving.qwen2.5-0.5b-instruct } }
+  int4: { quant: int4 }
+metric: held/accuracy
+held: correct_first/accuracy
+seeds: [0, 1, 2]
+```
+
+```sh
+louped grid grid.yaml
+```
+
+For each condition you get the change from the baseline with a 95% paired interval, and two
+verdicts: whether the metric **moved**, and whether the `held` score **held**. Add
+`extra: [latency/mean, peak_memory/mean]` to see what each condition costs next to what it changes.
+
+A condition can also be a model behind an OpenAI-compatible endpoint, such as llama-server, vLLM or
+Ollama: use `endpoint(name, url)` from `louped.grid`.

@@ -1,47 +1,44 @@
 ---
-title: Coding agents
-description: Drive louped from Claude Code, Cursor or any MCP client.
+title: Use your coding agent
+description: Let Claude Code, Codex or Cursor write, run and read your experiments.
 ---
 
-louped has no agent of its own. It is the harness for the agent you already use: Claude Code, Codex,
-Cursor, Gemini CLI or any MCP client writes the experiments, launches them and reads the results,
-and you read and judge them in the app.
+louped has no agent of its own. It connects to the one you already use.
 
-- `louped mcp` is an [MCP](https://modelcontextprotocol.io) server over a running `louped serve`. An
-  agent reads what the app shows and starts work through the same queue: one job at a time, live
-  on the Runs page, and off on a server started with `--expose`.
-- `AGENTS.md`, written by `louped init`, holds the method: the README before the code, fixed
-  cohorts, counts with their denominators, paired intervals, RunMeta, big runs on a cluster.
-- Skills: `new-experiment`, `read-results` and `run-elsewhere`, under `.claude/skills/`.
+`louped init` writes three things your agent reads:
 
-```sh
-pip install 'louped[server,tracking,interp,agent]'
-louped init my-research && cd my-research   # writes AGENTS.md, .mcp.json and the skills
-louped serve
-```
+- `AGENTS.md`: how to work in the project.
+- `.mcp.json`: starts `louped mcp`, which talks to the running app.
+- `.claude/skills/`: steps for starting an experiment, reading results, and running on a cluster.
 
-In a project made another way, register the server yourself (`uv run louped mcp` when louped lives
-in a uv project's environment):
+Start the app with `louped serve`, then open your agent in the project folder and ask it what to
+test.
+
+## Tools the agent gets
+
+| Tool                                                | What it does                             |
+| --------------------------------------------------- | ---------------------------------------- |
+| `experiments`, `experiment`, `runs`, `run`          | Lists questions and runs                 |
+| `samples`, `sample`, `figures`, `figure`, `compare` | Reads results                            |
+| `new_experiment`                                    | Starts a question                        |
+| `launchables`, `launch_options`, `launch`           | Starts a job                             |
+| `jobs`, `job`, `cancel_job`                         | Follows or stops jobs                    |
+| `export_job`, `import_result`                       | Sends a job to a cluster, brings it back |
+
+Work the agent starts shows in the app like your own.
+
+## Without `louped init`
+
+Add this to your agent's MCP config. Use `uv run louped mcp` if louped is installed in a uv
+project.
 
 ```json
 { "mcpServers": { "louped": { "command": "louped", "args": ["mcp"] } } }
 ```
 
-`--url` points it at a server other than `http://127.0.0.1:8000`. Claude Code can take all of it
-as a plugin instead: `/plugin marketplace add ashworks1706/louped`, then
-`/plugin install louped@louped`.
+In Claude Code you can also install it as a plugin:
 
-A new question is `new_experiment`; the agent then writes the folder's files as
-[Writing an experiment](/docs/experiments) describes, launches `script:<name>/run.py` and reads
-the runs back. A run too large for this machine is `export_job`, run on the cluster by you, and
-`import_result` when its archive is back.
-
-| Tools                                                | What they do                                       |
-| ---------------------------------------------------- | -------------------------------------------------- |
-| `status`, `experiments`, `experiment`, `runs`, `run` | the questions and their runs                       |
-| `figures`, `figure`, `samples`, `sample`, `compare`  | results: figure data, transcripts, paired deltas   |
-| `vectors`                                            | saved directions                                   |
-| `launchables`, `launch_options`, `launch`            | start a script, config, grid or louped command     |
-| `jobs`, `job`, `cancel_job`                          | follow and stop queued work                        |
-| `new_experiment`                                     | start a research question                          |
-| `export_job`, `import_result`                        | run on Sol, a Slurm cluster or a VM; bring it back |
+```
+/plugin marketplace add ashworks1706/louped
+/plugin install louped@louped
+```

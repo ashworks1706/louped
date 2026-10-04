@@ -1,81 +1,30 @@
 ---
-title: Model support
-description: Which model families work with which part of louped, and how each claim was checked.
+title: Supported models
+description: Which model families work with which parts of louped.
 ---
 
-louped loads the unmodified Hugging Face model, so a family works when louped can find its decoder
-blocks, final norm, attention and output projection. Real checkpoints are not run in CI: nothing
-downloads there.
+louped works with a model family when it can find the model's layers. Tests run on a tiny model
+offline; real checkpoints are not downloaded in CI.
 
-| Mark     | Meaning                                                                            |
-| -------- | ---------------------------------------------------------------------------------- |
-| tested   | Covered by the test suite, on a tiny model offline                                 |
-| smoke    | Run once on a randomly initialised two-layer config of the architecture, not in CI |
-| expected | The code path is generic and should work; not run                                  |
-| no       | Does not work today                                                                |
+**tested**: covered by the tests. **smoke**: run once on a small random copy of the architecture.
+**expected**: should work, not run. **no**: does not work.
 
-## Causal language models
+| Family                  | Interventions and analyses | Evals                 | LoRA training      | SAE features |
+| ----------------------- | -------------------------- | --------------------- | ------------------ | ------------ |
+| Qwen2, Qwen2.5          | tested                     | tested                | tested             | tested       |
+| Qwen3                   | smoke                      | expected              | expected           | expected     |
+| Llama 2, 3              | smoke                      | expected              | expected           | expected     |
+| Mistral                 | smoke                      | expected              | expected           | expected     |
+| Gemma 2, Gemma 3 1B     | smoke                      | expected              | expected           | expected     |
+| Phi-3                   | smoke                      | expected              | set target modules | expected     |
+| GPT-2, GPT-NeoX, Pythia | smoke                      | needs a chat template | set target modules | expected     |
+| Gemma 3 4B and up       | no                         | expected              | expected           | no           |
 
-| Family                          | Interp | `louped/` provider | Tool calls    | LoRA on TRL | SAE features |
-| ------------------------------- | ------ | ------------------ | ------------- | ----------- | ------------ |
-| Qwen2, Qwen2.5                  | tested | tested             | tested        | tested      | tested       |
-| Qwen3                           | smoke  | expected           | expected      | expected    | expected     |
-| Llama 2, 3                      | smoke  | expected           | expected      | expected    | expected     |
-| Mistral                         | smoke  | expected           | expected      | expected    | expected     |
-| Gemma 2, Gemma 3 1B (text only) | smoke  | expected           | expected      | expected    | expected     |
-| Phi-3                           | smoke  | expected           | expected      | set targets | expected     |
-| GPT-2                           | smoke  | chat template      | chat template | set targets | expected     |
-| GPT-NeoX, Pythia                | smoke  | chat template      | chat template | set targets | expected     |
-| Gemma 3 4B and up (vision)      | no     | no edits           | expected      | expected    | no           |
+Masked diffusion models (LLaDA, Dream, nanoDiff, any Hugging Face masked LM) work for evals,
+training and adapter phases, but not for interventions or analyses.
 
-- **Interp** is steer and ablate during generation, next-token logits, residual reads, logit lens,
-  attention patterns, residual, head and attribution patching, and linear probes, all through
-  nnsight. The smoke check ran each of these per family.
-- **`louped/` provider** renders every conversation with the tokenizer's chat template. GPT-2 and
-  Pythia checkpoints ship without one: set `tokenizer.chat_template` or use an instruct fine-tune.
-- **Tool calls** go through the chat template's `tools` argument and are parsed by Inspect's Hugging
-  Face handler, picked by the config's `model_type`: Llama and Mistral have their own parsers, every
-  other family the generic one (`<tool_call>`, fenced JSON, `<function>`, bare JSON). A template
-  that ignores `tools` leaves the model unaware of them. Tested with the Qwen format on a scripted
-  reply.
-- **LoRA on TRL** targets `q_proj`, `k_proj`, `v_proj`, `o_proj`, `gate_proj`, `up_proj` and
-  `down_proj` by default. Phi-3 fuses them (`qkv_proj`, `gate_up_proj`), so the default adapts only
-  `o_proj` and `down_proj`; GPT-2 (`c_attn`, `c_proj`, `c_fc`) and GPT-NeoX (`query_key_value`,
-  `dense`) fail until `lora.target_modules` is set. SFT, DPO, GRPO and soft prompts are tested on
-  the tiny Qwen2.
-- **Unsloth** replaces TRL's loading with 4-bit QLoRA and adds GGUF export, on a CUDA GPU with
-  `unsloth` installed; `backend: auto` picks it then. Expected for the families Unsloth supports;
-  not run, since CI has no GPU. Soft prompts and masked diffusion stay on TRL.
-- **SAE features** take any SAELens SAE on a residual hook (`blocks.L.hook_resid_pre` or
-  `hook_resid_post`), read with nnsight on the unmodified model. Tested with a random SAE on the tiny
-  Qwen2; a pretrained SAE exists only for some models, such as Gemma Scope for Gemma 2 and
-  `gpt2-small-res-jb` for GPT-2.
-- **Architectures transformers lacks**: `-M remote_code=true` (and the Playground's "Run the
-  repository's own model code", `load(remote_code=True)`, `louped bench --remote-code`) runs the
-  modeling code a Hub repository ships (`trust_remote_code`), such as a model with trained
-  retrieval layers. It executes that code on this machine, so it is off unless asked and the load
-  says when it is on; pin `revision` with it so the code cannot change under a result.
-- **Attention kernels**: `-M attn=sdpa` (or `eager`, `flash_attention_2`, `flex_attention`, any
-  name registered with transformers' `AttentionInterface`, or `file.py:function` to register one)
-  picks the kernel, for the provider, `load(attn=...)` and the Playground's model loader. Only eager returns
-  attention weights; attention views switch to it for their trace, head edits work under any kernel.
-- **Gemma 3 4B and up** load as a vision model whose decoder blocks sit at a path louped does not
-  look up yet, so it generates through the provider but takes no edit or analysis; the error names
-  the paths it tried.
+A model with its own code on the Hub loads with `remote_code=true`. This runs that code on your
+machine, so use it only for repositories you trust, and pin `revision`.
 
-## Masked diffusion models
-
-| Model                             | Sampler and provider | Masked diffusion SFT (LoRA) | Adapter bank and phases | Interp |
-| --------------------------------- | -------------------- | --------------------------- | ----------------------- | ------ |
-| Any Hugging Face masked LM (BERT) | tested               | tested                      | tested                  | no     |
-| LLaDA                             | expected             | expected                    | expected                | no     |
-| Dream                             | expected             | expected                    | expected                | no     |
-
-Served with `-M diffusion='{"length": 64, "steps": 64}'`. LLaDA and Dream run their own code from
-the Hub, so a Hub id needs `-M revision=<commit>`, the same arg that pins any Hub model. Steer, ablate and inject act on causal models
-only; the provider refuses them with `diffusion`. Training is TRL only.
-
-## Adding a family
-
-A family whose blocks live elsewhere needs one path in `BLOCK_PATHS`, `NORM_PATHS`, `ATTN_PATHS` or
-`OUT_PATHS` in `src/louped/models/load.py`.
+To add a family whose layers live elsewhere, add its path to `BLOCK_PATHS` (and the norm, attention
+and output paths) in `src/louped/models/load.py`.

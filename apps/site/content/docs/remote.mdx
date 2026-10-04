@@ -1,46 +1,29 @@
 ---
-title: Run elsewhere
-description: Export a launch for ASU's Sol, a Slurm cluster or a VM, and import its results back.
+title: Run on a cluster
+description: Send a job to a Slurm cluster or another machine and bring its results back.
 ---
 
-A launch can run on a machine louped is not on. On the Launch page, set the form as usual, pick
-**Run on** (ASU Sol, a Slurm cluster, another machine) and press **Export**. You get
-`louped-<id>.tar.gz`, and the job waits on the page as _awaiting result_.
+1. In the app, open **Launch**, set the options, choose **Run on** (ASU Sol, a Slurm cluster or
+   another machine) and press **Export**. You get `louped-<id>.tar.gz`.
+2. Copy it to the cluster, unpack it and submit it:
 
-```sh
-# on Sol (or the cluster), in scratch
-tar -xzf louped-<id>.tar.gz && cd louped-<id>
-sbatch job.sh          # bash job.sh on a VM
-```
+   ```sh
+   tar -xzf louped-<id>.tar.gz && cd louped-<id>
+   sbatch job.sh        # or: bash job.sh on a plain machine
+   ```
 
-`job.sh` asks the scheduler for what the form set, installs louped with
-[uv](https://docs.astral.sh/uv) (the exact code and lockfile this louped runs, or the released
-version), runs the same command Launch would run here, and packs everything it wrote as
-`louped-result-<id>.tar.gz`. Bring that file back and import it on the Runs page, or:
+3. When it finishes, copy `louped-result-<id>.tar.gz` back and open **Runs → Import result**, or run
+   `louped import louped-result-<id>.tar.gz`.
 
-```sh
-louped import louped-result-<id>.tar.gz
-```
+The imported runs show like local ones, marked with where they ran.
 
-Its runs join Runs and their experiments as if they had run here, marked with where they ran, and
-the job takes its exit code and log. Importing the same result twice adds nothing.
+## Tips
 
-## Sol
-
-From [ASU's docs](https://docs.rc.asu.edu/sol-hardware-how-to-request): the job asks for
-`-p public -q public` unless you set a partition or QOS, and a GPU as `-G <type>:<n>`: `a100`
-(tick _80 GB A100 only_ for `-C a100_80`), `a30`, `h100`, `mi200` (AMD: needs ROCm builds of
-torch), or the A100 slices `1g.20gb` and `2g.20gb`. Since May 2026 Sol's `general` partition holds
-only privately owned nodes; the public ones are in `public`. Model and uv caches go to `/scratch/$USER` rather than home, whose
-quota is small.
-
-- Gated Hugging Face models need `HF_TOKEN` exported before `sbatch`.
-- If compute nodes have no internet, or the install times out there, run `job.sh`'s lines up to
-  `source .venv/bin/activate` once on a login node, then submit: the job reuses the cached wheels.
-  Downloads wait up to 300 s (`UV_HTTP_TIMEOUT`) rather than uv's 30 s.
-- The job installs the extras the form sets, else those the experiment's README declares
-  (`extras:` in its front matter), else interp, evals, tracking and train; `louped.json` records
-  which.
-- Files under `experiments/` over 50 MB stay behind; `louped.json` in the bundle lists them.
-- A paper harness's own environment (`out/vendor/`) is not packed into the result; its runs come
-  back through MLflow with their files.
+- **Gated models** (such as Llama): run `hf auth login` on the cluster with the same `HF_HOME` the
+  job uses (`/scratch/$USER/huggingface` on Sol).
+- **First run**: run the job's `uv sync` line once on a login node. The job then reuses the
+  downloaded packages, which avoids timeouts and compute nodes without internet.
+- **Smaller installs**: list the extras your experiment needs in its README (`extras: tracking`).
+  The job installs only those.
+- **Sol**: jobs use the `public` partition and QOS. Models and packages are cached under
+  `/scratch/$USER`, since home space is small.

@@ -1,51 +1,63 @@
 ---
-title: Quick start
-description: From pip install to a result you read item by item.
+title: Get started
+description: Install louped, make a project and run the example.
 ---
+
+You need Python 3.12 or newer.
 
 ```sh
 pip install 'louped[server,tracking,interp,agent]'
-louped init my-research && cd my-research
-louped serve      # http://127.0.0.1:8000
+louped init my-research
+cd my-research
+louped serve
 ```
 
-`louped init` makes a research project:
+Open http://127.0.0.1:8000. Go to **Launch**, pick `does-pushback-flip-answers` and press
+**Launch**. Tick `tiny` to try it offline without downloading a model. When the run finishes, open
+it and read the **Items** tab.
 
-| Path           | What                                                                        |
-| -------------- | --------------------------------------------------------------------------- |
-| `louped.toml`  | marks the project's root, so louped works from any folder under it; domains |
-| `experiments/` | your questions, one folder each, with `does-pushback-flip-answers` to start |
-| `AGENTS.md`    | how a coding agent works in the project                                     |
-| `.mcp.json`    | `louped mcp`, and the skills under `.claude/skills/`, for that agent        |
-| `.louped/`     | runs, logs and jobs; gitignored, rebuilt by running the experiments         |
+## What `louped init` makes
 
-Open Launch, pick `does-pushback-flip-answers` and launch it (tick `tiny` for an offline check that
-needs no download). The job opens on its own page; when it ends, its run's Items tab lines every
-question up across the conditions, with how many answers moved, out of how many.
+| Path           | What it is                                                  |
+| -------------- | ----------------------------------------------------------- |
+| `louped.toml`  | Marks the project's root. Commands work from any subfolder. |
+| `experiments/` | One folder per question. The example is here.               |
+| `AGENTS.md`    | Instructions for your coding agent.                         |
+| `.mcp.json`    | Connects your agent to the app.                             |
+| `.louped/`     | Runs, logs and jobs. Not committed to git.                  |
+
+## Extras
+
+Install only what you use.
+
+| Extra      | Adds                                                        |
+| ---------- | ----------------------------------------------------------- |
+| `server`   | The app (`louped serve`)                                    |
+| `tracking` | Run records, and GPU, CPU and memory use during each run    |
+| `interp`   | Loading models, interventions and analyses (torch, nnsight) |
+| `agent`    | The MCP server your coding agent uses (`louped mcp`)        |
+| `evals`    | Inspect evals                                               |
+| `train`    | Fine-tuning (TRL, PEFT)                                     |
+| `rl`       | Tasks with checkable answers, for GRPO                      |
+| `rag`      | Retrieval (bm25s, sentence-transformers)                    |
+| `sae`      | Sparse autoencoders (SAELens)                               |
+| `data`     | Building training sets from logged model calls              |
 
 ## Results you already have
 
-`louped view <folder>` opens a folder of Inspect logs, a louped home or MLflow store, or any folder of
-JSONL, Markdown, JSON and CSV in the app, read-only, without a project.
+```sh
+louped view path/to/results
+```
 
-## Your own question
-
-Ask your coding agent, or run `louped new my-question --domain honesty`: it writes
-`experiments/my-question/` with a `README.md` and a `run.py` that launches as is. The app shows it
-under its domain as soon as the folder exists. [Writing an experiment](/docs/experiments) says what
-goes in it; [Coding agents](/docs/agents) how the agent drives the app.
-
-## Every page filled
-
-Press Load examples on an empty page (or `louped examples`, which needs every extra). It trains a
-tiny model on this machine to refuse harmful requests, then writes its refusal vector and figures,
-a base, ablate and add grid with its eval runs, a LoRA fine-tune, a benchmark and an attribution
-graph, under the experiment `examples`.
+This opens Inspect logs, an MLflow store, or any folder of JSONL, JSON, CSV or Markdown files in
+the app, read-only. No project is needed.
 
 ## From source
 
+You need [just](https://just.systems), [uv](https://docs.astral.sh/uv) and Node 22 with pnpm.
+
 ```sh
 git clone https://github.com/ashworks1706/louped && cd louped
-just bootstrap   # Python with every extra, the UI's packages and git hooks
-just serve       # http://127.0.0.1:8000
+just bootstrap
+just serve
 ```

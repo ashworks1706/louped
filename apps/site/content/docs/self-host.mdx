@@ -1,16 +1,15 @@
 ---
-title: Self-host the app
-description: Run louped serve in Docker.
+title: Share results
+description: Serve the app read-only with Docker.
 ---
 
-The image serves the API and the app together. It holds no GPU extras: it reads results written
-elsewhere.
+The Docker image serves the app without GPU support. Use it to share results, not to run them.
 
 ```sh
 docker run -p 8000:8000 -v "$PWD/.louped:/data" ghcr.io/ashworks1706/louped
 ```
 
-`/data` is `LOUPED_HOME`: point it at the directory your experiments wrote.
+`/data` is the project's `.louped/` folder.
 
-The server has no auth: whoever reaches it reads every run, log and transcript, so expose it only
-with results you would publish.
+The server has no login. Anyone who can reach it can read every run, so only expose results you
+would publish.

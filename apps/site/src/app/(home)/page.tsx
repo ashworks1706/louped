@@ -7,9 +7,9 @@ import { docsRoute, repoUrl, tagline } from "@/lib/shared";
 import experimentDark from "../../../public/demo/experiment-dark.png";
 import experimentLight from "../../../public/demo/experiment-light.png";
 import hardwareDark from "../../../public/demo/hardware-dark.png";
+import hardwareLight from "../../../public/demo/hardware-light.png";
 import homeDark from "../../../public/demo/home-dark.png";
 import homeLight from "../../../public/demo/home-light.png";
-import hardwareLight from "../../../public/demo/hardware-light.png";
 import itemDark from "../../../public/demo/item-dark.png";
 import itemLight from "../../../public/demo/item-light.png";
 import itemsDark from "../../../public/demo/items-dark.png";
@@ -21,67 +21,57 @@ import tracesLight from "../../../public/demo/traces-light.png";
 
 const INSTALL = "pip install 'louped[server,tracking,interp,agent]'";
 
-/** The way a question goes through louped, each step with the screen it happens on. */
-const STEPS: {
-  title: string;
-  text: string;
-  code?: string;
-  shot: [StaticImageData, StaticImageData];
-  alt: string;
-}[] = [
+type Shot = [StaticImageData, StaticImageData];
+
+const STEPS: { title: string; text: string; code?: string; shot: Shot; alt: string }[] = [
   {
     title: "Make a project",
-    text: "louped init writes the project: experiments/ for your questions, an example that runs on a CPU, and AGENTS.md, an MCP server and skills for the coding agent you already use. What louped writes goes to .louped/, out of git.",
+    text: "One command sets up a folder for your questions, an example to try, and the files your coding agent needs.",
     code: `${INSTALL}\nlouped init my-research && cd my-research\nlouped serve`,
     shot: [homeLight, homeDark],
-    alt: "A new project opened in the app: its example question and runs",
+    alt: "A new project in the app, with its example question",
   },
   {
-    title: "Ask, and let your agent write it",
-    text: "Tell Claude Code, Codex or Cursor what you want to test. It starts the experiment through louped's MCP server and writes the README before the code: the question, competing hypotheses, a baseline, the test and when to stop.",
+    title: "Ask your agent",
+    text: "Tell Claude Code, Codex or Cursor what to test. It writes the experiment: the question, the plan and the code.",
     shot: [experimentLight, experimentDark],
-    alt: "The experiment the agent wrote, read in the app",
+    alt: "An experiment's page: its question, hypotheses and test",
   },
   {
-    title: "Run it here, or on your cluster",
-    text: "A small check runs on this machine and shows live. A real run exports to Sol, a Slurm cluster or a VM as one job.sh, and its result imports back as if it ran here. Models louped does not load, such as GGUF on llama-server or your own engine, are evaluated and timed through their endpoint.",
+    title: "Run it",
+    text: "Small runs go on your machine. Large ones go to a Slurm cluster as one job, and the results come back to your app.",
     shot: [launchLight, launchDark],
-    alt: "Launch: the experiment's options as a form, here or on a cluster",
+    alt: "The launch form, with the choice to run here or on a cluster",
   },
   {
-    title: "Read it item by item",
-    text: "Every item under every condition, against the baseline's fixed cohort: what flipped, out of how many, with Wilson intervals. Open one to see each condition side by side, with the scores behind the answer.",
+    title: "Read the results",
+    text: "See every item under every condition: what changed, and out of how many. Open one to compare the conditions side by side.",
     shot: [itemLight, itemDark],
     alt: "One question under baseline, evidence and pushback, side by side",
   },
 ];
 
-const MORE: {
-  title: string;
-  text: string;
-  shot: [StaticImageData, StaticImageData];
-  alt: string;
-}[] = [
+const MORE: { title: string; text: string; shot: Shot; alt: string }[] = [
   {
-    title: "What it cost",
-    text: "Every run records the machine while it ran: GPU energy, power, memory and utilisation, CPU and RAM, next to its provenance (code, packages, seed, command).",
+    title: "What a run cost",
+    text: "Every run records the GPU energy, power and memory it used, and the code, packages and seed behind it.",
     shot: [hardwareLight, hardwareDark],
-    alt: "A run's results with the GPU energy and hardware it used",
+    alt: "A run's results with the energy and hardware it used",
   },
   {
-    title: "Agent traces as timelines",
-    text: "An agent's trace files read per request: each event's offset and duration, what it carried, every field on a click. louped view opens a folder of them, or any results you already have, read-only.",
+    title: "Agent traces",
+    text: "Open an agent's trace files as a timeline per request. louped view opens any results you already have.",
     shot: [tracesLight, tracesDark],
     alt: "Agent requests as timelines of retrieval, model calls and tools",
   },
 ];
 
-function Shot({
+function Screenshot({
   shot: [light, dark],
   alt,
   priority = false,
 }: {
-  shot: [StaticImageData, StaticImageData];
+  shot: Shot;
   alt: string;
   priority?: boolean;
 }) {
@@ -100,8 +90,8 @@ export default function HomePage() {
         {tagline}
       </h1>
       <p className="text-fd-muted-foreground mt-5 max-w-lg text-center text-balance">
-        Each research question an experiment, written and run by your coding agent, read item by
-        item by you. Local, on open models, and free.
+        Your coding agent writes and runs the experiments. You read the results, item by item.
+        Local, open models, free.
       </p>
       <div className="mt-10 flex max-w-full flex-wrap items-center justify-center gap-3">
         <CopyCommand command={INSTALL} />
@@ -114,7 +104,7 @@ export default function HomePage() {
       </div>
 
       <div className="mt-20 w-full">
-        <Shot
+        <Screenshot
           shot={[itemsLight, itemsDark]}
           alt="Sixteen questions under three conditions: what pushback and evidence did to each answer"
           priority
@@ -140,7 +130,7 @@ export default function HomePage() {
                 </pre>
               )}
             </div>
-            <Shot shot={step.shot} alt={step.alt} />
+            <Screenshot shot={step.shot} alt={step.alt} />
           </div>
         ))}
       </section>
@@ -152,17 +142,16 @@ export default function HomePage() {
               <h3 className="text-lg font-semibold tracking-tight">{m.title}</h3>
               <p className="text-fd-muted-foreground mt-1 text-sm leading-relaxed">{m.text}</p>
             </div>
-            <Shot shot={m.shot} alt={m.alt} />
+            <Screenshot shot={m.shot} alt={m.alt} />
           </div>
         ))}
       </section>
 
       <section className="mt-28 w-full rounded-xl border p-8 text-center">
-        <h2 className="text-xl font-semibold tracking-tight">Bring your own agent</h2>
+        <h2 className="text-xl font-semibold tracking-tight">Use your own agent</h2>
         <p className="text-fd-muted-foreground mx-auto mt-2 max-w-xl text-sm text-balance">
-          louped has no agent of its own. It is the harness for the one you use: an MCP server,
-          skills and an AGENTS.md that hold the method (fixed cohorts, counts with denominators,
-          paired intervals, provenance on every result). In Claude Code it is also a plugin.
+          louped works with the coding agent you already use. In Claude Code, you can also add it as
+          a plugin.
         </p>
         <div className="mt-5 flex justify-center">
           <CopyCommand command="/plugin marketplace add ashworks1706/louped" />

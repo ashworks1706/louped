@@ -1,45 +1,31 @@
 ---
 title: Introduction
-description: A local testbed for research on LLM behavior and efficiency.
+description: What louped is and how it is used.
 ---
 
-louped is a local testbed for research on language models along two axes: **behavior and
-alignment** (what models do and why) and **efficiency and systems** (what it costs to run them).
-Each research question is an experiment, filed under a domain, with a stated hypothesis, a
-baseline, a test and a result you can reproduce and read in one app.
+louped is a local workbench for research on language models: how they behave, and what they cost
+to run.
 
-Every experiment uses the same method. Change the model: steer or ablate a direction, fine-tune it,
-rewrite its prompt, add an adapter, swap its attention kernel. Measure what changed: the same evals
-run on both versions, sample by sample, with paired intervals and a verdict on what moved and what
-held. Explain it: logit lens, patching, probes, SAE features and circuits on the same model under
-the same change.
-
-A change is one spec, a policy, that runs the same way in an eval, a training run, the Playground
-and an analysis. Your question is a short script; louped supplies the rest and the app to launch and
-read it from. It runs on your machine or your cluster: open-weight models, results in your
-project's `.louped/`, no hosted model and no API key.
+You keep your research questions in a project. Each question is an experiment: a README that
+states the question and how you will test it, and a script that runs the test. Your coding agent
+writes and runs the experiments; you read the results in louped's app.
 
 ## How it is used
 
-1. **Make a project**: `pip install 'louped[server,tracking,interp,agent]'`, then
-   `louped init my-research` and `louped serve`. The project holds your questions under
-   `experiments/`, an example that runs on a CPU, and what your coding agent needs.
-2. **Ask**: tell your agent (Claude Code, Codex, Cursor) what to test. Through louped's MCP server it
-   starts the experiment and writes the README (question, hypotheses, baseline, test, stop if)
-   before the code.
-3. **Run**: a small check here, live in the app; a real run exported to Sol, a Slurm cluster or a
-   VM and imported back. A model louped does not load is evaluated and timed through its endpoint.
-4. **Read**: on the run's page, every item under every condition against a fixed cohort, the
-   hardware and energy it used, its provenance, and its files (reports, records, traces as
-   timelines). The agent reads the same results and reports them with their denominators.
+1. **Make a project.** `louped init my-research` sets up the folders and connects your coding
+   agent.
+2. **Ask a question.** Tell your agent (Claude Code, Codex, Cursor) what to test. It writes the
+   experiment.
+3. **Run it.** Small runs go on your machine. Large ones go to a Slurm cluster, and the results
+   come back to your app.
+4. **Read the results.** The run page shows every item under every condition, what changed, and
+   out of how many.
 
-Results made without louped open read-only with `louped view <folder>`.
+Everything runs on your hardware with open-weight models. No API key is needed.
 
 <Cards>
-  <Card title="Install" href="/docs/install" />
-  <Card title="Quick start" href="/docs/quickstart" />
-  <Card title="Coding agents" href="/docs/agents" />
+  <Card title="Get started" href="/docs/quickstart" />
+  <Card title="Write an experiment" href="/docs/experiments" />
+  <Card title="Use your coding agent" href="/docs/agents" />
   <Card title="Recipes" href="/docs/recipes" />
-  <Card title="Research domains" href="/docs/domains" />
-  <Card title="Policies" href="/docs/policies" />
 </Cards>

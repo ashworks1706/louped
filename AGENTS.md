@@ -79,7 +79,7 @@ tests/            Python tests, CPU only
 | A training run or a grid   | `experiments/<name>/*.yaml` starting `# louped train <recipe>` or `# louped grid` |
 | A paper's own harness      | a pinned clone under `.louped/vendor/`, run in its own venv ("Someone else's code" in `apps/site/content/docs/experiments.mdx`) |
 | What a new project gets    | `src/louped/templates/`: project files, agent skills, the example experiment |
-| A domain                   | "Adding a domain" in `apps/site/content/docs/domains.mdx`                 |
+| A domain                   | `[domains.<key>]` in the project's `louped.toml` ("Domains" in `apps/site/content/docs/experiments.mdx`) |
 | A view kind the UI lacks   | `louped.analysis.views`, `View` in `stores/types.py`, a renderer in `apps/web/src/components/run-views.tsx`, `just api-types` |
 
 The app finds each of these by convention: no registration. `apps/site/content/docs/experiments.mdx`

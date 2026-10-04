@@ -1,19 +1,16 @@
 {
   "pages": [
     "index",
-    "install",
     "quickstart",
-    "---Concepts---",
+    "---Guides---",
     "experiments",
-    "policies",
-    "grid",
-    "domains",
+    "agents",
+    "changes",
+    "remote",
     "recipes",
     "---Reference---",
     "models",
     "cli",
-    "remote",
-    "agents",
     "self-host"
   ]
 }

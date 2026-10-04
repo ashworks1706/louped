@@ -1,69 +1,82 @@
 ---
-title: Writing an experiment
-description: Where a question's code, evals, figures and results go, so the app picks them up.
+title: Write an experiment
+description: What goes in an experiment's folder, and how its results show in the app.
 ---
 
-An experiment is one folder under `experiments/`, named for its question. Nothing imports it, so
-deleting the folder removes it. The app finds everything in it by convention; there is nothing to
-register.
+An experiment is a folder in `experiments/`, named for its question. The app finds everything in it
+by its file names; nothing needs registering.
 
 ```sh
-louped new my-question --domain honesty   # or launch `new`
+louped new does-pushback-flip-answers --domain honesty
 ```
 
-| File             | What it is                                                      | Where it shows                     |
-| ---------------- | --------------------------------------------------------------- | ---------------------------------- |
-| `README.md`      | Front matter (domain, status), then the research note           | Experiments, the experiment's page |
-| `run.py`         | A script with a `tyro` `Args` dataclass and `__main__`          | Launch, its fields as the form     |
-| `task.py`        | Inspect tasks (`@task`); its logs file under the experiment     | Launch › inspect eval, Runs        |
-| `*.yaml` (train) | A config whose first line is `# louped train sft` (or dpo, ...) | Launch › Training                  |
-| `*.yaml` (grid)  | A config whose first line is `# louped grid`                    | Launch › Grids                     |
+| File        | What it is                                                           | Where it shows                |
+| ----------- | -------------------------------------------------------------------- | ----------------------------- |
+| `README.md` | The question, the plan and the result                                | Experiments, and its own page |
+| `run.py`    | The script. Its `Args` dataclass becomes a form.                     | Launch                        |
+| `task.py`   | Inspect evals (`@task`)                                              | Launch, Runs                  |
+| `*.yaml`    | A training config (`# louped train sft`) or a grid (`# louped grid`) | Launch                        |
 
 ## README
 
-The front matter names a domain from [Research domains](/docs/domains) and a status (`active`,
-`parked`, `answered`), and may list the package extras its `run.py` needs (`extras: tracking,
-interp`): a job exported to a cluster then installs only those, not every extra. The first paragraph under **Question** and under **Result** is what the
-Experiments page shows; the rest renders on the experiment's page.
+It starts with a short header, then these sections: Question, Observation, Hypotheses, Baseline,
+Test, Stop if, Run, Result, Next.
+
+```md
+---
+domain: honesty
+status: active
+extras: tracking, interp
+---
+```
+
+- `status` is `active`, `parked` or `answered`.
+- `extras` is optional. A job sent to a cluster installs only these.
+- The first paragraph of **Question** and of **Result** shows on the Experiments page.
+
+### Domains
+
+A domain groups questions on the Experiments page. louped has eight by default:
+
+| Axis       | Domains                                           |
+| ---------- | ------------------------------------------------- |
+| behavior   | `mechanisms`, `honesty`, `conditioning`, `agents` |
+| efficiency | `context`, `inference`, `specialisation`          |
+| checks     | `reproduction`                                    |
+
+To use your own, list them in `louped.toml`. This replaces the defaults:
+
+```toml
+[domains.calibration]
+axis = "behavior"
+title = "Calibration under feedback"
+```
 
 ## run.py
 
-`louped new` writes a skeleton that launches as is. Fill in `main`:
-
 ```python
-from louped.analysis.views import table
-from louped.tracking import log_json, start_run
-
 with start_run(EXPERIMENT, name=args.model, params=asdict(args), seed=args.seed):
-    mlflow.log_metrics({"held/accuracy": 0.72})                    # Runs, Compare
-    log_json(table("Held by condition", ["condition", "held"], rows,
-                   about="One row per condition; higher holds more."),
-             "views/00-held.json")                                 # the run's Figures tab
+    ...
+    mlflow.log_metrics({"pressure/accuracy": 0.31})
+    mlflow.log_artifacts(folder)   # raw/<condition>.jsonl, report.md
 ```
 
-- **Numbers** are MLflow metrics, named `scorer/metric`, so they read like eval scores.
-- **Figures** are data, not images: `heatmap`, `line`, `scatter`, `table` or `tokens` from
-  `louped.analysis.views`, logged under `views/`. Each takes `about`, the text behind its ?.
-- **Evals** are Inspect tasks. A log is filed under the experiment when its task file is in the
-  folder, or when it carries the tag `experiment:<name>`.
-- **Directions** go through `louped.vectors.save_vector`, and appear under Behavior › Vectors.
-- **Reproducibility**: `start_run` records the commit and environment; pin model revisions and
-  seeds in `Args` so they are in the run's parameters.
-- **Hardware**: while a run is open, MLflow samples the machine every 2 s (GPU power, utilisation
-  and memory through NVML, CPU and RAM) as `system/` metrics; the run's Overview shows them under
-  Hardware with the GPU energy used. `LOUPED_SYSTEM_METRICS=0` turns it off.
+`start_run` records the code version, packages, seed and hardware use with every run. Pin the
+model's revision and the seed in `Args` so they are saved too.
 
-## Someone else's code
+What the app shows depends on what the script writes:
 
-A paper's harness that pins its own versions runs in its own environment, not in louped's: clone
-it at a fixed commit under `.louped/vendor/`, call it as a subprocess, and log what it wrote: its
-per-item records as one JSONL file per condition, so the run page lines them up, and its report.
+| Write                                       | Shown as                                    |
+| ------------------------------------------- | ------------------------------------------- |
+| `raw/<condition>.jsonl`, an id in every row | **Items**: each item under every condition  |
+| One JSONL file with a `condition` column    | **Artifacts**: line up by that column       |
+| JSONL rows with a time and a kind (traces)  | **Artifacts**: a timeline per request       |
+| `report.md`                                 | **Overview**                                |
+| Numbers with `mlflow.log_metrics`           | **Overview**, Runs, Compare                 |
+| A view from `louped.analysis.views`         | **Figures** (table, line, scatter, heatmap) |
 
-## Shared code
+## Code from a paper
 
-When two experiments need the same code, it moves into `src/louped` with a test, and both import it.
-
-## From a coding agent
-
-With [`louped mcp`](/docs/agents) the agent creates the folder (`launch` with id `new`), writes the
-files above, launches `run.py` through the app's queue and reads the runs and figures back.
+If a paper's code needs its own package versions, run it in its own environment. Clone it at a
+fixed commit under `.louped/vendor/`, call it as a subprocess, and log its per-item records and
+report as above.

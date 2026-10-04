@@ -103,7 +103,7 @@ Nothing in `src/louped` knows about any one system: a system you study comes in 
 OpenAI-compatible endpoint (`louped.grid.endpoint`), an agent endpoint that reports the tools it ran
 in a `trace` field on its reply (the `agent/` provider), its regression cases as JSONL
 (`louped.inspect_ext.cases`) or its logged model calls, and its specifics stay in an experiment's
-options. The domains and their experiments are listed in `apps/site/content/docs/domains.mdx`; what
+options. The default domains, and how a project lists its own, are in `apps/site/content/docs/experiments.mdx`; what
 goes in an experiment's folder, and how the app finds it, in `apps/site/content/docs/experiments.mdx`.
 
 ## Packages and layers
