@@ -68,7 +68,7 @@ test("Inspect tab draws the lens, projections and attention", async ({ page }, i
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await mockApi(page);
-  await page.goto("/playground/?tab=inspect");
+  await page.goto("/behavior/probe/?tab=inspect");
   await page.getByLabel("Prompt").fill("hi");
   await page.getByRole("button", { name: /Run/ }).click();
   await expect(page.getByText("Logit lens", { exact: true })).toBeVisible();
@@ -94,7 +94,7 @@ test("Inspect tab draws the lens, projections and attention", async ({ page }, i
 
 test("every figure says how to read it behind its ?", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/playground/?tab=inspect");
+  await page.goto("/behavior/probe/?tab=inspect");
   await page.getByLabel("Prompt").fill("hi");
   await page.getByRole("button", { name: /Run/ }).click();
   // a tap opens it, so it works without hover too
@@ -115,7 +115,7 @@ test("Reply tab shows both streamed replies", async ({ page }) => {
       body: r.request().postDataJSON().interventions.length ? " steered reply" : " base reply",
     }),
   );
-  await page.goto("/playground/");
+  await page.goto("/behavior/probe/");
   await page.getByLabel("Prompt").fill("hi");
   await page.getByRole("button", { name: /Run/ }).click();
   await expect(page.getByTestId("reply-base")).toContainText("base reply");
@@ -135,7 +135,7 @@ test("Adapters and heads go to the intervened side and into the model args", asy
       body: sent.at(-1)!.adapters.length ? " terse" : " base",
     });
   });
-  await page.goto("/playground/");
+  await page.goto("/behavior/probe/");
   await page.getByRole("checkbox", { name: "terse" }).click();
   await page.getByRole("radio", { name: "heads" }).click();
   await page.getByLabel("Heads").fill("1, 3, 9");
@@ -173,7 +173,7 @@ test("A diffusion model denoises and shows its trajectory", async ({ page }, inf
   await page.route("**/api/playground/inspect", (r) =>
     r.fulfill({ json: { views: [trajectory] } }),
   );
-  await page.goto("/playground/");
+  await page.goto("/behavior/probe/");
   await expect(page.getByRole("radiogroup")).toHaveCount(0);
   await page.getByLabel("Steps").fill("8");
   await expect(page.getByText(`-M diffusion='{"length":64,"steps":8}'`)).toBeVisible();

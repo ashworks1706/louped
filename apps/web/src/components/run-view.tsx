@@ -82,11 +82,7 @@ function RunHeader({ run }: { run: RunDetail }) {
           <div className="flex gap-1.5">
             <dt>Experiment</dt>
             <dd className="text-foreground">
-              {run.experiment ? (
-                <ExperimentLink name={run.experiment} />
-              ) : (
-                "—"
-              )}
+              {run.experiment ? <ExperimentLink name={run.experiment} /> : "—"}
             </dd>
           </div>
           <div className="flex gap-1.5">

@@ -78,7 +78,7 @@ test("circuits shows the latest graph in circuit-tracer's viewer", async ({ page
   await page.route("**/circuit/**", (r) =>
     r.fulfill({ body: "<title>Attribution Graphs</title>" }),
   );
-  await page.goto("/circuits/");
+  await page.goto("/behavior/circuits/");
   await expect(page.getByTitle("Attribution graph capital")).toHaveAttribute(
     "src",
     /\/circuit\/\?slug=capital$/,

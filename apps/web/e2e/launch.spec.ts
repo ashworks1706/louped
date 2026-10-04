@@ -154,6 +154,11 @@ test("a launch exports for Sol and its result imports back", async ({ page }, in
     id: "script:hello/run.py",
     target: { provider: "sol", gpu: "a30", gpus: 1, hours: 2 },
   });
+  // A result comes back on Runs, where every job is followed.
+  await page.route("**/api/health", (r) =>
+    r.fulfill({ json: { status: "ok", version: "0.0.0", home: "/tmp", launching: true } }),
+  );
+  await page.goto("/runs/");
   await page.getByLabel("Result archive").setInputFiles({
     name: "loupe-result-j2.tar.gz",
     mimeType: "application/gzip",

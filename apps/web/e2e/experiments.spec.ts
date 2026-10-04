@@ -53,20 +53,26 @@ async function mockApi(page: Page) {
 }
 
 for (const scheme of ["dark", "light"] as const) {
-  test(`experiments group by axis and filter by status (${scheme})`, async ({ page }, info) => {
+  test(`experiments group by domain and filter by status (${scheme})`, async ({ page }, info) => {
     await page.emulateMedia({ colorScheme: scheme });
     await mockApi(page);
-    await page.goto("/experiments/");
-    await expect(page.getByRole("heading", { level: 2, name: "Behavior" })).toBeVisible();
-    await expect(page.getByRole("heading", { level: 2, name: "Efficiency" })).toBeVisible();
-    await expect(page.getByText("2 more runs")).toBeVisible();
+    await page.goto("/behavior/experiments/");
+    await expect(page.getByRole("heading", { level: 2, name: /Mechanisms/ })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 2, name: /Sycophancy and honesty/ }),
+    ).toBeVisible();
+    // The efficiency question is on the efficiency page only.
+    await expect(page.getByText("retrieval-injection")).toHaveCount(0);
     await page.screenshot({ path: info.outputPath(`experiments-${scheme}.png`), fullPage: true });
 
-    await page.getByRole("tab", { name: "parked (1)" }).click();
+    await page.getByRole("button", { name: /parked/i }).click();
     await expect(page).toHaveURL(/status=parked/);
     await expect(page.getByText("sycophancy-pushback")).toBeVisible();
     await expect(page.getByText("refusal-direction")).toHaveCount(0);
     await page.screenshot({ path: info.outputPath(`experiments-parked-${scheme}.png`) });
+
+    await page.goto("/efficiency/experiments/");
+    await expect(page.getByText("5 runs")).toBeVisible();
   });
 }
 
@@ -113,12 +119,12 @@ test("an experiment page shows its design, result, runs and what launches it", a
       ],
     }),
   );
-  await page.goto("/experiments/");
+  await page.goto("/efficiency/experiments/");
   await page
     .getByRole("link", { name: /retrieval-injection/ })
     .first()
     .click();
-  await expect(page).toHaveURL(/\/experiment\/\?name=retrieval-injection/);
+  await expect(page).toHaveURL(/\/efficiency\/experiment\/\?name=retrieval-injection/);
   await expect(page.getByRole("heading", { level: 1, name: "retrieval-injection" })).toBeVisible();
   await expect(page.getByRole("cell", { name: "0.00" })).toBeVisible();
   await expect(page.getByRole("link", { name: "run.py" })).toHaveAttribute(

@@ -127,11 +127,13 @@ never with `--expose`.
 
 `loupe mcp` is a stdio MCP server for coding agents. It imports nothing from the server: it calls
 the same HTTP API the UI does, so an agent's jobs share the queue and the `--expose` guard, and show
-on the Launch page.
+on the Runs page.
 
-Pages: the workspace (Home, Experiments, Runs, Compare, Launch, with Run and Experiment detail),
-then one sidebar per research domain. Behavior: Overview, Probe (reply, inspect, patch, dose),
-Vectors, Circuits, Feature. Efficiency: Overview, Benchmark (speed, reply), Training. Probe and
+Pages: a top bar of sections over a sidebar of the section's pages, which folds to icons. The
+workspace: Home, Runs (jobs with their progress, then every run), Compare, Launch, with Run and Job
+detail. Each research domain lives under its own path: `/behavior/` Overview, Experiments, Probe
+(reply, inspect, patch, dose), Vectors, Circuits, Feature; `/efficiency/` Overview, Experiments,
+Benchmark (speed, reply), Training. An experiment's page is under its domain's path. Probe and
 Benchmark are one playground with different tools. Every technical term has a ? from
 `apps/web/src/lib/glossary.ts`.
 Design rules are in `apps/web/AGENTS.md`. `apps/site` is the docs site.

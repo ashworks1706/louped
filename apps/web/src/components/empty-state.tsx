@@ -17,9 +17,7 @@ export function EmptyState({
   title: string;
   body?: string;
 } & (
-  | { action: { href: string; label: string } }
-  | { command: string }
-  | { children: React.ReactNode }
+  { action: { href: string; label: string } } | { command: string } | { children: React.ReactNode }
 )) {
   return (
     <div className="flex flex-col items-center rounded-xl border border-dashed px-6 py-16 text-center">

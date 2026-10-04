@@ -69,9 +69,10 @@ for (const [end, title, detail] of [
     const { jobs } = await mockApi(page);
     await page.goto("/launch/");
     await page.getByRole("button", { name: "Launch" }).click();
-    await expect(page.getByText("hello/run.py queued")).toBeVisible();
+    await expect(page.getByText("hello/run.py launched")).toBeVisible();
+    await expect(page).toHaveURL(/\/job\/\?id=j1/);
 
-    // Leave the Launch page: the notice must not depend on watching the job.
+    // Leave the job page: the notice must not depend on watching the job.
     await page.getByRole("link", { name: "Runs", exact: true }).first().click();
     Object.assign(jobs[0], {
       status: end,
@@ -104,7 +105,7 @@ test("a run started outside the app is announced when it ends", async ({ page },
   const { runs } = await mockApi(page, { runs: [run("running")] });
   await page.addInitScript(() => localStorage.setItem("theme", "light"));
   await page.goto("/runs/");
-  await expect(page.getByRole("link", { name: "refusal-finetuning" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: /refusal-finetuning/ })).toBeVisible();
   runs[0] = run("finished");
   await expect(page.getByText("Training finished")).toBeVisible({ timeout: 10_000 });
   await settle(page);

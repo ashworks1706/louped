@@ -45,7 +45,7 @@ export function RunsList({
             body="Launch a script, or load example runs from a tiny model trained on this machine."
           >
             <Button asChild size="sm" variant="outline">
-              <Link href="/launch/">Launch</Link>
+              <Link href="/launch/">Launch a run</Link>
             </Button>
             <ExamplesButton />
           </EmptyState>
