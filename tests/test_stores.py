@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import get_args
 
 import pytest
 from fastapi.testclient import TestClient
@@ -12,8 +11,13 @@ from inspect_ai.solver import generate
 from loupe import stores
 from loupe.core import logs_dir
 from loupe.server import create_app
-from loupe.stores.experiments import DOMAINS, BadExperiment, front_matter, question, result
-from loupe.stores.types import Domain
+from loupe.stores.experiments import (
+    DEFAULT_DOMAINS,
+    BadExperiment,
+    front_matter,
+    question,
+    result,
+)
 from loupe.tracking import start_run
 from loupe.tracking.runs import log_json
 
@@ -93,7 +97,7 @@ def test_experiments_group_runs_by_tag(tmp_path: Path) -> None:
     assert exp.question == "Does it cave?"
     assert exp.result == "It caves."
     assert (exp.axis, exp.domain, exp.status) == ("behavior", "honesty", "active")
-    assert exp.domain_title == DOMAINS["honesty"][1]
+    assert exp.domain_title == DEFAULT_DOMAINS["honesty"][1]
     assert len(exp.runs) == 1
 
 
@@ -122,8 +126,9 @@ def test_front_matter_is_required_and_checked() -> None:
     assert front_matter("---\ndomain: context\nstatus: active\n---\n", "x") == ("context", "active")
 
 
-def test_every_experiment_in_the_repo_is_filed(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("LOUPE_EXPERIMENTS", str(Path(__file__).parents[1] / "experiments"))
+def test_the_example_experiment_init_ships_is_filed(monkeypatch: pytest.MonkeyPatch) -> None:
+    example = Path(__file__).parents[1] / "src" / "loupe" / "templates" / "example"
+    monkeypatch.setenv("LOUPE_EXPERIMENTS", str(example))
     experiments = stores.list_experiments()
     assert experiments
     assert all(e.question for e in experiments)
@@ -136,10 +141,6 @@ def test_question_and_result_parsing() -> None:
     assert result("## Result\n\nWith `--tiny`: 0.5.\n") == "With --tiny: 0.5."
     assert result("## Result\n\n## Next\n\nLater.\n") is None
     assert question("## Question\n\n<!-- a hint -->\n\n## Observation\n") is None
-
-
-def test_domains_match_the_domain_type() -> None:
-    assert set(DOMAINS) == set(get_args(Domain))
 
 
 def test_one_experiment_carries_its_readme(tmp_path: Path) -> None:

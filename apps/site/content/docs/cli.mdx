@@ -3,8 +3,16 @@ title: CLI
 description: The loupe command.
 ---
 
-Every command takes `--help`, and each is also a form on the app's Launch page. State lives under
-`LOUPE_HOME` (default `./.loupe`).
+Every command takes `--help`, and each is also a form on the app's Launch page. Commands find the
+project from the working directory upward, by its `loupe.toml`; state lives under `LOUPE_HOME`
+(default `.loupe/` at the project's root, else in the working directory) and experiments under
+`LOUPE_EXPERIMENTS` (default `experiments/` beside it).
+
+- `loupe init [dir]`: make a research project: `loupe.toml`, `experiments/` with an example
+  (`--no-example` to leave it out), `AGENTS.md`, `.mcp.json` and the agent's skills, and `.loupe/`
+  gitignored. Files that exist are kept.
+- `loupe view <folder>`: Inspect logs, a loupe home or MLflow store, or any folder of files in the
+  app, read-only, without a project.
 
 - `loupe serve`: the API and the app on 127.0.0.1:8000. Models load from the Probe or Benchmark page, with
   adapters, a masked diffusion model or an attention kernel. `--host` needs `--expose`, which

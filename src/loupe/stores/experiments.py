@@ -9,7 +9,13 @@ A README opens with front matter naming its domain and status:
 
 Domains belong to one of two research axes, behaviour and efficiency, or to the checks that
 loupe reproduces known results. The axis is read from the domain, so a README names only the
-domain. A README without front matter, or with a domain or status not listed here, is an error
+domain. A project lists its domains in loupe.toml; without that list it has DEFAULT_DOMAINS:
+
+    [domains.honesty]
+    axis = "behavior"
+    title = "Sycophancy and honesty"
+
+A README without front matter, or with a domain or status the project does not list, is an error
 naming the folder, not an experiment filed under a default.
 """
 
@@ -20,6 +26,7 @@ from pathlib import Path
 from typing import get_args
 
 from loupe.core import experiments_dir
+from loupe.core.project import config
 from loupe.stores.runs import NotFound, list_runs
 from loupe.stores.types import (
     Axis,
@@ -30,8 +37,9 @@ from loupe.stores.types import (
     Status,
 )
 
-#: Each domain's axis and title, in the order the Experiments page shows them.
-DOMAINS: dict[Domain, tuple[Axis, str]] = {
+#: Each domain's axis and title, in the order the Experiments page shows them, for a project whose
+#: loupe.toml lists none.
+DEFAULT_DOMAINS: dict[Domain, tuple[Axis, str]] = {
     "mechanisms": ("behavior", "Mechanisms"),
     "honesty": ("behavior", "Sycophancy and honesty"),
     "conditioning": ("behavior", "Steering and conditioning"),
@@ -41,6 +49,24 @@ DOMAINS: dict[Domain, tuple[Axis, str]] = {
     "specialisation": ("efficiency", "Small and specialised models"),
     "reproduction": ("checks", "Reproducing known results"),
 }
+
+
+def domains() -> dict[Domain, tuple[Axis, str]]:
+    """The project's domains from loupe.toml, in its order; DEFAULT_DOMAINS when it lists none.
+    A domain with an unknown axis or no title is an error naming it."""
+    listed = config().get("domains")
+    if not listed:
+        return DEFAULT_DOMAINS
+    out: dict[Domain, tuple[Axis, str]] = {}
+    for key, entry in listed.items():
+        axis, title = entry.get("axis"), entry.get("title")
+        if axis not in get_args(Axis) or not isinstance(title, str) or not title:
+            raise BadExperiment(
+                f"loupe.toml: domain {key!r} needs an axis, one of {get_args(Axis)}, and a title"
+            )
+        out[key] = (axis, title)
+    return out
+
 
 _FRONT = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 _COMMENT = re.compile(r"<!--.*?-->", re.S)
@@ -92,8 +118,9 @@ def front_matter(readme: str, name: str) -> tuple[Domain, Status]:
         for k, v in (line.split(":", 1) for line in found.group(1).splitlines() if ":" in line)
     )
     domain, status = fields.get("domain"), fields.get("status")
-    if domain not in DOMAINS:
-        raise BadExperiment(f"experiments/{name}: domain {domain!r} is not one of {list(DOMAINS)}")
+    known = domains()
+    if domain not in known:
+        raise BadExperiment(f"experiments/{name}: domain {domain!r} is not one of {list(known)}")
     if status not in get_args(Status):
         raise BadExperiment(
             f"experiments/{name}: status {status!r} is not one of {get_args(Status)}"
@@ -118,11 +145,12 @@ def _read(folder: Path, runs: list[RunSummary]) -> tuple[Experiment, str]:
     """The experiment in a folder, and its README without the front matter."""
     readme = (folder / "README.md").read_text(encoding="utf-8")
     domain, status = front_matter(readme, folder.name)
+    axis, title = domains()[domain]
     experiment = Experiment(
         name=folder.name,
-        axis=DOMAINS[domain][0],
+        axis=axis,
         domain=domain,
-        domain_title=DOMAINS[domain][1],
+        domain_title=title,
         status=status,
         question=question(readme),
         result=result(readme),
@@ -134,7 +162,7 @@ def _read(folder: Path, runs: list[RunSummary]) -> tuple[Experiment, str]:
 def list_experiments() -> list[Experiment]:
     runs = list_runs()
     out = [_read(folder, runs)[0] for folder in _folders()]
-    order = list(DOMAINS)
+    order = list(domains())
     return sorted(out, key=lambda e: (order.index(e.domain), e.status != "active", e.name))
 
 
@@ -241,8 +269,9 @@ def scaffold(name: str, domain: str) -> Path:
     """experiments/<name>/ with its README to fill in and a run.py to write, active in domain."""
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", name):
         raise BadExperiment(f"{name!r}: a name is lowercase letters, digits and dashes")
-    if domain not in DOMAINS:
-        raise BadExperiment(f"domain {domain!r} is not one of {list(DOMAINS)}")
+    known = domains()
+    if domain not in known:
+        raise BadExperiment(f"domain {domain!r} is not one of {list(known)}")
     folder = experiments_dir() / name
     if folder.exists():
         raise BadExperiment(f"experiments/{name} exists")

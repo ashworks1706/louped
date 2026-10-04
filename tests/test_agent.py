@@ -98,6 +98,22 @@ def test_an_agent_launches_follows_and_cancels_jobs_through_the_queue(tmp_path: 
     assert (tmp_path / "experiments" / "my-q" / "README.md").exists()
 
 
+def test_an_agent_starts_a_question_exports_a_run_and_imports_a_result(tmp_path: Path) -> None:
+    mcp = tools()
+    done = call(mcp, "new_experiment", name="does-it-cave", domain="honesty")
+    assert done["status"] == "succeeded", done["log"]
+    assert (tmp_path / "experiments" / "does-it-cave" / "run.py").exists()
+    with pytest.raises(ToolError, match="'vibes' is not one of"):
+        asyncio.run(mcp.call_tool("new_experiment", {"name": "x", "domain": "vibes"}))
+    out = call(mcp, "export_job", id="script:does-it-cave/run.py", target={"provider": "sol"},
+               out_dir=str(tmp_path / "bundles"))  # fmt: skip
+    bundle = Path(out["path"])
+    assert bundle.parent == tmp_path / "bundles" and bundle.name.startswith("loupe-")
+    assert bundle.stat().st_size == out["bytes"] > 0
+    with pytest.raises(ToolError, match="does not exist"):
+        asyncio.run(mcp.call_tool("import_result", {"path": str(tmp_path / "nope.tar.gz")}))
+
+
 def test_an_exposed_server_refuses_an_agents_launch() -> None:
     mcp = tools(launching=False)
     with pytest.raises(ToolError, match="loupe answered 403: launching is off"):
@@ -128,5 +144,6 @@ def test_loupe_mcp_speaks_mcp_over_stdio() -> None:
             return found, result.content[0].text  # type: ignore[union-attr]
 
     found, error = asyncio.run(connect())
-    assert {"experiments", "runs", "figure", "compare", "launch", "job"} <= found
+    assert {"experiments", "runs", "figure", "compare", "launch", "job", "new_experiment",
+            "export_job", "import_result"} <= found  # fmt: skip
     assert "no loupe server at http://127.0.0.1:9" in error

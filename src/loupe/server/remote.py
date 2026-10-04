@@ -35,6 +35,8 @@ from starlette.background import BackgroundTask
 import loupe
 from loupe import __version__
 from loupe.core import experiments_dir, home, logs_dir, tracking_uri
+from loupe.core.project import FILE
+from loupe.core.project import root as root_of_project
 from loupe.server.launch import Job, Jobs, Launchable, LaunchRequest, argv, require_json
 
 Provider = Literal["sol", "slurm", "shell"]
@@ -189,6 +191,8 @@ def export(req: ExportRequest, jobs: Jobs, title: str) -> Path:
 
     if experiments_dir().is_dir():
         shutil.copytree(experiments_dir(), root / "experiments", ignore=keep)
+    if (project := root_of_project()) is not None:  # its domains, so its experiments read there
+        shutil.copy2(project / FILE, root / FILE)
     extras = " ".join(f"--extra {e}" for e in target.extras)
     if (source := _checkout()) is not None:
         for name in ("pyproject.toml", "uv.lock", "README.md", "LICENSE", ".python-version"):
@@ -249,7 +253,9 @@ def import_result(path: Path, jobs: Jobs | None) -> Imported:
         result = json.loads((out / "result.json").read_text(encoding="utf-8"))
         host = str(result.get("host") or "remote")
         added, skipped = _evals(out, host)
-        more, again = _mlflow(out, host, str(result.get("home", "")))
+        # the node and GPUs it ran on, for the run page's provenance
+        where = {f"loupe.{k}": str(result[k]) for k in ("node", "gpu") if result.get(k)}
+        more, again = _mlflow(out, host, str(result.get("home", "")), where)
         job = _finish(jobs, result, out) if jobs is not None else None
     return Imported(job=job, host=host, exit_code=int(result["exit_code"]), runs=added + more,
                     skipped=skipped + again)  # fmt: skip
@@ -283,7 +289,9 @@ def _record_hosts(hosts: dict[str, str]) -> None:
     path.write_text(json.dumps(known | hosts, indent=2, sort_keys=True), encoding="utf-8")
 
 
-def _mlflow(out: Path, host: str, remote_home: str) -> tuple[list[str], list[str]]:
+def _mlflow(
+    out: Path, host: str, remote_home: str, where: dict[str, str]
+) -> tuple[list[str], list[str]]:
     db = out / "mlflow.db"
     if not db.exists():
         return [], []
@@ -306,7 +314,7 @@ def _mlflow(out: Path, host: str, remote_home: str) -> tuple[list[str], list[str
             if seen:
                 skipped.append(f"m-{seen[0].info.run_id}")
                 continue
-            tags = {**run.data.tags, "loupe.host": host, "loupe.imported_from": origin}
+            tags = {**run.data.tags, **where, "loupe.host": host, "loupe.imported_from": origin}
             new = ours.create_run(experiment_id(experiment.name), start_time=run.info.start_time,
                                   tags=tags, run_name=run.info.run_name)  # fmt: skip
             params = [Param(k, v) for k, v in run.data.params.items()]

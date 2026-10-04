@@ -2,6 +2,7 @@
 
 import io
 import os
+import socket
 import subprocess
 import sys
 import tarfile
@@ -136,6 +137,7 @@ def test_a_result_run_elsewhere_imports_as_if_it_ran_here(tmp_path: Path) -> Non
     assert analysis.name == "far sol" and analysis.experiment == "hello"
     assert evaled.experiment == "hello" and evaled.model == "mockllm/model"
     assert {analysis.host, evaled.host} == {"vm"}
+    assert stores.get_run(analysis.id).tags["loupe.node"] == socket.gethostname()
     assert [v.view.title for v in stores.list_views(analysis.id)] == ["t"]
     detail = api.get(f"/api/launch/jobs/{job}").json()
     assert detail["status"] == "succeeded" and "ran sol" in detail["log"]

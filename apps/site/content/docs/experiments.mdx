@@ -52,8 +52,8 @@ with start_run(EXPERIMENT, name=args.model, params=asdict(args), seed=args.seed)
 ## Someone else's code
 
 A paper's harness that pins its own versions runs in its own environment, not in loupe's: clone
-it at a fixed commit under `.loupe/vendor/`, call it as a subprocess, and log what it wrote.
-`experiments/rational-updating-baseline/run.py` does this for the rational-updating harness.
+it at a fixed commit under `.loupe/vendor/`, call it as a subprocess, and log what it wrote: its
+per-item records as one JSONL file per condition, so the run page lines them up, and its report.
 
 ## Shared code
 

@@ -10,7 +10,6 @@ import tyro
 
 from loupe import __version__
 from loupe.data.cli import Command as DataCommand
-from loupe.stores.types import Domain
 from loupe.train.cli import Command as TrainCommand
 
 
@@ -21,12 +20,38 @@ class Serve:
 
     host: str = "127.0.0.1"
     port: int = 8000
-    web_dir: Path = Path("apps/web/out")
-    """The UI's static export; built by `just web-build`."""
+    web_dir: Path | None = None
+    """The UI's static export; by default the one in the installed package, else a checkout's
+    apps/web/out (built by `just web-build`)."""
     expose: bool = False
     """Allow a host other than this machine. There is no auth: whoever reaches the port reads
     every run, log and transcript. Launching and loading a model from the UI are off when
     exposed."""
+
+
+@dataclass(frozen=True)
+class Init:
+    """Make a research project: loupe.toml, experiments/ with an example that runs on a CPU,
+    AGENTS.md and the skills and MCP server for your coding agent, and .loupe/ gitignored. Files
+    that exist are kept."""
+
+    path: tyro.conf.Positional[Path] = Path(".")
+    """The project's folder; made if missing."""
+    example: bool = True
+    """Add the example experiment, does-pushback-flip-answers."""
+
+
+@dataclass(frozen=True)
+class View:
+    """Open results you already have in the UI, read-only, without a project: a folder of Inspect
+    logs, a loupe home or MLflow store (mlflow.db), or any folder of files (JSONL, Markdown, JSON,
+    CSV), which shows as one run."""
+
+    path: tyro.conf.Positional[Path]
+    host: str = "127.0.0.1"
+    port: int = 8000
+    web_dir: Path | None = None
+    """The UI's static export; found as for serve."""
 
 
 @dataclass(frozen=True)
@@ -68,9 +93,11 @@ class New:
     """Start a research question: experiments/<name>/ with its README to fill in, active."""
 
     name: tyro.conf.Positional[str]
-    """Named for the question, lowercase with dashes: rational-updating-baseline."""
-    domain: Domain
-    """The domain it is filed under on the Experiments page."""
+    """Named for the question, lowercase with dashes: does-pushback-flip-answers."""
+    domain: str
+    """The domain it is filed under on the Experiments page: one the project's loupe.toml lists,
+    else mechanisms, honesty, conditioning, agents, context, inference, specialisation or
+    reproduction."""
 
 
 @dataclass(frozen=True)
@@ -197,7 +224,9 @@ Command = (
     | Annotated[TrainCommand, tyro.conf.subcommand("train")]
     | Annotated[Sweep, tyro.conf.subcommand("sweep")]
     | Annotated[Grid, tyro.conf.subcommand("grid")]
+    | Annotated[Init, tyro.conf.subcommand("init")]
     | Annotated[New, tyro.conf.subcommand("new")]
+    | Annotated[View, tyro.conf.subcommand("view")]
     | Annotated[Features, tyro.conf.subcommand("features")]
     | Annotated[Circuit, tyro.conf.subcommand("circuit")]
     | Annotated[Import, tyro.conf.subcommand("import")]
@@ -218,7 +247,7 @@ def serve(cmd: Serve) -> None:
         raise SystemExit(
             "loupe serve needs the server extra: pip install 'loupelab[server]'"
         ) from exc
-    from loupe.server.app import LOOPBACK
+    from loupe.server.app import LOOPBACK, find_ui
 
     hosts = None
     if cmd.host not in LOOPBACK:
@@ -226,10 +255,32 @@ def serve(cmd: Serve) -> None:
             raise SystemExit(f"--host {cmd.host} serves every log without auth; add --expose")
         hosts = ["*"] if cmd.host in ("0.0.0.0", "::") else [*LOOPBACK, cmd.host]
     uvicorn.run(
-        create_app(cmd.web_dir, hosts, launching=hosts is None),
+        create_app(find_ui(cmd.web_dir), hosts, launching=hosts is None),
         host=cmd.host,
         port=cmd.port,
     )
+
+
+def view(cmd: View) -> None:
+    try:
+        import uvicorn
+
+        from loupe.server import create_app
+        from loupe.server.app import LOOPBACK, find_ui
+        from loupe.server.view import prepare
+    except ImportError as exc:
+        raise SystemExit(
+            "loupe view needs the server and tracking extras: "
+            "pip install 'loupelab[server,tracking]'"
+        ) from exc
+    if cmd.host not in LOOPBACK:
+        raise SystemExit("loupe view serves this machine only; use loupe serve --expose to share")
+    try:
+        print(prepare(cmd.path))
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+    uvicorn.run(create_app(find_ui(cmd.web_dir), None, launching=False), host=cmd.host,
+                port=cmd.port)  # fmt: skip
 
 
 def main() -> None:
@@ -260,6 +311,15 @@ def main() -> None:
             if unknown := set(spec) - set(inspect.signature(grid).parameters):
                 raise SystemExit(f"{cmd.config}: unknown keys {sorted(unknown)}")
             print(grid(**spec))
+        case Init() as cmd:
+            from loupe.init import init
+
+            try:
+                print(init(cmd.path, cmd.example))
+            except FileExistsError as exc:
+                raise SystemExit(str(exc)) from exc
+        case View() as cmd:
+            view(cmd)
         case New() as cmd:
             from loupe.stores.experiments import BadExperiment, scaffold
 

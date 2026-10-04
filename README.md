@@ -13,10 +13,11 @@ loupe is where research questions about language models get answered. It studies
 - **Behavior and alignment**: what models do, and why.
 - **Efficiency and systems**: what it costs to run them.
 
-Each question is an experiment: a folder in `experiments/` with a stated question, the observation
-behind it, competing hypotheses, a baseline, a controlled test, a stop condition and a result. The
-app shows which questions are active, launches their runs and reads every result back, sample by
-sample. Everything runs on one machine, on open-weight models, with no hosted model and no API key.
+Each question is an experiment: a folder in your project's `experiments/` with a stated question,
+the observation behind it, competing hypotheses, a baseline, a controlled test, a stop condition
+and a result. The app shows which questions are active, launches their runs and reads every result
+back, item by item. Runs stay on your machine or your cluster, on open-weight models, with no
+hosted model and no API key. Your coding agent does the plumbing through loupe's MCP server.
 
 ## The method
 
@@ -34,38 +35,42 @@ A change is one spec, a policy, that runs the same way in an eval, a training ru
 and an analysis. Systems that are not open weights come in as an OpenAI-compatible endpoint, an
 agent endpoint or logged model calls.
 
-## Domains
-
-| Axis | Domain | Experiments |
-|---|---|---|
-| Behavior & alignment | Sycophancy and honesty | `rational-updating-baseline` (Experiment 1A) |
-| Efficiency & systems | | none yet |
-
-Every domain is listed in [the docs](apps/site/content/docs/domains.mdx).
-
-## A new question
-
-Run `loupe new my-question --domain honesty`. It writes
-`experiments/my-question/` with the research-note README and a `run.py` whose options become a
-form on Launch and whose runs file under the experiment. What goes where is in
-[Writing an experiment](apps/site/content/docs/experiments.mdx).
-
-## From a coding agent
-
-`loupe mcp` lets Claude Code, Cursor or any MCP client read runs and launch experiments
-through the app's queue. Setup is in [the docs](apps/site/content/docs/agents.mdx).
-
-## Install
+## Start
 
 ```
-pip install 'loupelab[server,interp]'
+pip install 'loupelab[server,tracking,interp,agent]'
+loupe init my-research && cd my-research
 loupe serve
 ```
 
-Open http://127.0.0.1:8000. Extras for training, SAEs and retrieval are in the
-[install docs](apps/site/content/docs/install.mdx). The package is `loupelab`; the import and the
-command are `loupe`. Built on nnsight, Inspect, TRL, PEFT, SAELens, circuit-tracer and MLflow
-([how each runs](docs/ARCHITECTURE.md)).
+`loupe init` makes a research project: `loupe.toml` (the project's root and its domains),
+`experiments/` with an example that runs on a CPU, `AGENTS.md`, and `.mcp.json` with skills for
+your coding agent. What you write under `experiments/` is committed; what loupe writes goes to
+`.loupe/`, gitignored. Open http://127.0.0.1:8000, Launch the example, and read it item by item on
+its run page.
+
+Already have results? `loupe view <folder>` opens Inspect logs, an MLflow store or any folder of
+JSONL, Markdown and CSV in the app, read-only, without a project.
+
+## With your coding agent
+
+loupe has no agent of its own: it is the harness for the one you use. In a project, Claude Code,
+Codex or Cursor read `AGENTS.md`, and `loupe mcp` (in `.mcp.json`) lets them start a question,
+launch it through the app's queue, export it to a cluster and read the results. Claude Code users
+can also add loupe as a plugin: `/plugin marketplace add ashworks1706/loupe`, then
+`/plugin install loupe@loupe`. Setup is in [the docs](apps/site/content/docs/agents.mdx).
+
+## A new question
+
+`loupe new my-question --domain honesty` (or the agent's `new_experiment`) writes
+`experiments/my-question/` with the research-note README and a `run.py` whose options become a
+form on Launch and whose runs file under the experiment. What goes where is in
+[Writing an experiment](apps/site/content/docs/experiments.mdx). Real runs on large models go to
+Sol, a Slurm cluster or a VM ([Run elsewhere](apps/site/content/docs/remote.mdx)).
+
+Extras for training, SAEs and retrieval are in the [install docs](apps/site/content/docs/install.mdx).
+The package is `loupelab`; the import and the command are `loupe`. Built on nnsight, Inspect,
+TRL, PEFT, SAELens, circuit-tracer and MLflow ([how each runs](docs/ARCHITECTURE.md)).
 
 ## Develop
 

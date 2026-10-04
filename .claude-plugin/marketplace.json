@@ -1,0 +1,11 @@
+{
+  "name": "loupe",
+  "owner": { "name": "ashworks1706" },
+  "plugins": [
+    {
+      "name": "loupe",
+      "source": "./src/loupe/templates/agent",
+      "description": "Drive loupe research projects from Claude Code: the loupe MCP server and the new-experiment, read-results and run-elsewhere skills. Needs loupe installed (pip install 'loupelab[agent]')."
+    }
+  ]
+}

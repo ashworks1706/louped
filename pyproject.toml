@@ -104,6 +104,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/loupe"]
 
+# hatch_build.py: the UI's static export goes in as loupe/web when it has been built.
+[tool.hatch.build.targets.wheel.hooks.custom]
+
 [tool.uv]
 default-groups = ["dev"]
 
@@ -134,7 +137,7 @@ name = "Layers"
 type = "layers"
 layers = [
     "loupe.cli",
-    "loupe.server | loupe.agent",
+    "loupe.server | loupe.agent | loupe.init",
     "loupe.examples",
     "loupe.train | loupe.sweep | loupe.grid | loupe.features | loupe.circuits | loupe.judge | loupe.bench",
     "loupe.stores | loupe.tracking | loupe.analysis | loupe.inspect_ext",

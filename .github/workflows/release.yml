@@ -13,8 +13,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # The wheel carries the UI (hatch_build.py), so it is built first.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: extractions/setup-just@v4
+      - run: corepack enable && cd apps/web && pnpm install --frozen-lockfile
+      - run: just web-build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
       - uses: astral-sh/setup-uv@v10.2.0
       - run: uv build
+      - run: unzip -l dist/*.whl | grep -q 'loupe/web/index.html'
       - uses: actions/upload-artifact@v7
         with:
           name: dist

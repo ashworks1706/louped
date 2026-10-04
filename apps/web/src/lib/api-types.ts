@@ -667,19 +667,8 @@ export interface components {
        * @enum {string}
        */
       axis: "behavior" | "efficiency" | "checks";
-      /**
-       * Domain
-       * @enum {string}
-       */
-      domain:
-        | "mechanisms"
-        | "honesty"
-        | "conditioning"
-        | "agents"
-        | "context"
-        | "inference"
-        | "specialisation"
-        | "reproduction";
+      /** Domain */
+      domain: string;
       /** Domain Title */
       domain_title: string;
       /**
@@ -703,19 +692,8 @@ export interface components {
        * @enum {string}
        */
       axis: "behavior" | "efficiency" | "checks";
-      /**
-       * Domain
-       * @enum {string}
-       */
-      domain:
-        | "mechanisms"
-        | "honesty"
-        | "conditioning"
-        | "agents"
-        | "context"
-        | "inference"
-        | "specialisation"
-        | "reproduction";
+      /** Domain */
+      domain: string;
       /** Domain Title */
       domain_title: string;
       /**

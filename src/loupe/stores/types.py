@@ -93,16 +93,9 @@ class SampleDetail(BaseModel):
 #: behavior: what models do and why; efficiency: what it costs to run them; checks: loupe
 #: reproducing known results, so the other two can be trusted.
 Axis = Literal["behavior", "efficiency", "checks"]
-Domain = Literal[
-    "mechanisms",
-    "honesty",
-    "conditioning",
-    "agents",
-    "context",
-    "inference",
-    "specialisation",
-    "reproduction",
-]
+#: A domain's key, as a README's front matter names it; a project's loupe.toml lists its own, else
+#: loupe.stores.experiments.DEFAULT_DOMAINS.
+Domain = str
 #: active: being worked on now; parked: set up, waiting its turn; answered: the README holds a
 #: result on a real model that answers the question.
 Status = Literal["active", "parked", "answered"]

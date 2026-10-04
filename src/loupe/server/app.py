@@ -59,6 +59,20 @@ class Health(BaseModel):
     launching: bool = False
 
 
+def find_ui(given: Path | None = None) -> Path | None:
+    """The UI to serve: the one given; else the export a release carries in loupe/web; else a
+    source checkout's apps/web/out. Says which, or that there is none and the API runs alone."""
+    if given is not None:
+        return given
+    package = Path(__file__).resolve().parents[1]
+    for found in (package / "web", package.parents[1] / "apps" / "web" / "out"):
+        if (found / "index.html").is_file():
+            print(f"UI: {found}")
+            return found
+    print("no UI found: the API only. In a checkout, build it with `just web-build`.")
+    return None
+
+
 def create_app(
     web_dir: Path | None = None,
     hosts: list[str] | None = None,

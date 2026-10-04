@@ -117,7 +117,7 @@ def test_the_ui_launches_an_experiment_as_a_job_and_reads_its_log(tmp_path) -> N
     assert ids["grid"]["config"].startswith("# loupe grid") and ids["grid"]["recipe"] is None
     assert client.get("/api/launch/options?id=grid").json() == []
     new = {o["flag"]: o for o in client.get("/api/launch/options?id=new").json()}
-    assert new["name"]["required"] and "honesty" in new["--domain"]["choices"]
+    assert new["name"]["required"] and "loupe.toml" in new["--domain"]["help"]
     train = {o["flag"] for o in client.get("/api/launch/options?id=train:hello/sft.yaml").json()}
     assert train == {"--sweep", "--dry-run"}
     export = {o["flag"]: o for o in client.get("/api/launch/options?id=data:export").json()}

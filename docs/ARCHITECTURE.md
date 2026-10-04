@@ -16,6 +16,31 @@ one provider that runs any change in an eval, one data format for results, and t
 it. A tool loupe needs runs inside it, as a library, or in an environment of its own when it pins
 other versions. Nothing it does well is rewritten.
 
+## The package and a project
+
+loupe is installed once (`pip install loupelab`: the library, the `loupe` command, the API and
+the UI, which the wheel carries as `loupe/web`) and used in research projects, each its own
+folder and repository. `loupe init` makes one:
+
+```
+my-research/
+  loupe.toml          marks the root (commands find it from any subfolder) and lists its domains
+  experiments/        the questions, written by the person and their agent; committed
+  AGENTS.md, .mcp.json, .claude/skills/
+                      the harness for the person's own coding agent
+  .loupe/             what loupe writes: runs, logs, jobs, vendored harnesses; gitignored
+```
+
+What is written by hand is versioned; what loupe writes can be deleted and rebuilt by running the
+experiments. `loupe.core.project` finds the root; `loupe.core.paths` puts `.loupe/` and
+`experiments/` there unless `LOUPE_HOME` and `LOUPE_EXPERIMENTS` say otherwise. loupe's own
+repository is not a project: it holds the package and, under `src/loupe/templates/`, what `init`
+copies (also served to Claude Code as a plugin through `.claude-plugin/marketplace.json`).
+
+loupe has no agent of its own. The person's agent (Claude Code, Codex, Cursor) drives it through
+`loupe mcp` and follows the project's `AGENTS.md`; the person reads and judges in the UI.
+`loupe view <folder>` opens results that were made without loupe, read-only, with no project.
+
 ## The one idea: a change runs everywhere
 
 ```
@@ -45,7 +70,8 @@ function, wrapped once as an Inspect scorer (`inspect_ext.as_scorer`) and once a
 | API and UI | FastAPI; Next.js static export, shadcn/ui, TanStack Query, nuqs, Recharts | |
 
 Rejected: verifiers (pulls in hosted-API clients; TRL's environments cover it), vLLM, EasySteer and
-cluster launchers (loupe stays on one machine and batches through its own provider),
+cluster launchers such as submitit (a job runs here through loupe's own provider, or is exported as
+a bundle whose job.sh the cluster's own scheduler runs and whose result is imported back),
 TransformerLens (reimplements architectures, lags new models), Hydra (each tool keeps its native
 config; scripts use tyro), W&B (its server is not free to self-host), a plugin registry (Inspect's
 registries and Python entry points exist).
@@ -60,9 +86,10 @@ loupe is organised by research question, not by the system that asks or by the t
 | Efficiency and systems | context and retrieval inside the model; inference cost and kernels; small and specialised models |
 | Instrument checks | reproducing known results |
 
-A question is an experiment in `experiments/`, named for the question. Its README opens with front
-matter naming its domain and status (active, parked, answered); `loupe.stores.experiments` holds
-the list of domains and their axes, and refuses an experiment that names none of them. Evaluation,
+A question is an experiment in a project's `experiments/`, named for the question. Its README opens
+with front matter naming its domain and status (active, parked, answered); the project's
+`loupe.toml` lists its domains and their axes, else `loupe.stores.experiments.DEFAULT_DOMAINS`
+does, and an experiment naming none of them is refused. Evaluation,
 training, interventions and analysis are methods every domain uses, so they are packages in
 `src/loupe`, not domains.
 
@@ -80,10 +107,10 @@ only what it uses. A package imports only packages below it; `import-linter` enf
 in `pyproject.toml`.
 
 ```
-experiments                              leaf, nothing imports it
+experiments                              leaf, in a project; nothing imports it
 cli
-server | agent                           FastAPI over the stores; Playground; launching jobs; the
-                                         MCP server, an HTTP client of the API
+server | agent | init                    FastAPI over the stores; Playground; launching jobs; the
+                                         MCP server, an HTTP client of the API; loupe init
 train | sweep | grid | features | circuits | judge | bench
                                          training recipes and sweeps; steering sweeps; condition
                                          grids; SAE dashboards; attribution graphs; pairwise judging;
@@ -96,7 +123,7 @@ interventions                            steer, ablate, inject and heads specs; 
 vectors                                  directions as safetensors
 models | data | retrieval                load a model, adapter banks, masked diffusion; training
                                          sets; search and its metrics
-core                                     run metadata, paths
+core                                     run metadata, paths, the project
 ```
 
 ## Data

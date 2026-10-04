@@ -65,6 +65,12 @@ web:
 web-build:
     cd {{web}} && pnpm build
 
+# the first five minutes as a pip user: build the wheel with its UI, install it in an empty folder,
+# loupe init, the example, loupe serve (scripts/install-check.sh)
+install-check: web-build
+    rm -rf dist && uv build --wheel
+    bash scripts/install-check.sh dist/*.whl
+
 # the landing page and docs on :3001
 site:
     cd {{site}} && pnpm dev

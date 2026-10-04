@@ -14,8 +14,9 @@ Do not contradict them; propose an edit to the doc instead.
   BSD, OFL) and justified in the PR.
 - **No speculative code.** No module, option or abstraction without a caller today.
 - **Questions before infrastructure.** Code in `src/loupe` earns its place when an experiment needs
-  it. A question is an experiment in `experiments/`, named for the question, its README opening
-  with its domain and status (`DOMAINS` in `src/loupe/stores/experiments.py`). Nothing in
+  it. A question is an experiment in a research project (`loupe init`, its own repository), not in
+  this one: `experiments/<name>/`, its README opening with its domain and status (the project's
+  `loupe.toml`, else `DEFAULT_DOMAINS` in `src/loupe/stores/experiments.py`). Nothing in
   `src/loupe` or an experiment's name is tied to one application: a system comes in as a model
   id, an OpenAI-compatible endpoint, an agent endpoint or logged calls.
 - **Say what happened.** No silent fallbacks: raise, or print what was chosen. No fake paths in
@@ -58,9 +59,12 @@ src/loupe/        the package (distribution loupelab); layers in docs/ARCHITECTU
   server/         the API, the Playground, launching jobs
   agent.py        the MCP server coding agents drive loupe through
   sweep.py grid.py features.py circuits.py cli.py
+  templates/      what `loupe init` copies: the project files, the agent's skills and MCP config
+                  (also the Claude Code plugin, listed in .claude-plugin/), the example experiment
+  init.py         `loupe init`
 apps/web/         the UI; its AGENTS.md holds the design rules
 apps/site/        the docs site
-experiments/      one folder per research question, filed by domain; nothing imports it
+hatch_build.py    puts the built UI in the wheel as loupe/web
 tests/            Python tests, CPU only
 ```
 
@@ -68,12 +72,13 @@ tests/            Python tests, CPU only
 
 | To add                     | Write                                                                    |
 | -------------------------- | ------------------------------------------------------------------------ |
-| A research question        | `loupe new <name> --domain <domain>`, then its README and `run.py`        |
+| A research question        | in a research project: `loupe new <name> --domain <domain>`, then its README and `run.py` |
 | An eval                    | Inspect `@task`s in `experiments/<name>/task.py`                           |
 | A figure                   | a view from `loupe.analysis.views`, logged with `log_json` under `views/` |
 | A number                   | `mlflow.log_metrics` inside `loupe.tracking.start_run`                    |
 | A training run or a grid   | `experiments/<name>/*.yaml` starting `# loupe train <recipe>` or `# loupe grid` |
-| A paper's own harness      | a pinned clone under `.loupe/vendor/`, run in its own venv (see `rational-updating-baseline`) |
+| A paper's own harness      | a pinned clone under `.loupe/vendor/`, run in its own venv ("Someone else's code" in `apps/site/content/docs/experiments.mdx`) |
+| What a new project gets    | `src/loupe/templates/`: project files, agent skills, the example experiment |
 | A domain                   | "Adding a domain" in `apps/site/content/docs/domains.mdx`                 |
 | A view kind the UI lacks   | `loupe.analysis.views`, `View` in `stores/types.py`, a renderer in `apps/web/src/components/run-views.tsx`, `just api-types` |
 
@@ -93,7 +98,7 @@ asked.
 
 ## Agent tooling
 
-`.claude/skills/` holds the workflows (`check`, `new-experiment`, `roadmap`, `code-quality`, and
+`.claude/skills/` holds the workflows for developing loupe (`check`, `roadmap`, `code-quality`, and
 vendored debugging, TDD, verification and security skills). Run the `loupe-reviewer` agent before
 opening a pull request and `web-reviewer` after any change under `apps/web`.
 

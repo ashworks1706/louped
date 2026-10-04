@@ -34,7 +34,7 @@ jobs:
             python:
               - 'src/**'
               - 'tests/**'
-              - 'experiments/**'
+              - 'hatch_build.py'
               - 'pyproject.toml'
               - 'uv.lock'
               - '.python-version'
@@ -107,6 +107,31 @@ jobs:
       - run: uv sync --locked --all-extras
       - run: just examples
 
+  # The roadmap's first-five-minutes path, as a pip user meets it: the wheel built with its UI,
+  # installed in an empty folder, `loupe init`, the example on its offline model, `loupe serve`.
+  install:
+    name: Install
+    needs: changes
+    if: needs.changes.outputs.python == 'true' || needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+      - uses: extractions/setup-just@v4
+      - run: corepack enable && cd apps/web && pnpm install --frozen-lockfile
+      - run: just web-build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+      - run: uv build --wheel
+      - run: unzip -l dist/*.whl | grep -q 'loupe/web/index.html'
+      - run: bash scripts/install-check.sh dist/*.whl
+
   web:
     name: Web
     needs: changes
@@ -161,7 +186,7 @@ jobs:
   ci:
     name: CI
     if: always()
-    needs: [changes, python, web, site]
+    needs: [changes, python, install, web, site]
     runs-on: ubuntu-latest
     steps:
       - run: |

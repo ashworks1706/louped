@@ -1,16 +1,19 @@
 """Where loupe and the tools it drives keep what they write.
 
 Everything lives under one state directory so a run, its eval logs and its tracking database can
-be moved or deleted together. Each tool's own environment variable still wins when it is set.
+be moved or deleted together: .loupe/ at the project's root (loupe.core.project), beside its
+experiments/. Each tool's own environment variable still wins when it is set.
 """
 
 import os
 from pathlib import Path
 
+from loupe.core.project import base
+
 
 def home() -> Path:
-    """The state directory: LOUPE_HOME when set, else .loupe under the working directory."""
-    return Path(os.environ.get("LOUPE_HOME", ".loupe")).resolve()
+    """The state directory: LOUPE_HOME when set, else .loupe at the project's root."""
+    return Path(os.environ.get("LOUPE_HOME", base() / ".loupe")).resolve()
 
 
 def logs_dir() -> Path:
@@ -50,5 +53,6 @@ def graphs_dir() -> Path:
 
 
 def experiments_dir() -> Path:
-    """The research questions: LOUPE_EXPERIMENTS when set, else ./experiments."""
-    return Path(os.environ.get("LOUPE_EXPERIMENTS", "experiments")).resolve()
+    """The research questions: LOUPE_EXPERIMENTS when set, else experiments/ at the project's
+    root."""
+    return Path(os.environ.get("LOUPE_EXPERIMENTS", base() / "experiments")).resolve()

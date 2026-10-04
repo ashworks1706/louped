@@ -7,20 +7,20 @@ loupe studies two things about language models: **behavior and alignment**, what
 why, and **efficiency and systems**, what it costs to run them. A third group, **instrument
 checks**, reproduces known results so the other two can be trusted.
 
-Each axis is split into domains. A question is an experiment in `experiments/`, named for the
-question, whose README names its domain and status (`active`, `parked` or `answered`) in front
+Each axis is split into domains. A question is an experiment in a project's `experiments/`, named
+for the question, whose README names its domain and status (`active`, `parked` or `answered`) in front
 matter. The Experiments page groups them the same way. A system you study comes in as a model id,
 an OpenAI-compatible endpoint, an agent endpoint or logged model calls; nothing in a domain is tied
 to one application.
 
 ## Behavior and alignment
 
-| Domain                    | Asks                                                                                       | Experiments                  |
-| ------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------- |
-| Mechanisms                | Which directions, heads, features and circuits carry a behavior, and what moving them does | none yet                     |
-| Sycophancy and honesty    | Whether a model holds a correct answer under pressure and updates on valid evidence        | `rational-updating-baseline` |
-| Steering and conditioning | How prompts, vectors, soft prompts, ReFT and LoRA compare at reaching one target           | none yet                     |
-| Agent behavior            | Whether agents use tools, ground their answers in tool output and report failure honestly  | none yet                     |
+| Domain                    | Asks                                                                                       | Experiments                                                  |
+| ------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| Mechanisms                | Which directions, heads, features and circuits carry a behavior, and what moving them does | none yet                                                     |
+| Sycophancy and honesty    | Whether a model holds a correct answer under pressure and updates on valid evidence        | `does-pushback-flip-answers` (the example `loupe init` adds) |
+| Steering and conditioning | How prompts, vectors, soft prompts, ReFT and LoRA compare at reaching one target           | none yet                                                     |
+| Agent behavior            | Whether agents use tools, ground their answers in tool output and report failure honestly  | none yet                                                     |
 
 ## Efficiency and systems
 
@@ -46,7 +46,18 @@ patching, probes, attention, SAE features, circuits) on the same changed model.
 
 ## Adding a domain
 
-When a question fits none of these, add a domain in three places: the `Domain` type in
-`src/loupe/stores/types.py`, its axis and title in `DOMAINS` in `src/loupe/stores/experiments.py`
-(a test checks the two agree), and this page; then run `just api-types`. An experiment naming a
-domain not listed there is an error that names its folder, not filed under a default.
+The domains above are loupe's defaults. A project lists its own in `loupe.toml`, each on one of the
+three axes, in the order the Experiments page shows them; listing any replaces the defaults:
+
+```toml
+[domains.honesty]
+axis = "behavior"
+title = "Sycophancy and honesty"
+
+[domains.calibration]
+axis = "behavior"
+title = "Calibration under feedback"
+```
+
+An experiment naming a domain its project does not list is an error that names its folder, not
+filed under a default.

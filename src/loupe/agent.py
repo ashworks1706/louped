@@ -8,6 +8,8 @@ started with --expose. It reads nothing on its own and keeps no state.
 from __future__ import annotations
 
 import asyncio
+import re
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -26,11 +28,11 @@ tasks), training and grid YAML. A run is one eval, analysis or training run an e
 it has metrics, figures and, for an eval, samples. A job is a command started from the queue; its
 runs appear as it writes them.
 
-Work like this: read the experiments and runs first. A new question is launch with id "new"; then
-edit its README and run.py in the repository (apps/site/content/docs/experiments.mdx says what
-goes where). Start work with launchables, launch_options and launch (a script is
-"script:<name>/run.py"); follow it with job; read results with run, figures, figure, samples and
-compare.
+Work like this: read the experiments and runs first. Start a question with new_experiment, then
+edit its README and run.py in the project (the project's AGENTS.md says what goes where). Start
+work with launchables, launch_options and launch (a script is "script:<name>/run.py"); follow it
+with job; read results with run, figures, figure, samples and compare. A run too large for this
+machine goes to a cluster with export_job; its result comes back with import_result.
 Report a difference only with its paired interval from compare, and name the run ids you used.
 Jobs run one at a time on this machine's GPU, so do not queue more than the question needs."""
 
@@ -197,6 +199,49 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         """Stop a queued or running job, and wait for it to end."""
         await post(f"/launch/jobs/{job_id}/cancel", {})
         return await _wait(job_id, 10)
+
+    @mcp.tool(annotations=WRITE)
+    async def new_experiment(name: str, domain: str) -> dict[str, Any]:
+        """Start a research question: experiments/<name>/ with its README to fill in and a run.py
+        to write, active. name is kebab-case, named for the question; domain is one the project's
+        loupe.toml lists (else loupe's own: mechanisms, honesty, conditioning, agents, context,
+        inference, specialisation, reproduction). Returns the finished job and its log."""
+        body = {"id": "new", "options": {"name": name, "--domain": domain}}
+        job = await post("/launch", body)
+        return await _wait(job["id"], 60)
+
+    @mcp.tool(annotations=WRITE)
+    async def export_job(
+        id: str,
+        target: dict[str, Any],
+        options: dict[str, str | bool | list[str]] | None = None,
+        out_dir: str = ".",
+    ) -> dict[str, Any]:
+        """Package a launch to run on another machine, without running it here: a folder with
+        job.sh for Sol, a Slurm cluster or a VM. id and options are as for launch; target holds
+        provider (sol, slurm or shell), gpu, gpus, hours, cpus, partition, qos and constraint, the
+        server filling in the rest. Saves loupe-<job>.tar.gz under out_dir and returns its path;
+        the person copies it to the machine, runs `sbatch job.sh` (bash on a VM), and brings back
+        loupe-result-<job>.tar.gz for import_result."""
+        body = {"id": id, "options": options or {}, "target": target}
+        try:
+            response = await api.post("/launch/export", json=body)
+        except httpx.HTTPError as e:
+            raise ToolError(f"export to {url} failed: {e!r}") from e
+        if not response.is_success:
+            _read(response)
+        found = re.search(r'filename="?([^";]+)"?', response.headers.get("content-disposition", ""))
+        name = found.group(1) if found else "loupe-job.tar.gz"
+        path = Path(out_dir).expanduser().resolve() / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(response.content)
+        return {"path": str(path), "bytes": len(response.content)}
+
+    @mcp.tool(annotations=WRITE)
+    async def import_result(path: str) -> dict[str, Any]:
+        """Add a loupe-result-<job>.tar.gz (or its unpacked folder) from another machine to this
+        loupe: its runs join Runs marked with where they ran; importing twice adds nothing."""
+        return await post("/launch/import-path", {"path": path})
 
     async def _wait(job_id: str, seconds: int) -> dict[str, Any]:
         for _ in range(seconds * 2):
