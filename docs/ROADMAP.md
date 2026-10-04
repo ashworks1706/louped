@@ -2,7 +2,7 @@
 
 ### 1. Release
 
-- [ ] louped on PyPI: `pip install louped` works for anyone.
+- [x] louped on PyPI: `pip install louped` works for anyone (0.1.2).
 - [ ] The repository made public, after removing private project names from its history.
 - [ ] The docs site on a public address, with a read-only demo of real runs beside it.
 
