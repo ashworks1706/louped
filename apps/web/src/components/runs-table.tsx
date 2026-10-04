@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
 import { useState } from "react";
 
+import { ExperimentLink } from "@/components/experiment-link";
 import { MetricValue } from "@/components/metric";
 import { HostBadge, KindBadge, StatusDot } from "@/components/run-badges";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ import {
 } from "@/components/ui/table";
 import { isLive, type RunSummary } from "@/lib/api";
 import { ago, headline } from "@/lib/format";
-import { compareHref, experimentHref, runHref } from "@/lib/href";
+import { compareHref, runHref } from "@/lib/href";
 
 type SortKey = "name" | "metric" | "created";
 type Sort = { key: SortKey; desc: boolean };
@@ -258,13 +259,10 @@ export function RunsTable({
                       {r.name}
                     </Link>
                     {!byExperiment ? null : r.experiment ? (
-                      <Link
-                        href={experimentHref(r.experiment)}
-                        className="text-muted-foreground truncate text-xs hover:underline"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {r.experiment}
-                      </Link>
+                      <ExperimentLink
+                        name={r.experiment}
+                        className="text-muted-foreground truncate text-xs"
+                      />
                     ) : (
                       <span className="text-muted-foreground truncate text-xs">no experiment</span>
                     )}

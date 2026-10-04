@@ -39,17 +39,9 @@ export const NAV: NavItem[] = [
     section: "workspace",
   },
   {
-    href: "/experiments/",
-    title: "Experiments",
-    description: "Every research question, by domain.",
-    icon: FlaskConical,
-    shortcut: "G E",
-    section: "workspace",
-  },
-  {
     href: "/runs/",
     title: "Runs",
-    description: "Every eval, analysis and training run.",
+    description: "Every job, eval, analysis and training run, newest first.",
     icon: ListTree,
     shortcut: "G R",
     section: "workspace",
@@ -65,7 +57,7 @@ export const NAV: NavItem[] = [
   {
     href: "/launch/",
     title: "Launch",
-    description: "Start a run and follow it.",
+    description: "Start a script, a config or a command, here or on a cluster.",
     icon: Rocket,
     shortcut: "G L",
     section: "workspace",
@@ -79,7 +71,15 @@ export const NAV: NavItem[] = [
     section: "behavior",
   },
   {
-    href: "/playground/",
+    href: "/behavior/experiments/",
+    title: "Experiments",
+    description: "The behavior questions, by domain.",
+    icon: FlaskConical,
+    shortcut: "G E",
+    section: "behavior",
+  },
+  {
+    href: "/behavior/probe/",
     title: "Probe",
     description: "One prompt, with and without an intervention.",
     icon: MessageSquareText,
@@ -87,7 +87,7 @@ export const NAV: NavItem[] = [
     section: "behavior",
   },
   {
-    href: "/vectors/",
+    href: "/behavior/vectors/",
     title: "Vectors",
     description: "Directions in a model's activations that stand for a concept.",
     icon: Move3d,
@@ -95,7 +95,7 @@ export const NAV: NavItem[] = [
     section: "behavior",
   },
   {
-    href: "/circuits/",
+    href: "/behavior/circuits/",
     title: "Circuits",
     description: "Which internal features produce an answer.",
     icon: Waypoints,
@@ -111,7 +111,15 @@ export const NAV: NavItem[] = [
     section: "efficiency",
   },
   {
-    href: "/benchmark/",
+    href: "/efficiency/experiments/",
+    title: "Experiments",
+    description: "The efficiency questions, by domain.",
+    icon: FlaskConical,
+    shortcut: "G X",
+    section: "efficiency",
+  },
+  {
+    href: "/efficiency/benchmark/",
     title: "Benchmark",
     description: "Latency, throughput and memory of one prompt.",
     icon: Activity,
@@ -119,7 +127,7 @@ export const NAV: NavItem[] = [
     section: "efficiency",
   },
   {
-    href: "/training/",
+    href: "/efficiency/training/",
     title: "Training",
     description: "Fine-tuning and adapter runs.",
     icon: Dumbbell,
@@ -138,17 +146,34 @@ export const DOMAINS: {
   { section: "efficiency", title: "Efficiency", icon: Gauge },
 ];
 
-/** Detail pages with no sidebar entry, filed under the section of the list they belong to. */
-const DETAIL: Record<string, Section> = {
-  "/feature/": "behavior",
-  "/run/": "workspace",
-  "/experiment/": "workspace",
+/** The top bar's sections, each opening its sidebar at its first page. */
+export const SECTIONS: { section: Section; title: string; href: string }[] = [
+  { section: "workspace", title: "Workspace", href: "/" },
+  { section: "behavior", title: "Behavior", href: "/behavior/" },
+  { section: "efficiency", title: "Efficiency", href: "/efficiency/" },
+];
+
+/** Detail pages with no sidebar entry, and the list page that stays highlighted on them. */
+const DETAIL: Record<string, string> = {
+  "/run/": "/runs/",
+  "/job/": "/runs/",
+  "/behavior/experiment/": "/behavior/experiments/",
+  "/efficiency/experiment/": "/efficiency/experiments/",
+  "/behavior/feature/": "/behavior/vectors/",
 };
 
-/** The section a path belongs to, which picks the sidebar shown. */
+const slash = (path: string) => (path.endsWith("/") ? path : `${path}/`);
+
+/** The section a path belongs to, which picks the sidebar shown: its first segment. */
 export function sectionOf(pathname: string): Section {
-  const path = pathname.endsWith("/") ? pathname : `${pathname}/`;
-  return NAV.find((n) => n.href !== "/" && path === n.href)?.section ?? DETAIL[path] ?? "workspace";
+  const first = slash(pathname).split("/")[1];
+  return first === "behavior" || first === "efficiency" ? first : "workspace";
+}
+
+/** The sidebar entry a path highlights: its own, or its list page's on a detail page. */
+export function activeHref(pathname: string): string | undefined {
+  const path = slash(pathname);
+  return NAV.find((n) => n.href === path)?.href ?? DETAIL[path];
 }
 
 export function navItem(href: string): NavItem {

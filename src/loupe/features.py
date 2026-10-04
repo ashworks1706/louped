@@ -88,7 +88,8 @@ def features(
             )
         rows = [[f"#{d['feature']}", d["density"], d["max"],
                  " ".join(t for t, _ in d["promoted"][:5])] for d in dashes]  # fmt: skip
-        links = [[f"/feature/?run={run_id}&f={d['feature']}", None, None, None] for d in dashes]
+        links = [[f"/behavior/feature/?run={run_id}&f={d['feature']}", None, None, None]
+                 for d in dashes]  # fmt: skip
         log_json(table(f"SAE features at {hook}", ["feature", "density", "max", "promotes"], rows,
                        note=f"{len(prompts)} texts; a feature opens its dashboard", links=links,
                        about="density: share of tokens where the feature fires. max: its "

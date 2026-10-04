@@ -95,6 +95,11 @@ COMMANDS = {
     "circuit": ("Circuit", "An attribution graph with circuit-tracer, shown on the Circuits page."),
     "bench": ("Bench", "Throughput under load and prefill by context, per weight format."),
     "judge": ("Judge", "Two eval runs judged pairwise by a local model: B's win rate over A."),
+    "examples": (
+        "Examples",
+        "Example runs for every page from a tiny model trained here: "
+        "vector, figures, grid, fine-tune, benchmark, circuit.",
+    ),
 }
 #: The `loupe data` steps a form can run; review is interactive and stays in a terminal.
 DATA = {

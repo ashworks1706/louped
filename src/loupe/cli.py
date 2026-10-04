@@ -180,6 +180,13 @@ class Mcp:
 
 
 @dataclass(frozen=True)
+class Examples:
+    """Example runs for every page, from a tiny model trained here on the CPU: a vector, an
+    analysis with every figure, a grid of evals, a fine-tune, a benchmark and a circuit. Their
+    numbers check the pipeline, not a claim. Needs every extra."""
+
+
+@dataclass(frozen=True)
 class Version:
     """Print the installed version."""
 
@@ -197,6 +204,7 @@ Command = (
     | Annotated[Bench, tyro.conf.subcommand("bench")]
     | Annotated[Judge, tyro.conf.subcommand("judge")]
     | Annotated[Mcp, tyro.conf.subcommand("mcp")]
+    | Annotated[Examples, tyro.conf.subcommand("examples")]
     | Annotated[Version, tyro.conf.subcommand("version")]
 )
 
@@ -304,5 +312,9 @@ def main() -> None:
                     "loupe mcp needs the agent extra: pip install 'loupelab[agent]'"
                 ) from exc
             server(cmd.url).run("stdio")
+        case Examples():
+            from loupe.examples import examples
+
+            examples()
         case Version():
             print(__version__)

@@ -95,6 +95,13 @@ def hosts() -> dict[str, str]:
     return _hosts(str(path), path.stat().st_mtime) if path.exists() else {}
 
 
+def _name(log: EvalLog) -> str:
+    """The task, and for a grid's eval the cell it ran: `refusal · ablate · seed 1`."""
+    task = log.eval.task_display_name or log.eval.task
+    cell = (log.eval.metadata or {}).get("cell")
+    return f"{task} · {cell}" if cell else task
+
+
 def _summary(path: Path, log: EvalLog) -> RunSummary:
     samples = log.results.total_samples if log.results else None
     if log.status == "started":
@@ -103,7 +110,7 @@ def _summary(path: Path, log: EvalLog) -> RunSummary:
     return RunSummary(
         id=PREFIX + log.eval.eval_id,
         kind="eval",
-        name=log.eval.task_display_name or log.eval.task,
+        name=_name(log),
         experiment=experiment_of(log),
         status=log.status,
         created=log.eval.created,  # type: ignore[arg-type]

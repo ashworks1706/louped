@@ -2,10 +2,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Waypoints } from "lucide-react";
+import Link from "next/link";
 import { parseAsString, useQueryState } from "nuqs";
 
 import { EmptyState } from "@/components/empty-state";
+import { ExamplesButton } from "@/components/jobs";
 import { QueryState } from "@/components/query-state";
+import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { API, q } from "@/lib/api";
 
@@ -21,9 +24,13 @@ export function CircuitsView() {
             <EmptyState
               icon={Waypoints}
               title="No graphs"
-              body="Attribution graphs over a model's transcoders, from circuit-tracer."
-              action={{ href: "/launch/?id=circuit", label: "Launch a circuit" }}
-            />
+              body="Attribution graphs over a model's transcoders, from circuit-tracer. The examples draw one over a tiny model's neurons."
+            >
+              <Button asChild size="sm" variant="outline">
+                <Link href="/launch/?id=circuit">Launch a circuit</Link>
+              </Button>
+              <ExamplesButton />
+            </EmptyState>
           );
         }
         const current = all.find((g) => g.slug === slug) ?? all[all.length - 1];

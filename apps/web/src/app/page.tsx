@@ -25,9 +25,14 @@ export default function Home() {
           <div className="w-full">
             <ActiveExperiments />
           </div>
-          <Link href="/experiments/" className={MORE}>
-            All experiments
-          </Link>
+          <div className="flex gap-4">
+            <Link href="/behavior/experiments/" className={MORE}>
+              Behavior experiments
+            </Link>
+            <Link href="/efficiency/experiments/" className={MORE}>
+              Efficiency experiments
+            </Link>
+          </div>
         </section>
         <section className="flex flex-col items-start gap-3">
           <h2 className="text-lg font-semibold tracking-tight">Latest runs</h2>

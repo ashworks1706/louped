@@ -20,7 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { API, isLive, q, type RunDetail } from "@/lib/api";
 import { ago, headline } from "@/lib/format";
-import { experimentHref } from "@/lib/href";
+import { ExperimentLink } from "@/components/experiment-link";
 
 export function RunView() {
   const [id] = useQueryState("id", parseAsString);
@@ -83,9 +83,7 @@ function RunHeader({ run }: { run: RunDetail }) {
             <dt>Experiment</dt>
             <dd className="text-foreground">
               {run.experiment ? (
-                <Link href={experimentHref(run.experiment)} className="hover:underline">
-                  {run.experiment}
-                </Link>
+                <ExperimentLink name={run.experiment} />
               ) : (
                 "—"
               )}

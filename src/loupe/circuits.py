@@ -93,5 +93,5 @@ def circuit(
     assets = Path(done.stdout.strip().splitlines()[-1]) / "assets"
     shutil.rmtree(graphs / "viewer", ignore_errors=True)
     shutil.copytree(assets, graphs / "viewer")
-    print(f"open /circuits/?slug={slug} in loupe")
+    print(f"open /behavior/circuits/?slug={slug} in loupe")
     return graphs

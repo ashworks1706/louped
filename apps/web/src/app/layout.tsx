@@ -2,7 +2,7 @@ import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import type { Metadata } from "next";
 
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppShell } from "@/components/app-shell";
 import { CommandMenu } from "@/components/command-menu";
 import { Providers } from "@/components/providers";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -24,10 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <Providers>
             <CommandMenu>
-              <div className="flex min-h-dvh flex-col md:flex-row">
-                <AppSidebar />
-                <main className="min-w-0 flex-1">{children}</main>
-              </div>
+              <AppShell>{children}</AppShell>
             </CommandMenu>
           </Providers>
         </ThemeProvider>

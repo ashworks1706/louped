@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Probe" };
 export default function Page() {
   return (
     <>
-      <PageHeader item={navItem("/playground/")} />
+      <PageHeader item={navItem("/behavior/probe/")} />
       <section className="mx-auto max-w-6xl px-6 py-8">
         <Playground tools={PROBE} />
       </section>

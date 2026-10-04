@@ -71,8 +71,8 @@ def grid(
         for cond in names:
             for col, task in tasks.items():
                 task = (variants or {}).get(cond, {}).get(col, task)
-                per[cond, col] = _cell(task, targets[cond], conditions[cond], metric, held, seeds,
-                                       [f"experiment:{experiment}", f"grid:{grid_id}"],
+                per[cond, col] = _cell(task, cond, targets[cond], conditions[cond], metric, held,
+                                       seeds, [f"experiment:{experiment}", f"grid:{grid_id}"],
                                        extra or [])  # fmt: skip
         views = _views(per, names, list(tasks), base, metric, held)
         for name in extra or []:
@@ -98,6 +98,7 @@ def _roles(args: dict[str, Any]) -> dict[str, Model] | None:
 
 def _cell(
     task: Task | str,
+    cond: str,
     target: Model,
     args: dict[str, Any],
     metric: str,
@@ -113,7 +114,8 @@ def _cell(
     for seed in seeds:
         [log] = eval(task, model=target, model_roles=_roles(args), log_dir=str(logs_dir()),
                      tags=tags, seed=seed,
-                     metadata={"condition": _plain(args)}, display="none")  # fmt: skip
+                     metadata={"condition": _plain(args), "cell": f"{cond} · seed {seed}"},
+                     display="none")  # fmt: skip
         if log.status != "success":
             reason = log.error.message if log.error else log.status
             raise RuntimeError(f"{log.eval.task} failed under {_plain(args)}: {reason}")

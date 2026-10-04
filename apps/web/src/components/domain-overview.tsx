@@ -9,7 +9,7 @@ const MORE =
 
 /** A research domain's front page: its tools, its questions, and their latest runs. */
 export function DomainOverview({ section }: { section: Exclude<Section, "workspace"> }) {
-  const tools = NAV.filter((n) => n.section === section).slice(1);
+  const tools = NAV.filter((n) => n.section === section).slice(2);
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-10 px-6 py-8">
       <section className="flex flex-col gap-3">

@@ -5,7 +5,8 @@ import { CopyButton } from "@/components/copy-button";
 import { Button } from "@/components/ui/button";
 
 /** What a page shows before it has data: what will be here, and what fills it. That is a link
- * into the app, or a command only where the app cannot do it, such as starting the server. */
+ * or a button into the app, or a command only where the app cannot do it, such as starting the
+ * server or writing an experiment's files. */
 export function EmptyState({
   icon: Icon,
   title,
@@ -15,7 +16,11 @@ export function EmptyState({
   icon: LucideIcon;
   title: string;
   body?: string;
-} & ({ action: { href: string; label: string } } | { command: string })) {
+} & (
+  | { action: { href: string; label: string } }
+  | { command: string }
+  | { children: React.ReactNode }
+)) {
   return (
     <div className="flex flex-col items-center rounded-xl border border-dashed px-6 py-16 text-center">
       <div className="bg-muted grid size-10 place-items-center rounded-lg border">
@@ -23,7 +28,9 @@ export function EmptyState({
       </div>
       <h2 className="mt-4 font-medium">{title}</h2>
       {body && <p className="text-muted-foreground mt-1 max-w-sm text-sm">{body}</p>}
-      {"action" in fill ? (
+      {"children" in fill ? (
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">{fill.children}</div>
+      ) : "action" in fill ? (
         <Button asChild size="sm" className="mt-6">
           <Link href={fill.action.href}>{fill.action.label}</Link>
         </Button>
