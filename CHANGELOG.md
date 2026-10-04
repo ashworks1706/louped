@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/ashworks1706/louped/compare/v0.1.2...v0.1.3) (2026-10-04)
+
+
+### Bug Fixes
+
+* PyPI and the README point to the website, louped.vercel.app ([0209563](https://github.com/ashworks1706/louped/commit/0209563de6e40f10d101f2cbb4474189f5e0b7b0))
+
 ## [0.1.2](https://github.com/ashworks1706/louped/compare/v0.1.1...v0.1.2) (2026-10-04)
 
 

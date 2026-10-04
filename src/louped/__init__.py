@@ -9,4 +9,4 @@ os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")
 try:
     __version__ = version("louped")
 except PackageNotFoundError:
-    __version__ = "0.1.2"
+    __version__ = "0.1.3"
