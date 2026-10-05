@@ -1,6 +1,6 @@
 [project]
 name = "louped"
-version = "0.3.0"
+version = "0.4.0"
 description = "A local testbed for research on LLM behavior and efficiency: experiments, evals, interventions, training and interpretability in one app"
 readme = "README.md"
 requires-python = ">=3.12"

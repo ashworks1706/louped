@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0](https://github.com/ashworks1706/louped/compare/v0.3.0...v0.4.0) (2026-10-05)
+
+
+### Features
+
+* agent-editable pages: layouts, presets, select mode, kit and theme ([7461c5c](https://github.com/ashworks1706/louped/commit/7461c5c060d818a97cce7ffe2831be23115f4352))
+* agent-editable pages: layouts, presets, select mode, kit and theme ([85ba533](https://github.com/ashworks1706/louped/commit/85ba533a2d231dde9337d6dabc0e2f3ae8eb5bfd))
+
 ## [0.3.0](https://github.com/ashworks1706/louped/compare/v0.2.0...v0.3.0) (2026-10-05)
 
 
