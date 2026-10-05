@@ -1351,6 +1351,16 @@ export interface components {
       description: string;
       /** Panel */
       panel: boolean;
+      /**
+       * Run
+       * @default false
+       */
+      run: boolean;
+      /**
+       * Experiment
+       * @default false
+       */
+      experiment: boolean;
       /** Error */
       error?: string | null;
     };

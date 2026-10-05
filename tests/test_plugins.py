@@ -60,12 +60,27 @@ def test_a_plugin_adds_routes_and_a_panel_only_where_launching_is_on(project: Pa
     api = client()
     [plugin] = api.get("/api/plugins").json()
     assert plugin == {"name": "verdicts", "title": "Verdicts", "section": "behavior",
-                      "description": "", "panel": True, "error": None}  # fmt: skip
+                      "description": "", "panel": True, "run": False, "experiment": False,
+                      "error": None}  # fmt: skip
     assert api.get("/api/x/verdicts/verdicts").json() == {"1": "right"}
     assert api.get("/x/verdicts/").text == "<p>verdicts</p>"
     exposed = client(launching=False)
     assert exposed.get("/api/plugins").json() == []
     assert exposed.get("/x/verdicts/").status_code == 404
+
+
+def test_a_plugin_adds_a_tab_to_runs_and_experiments_with_no_page_of_its_own(
+    project: Path,
+) -> None:
+    panel = project / "plugins" / "verdicts" / "panel"
+    (panel / "index.html").unlink()
+    (panel / "run.html").write_text("<p>a run</p>")
+    (panel / "experiment.html").write_text("<p>an experiment</p>")
+    api = client()
+    [plugin] = api.get("/api/plugins").json()
+    assert (plugin["panel"], plugin["run"], plugin["experiment"]) == (False, True, True)
+    assert api.get("/x/verdicts/run.html?run=m-1").text == "<p>a run</p>"
+    assert api.get("/x/verdicts/experiment.html").text == "<p>an experiment</p>"
 
 
 def test_a_plugin_that_does_not_load_says_why(project: Path) -> None:

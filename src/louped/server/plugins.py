@@ -17,8 +17,11 @@ class PluginInfo(BaseModel):
     title: str
     section: Section
     description: str
-    #: Whether it has a panel to show at its sidebar entry.
+    #: Whether it has a page of its own, at its sidebar entry (panel/index.html).
     panel: bool
+    #: Whether it adds a tab to each run (run.html) and each experiment (experiment.html).
+    run: bool = False
+    experiment: bool = False
     #: Why its plugin.py did not load, shown on its page; null when it loaded or has none.
     error: str | None = None
 
@@ -30,7 +33,8 @@ def mount(app: FastAPI, launching: bool) -> None:
     for plugin in find_plugins() if launching else []:
         info = PluginInfo(name=plugin.name, title=plugin.title, section=plugin.section,
                           description=plugin.description,
-                          panel=plugin.panel is not None)  # fmt: skip
+                          panel="index" in plugin.pages, run="run" in plugin.pages,
+                          experiment="experiment" in plugin.pages)  # fmt: skip
         try:
             module = plugin.load()
         except Exception:

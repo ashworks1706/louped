@@ -84,20 +84,38 @@ function Body({ plugin }: { plugin: PluginInfo }) {
   if (!plugin.panel)
     return (
       <p className="text-muted-foreground text-sm">
-        It adds routes, commands or agent tools, and no page: a page is{" "}
-        <span className="font-mono">plugins/{plugin.name}/panel/index.html</span>.
+        {plugin.run || plugin.experiment
+          ? `It adds a tab to each ${[plugin.run && "run", plugin.experiment && "experiment"].filter(Boolean).join(" and ")}, and no page of its own`
+          : "It adds routes, commands or agent tools, and no page"}
+        : a page is <span className="font-mono">plugins/{plugin.name}/panel/index.html</span>.
       </p>
     );
-  return <Panel name={plugin.name} />;
+  return <PluginFrame name={plugin.name} />;
 }
 
-/** The panel in a frame, handed the app's theme each time it loads or the theme changes. */
-function Panel({ name }: { name: string }) {
+/** The plugins that add a tab to every run's page or every experiment's. */
+export function usePluginTabs(on: "run" | "experiment"): PluginInfo[] {
+  const plugins = useQuery(q.plugins());
+  return (plugins.data ?? []).filter((p) => p[on]);
+}
+
+/** A plugin's page in a frame (its own page, or its run or experiment tab with that one's id),
+ * handed the app's theme each time it loads or the theme changes. */
+export function PluginFrame({
+  name,
+  page = "",
+  query,
+}: {
+  name: string;
+  page?: "" | "run.html" | "experiment.html";
+  query?: Record<string, string>;
+}) {
   const frame = useRef<HTMLIFrameElement>(null);
   const { resolvedTheme } = useTheme();
   const theme = () => {
     const doc = frame.current?.contentDocument;
-    if (!doc) return;
+    // between loads a frame's document can be empty; onLoad themes it once it is there
+    if (!doc?.documentElement || !doc.head) return;
     const style = getComputedStyle(document.body);
     for (const t of TOKENS)
       doc.documentElement.style.setProperty(`--${t}`, style.getPropertyValue(`--${t}`));
@@ -132,7 +150,7 @@ function Panel({ name }: { name: string }) {
     <iframe
       ref={frame}
       title={name}
-      src={`${API}/x/${encodeURIComponent(name)}/`}
+      src={`${API}/x/${encodeURIComponent(name)}/${page}${query ? `?${new URLSearchParams(query)}` : ""}`}
       onLoad={theme}
       className="h-[calc(100dvh-14rem)] min-h-96 w-full rounded-xl border"
     />

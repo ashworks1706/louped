@@ -55,3 +55,68 @@ test("a plugin that did not load shows why on its page", async ({ page }) => {
   await page.goto("/x/?name=broken");
   await expect(page.getByText("RuntimeError: typo")).toBeVisible();
 });
+
+// a plugin page that shows the query it was opened with
+const echo = (r: import("@playwright/test").Route) =>
+  r.fulfill({
+    contentType: "text/html",
+    body: "<body><p id=q></p><script>q.textContent = location.search</script></body>",
+  });
+const tabs = [{ ...plugins[0], panel: false, run: true, experiment: true }];
+
+test("a plugin adds a tab to a run's page, opened with the run's id", async ({ page }, info) => {
+  await page.route("**/api/plugins", (r) => r.fulfill({ json: tabs }));
+  await page.route("**/x/verdicts/run.html*", echo);
+  await page.route("**/api/runs/m-1", (r) =>
+    r.fulfill({
+      json: {
+        id: "m-1",
+        kind: "analysis",
+        name: "a run",
+        experiment: "hello",
+        status: "finished",
+        created: null,
+        model: null,
+        metrics: {},
+        samples: null,
+        params: {},
+        tags: {},
+        history: {},
+        artifacts: [],
+        scorers: [],
+        error: null,
+        log: null,
+      },
+    }),
+  );
+  await page.goto("/run/?id=m-1");
+  await page.getByRole("tab", { name: "Verdicts" }).click();
+  await expect(page.frameLocator('iframe[title="verdicts"]').getByText("?run=m-1")).toBeVisible();
+  await page.screenshot({ path: info.outputPath("plugin-run-tab.png"), fullPage: true });
+});
+
+test("a plugin adds a tab to an experiment's page, opened with its name", async ({ page }) => {
+  await page.route("**/api/plugins", (r) => r.fulfill({ json: tabs }));
+  await page.route("**/x/verdicts/experiment.html*", echo);
+  await page.route("**/api/runs", (r) => r.fulfill({ json: [] }));
+  await page.route("**/api/launch", (r) => r.fulfill({ json: [] }));
+  await page.route("**/api/experiments/hello", (r) =>
+    r.fulfill({
+      json: {
+        name: "hello",
+        axis: "behavior",
+        domain: "honesty",
+        domain_title: "Honesty",
+        status: "active",
+        question: "Q?",
+        result: null,
+        runs: [],
+        readme: "# hello\n",
+      },
+    }),
+  );
+  await page.goto("/behavior/experiment/?name=hello&tab=x-verdicts");
+  await expect(
+    page.frameLocator('iframe[title="verdicts"]').getByText("?experiment=hello"),
+  ).toBeVisible();
+});

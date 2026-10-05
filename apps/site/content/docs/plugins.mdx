@@ -1,11 +1,11 @@
 ---
 title: Plugins
-description: Add a page, routes, a command or agent tools to louped from your own project.
+description: Add pages, tabs on runs and experiments, routes, a command or agent tools to louped from your own project.
 ---
 
 Most additions need no plugin. A new chart is a [view](/docs/experiments), and `views.vega` draws
-any Vega-Lite chart. A plugin is for the rest: a page of your own in the app, the API routes it
-calls, a command, or tools for your agent. You don't need a louped release for any of it.
+any Vega-Lite chart. A plugin is for the rest: a page of your own in the app, a tab on every run
+or experiment, the API routes they call, a command, or tools for your agent. You don't need a louped release for any of it.
 
 A plugin is a folder under `plugins/` in your project:
 
@@ -13,7 +13,10 @@ A plugin is a folder under `plugins/` in your project:
 plugins/verdicts/
   plugin.toml       # required
   plugin.py         # optional: routes, a command, agent tools
-  panel/index.html  # optional: a page in the app
+  panel/
+    index.html        # optional: a page of its own, at its sidebar entry
+    run.html          # optional: a tab on every run's page
+    experiment.html   # optional: a tab on every experiment's page
 ```
 
 ```toml title="plugin.toml"
@@ -44,15 +47,32 @@ def tools(mcp, api) -> None:            # tools in louped mcp
         return (await api.get("/x/verdicts/left")).json()
 ```
 
-`panel/index.html` shows in the app at the plugin's sidebar entry, and is served at `/x/verdicts/`.
-Its scripts call the same API the app does, such as `fetch("/api/runs")` or
-`fetch("/api/x/verdicts/left")`. The app hands the panel its theme, so these follow light and dark
+The pages are served from `/x/verdicts/`:
+
+- `index.html` shows at the plugin's sidebar entry.
+- `run.html` is a tab, named after the plugin, on every run's page. It opens with `?run=<run id>`.
+- `experiment.html` is a tab on every experiment's page. It opens with `?experiment=<name>`.
+
+A tab reads the id from its URL and fetches what it shows:
+
+```html title="panel/run.html"
+<p id="out"></p>
+<script>
+  const run = new URLSearchParams(location.search).get("run");
+  fetch(`/api/runs/${run}`).then((r) => r.json())
+    .then((r) => (out.textContent = `${Object.keys(r.metrics).length} metrics`));
+</script>
+```
+
+Their scripts call the same API the app does, such as `fetch("/api/runs")` or
+`fetch("/api/x/verdicts/left")`. The app hands every page its theme, so these follow light and dark
 mode:
 
 - the colours as CSS variables, such as `var(--foreground)`, `var(--border)` and
   `var(--muted-foreground)`;
 - the fonts, as `var(--font-geist-sans)` and `var(--font-geist-mono)`.
 
-A plugin that fails to load shows its error on its page. Plugins run your project's code in
+Built-in pages stay as they are: a plugin adds pages and tabs beside them. A plugin that fails to
+load shows its error on its page. Plugins run your project's code in
 louped's process. They load only on your own machine, never with `louped serve --expose` or in
 `louped publish`.

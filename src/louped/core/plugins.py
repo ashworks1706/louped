@@ -13,9 +13,12 @@ and any of:
   - `main(argv: list[str])`, run as `louped <name> ...`;
   - `tools(mcp, api)`, adding MCP tools to `louped mcp`; api is its httpx client of the server, so
     a tool calls the plugin's routes as `api.get("/x/<name>/...")`.
-- panel/, a static page (index.html and its files) shown in the app at the plugin's sidebar entry.
-  It is served at /x/<name>/ and calls the same API the app does. The app hands it its theme: the
-  CSS variables (var(--foreground), var(--border), ...) and the `dark` class.
+- panel/, static pages served at /x/<name>/ that call the same API the app does:
+  - index.html, shown at the plugin's sidebar entry;
+  - run.html, a tab on every run's page, opened with ?run=<run id>;
+  - experiment.html, a tab on every experiment's page, opened with ?experiment=<name>.
+  The app hands each its theme: the CSS variables (var(--foreground), var(--border), ...) and the
+  `dark` class.
 
 plugin.py runs in louped's own process, like an experiment's code, and only where launching is on:
 never with `--expose` or in a published dashboard.
@@ -35,6 +38,8 @@ from typing import Literal
 from louped.core.project import base
 
 Section = Literal["workspace", "behavior", "efficiency"]
+Page = Literal["index", "run", "experiment"]
+PAGES: tuple[Page, ...] = ("index", "run", "experiment")
 NAME = re.compile(r"^[a-z][a-z0-9-]*$")
 
 
@@ -53,8 +58,15 @@ class Plugin:
 
     @property
     def panel(self) -> Path | None:
+        """panel/, when it holds any of the pages the app shows."""
         found = self.folder / "panel"
-        return found if (found / "index.html").is_file() else None
+        return found if self.pages else None
+
+    @property
+    def pages(self) -> list[Page]:
+        """Which of index.html, run.html and experiment.html panel/ has."""
+        found = self.folder / "panel"
+        return [p for p in PAGES if (found / f"{p}.html").is_file()]
 
     def load(self) -> ModuleType | None:
         """plugin.py imported, once; None when the plugin has none. Its errors are raised."""
