@@ -37,6 +37,8 @@ export type FeatureDashboard = Schemas["FeatureDashboard"];
 export type Launchable = Schemas["Launchable"];
 export type LaunchOption = Schemas["Option"];
 export type Judge = Schemas["Judge"];
+export type AbSession = Schemas["AbSession"];
+export type AbResult = Schemas["AbResult"];
 export type EvalTask = Schemas["EvalTask"];
 export type LaunchRequest = Schemas["LaunchRequest"];
 export type Job = Schemas["Job"];
@@ -233,6 +235,8 @@ export const setLabel = (run: string, sample: string, label: Label | null) =>
     `/runs/${encodeURIComponent(run)}/labels/${encodeURIComponent(sample)}`,
     { label },
   );
+/** A blind pick of one pair by the side the person saw; null clears it. */
+export const abPick = (body: Schemas["AbPickRequest"]) => post<AbSession>("/ab/pick", body);
 /** What a Probe or Benchmark tool showed, kept as a run. */
 export const saveResult = (req: Schemas["SaveRequest"]) =>
   post<Schemas["SavedResult"]>("/playground/save", req);
@@ -382,6 +386,16 @@ export const q = {
   judges: () => ({
     queryKey: ["judges"],
     queryFn: () => (isSnapshot() ? Promise.resolve([] as Judge[]) : get<Judge[]>("/judges")),
+  }),
+  /** Two eval runs' shared samples as blind pairs, with the person's picks. */
+  ab: (a: string, b: string) => ({
+    queryKey: ["ab", a, b],
+    queryFn: () => get<AbSession>(`/ab?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`),
+  }),
+  abResult: (a: string, b: string) => ({
+    queryKey: ["ab-result", a, b],
+    queryFn: () =>
+      get<AbResult>(`/ab/result?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`),
   }),
   /** Every Inspect task Launch's eval runs: the project's, then inspect_evals'. */
   evalTasks: () => ({

@@ -13,9 +13,11 @@ from inspect_ai.log import (
     read_eval_log,
     read_eval_log_sample,
     read_eval_log_sample_summaries,
+    read_eval_log_samples,
 )
 
 from louped.core import experiments_dir, home, logs_dir
+from louped.core.judges import pair_key, request_text
 from louped.stores.types import (
     Message,
     RunDetail,
@@ -134,6 +136,28 @@ def _find(run_id: str) -> tuple[Path, EvalLog] | None:
 def log_of(run_id: str) -> tuple[Path, EvalLog] | None:
     """An eval run's log file and header, None for a run that is not an Inspect eval."""
     return _find(run_id) if run_id.startswith(PREFIX) else None
+
+
+def answers(run_id: str) -> dict[str, tuple[str, str]] | None:
+    """Each sample the run answered without error, by id (id#epoch past the first epoch): its
+    request in full and the model's final answer; None for a run that is not an Inspect eval."""
+    found = log_of(run_id)
+    if found is None:
+        return None
+    out: dict[str, tuple[str, str]] = {}
+    for s in read_eval_log_samples(str(found[0])):
+        if s.error is None:  # what louped judge pairs too (louped.inspect_ext.judge.pairs)
+            out[pair_key(s.id, s.epoch)] = (request_text(s.input), s.output.completion)
+    return out
+
+
+def judge_runs(a: str, b: str) -> list[str]:
+    """The judge runs (louped judge) of b against a, newest first."""
+    found = [(p, log) for p, log in eval_logs()
+             if (log.eval.metadata or {}).get("a") == a and (log.eval.metadata or {}).get("b") == b
+             and log.eval.task.endswith("judge")]  # fmt: skip
+    found.sort(key=lambda f: f[1].eval.created, reverse=True)
+    return [f"{PREFIX}{log.eval.eval_id}" for _, log in found]
 
 
 def log_mtime(run_id: str) -> float | None:

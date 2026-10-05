@@ -3,7 +3,8 @@
 
 The server owns no database. Every route reads a store another tool already writes (MLflow,
 Inspect logs, artifact files, experiments/), so deleting the server loses nothing. The one thing
-it writes itself is a person's labels on a judge run's pairs, plain JSON under <home>/labels. The
+it writes itself is a person's picks: labels on a judge run's pairs and blind A/B picks, plain
+JSON under <home>/labels and <home>/ab. The
 launch routes start louped's own commands as jobs, whose runs land in those same stores.
 """
 
@@ -11,6 +12,7 @@ from __future__ import annotations
 
 import mimetypes
 from pathlib import Path
+from typing import Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,10 +25,13 @@ from louped import __version__, stores
 from louped.core import Direction, cohorts, home
 from louped.core.judges import Judge, find_judges, write_judge
 from louped.server import graphs, inspect_view, launch, playground, plugins, ui
+from louped.stores import ab
 from louped.stores.catalog import EvalTask, eval_tasks
 from louped.stores.labels import Label
 from louped.stores.runs import read_artifact
 from louped.stores.types import (
+    AbResult,
+    AbSession,
     Agreement,
     Comparison,
     Experiment,
@@ -56,6 +61,13 @@ class JudgeRequest(BaseModel):
     prompt: str | None = None
     model: str | None = None
     about: str | None = None
+
+
+class AbPickRequest(BaseModel):
+    a: str
+    b: str
+    sample: str
+    side: Literal["left", "right", "tie"] | None
 
 
 class LabelRequest(BaseModel):
@@ -233,6 +245,34 @@ def create_app(
             raise HTTPException(403, "labelling is off: this server was started with --expose")
         try:
             return stores.set_label(run_id, sample_id, req.label)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.get("/api/ab")
+    def ab_session(a: str, b: str) -> AbSession:
+        """Two eval runs' shared samples as blind pairs, with the person's picks so far."""
+        if not launching:
+            raise HTTPException(403, "blind A/B is off: this server was started with --expose")
+        try:
+            return ab.session(a, b)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.post("/api/ab/pick", dependencies=[Depends(launch.require_json)])
+    def ab_pick(req: AbPickRequest) -> AbSession:
+        """The person's pick of one pair, by the side they saw; null clears it."""
+        if not launching:
+            raise HTTPException(403, "blind A/B is off: this server was started with --expose")
+        try:
+            return ab.set_pick(req.a, req.b, req.sample, req.side)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.get("/api/ab/result")
+    def ab_result(a: str, b: str) -> AbResult:
+        """B's win rate by the person's blind picks, with each judge run's agreement."""
+        try:
+            return ab.result(a, b)
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
 

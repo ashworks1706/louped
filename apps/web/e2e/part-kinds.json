@@ -475,6 +475,11 @@
     "rules": []
   },
   {
+    "part": "compare/blind/*",
+    "about": "Blind A/B: its button, progress, the request, the left or right answer, tie, reveal, the result and each judge's agreement.",
+    "rules": []
+  },
+  {
     "part": "compare/open/title",
     "about": "The open sample's title.",
     "rules": []

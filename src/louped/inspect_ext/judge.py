@@ -11,7 +11,6 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
 
 from inspect_ai import Task
 from inspect_ai.dataset import Sample
@@ -20,10 +19,9 @@ from inspect_ai.model import ChatMessageAssistant, ChatMessageUser, get_model
 from inspect_ai.scorer import Score, Target, mean, scorer, stderr
 from inspect_ai.solver import Generate, TaskState, solver
 
-from louped.core.judges import CRITERION, PROMPT
+from louped.core.judges import CRITERION, POINTS, PROMPT, pair_key, request_text
 
 VERDICT = re.compile(r"verdict\s*:\s*\**\s*(1|2|tie)\b", re.I)
-POINTS = {"b": 1.0, "a": 0.0, "tie": 0.5}
 
 
 def verdict(reply: str) -> str | None:
@@ -32,14 +30,8 @@ def verdict(reply: str) -> str | None:
     return found[-1].lower() if found else None
 
 
-def _text(value: Any) -> str:
-    if isinstance(value, str):
-        return value
-    return "\n\n".join(f"{m.role}: {m.text}" for m in value)
-
-
 def _key(s: EvalSample) -> str:
-    return str(s.id) if s.epoch == 1 else f"{s.id}#{s.epoch}"
+    return pair_key(s.id, s.epoch)
 
 
 def pairs(a: str | Path, b: str | Path) -> list[Sample]:
@@ -47,7 +39,7 @@ def pairs(a: str | Path, b: str | Path) -> list[Sample]:
     left = {_key(s): s for s in read_eval_log_samples(a) if s.error is None}
     right = {_key(s): s for s in read_eval_log_samples(b) if s.error is None}
     return [
-        Sample(id=k, input=_text(s.input),
+        Sample(id=k, input=request_text(s.input),
                metadata={"a": s.output.completion, "b": right[k].output.completion})
         for k, s in left.items()
         if k in right

@@ -235,6 +235,66 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/ab": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Ab Session
+     * @description Two eval runs' shared samples as blind pairs, with the person's picks so far.
+     */
+    get: operations["ab_session_api_ab_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/ab/pick": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Ab Pick
+     * @description The person's pick of one pair, by the side they saw; null clears it.
+     */
+    post: operations["ab_pick_api_ab_pick_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/ab/result": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Ab Result
+     * @description B's win rate by the person's blind picks, with each judge run's agreement.
+     */
+    get: operations["ab_result_api_ab_result_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/runs/{run_id}/agreement": {
     parameters: {
       query?: never;
@@ -1044,6 +1104,107 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /**
+     * AbJudge
+     * @description A judge run of the same two runs, against the person's picks.
+     */
+    AbJudge: {
+      /** Run */
+      run: string;
+      /**
+       * Labelled
+       * @description Pairs both the person and the judge picked.
+       */
+      labelled: number;
+      /**
+       * Agreement
+       * @description Share of those pairs with the same pick.
+       */
+      agreement: number | null;
+      /**
+       * Kappa
+       * @description Cohen's kappa: agreement beyond chance.
+       */
+      kappa: number | null;
+    };
+    /**
+     * AbPair
+     * @description One pair to pick from, blind: which run gave left and which right is not said.
+     */
+    AbPair: {
+      /** Sample */
+      sample: string;
+      /** Request */
+      request: string;
+      /** Left */
+      left: string;
+      /** Right */
+      right: string;
+      /** Pick */
+      pick?: ("left" | "right" | "tie") | null;
+    };
+    /** AbPickRequest */
+    AbPickRequest: {
+      /** A */
+      a: string;
+      /** B */
+      b: string;
+      /** Sample */
+      sample: string;
+      /** Side */
+      side: ("left" | "right" | "tie") | null;
+    };
+    /**
+     * AbResult
+     * @description What the person's blind picks say: how often B won, with its 95% interval.
+     */
+    AbResult: {
+      /** A */
+      a: string;
+      /** B */
+      b: string;
+      /** Labelled */
+      labelled: number;
+      /** Total */
+      total: number;
+      /** A Wins */
+      a_wins: number;
+      /** B Wins */
+      b_wins: number;
+      /** Ties */
+      ties: number;
+      /**
+       * B Rate
+       * @description B's win rate: B 1, tie 0.5, A 0, averaged.
+       */
+      b_rate: number | null;
+      /**
+       * Low
+       * @description The rate's 95% bootstrap interval, low end.
+       */
+      low: number | null;
+      /**
+       * High
+       * @description The rate's 95% bootstrap interval, high end.
+       */
+      high: number | null;
+      /** Judges */
+      judges: components["schemas"]["AbJudge"][];
+    };
+    /**
+     * AbSession
+     * @description A blind A/B of two eval runs: their shared samples, each side placed by a seed.
+     */
+    AbSession: {
+      /** A */
+      a: string;
+      /** B */
+      b: string;
+      /** Pairs */
+      pairs: components["schemas"]["AbPair"][];
+      /** Labelled */
+      labelled: number;
+    };
     /**
      * Agreement
      * @description A judge run's agreement with a person's labels on its pairs.
@@ -3135,6 +3296,103 @@ export interface operations {
           "application/json": {
             [key: string]: "a" | "b" | "tie";
           };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  ab_session_api_ab_get: {
+    parameters: {
+      query: {
+        a: string;
+        b: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AbSession"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  ab_pick_api_ab_pick_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AbPickRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AbSession"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  ab_result_api_ab_result_get: {
+    parameters: {
+      query: {
+        a: string;
+        b: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AbResult"];
         };
       };
       /** @description Validation Error */
