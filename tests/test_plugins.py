@@ -8,6 +8,7 @@ from pathlib import Path
 import httpx
 import pytest
 from fastapi.testclient import TestClient
+from mcp.types import CallToolResult, TextContent
 
 from louped.agent import server
 from louped.cli import _plugin_command
@@ -84,6 +85,6 @@ def test_a_plugin_adds_a_command_and_agent_tools(
 
     mcp = server("http://localhost", transport=httpx.ASGITransport(app=create_app(launching=True)))
     result = asyncio.run(mcp.call_tool("verdicts", {}))
-    assert not result.is_error
-    found = result.structured_content or json.loads(result.content[0].text)  # type: ignore[union-attr]
-    assert found.get("result", found) == {"1": "right"}
+    assert isinstance(result, CallToolResult) and not result.is_error, result
+    text = result.content[0]
+    assert isinstance(text, TextContent) and json.loads(text.text) == {"1": "right"}
