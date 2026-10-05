@@ -70,6 +70,13 @@ At most three claims. Put the rest in the records, the run page or a table.
 - Avoid filler patterns: groups of three for rhythm, "not just X but Y", rhetorical questions,
   bold scattered through prose, emoji, and closing paragraphs that restate the report.
 
+## Decks and documents
+
+When the user asks for slides or a document, write it into `reports/` with python-pptx or
+python-docx, from the run's files. Export each figure first with `export_figure` and place the
+file it returns. Put each number's ref in the slide's speaker notes, or in the document's
+paragraph (above a table, for the table). Keep the deck to the same claims as the report.
+
 ## Before handing it over
 
 Re-read it as a reviewer would:

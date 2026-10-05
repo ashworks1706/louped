@@ -125,6 +125,8 @@ KINDS: list[Kind] = [
     _k(part="sample/*", about="The open sample's title, log link and your pick.", rules=PICK),
     # figures, config, files
     _k(part="figures/figure/*", about="One figure, by its file.", rules=["hidden", "note"]),
+    _k(part="figures/export/*", about="Exports one figure to reports/ as SVG, PNG or PDF.",
+       rules=PICK),
     _k(part="config/param/*", about="One parameter.", rules=["hidden", "about", "order"]),
     _k(part="config/tag/*", about="One tag.", rules=["hidden", "about", "order"]),
     _k(part="config/*", about="The parameters' or tags' heading (params, tags).", rules=PICK),
@@ -228,6 +230,14 @@ KINDS: list[Kind] = [
     _k(part="source/*", about="A source's viewer: its header, page controls, the page, Pin.",
        rules=PICK),
     _k(part="source/pin/*", about="One pinned passage of the source, by id.", rules=PICK),
+    # Reports
+    _k(part="reports/heading", about="The count of files in reports/.", rules=PICK),
+    _k(part="reports/table", about="The files in reports/.", rules=["note"]),
+    _k(part="reports/report/*", about="One file in reports/, by its path there.", rules=PICK),
+    _k(part="report/*", about="A report's viewer: its header, page controls, the page, the "
+       "figure, the note on why a deck shows as text.", rules=PICK),
+    _k(part="report/block/*", about="One slide or paragraph of a deck or document's text.",
+       rules=PICK),
     # Launch
     _k(part="launch/group/*", about="A group of things to launch.", rules=PICK),
     _k(part="launch/item/*", about="One thing to launch, by id (script:hello/run.py).",

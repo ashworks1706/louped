@@ -210,6 +210,11 @@
     "rules": ["hidden", "note"]
   },
   {
+    "part": "figures/export/*",
+    "about": "Exports one figure to reports/ as SVG, PNG or PDF.",
+    "rules": []
+  },
+  {
     "part": "config/param/*",
     "about": "One parameter.",
     "rules": ["hidden", "about", "order"]
@@ -527,6 +532,31 @@
   {
     "part": "source/pin/*",
     "about": "One pinned passage of the source, by id.",
+    "rules": []
+  },
+  {
+    "part": "reports/heading",
+    "about": "The count of files in reports/.",
+    "rules": []
+  },
+  {
+    "part": "reports/table",
+    "about": "The files in reports/.",
+    "rules": ["note"]
+  },
+  {
+    "part": "reports/report/*",
+    "about": "One file in reports/, by its path there.",
+    "rules": []
+  },
+  {
+    "part": "report/*",
+    "about": "A report's viewer: its header, page controls, the page, the figure, the note on why a deck shows as text.",
+    "rules": []
+  },
+  {
+    "part": "report/block/*",
+    "about": "One slide or paragraph of a deck or document's text.",
     "rules": []
   },
   {

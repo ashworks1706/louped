@@ -40,7 +40,8 @@ results.
 6. Write the result in the README's Result (model, date, numbers) and the decision in Next, as
    `write-report` says: every number traced to a run, no claim past what was tested. Papers come
    from `sources/` and are cited from pinned passages (`ground-claims`); `check` finds what is not
-   grounded. Set `status: answered` when a real model's result answers the question.
+   grounded. Decks, documents and exported figures go in `reports/`. Set `status: answered`
+   when a real model's result answers the question.
 
 ## Where things are
 

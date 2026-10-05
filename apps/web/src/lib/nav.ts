@@ -4,6 +4,7 @@ import {
   Brain,
   Dumbbell,
   FlaskConical,
+  FileText,
   Gauge,
   GitCompareArrows,
   House,
@@ -62,6 +63,14 @@ export const NAV: NavItem[] = [
     description: "The papers, docs, slides and notebooks the project rests on.",
     icon: BookOpen,
     shortcut: "G S",
+    section: "workspace",
+  },
+  {
+    href: "/reports/",
+    title: "Reports",
+    description: "What the project hands to people: write-ups, decks, documents and figures.",
+    icon: FileText,
+    shortcut: "G O",
     section: "workspace",
   },
   {

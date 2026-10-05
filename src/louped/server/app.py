@@ -23,6 +23,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from louped import __version__, stores
+from louped import reports as reporting
 from louped import sources as library
 from louped.check import Issue, check
 from louped.core import Direction, cohorts, home
@@ -102,6 +103,16 @@ class SourceRequest(BaseModel):
     location: str
     key: str | None = None
     title: str | None = None
+
+
+class FigureRequest(BaseModel):
+    #: The figure: run:<id>/views/<name>.json or experiment:<name>/views/<name>.json.
+    ref: str
+    format: reporting.Format = "svg"
+    #: The file's name in reports/figures/; from the ref when empty.
+    name: str | None = None
+    #: Write over a file of the same name; without it, 409.
+    replace: bool = False
 
 
 class PinRequest(BaseModel):
@@ -303,10 +314,64 @@ def create_app(
         except httpx.HTTPError as exc:
             raise HTTPException(502, f"could not fetch {req.location}: {exc}") from exc
 
+    @app.get("/api/reports")
+    def report_list() -> list[reporting.Report]:
+        """Every file in reports/ the app shows; 400 naming an exported figure's broken refs
+        file."""
+        try:
+            return reporting.list_reports()
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    def _report_error(exc: Exception) -> HTTPException:
+        if isinstance(exc, FileNotFoundError):
+            return HTTPException(404, str(exc))
+        if isinstance(exc, reporting.MissingTool):
+            return HTTPException(501, str(exc))
+        return HTTPException(400, str(exc))
+
+    @app.get("/api/reports/file")
+    def report_file(path: str, download: bool = False) -> FileResponse:
+        """A file in reports/ as it is; with download, as a file to save."""
+        try:
+            file = reporting.report_file(path)
+            return FileResponse(file, filename=file.name if download else None)
+        except (ValueError, FileNotFoundError) as exc:
+            raise _report_error(exc) from exc
+
+    @app.get("/api/reports/outline")
+    def report_outline(path: str) -> list[str]:
+        """A deck's text slide by slide, a document's paragraph by paragraph."""
+        try:
+            return reporting.outline(path)
+        except (ValueError, FileNotFoundError) as exc:
+            raise _report_error(exc) from exc
+
+    @app.get("/api/reports/preview")
+    def report_preview(path: str) -> FileResponse:
+        """A deck or document as a PDF drawn by LibreOffice; 501 when it is not installed."""
+        try:
+            return FileResponse(reporting.preview_pdf(path), media_type="application/pdf")
+        except (ValueError, FileNotFoundError, RuntimeError) as exc:
+            raise _report_error(exc) from exc
+
+    @app.post("/api/reports/figures", dependencies=[Depends(launch.require_json)])
+    def export_figure(req: FigureRequest) -> reporting.Report:
+        """A run's or experiment's figure exported to reports/figures/ with its ref and trace."""
+        editing()
+        try:
+            return reporting.export_figure(req.ref, req.format, req.name, req.replace)
+        except stores.NotFound as exc:
+            raise HTTPException(404, str(exc)) from exc
+        except FileExistsError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        except (ValueError, RuntimeError) as exc:
+            raise _report_error(exc) from exc
+
     @app.get("/api/check")
     def grounded(path: str | None = None) -> list[Issue]:
-        """What in the project's Markdown is not grounded (louped check): a file or folder in
-        the project, or every .md under experiments/ and reports/."""
+        """What in the project's write-ups is not grounded (louped check): a file or folder in
+        the project, or every .md, .pptx and .docx under experiments/ and reports/."""
         try:
             where = [inside(experiments_dir().parent, path)] if path else None
             return check(where)

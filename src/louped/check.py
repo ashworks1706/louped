@@ -1,11 +1,13 @@
-"""louped check: the mechanical half of grounding. In the project's Markdown, every result number
-sits beside what it came from, every citation names a page with a passage pinned on it, every
-ref resolves; and every pin is still on its page.
+"""louped check: the mechanical half of grounding. In the project's Markdown, slide decks and Word
+documents, every result number sits beside what it came from, every citation names a page with a
+passage pinned on it, every ref resolves; every exported figure's ref still resolves; and every
+pin is still on its page.
 
 What counts as a result number is exact so the check never guesses: a decimal (0.92), a
 percentage (78%) or a fraction (12/40). Whole numbers (3 conditions, 2024) are not checked. A
 number is sourced when its paragraph or list item (a table: with the paragraph above it) also
-holds a ref (run:…, experiment:…) or a citation ([@key p4]).
+holds a ref (run:…, experiment:…) or a citation ([@key p4]). In a deck the unit is the slide with
+its speaker notes; in a Word document, the paragraph (a table: with the paragraph above it).
 """
 
 from __future__ import annotations
@@ -16,7 +18,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from louped import sources
+from louped import reports, sources
+from louped.core import documents
 from louped.core.paths import experiment_folder, experiments_dir
 from louped.core.refs import parse
 from louped.stores import trace
@@ -34,24 +37,34 @@ CODE = re.compile(r"`[^`]*`")
 COMMENT = re.compile(r"<!--.*?-->", re.S)
 #: The folders checked when no path is given.
 FOLDERS = ("experiments", "reports")
+#: The files checked, by suffix.
+CHECKED = (".md", ".pptx", ".docx")
 
 
 class Issue(BaseModel):
     #: Relative to the project.
     file: str
+    #: The line; in a deck, the slide; in a Word document, the paragraph.
     line: int
-    kind: Literal["number", "citation", "ref", "pin"]
+    kind: Literal["number", "citation", "ref", "pin", "file"]
     message: str
+
+    def where(self) -> str:
+        """file:line, or file slide 3, file paragraph 12."""
+        unit = {".pptx": " slide ", ".docx": " paragraph "}.get(Path(self.file).suffix, ":")
+        return f"{self.file}{unit}{self.line}"
 
 
 def check(paths: list[Path] | None = None) -> list[Issue]:
-    """The issues in the given Markdown files and folders (every .md under experiments/ and
-    reports/ when none), then in sources/pins.jsonl."""
+    """The issues in the given files and folders (every Markdown file, deck and Word document
+    under experiments/ and reports/ when none), then in exported figures' refs and
+    sources/pins.jsonl."""
     project = experiments_dir().parent
     files: list[Path] = []
     for path in paths or [project / f for f in FOLDERS]:
         if path.is_dir():
-            files += sorted(path.rglob("*.md"))
+            files += sorted(f for f in path.rglob("*") if _checked(f))
+            files += sorted(path.rglob(f"*{reports.REFS}"))
         elif path.is_file():
             files.append(path)
         elif paths:
@@ -64,9 +77,51 @@ def check(paths: list[Path] | None = None) -> list[Issue]:
     pinned = {(p.key, p.page) for p in sources.pins()}
     for f in files:
         name = f.resolve().relative_to(project.resolve()).as_posix()
-        for unit in _units(f.read_text(encoding="utf-8")):
+        try:
+            if f.name.endswith(reports.REFS):
+                ref = reports.sidecar_ref(f)
+                if why := _unresolved(ref):
+                    why = f"exported from {ref}, which does not resolve: {why}"
+                    issues.append(Issue(file=name, line=1, kind="ref", message=why))
+                continue
+            units = _file_units(f)
+        except (
+            Exception
+        ) as exc:  # a file louped cannot read is an issue in it, not the end of the check
+            issues.append(Issue(file=name, line=1, kind="file", message=f"cannot be read: {exc}"))
+            continue
+        for unit in units:
             issues += _check_unit(name, unit, found, pinned)
     return issues + _stale_pins(found)
+
+
+def _checked(f: Path) -> bool:
+    """A Markdown file, deck or Word document, and not the lock file Office keeps beside an open
+    one (~$deck.pptx)."""
+    return f.suffix.lower() in CHECKED and not f.name.startswith("~$")
+
+
+def _file_units(f: Path) -> list[list[tuple[int, str]]]:
+    """A file's units, each line numbered with its line, slide or paragraph."""
+    match f.suffix.lower():
+        case ".pptx":
+            slides = documents.pptx_slides(f)[0]
+            return [[(n, line) for line in text.splitlines()] for n, text in enumerate(slides, 1)]
+        case ".docx":
+            units: list[list[tuple[int, str]]] = []
+            after_paragraph = False  # whether the last unit is a paragraph, a table's caption
+            for n, block in enumerate(documents.docx_blocks(f)[0], 1):
+                lines = [(n, line) for line in block.text.splitlines()]
+                if not lines:
+                    continue
+                if block.table and after_paragraph:
+                    units[-1] += lines
+                else:
+                    units.append(lines)
+                after_paragraph = not block.table
+            return units
+        case _:
+            return _units(f.read_text(encoding="utf-8"))
 
 
 def _units(text: str) -> list[list[tuple[int, str]]]:

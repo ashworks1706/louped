@@ -697,6 +697,198 @@
         }
       }
     },
+    "/api/reports": {
+      "get": {
+        "summary": "Report List",
+        "description": "Every file in reports/ the app shows; 400 naming an exported figure's broken refs\nfile.",
+        "operationId": "report_list_api_reports_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Report"
+                  },
+                  "type": "array",
+                  "title": "Response Report List Api Reports Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/file": {
+      "get": {
+        "summary": "Report File",
+        "description": "A file in reports/ as it is; with download, as a file to save.",
+        "operationId": "report_file_api_reports_file_get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          },
+          {
+            "name": "download",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Download"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/outline": {
+      "get": {
+        "summary": "Report Outline",
+        "description": "A deck's text slide by slide, a document's paragraph by paragraph.",
+        "operationId": "report_outline_api_reports_outline_get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Report Outline Api Reports Outline Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/preview": {
+      "get": {
+        "summary": "Report Preview",
+        "description": "A deck or document as a PDF drawn by LibreOffice; 501 when it is not installed.",
+        "operationId": "report_preview_api_reports_preview_get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/figures": {
+      "post": {
+        "summary": "Export Figure",
+        "description": "A run's or experiment's figure exported to reports/figures/ with its ref and trace.",
+        "operationId": "export_figure_api_reports_figures_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FigureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Report"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/check": {
       "get": {
         "summary": "Grounded",
@@ -4394,6 +4586,39 @@
         "title": "FeatureDashboard",
         "description": "One SAE feature over a dataset, as `louped features` logs it under features/."
       },
+      "FigureRequest": {
+        "properties": {
+          "ref": {
+            "type": "string",
+            "title": "Ref"
+          },
+          "format": {
+            "type": "string",
+            "enum": ["svg", "png", "pdf"],
+            "title": "Format",
+            "default": "svg"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "replace": {
+            "type": "boolean",
+            "title": "Replace",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": ["ref"],
+        "title": "FigureRequest"
+      },
       "GenerateRequest": {
         "properties": {
           "interventions": {
@@ -4865,7 +5090,7 @@
           },
           "kind": {
             "type": "string",
-            "enum": ["number", "citation", "ref", "pin"],
+            "enum": ["number", "citation", "ref", "pin", "file"],
             "title": "Kind"
           },
           "message": {
@@ -6125,6 +6350,42 @@
         "type": "object",
         "required": ["remote", "token"],
         "title": "RemoteState"
+      },
+      "Report": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["md", "pptx", "docx", "pdf", "svg", "png"],
+            "title": "Kind"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Modified"
+          },
+          "ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref"
+          }
+        },
+        "type": "object",
+        "required": ["path", "kind", "size", "modified"],
+        "title": "Report"
       },
       "RunDetail": {
         "properties": {

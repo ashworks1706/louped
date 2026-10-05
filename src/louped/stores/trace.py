@@ -34,13 +34,7 @@ def trace(text: str) -> Trace:
         if at.path is None or not _is_view(at.path):
             raise ValueError("an experiment's ref names one of its figures: "
                              "experiment:<name>/views/<figure>.json")  # fmt: skip
-        try:
-            path = inside(experiment_folder(at.name), *at.path.split("/"))
-        except FileNotFoundError as exc:
-            raise NotFound(str(exc)) from exc
-        if not path.is_file():
-            raise NotFound(f"experiment {at.name} has no {at.path}")
-        view = _view(path.read_bytes(), at.path)
+        view = read_view(text)
         steps.append(_figure(ref("experiment", at.name, at.path), view))
         source = _items(view)
         if source is None or source.run is None:
@@ -55,7 +49,7 @@ def trace(text: str) -> Trace:
         if at.path is not None and at.path not in artifacts:
             raise NotFound(f"run {run_id} has no {at.path}")
         if at.path is not None and _is_view(at.path):
-            view = _view(read_artifact(run_id, at.path), at.path)
+            view = read_view(text)
             steps.append(_figure(ref("run", run_id, at.path), view))
             source = _items(view)
             if at.item is not None and source is None:
@@ -70,6 +64,23 @@ def trace(text: str) -> Trace:
     if own is not None and own != run_id:
         steps.append(_run(own))  # the run that logged the figure, besides the one it draws on
     return Trace(ref=text, steps=steps)
+
+
+def read_view(text: str) -> View:
+    """The figure a ref names: run:<id>/views/<name>.json or experiment:<name>/views/<name>.json.
+    ValueError when the ref names no figure, NotFound when it is not there."""
+    at = parse(text)
+    if at.path is None or not _is_view(at.path):
+        raise ValueError(f"{text} names no figure: its path is views/<name>.json")
+    if at.scheme == "run":
+        return _view(read_artifact(at.name, at.path), at.path)
+    try:
+        path = inside(experiment_folder(at.name), *at.path.split("/"))
+    except FileNotFoundError as exc:
+        raise NotFound(str(exc)) from exc
+    if not path.is_file():
+        raise NotFound(f"experiment {at.name} has no {at.path}")
+    return _view(path.read_bytes(), at.path)
 
 
 def _items(view: View) -> ItemSource | None:

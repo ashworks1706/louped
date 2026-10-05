@@ -251,6 +251,107 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/reports": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Report List
+     * @description Every file in reports/ the app shows; 400 naming an exported figure's broken refs
+     *     file.
+     */
+    get: operations["report_list_api_reports_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/reports/file": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Report File
+     * @description A file in reports/ as it is; with download, as a file to save.
+     */
+    get: operations["report_file_api_reports_file_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/reports/outline": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Report Outline
+     * @description A deck's text slide by slide, a document's paragraph by paragraph.
+     */
+    get: operations["report_outline_api_reports_outline_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/reports/preview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Report Preview
+     * @description A deck or document as a PDF drawn by LibreOffice; 501 when it is not installed.
+     */
+    get: operations["report_preview_api_reports_preview_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/reports/figures": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Export Figure
+     * @description A run's or experiment's figure exported to reports/figures/ with its ref and trace.
+     */
+    post: operations["export_figure_api_reports_figures_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/check": {
     parameters: {
       query?: never;
@@ -1764,6 +1865,24 @@ export interface components {
       /** Sae Id */
       sae_id?: string | null;
     };
+    /** FigureRequest */
+    FigureRequest: {
+      /** Ref */
+      ref: string;
+      /**
+       * Format
+       * @default svg
+       * @enum {string}
+       */
+      format: "svg" | "png" | "pdf";
+      /** Name */
+      name?: string | null;
+      /**
+       * Replace
+       * @default false
+       */
+      replace: boolean;
+    };
     /** GenerateRequest */
     GenerateRequest: {
       /**
@@ -1971,7 +2090,7 @@ export interface components {
        * Kind
        * @enum {string}
        */
-      kind: "number" | "citation" | "ref" | "pin";
+      kind: "number" | "citation" | "ref" | "pin" | "file";
       /** Message */
       message: string;
     };
@@ -2524,6 +2643,25 @@ export interface components {
       remote: string | null;
       /** Token */
       token: boolean;
+    };
+    /** Report */
+    Report: {
+      /** Path */
+      path: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "md" | "pptx" | "docx" | "pdf" | "svg" | "png";
+      /** Size */
+      size: number;
+      /**
+       * Modified
+       * Format: date-time
+       */
+      modified: string;
+      /** Ref */
+      ref?: string | null;
     };
     /** RunDetail */
     RunDetail: {
@@ -3662,6 +3800,153 @@ export interface operations {
         };
         content: {
           "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  report_list_api_reports_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Report"][];
+        };
+      };
+    };
+  };
+  report_file_api_reports_file_get: {
+    parameters: {
+      query: {
+        path: string;
+        download?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  report_outline_api_reports_outline_get: {
+    parameters: {
+      query: {
+        path: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": string[];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  report_preview_api_reports_preview_get: {
+    parameters: {
+      query: {
+        path: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  export_figure_api_reports_figures_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["FigureRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Report"];
         };
       };
       /** @description Validation Error */

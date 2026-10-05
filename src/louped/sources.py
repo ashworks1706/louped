@@ -36,9 +36,13 @@ from typing import Literal
 import httpx
 from pydantic import BaseModel, TypeAdapter
 
+from louped.core import documents
 from louped.core.paths import NAME, experiments_dir, home, inside
 
 Kind = Literal["pdf", "pptx", "docx", "ipynb", "md", "txt"]
+#: The version of the readers in louped.core.documents the search index was built with: bump
+#: it when they read a file differently, and every source is read again.
+READER = 1
 KINDS: dict[str, Kind] = {".pdf": "pdf", ".pptx": "pptx", ".docx": "docx", ".ipynb": "ipynb",
                           ".md": "md", ".markdown": "md", ".txt": "txt"}  # fmt: skip
 #: The largest file a URL may bring in.
@@ -274,6 +278,9 @@ def _index() -> sqlite3.Connection:
     removed one dropped."""
     home().mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(home() / "sources.db")
+    if db.execute("PRAGMA user_version").fetchone()[0] != READER:  # read again by new readers
+        db.executescript(f"DROP TABLE IF EXISTS files; DROP TABLE IF EXISTS pages; "
+                         f"PRAGMA user_version = {READER};")  # fmt: skip
     db.execute("CREATE TABLE IF NOT EXISTS files (key TEXT PRIMARY KEY, sha256 TEXT)")
     db.execute("CREATE VIRTUAL TABLE IF NOT EXISTS pages USING fts5(key UNINDEXED, "
                "page UNINDEXED, text, tokenize='porter unicode61')")  # fmt: skip
@@ -389,39 +396,14 @@ def _fetch(url: str, transport: httpx.BaseTransport | None) -> tuple[bytes, Kind
 def _read(path: Path, kind: Kind) -> tuple[list[str], str | None]:
     """A source's text page by page, and the title its file gives, if any."""
     if kind == "pdf":
-        import pypdfium2 as pdfium
-
-        doc = pdfium.PdfDocument(path)
-        try:
-            pages = [doc[i].get_textpage().get_text_range() for i in range(len(doc))]
-            title = doc.get_metadata_dict().get("Title") or None
-        finally:
-            doc.close()
-        return pages, title
+        return documents.pdf_pages(path)
     if kind == "pptx":
-        from pptx import Presentation
-        from pptx.shapes.autoshape import Shape
-
-        deck = Presentation(str(path))
-        slides = []
-        for slide in deck.slides:
-            text = [
-                s.text_frame.text for s in slide.shapes if isinstance(s, Shape) and s.has_text_frame
-            ]
-            if slide.has_notes_slide and slide.notes_slide.notes_text_frame is not None:
-                text.append(slide.notes_slide.notes_text_frame.text)
-            slides.append("\n".join(t for t in text if t))
-        return slides, deck.core_properties.title or None
+        return documents.pptx_slides(path)
     if kind == "docx":
-        from docx import Document
-
-        doc = Document(str(path))
-        return ["\n".join(p.text for p in doc.paragraphs)], doc.core_properties.title or None
+        blocks, title = documents.docx_blocks(path)
+        return ["\n".join(b.text for b in blocks)], title
     if kind == "ipynb":
-        import nbformat
-
-        notebook = nbformat.read(str(path), as_version=4)
-        return [c.source for c in notebook.cells], None
+        return documents.notebook_cells(path), None
     text = path.read_text(encoding="utf-8")
     heading = re.search(r"^# (.+)$", text, re.M) if kind == "md" else None
     return [text], heading.group(1).strip() if heading else None

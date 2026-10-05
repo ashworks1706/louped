@@ -69,7 +69,7 @@ export async function mockSources(page: Page) {
   await json("**/api/sources/search?*", [
     { key: "pushback", title: paper.title, page: 1, snippet: "Models cave to [pushback]" },
   ]);
-  await page.route("**/api/sources/pushback/file", (r) =>
+  await page.route("**/api/sources/pushback/file?*", (r) =>
     r.fulfill({
       body: pdf("Models cave to pushback", "Evidence helps them"),
       contentType: "application/pdf",

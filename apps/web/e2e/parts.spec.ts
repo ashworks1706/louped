@@ -74,6 +74,9 @@ const PAGES: [string, string][] = [
   ["sources", "/sources/?q=pushback"],
   ["pdf source", "/source/?key=pushback"],
   ["slide source", "/source/?key=deck"],
+  ["reports", "/reports/"],
+  ["markdown report", "/report/?path=1b.md"],
+  ["deck report", "/report/?path=lab.pptx"],
 ];
 
 for (const [name, url] of PAGES) {
