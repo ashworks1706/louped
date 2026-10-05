@@ -299,6 +299,17 @@ class Derive:
 
 
 @dataclass(frozen=True)
+class Notebook:
+    """Run a notebook in experiments/<name>/ with papermill, inside a run in that experiment; the
+    run keeps the executed copy with every output."""
+
+    notebook: tyro.conf.Positional[Path]
+    """The .ipynb file, such as experiments/<name>/explore.ipynb."""
+    param: tuple[str, ...] = ()
+    """name=value for a variable of the cell tagged "parameters"; repeat for more."""
+
+
+@dataclass(frozen=True)
 class SourceAdd:
     """Keep a paper, doc, deck or notebook in sources/: a file, or an https URL (an arXiv page,
     a shared Google Doc or Slides deck, a notebook on GitHub, a direct file link)."""
@@ -376,6 +387,7 @@ Command = (
     | Annotated[EndpointBench, tyro.conf.subcommand("endpoint-bench")]
     | Annotated[Judge, tyro.conf.subcommand("judge")]
     | Annotated[Derive, tyro.conf.subcommand("derive")]
+    | Annotated[Notebook, tyro.conf.subcommand("notebook")]
     | Annotated[Check, tyro.conf.subcommand("check")]
     | Annotated[Export, tyro.conf.subcommand("export")]
     | Annotated[Sources, tyro.conf.subcommand("source")]
@@ -404,6 +416,7 @@ COMMANDS = {
     "endpoint-bench",
     "judge",
     "derive",
+    "notebook",
     "check",
     "export",
     "source",
@@ -666,6 +679,21 @@ def main() -> None:
             try:
                 print(json.dumps({"run": cmd.run, "added": derive(cmd.run, cmd.script, cmd.name)}))
             except (ValueError, FileNotFoundError) as exc:
+                raise SystemExit(str(exc)) from exc
+        case Notebook() as cmd:
+            from papermill.exceptions import PapermillExecutionError
+
+            from louped.notebooks import run_notebook
+
+            given: dict[str, str] = {}
+            for pair in cmd.param:
+                name, eq, value = pair.partition("=")
+                if not eq:
+                    raise SystemExit(f"--param takes name=value, not {pair!r}")
+                given[name] = value
+            try:
+                print(run_notebook(cmd.notebook, given))
+            except (ValueError, PapermillExecutionError) as exc:
                 raise SystemExit(str(exc)) from exc
         case Sources(cmd=sub):
             from louped import sources

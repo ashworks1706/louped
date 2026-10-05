@@ -16,6 +16,7 @@ louped new does-pushback-flip-answers --domain honesty
 | `run.py`    | The script. Its `Args` dataclass becomes a form.                     | Launch                        |
 | `task.py`   | Inspect evals (`@task`)                                              | Launch, Runs                  |
 | `*.yaml`    | A training config (`# louped train sft`) or a grid (`# louped grid`) | Launch                        |
+| `*.ipynb`   | A notebook. Its cell tagged `parameters` becomes a form.             | Launch                        |
 
 ## README
 
@@ -100,6 +101,31 @@ A figure whose points are the run's items can say so: `views.plotly(..., items=v
 with each trace's `ids` set to the items' keys (for `vega`, `views.items(field="qid")`). Hovering
 a point then names its item, the files holding it and the script and commit that made the figure;
 clicking it opens the item in **Items**. Your agent follows the same chain with `trace`.
+
+## Notebooks
+
+A notebook in the experiment's folder runs as a job. Tag one cell `parameters` (in Jupyter: the
+cell's property inspector) and set the variables a run can change there:
+
+```python
+n = 200        # items to read
+model = "Qwen/Qwen2.5-0.5B-Instruct"
+```
+
+Launch shows each variable as an option, with its comment as help. From a terminal:
+
+```sh
+louped notebook experiments/my-question/explore.ipynb --param n=50
+```
+
+papermill runs the notebook in its own folder, with your values in a new cell after the
+parameters cell. A value is read as the type of the variable's default (or annotation): `n=50` is
+an int, and a value that does not parse as one stops the job. The run is in the notebook's
+experiment and keeps the parameters and the executed copy, `notebook/<name>.ipynb`, with every
+output. The run's **Artifacts** tab shows that copy as Jupyter does. A cell can log to the run
+with `mlflow.log_metric` or `louped.tracking.log_json`, as `run.py` does. A cell that raises
+fails the run, and the copy shows the cells up to it. A notebook from Colab needs the
+`parameters` tag added; Colab's `#@param` form fields are not read.
 
 ## Evals and judges
 

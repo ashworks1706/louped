@@ -1,6 +1,7 @@
 """The text of PDFs, slide decks, Word documents and notebooks, read the same way wherever louped
 reads one: sources/ for search and pins, reports/ for previews and louped check. Each reader
-imports its library when called; they come with the sources extra."""
+imports its library when called; they come with the sources extra, and notebook_html with the
+notebooks extra."""
 
 from __future__ import annotations
 
@@ -80,3 +81,15 @@ def notebook_cells(path: Path) -> list[str]:
     import nbformat
 
     return [c.source for c in nbformat.read(str(path), as_version=4).cells]
+
+
+def notebook_html(notebook: Path | bytes) -> str:
+    """A notebook as one HTML page, its cells and saved outputs as JupyterLab shows them. The
+    page's scripts (MathJax, interactive outputs) are for a frame that allows them; the app's does
+    not, so math shows as its TeX and an interactive output as its static copy, if it saved one."""
+    import nbformat
+    from nbconvert import HTMLExporter
+
+    text = notebook.read_text(encoding="utf-8") if isinstance(notebook, Path) else notebook.decode()
+    html, _ = HTMLExporter(template_name="lab").from_notebook_node(nbformat.reads(text, 4))
+    return html

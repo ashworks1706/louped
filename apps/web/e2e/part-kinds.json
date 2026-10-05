@@ -526,7 +526,7 @@
   },
   {
     "part": "source/*",
-    "about": "A source's viewer: its header, page controls, the page, Pin.",
+    "about": "A source's viewer: its header, page controls, the page, Pin and, for a notebook, the whole notebook.",
     "rules": []
   },
   {

@@ -243,6 +243,9 @@ export const setLabel = (run: string, sample: string, label: Label | null) =>
   );
 /** A source's file as kept, for the viewer. */
 export const sourceFile = (key: string) => `${API}/api/sources/${encodeURIComponent(key)}/file`;
+/** A notebook source as the page the API draws it as. */
+export const sourceNotebook = (key: string) =>
+  `${API}/api/sources/${encodeURIComponent(key)}/notebook`;
 export const addSource = (body: Schemas["SourceRequest"]) => post<Source>("/sources", body);
 export const addPin = (body: Schemas["PinRequest"]) => post<Pin>("/pins", body);
 export const deletePin = (id: string) => del(`/pins/${encodeURIComponent(id)}`);

@@ -18,7 +18,7 @@ import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -26,7 +26,7 @@ from louped import __version__, stores
 from louped import reports as reporting
 from louped import sources as library
 from louped.check import Issue, check
-from louped.core import Direction, cohorts, home
+from louped.core import Direction, cohorts, documents, home
 from louped.core.judges import Judge, find_judges, write_judge
 from louped.core.paths import experiments_dir, inside
 from louped.server import graphs, inspect_view, launch, playground, plugins, ui
@@ -154,6 +154,12 @@ def find_ui(given: Path | None = None) -> Path | None:
     return None
 
 
+def _notebook_page(html: str) -> HTMLResponse:
+    """A notebook's page, sandboxed by its own header too: a notebook from the web can carry any
+    script in its outputs, and opened outside the app's frame it still runs none."""
+    return HTMLResponse(html, headers={"Content-Security-Policy": "sandbox"})
+
+
 def create_app(
     web_dir: Path | None = None,
     hosts: list[str] | None = None,
@@ -216,6 +222,13 @@ def create_app(
         media = mimetypes.guess_type(path)[0] or "application/octet-stream"
         return Response(read_artifact(run_id, path), media_type=media)
 
+    @app.get("/api/runs/{run_id}/notebook/{path:path}")
+    def run_notebook(run_id: str, path: str) -> HTMLResponse:
+        """A notebook the run logged, as a page, for a frame that runs no scripts."""
+        if ".." in Path(path).parts or not path.endswith(".ipynb"):
+            raise HTTPException(400, "not a notebook's path")
+        return _notebook_page(documents.notebook_html(read_artifact(run_id, path)))
+
     @app.put(
         "/api/runs/{run_id}/artifacts/{path:path}", dependencies=[Depends(launch.require_json)]
     )
@@ -274,6 +287,19 @@ def create_app(
             raise HTTPException(400, str(exc)) from exc
         kind = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
         return FileResponse(path, media_type=kind, headers={"Cache-Control": "no-cache"})
+
+    @app.get("/api/sources/{key}/notebook")
+    def source_notebook(key: str) -> HTMLResponse:
+        """A notebook source as a page, for a frame that runs no scripts."""
+        try:
+            path = library.source_file(key)
+        except KeyError as exc:
+            raise HTTPException(404, exc.args[0]) from exc
+        except ValueError as exc:  # an index entry naming a file outside sources/
+            raise HTTPException(400, str(exc)) from exc
+        if path.suffix != ".ipynb":
+            raise HTTPException(400, f"{key} is not a notebook")
+        return _notebook_page(documents.notebook_html(path))
 
     @app.get("/api/pins")
     def pins(key: str | None = None) -> list[library.Pin]:

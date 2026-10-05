@@ -31,7 +31,7 @@ Documentation = "https://louped.vercel.app/docs"
 server = [
     "fastapi>=0.115",
     "uvicorn>=0.32",
-    "louped[evals,tracking,sync,sources,reports]",
+    "louped[evals,tracking,sync,sources,reports,notebooks]",
 ]
 # The project's sources/ (papers, docs, slides, notebooks): their text, read for search and
 # quoting. PDF through PDFium (pypdfium2, Apache-2.0/BSD-3), not PyMuPDF (AGPL).
@@ -49,6 +49,14 @@ reports = [
     "plotly>=5.24",
     "vl-convert-python>=1.7",
     "louped[sources]",
+]
+# Notebooks run as jobs: papermill executes one with its parameters in an IPython kernel, inside a
+# run; nbconvert draws a notebook as HTML for the app.
+notebooks = [
+    "ipykernel>=6.29",
+    "nbconvert>=7.16",
+    "papermill>=2.6",
+    "louped[sources,tracking]",
 ]
 # Runs pushed to and pulled from a remote: any fsspec URL, Hugging Face Storage Buckets through
 # huggingface_hub's hf://; S3 or R2 also needs s3fs.
@@ -187,7 +195,7 @@ layers = [
     "louped.examples",
     "louped.check",
     "louped.reports",
-    "louped.train | louped.sweep | louped.grid | louped.sync | louped.features | louped.circuits | louped.judge | louped.derive | louped.bench | louped.endpoint_bench | louped.sources",
+    "louped.train | louped.sweep | louped.grid | louped.sync | louped.features | louped.circuits | louped.judge | louped.derive | louped.bench | louped.endpoint_bench | louped.sources | louped.notebooks",
     "louped.stores | louped.tracking | louped.analysis | louped.inspect_ext",
     "louped.interventions",
     "louped.vectors",

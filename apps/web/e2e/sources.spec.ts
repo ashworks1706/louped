@@ -66,6 +66,20 @@ test("a slide is shown as its text", async ({ page }) => {
   await expect(page.locator('[data-part="source/pins"]')).toContainText("[@deck p<page>]");
 });
 
+test("a notebook shows cell by cell, then whole in a frame that runs no scripts", async ({
+  page,
+}) => {
+  await mock(page);
+  await mockSources(page);
+  await page.goto("/source/?key=explore");
+  await expect(page.locator('[data-part="source/page"]')).toHaveText("n = 2");
+  const frame = page.locator('[data-part="source/notebook"] iframe');
+  await expect(frame).toHaveAttribute("sandbox", "");
+  await expect(
+    page.frameLocator('[data-part="source/notebook"] iframe').getByText("printed 4"),
+  ).toBeVisible();
+});
+
 test("a citation in Markdown names the passage it rests on", async ({ page }) => {
   await mock(page);
   await mockSources(page);

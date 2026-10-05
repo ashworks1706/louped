@@ -227,7 +227,8 @@ KINDS: list[Kind] = [
     _k(part="sources/table", about="The list of sources.", rules=["note"]),
     _k(part="sources/add", about="Adds a source: a file in the project or an https URL.",
        rules=["hidden", "note"]),
-    _k(part="source/*", about="A source's viewer: its header, page controls, the page, Pin.",
+    _k(part="source/*", about="A source's viewer: its header, page controls, the page, Pin and, "
+       "for a notebook, the whole notebook.",
        rules=PICK),
     _k(part="source/pin/*", about="One pinned passage of the source, by id.", rules=PICK),
     # Reports

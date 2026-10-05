@@ -49,7 +49,9 @@ results.
 | ----------------- | ----------------------------------------------------- |
 | `louped.toml`      | the project's root and settings (domains, remote, theme) |
 | `layout.json`     | what the app's pages show (`change-ui`); committed     |
-| `experiments/`    | the questions; committed                              |
+| `experiments/`    | the questions: README, scripts, notebooks; committed  |
+| `sources/`        | papers, docs, slides, notebooks; committed            |
+| `reports/`        | write-ups, decks, documents, exported figures; committed |
 | `plugins/`        | the project's own pages, routes and tools; committed  |
 | `judges/`         | judges that compare two eval runs (`new_judge`); committed |
 | `.louped/`         | runs, eval logs, jobs, caches; gitignored, rebuildable |

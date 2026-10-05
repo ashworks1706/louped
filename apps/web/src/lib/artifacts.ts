@@ -6,6 +6,12 @@ export function artifactUrl(run: string, path: string): string {
   return `${API}/api/runs/${encodeURIComponent(run)}/artifacts/${segments}`;
 }
 
+/** A notebook the run logged, as the page the API draws it as. */
+export function notebookUrl(run: string, path: string): string {
+  const segments = path.split("/").map(encodeURIComponent).join("/");
+  return `${API}/api/runs/${encodeURIComponent(run)}/notebook/${segments}`;
+}
+
 /** One artifact's text, read once per run and path. */
 export const artifactQuery = (run: string, path: string) => ({
   queryKey: ["artifact", run, path],
@@ -16,7 +22,8 @@ export const artifactQuery = (run: string, path: string) => ({
   },
 });
 
-export type ArtifactKind = "markdown" | "json" | "jsonl" | "table" | "text" | "image" | "other";
+export type ArtifactKind =
+  "markdown" | "json" | "jsonl" | "table" | "text" | "image" | "notebook" | "other";
 
 const TEXT = /\.(txt|log|out|err|ya?ml|toml|cfg|ini|py|sh|diff|patch)$/i;
 
@@ -27,6 +34,7 @@ export function kindOf(path: string): ArtifactKind {
   if (p.endsWith(".json")) return "json";
   if (p.endsWith(".csv") || p.endsWith(".tsv")) return "table";
   if (/\.(png|jpe?g|gif|svg|webp)$/.test(p)) return "image";
+  if (p.endsWith(".ipynb")) return "notebook";
   if (TEXT.test(p)) return "text";
   return "other";
 }

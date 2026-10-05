@@ -322,6 +322,53 @@
         }
       }
     },
+    "/api/runs/{run_id}/notebook/{path}": {
+      "get": {
+        "summary": "Run Notebook",
+        "description": "A notebook the run logged, as a page, for a frame that runs no scripts.",
+        "operationId": "run_notebook_api_runs__run_id__notebook__path__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/runs/{run_id}/cohort": {
       "post": {
         "summary": "Run Cohort",
@@ -539,6 +586,44 @@
         "summary": "Source File",
         "description": "A source's file as it was kept, for the app's viewer.",
         "operationId": "source_file_api_sources__key__file_get",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sources/{key}/notebook": {
+      "get": {
+        "summary": "Source Notebook",
+        "description": "A notebook source as a page, for a frame that runs no scripts.",
+        "operationId": "source_notebook_api_sources__key__notebook_get",
         "parameters": [
           {
             "name": "key",
@@ -892,7 +977,7 @@
     "/api/check": {
       "get": {
         "summary": "Grounded",
-        "description": "What in the project's Markdown is not grounded (louped check): a file or folder in\nthe project, or every .md under experiments/ and reports/.",
+        "description": "What in the project's write-ups is not grounded (louped check): a file or folder in\nthe project, or every .md, .pptx and .docx under experiments/ and reports/.",
         "operationId": "grounded_api_check_get",
         "parameters": [
           {

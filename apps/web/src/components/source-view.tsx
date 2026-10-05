@@ -8,12 +8,13 @@ import { useEffect, useRef, useState } from "react";
 
 import { CopyButton } from "@/components/copy-button";
 import { DeleteButton } from "@/components/delete-button";
+import { NotebookFrame } from "@/components/notebook-frame";
 import { Part, part, partId } from "@/components/parts";
 import { PdfPage } from "@/components/pdf-page";
 import { QueryState } from "@/components/query-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { addPin, deletePin, q, sourceFile, type Pin, type Source } from "@/lib/api";
+import { addPin, deletePin, q, sourceFile, sourceNotebook, type Pin, type Source } from "@/lib/api";
 import { host, sourceHref } from "@/lib/href";
 import { quoteRanges } from "@/lib/quotes";
 import { cn } from "@/lib/utils";
@@ -122,6 +123,12 @@ function Viewer({ source: s }: { source: Source }) {
               <TextPage source={s} page={page} pins={onPage} />
             )}
           </div>
+          {s.kind === "ipynb" && (
+            <Part id="source/notebook" as="section" className="flex flex-col gap-2">
+              <h2 className="text-sm font-medium">The whole notebook, with its outputs</h2>
+              <NotebookFrame url={`${sourceNotebook(s.key)}?sha=${s.sha256}`} title={s.title} />
+            </Part>
+          )}
         </div>
         <Pins source={s} pins={pins.data ?? []} />
       </div>

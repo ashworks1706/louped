@@ -9,6 +9,7 @@ import { CopyButton } from "@/components/copy-button";
 import { part, partId } from "@/components/parts";
 import { Markdown } from "@/components/markdown";
 import { EditableText } from "@/components/markdown-editor";
+import { NotebookFrame } from "@/components/notebook-frame";
 import { QueryState } from "@/components/query-state";
 import { LinedUp } from "@/components/items-view";
 import { Timeline } from "@/components/trace-view";
@@ -23,6 +24,7 @@ import {
   asRecords,
   editable,
   kindOf,
+  notebookUrl,
   parseDelimited,
   parseJsonl,
   traceShape,
@@ -244,6 +246,8 @@ function Preview({ runId, artifact }: { runId: string; artifact: Artifact }) {
         Raw.
       </p>
     );
+  if (kind === "notebook")
+    return <NotebookFrame url={notebookUrl(runId, artifact.path)} title={artifact.path} />;
   return <TextPreview runId={runId} path={artifact.path} />;
 }
 

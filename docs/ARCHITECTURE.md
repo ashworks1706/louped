@@ -122,10 +122,11 @@ server | agent | init                    FastAPI over the stores; Playground; la
                                          MCP server, an HTTP client of the API; louped init
 check                                    what in the project's write-ups is not grounded
 reports                                  reports/: decks, documents, exported figures
-train | sweep | grid | sync | features | circuits | judge | bench | derive | sources
+train | sweep | grid | sync | features | circuits | judge | bench | derive | sources | notebooks
                                          training recipes and sweeps; steering sweeps; condition
                                          grids; SAE dashboards; attribution graphs; pairwise judging;
-                                         serving cost; columns and figures from a run's files; the project's sources
+                                         serving cost; columns and figures from a run's files; the
+                                         project's sources; notebooks run by papermill
 stores | tracking | analysis | inspect_ext
                                          read Inspect logs and MLflow; start a run; lens, patching,
                                          probes, attention, SAE features as views; the louped/
@@ -153,7 +154,11 @@ core                                     run metadata, paths, the project and it
   `louped.reports` lists reports/, previews decks and documents through LibreOffice when installed,
   and exports Vega-Lite (vl-convert) and Plotly (Kaleido, with Chrome) figures with a
   `<file>.refs.json` sidecar holding the ref and its trace. `louped.core.documents` reads PDFs,
-  decks, documents and notebooks for both.
+  decks, documents and notebooks for both, and draws a notebook as HTML (nbconvert) for a frame
+  with no scripts.
+- Notebooks: `louped.notebooks` runs an experiment's `.ipynb` with papermill inside a run; the
+  cell tagged `parameters` is the launch form, and the run keeps `notebook/<name>.ipynb`. The
+  kernel finds its run through `MLFLOW_RUN_ID`, so cells log to it.
   `louped.check` lists result numbers with no ref or citation beside them, citations without a
   pinned page, refs that do not resolve, and pins whose quote left its page.
 - Refs (`louped.core.refs`) address evidence: `run:<id>/<path>#<item>`, `experiment:<name>/<path>`.

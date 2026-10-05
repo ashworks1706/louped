@@ -52,6 +52,15 @@ export const deck = {
   origin: null,
   sha256: "b".repeat(64),
 };
+export const notebook = {
+  ...paper,
+  key: "explore",
+  title: "Explore",
+  kind: "ipynb",
+  file: "explore.ipynb",
+  origin: null,
+  sha256: "c".repeat(64),
+};
 export const pinned = {
   id: "5b55feb4d5",
   key: "pushback",
@@ -65,7 +74,7 @@ export const pinned = {
 
 export async function mockSources(page: Page) {
   const json = (glob: string, body: unknown) => page.route(glob, (r) => r.fulfill({ json: body }));
-  await json("**/api/sources", [deck, paper]);
+  await json("**/api/sources", [deck, notebook, paper]);
   await json("**/api/sources/search?*", [
     { key: "pushback", title: paper.title, page: 1, snippet: "Models cave to [pushback]" },
   ]);
@@ -80,6 +89,13 @@ export async function mockSources(page: Page) {
     page: 1,
     text: "Caving rate by condition",
   });
+  await json("**/api/sources/explore/pages/*", { key: "explore", page: 1, text: "n = 2" });
+  await page.route("**/api/sources/explore/notebook?*", (r) =>
+    r.fulfill({
+      body: '<html><body><main class="jp-Notebook"><p>printed 4</p></main></body></html>',
+      contentType: "text/html",
+    }),
+  );
   await page.route("**/api/pins?*", (r) => {
     const key = new URL(r.request().url()).searchParams.get("key");
     return r.fulfill({ json: key === "pushback" ? [pinned] : [] });

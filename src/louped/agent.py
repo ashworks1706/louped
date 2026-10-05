@@ -375,8 +375,9 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
 
     @mcp.tool(annotations=READ)
     async def launchables() -> list[dict[str, Any]]:
-        """What can be started: experiment scripts, training configs, grids, data steps and
-        louped's commands (new, sweep, features, circuit, grid, eval)."""
+        """What can be started: experiment scripts and notebooks, training configs, grids, data
+        steps and louped's commands (new, sweep, features, circuit, grid, eval). A notebook's
+        options are its parameters; its run keeps the executed copy under notebook/."""
         found = await get("/launch")
         return [{k: x.get(k) for k in ("id", "group", "title", "description")} for x in found]
 
