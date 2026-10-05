@@ -216,6 +216,18 @@ KINDS: list[Kind] = [
        "right answer, tie, reveal, the result and each judge's agreement.", rules=PICK),
     _k(part="compare/open/title", about="The open sample's title.", rules=PICK),
     _k(part="compare/open/side/*", about="The open sample in run A or B.", rules=PICK),
+    # Sources
+    _k(part="sources/search", about="Search the project's sources, every word.", rules=PICK),
+    _k(part="sources/hit/*/*", about="One page a search found, by source key and page.",
+       rules=PICK),
+    _k(part="sources/source/*", about="One source in the list, by key.", rules=PICK),
+    _k(part="sources/heading", about="The count of sources.", rules=PICK),
+    _k(part="sources/table", about="The list of sources.", rules=["note"]),
+    _k(part="sources/add", about="Adds a source: a file in the project or an https URL.",
+       rules=["hidden", "note"]),
+    _k(part="source/*", about="A source's viewer: its header, page controls, the page, Pin.",
+       rules=PICK),
+    _k(part="source/pin/*", about="One pinned passage of the source, by id.", rules=PICK),
     # Launch
     _k(part="launch/group/*", about="A group of things to launch.", rules=PICK),
     _k(part="launch/item/*", about="One thing to launch, by id (script:hello/run.py).",

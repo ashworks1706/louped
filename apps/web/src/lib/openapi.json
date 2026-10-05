@@ -534,6 +534,169 @@
         }
       }
     },
+    "/api/sources/{key}/file": {
+      "get": {
+        "summary": "Source File",
+        "description": "A source's file as it was kept, for the app's viewer.",
+        "operationId": "source_file_api_sources__key__file_get",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pins": {
+      "get": {
+        "summary": "Pins",
+        "description": "The pinned passages of one source, or of all.",
+        "operationId": "pins_api_pins_get",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Pin"
+                  },
+                  "title": "Response Pins Api Pins Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add Pin",
+        "description": "Pin a quote on a page of a source: refused unless the words are on that page.",
+        "operationId": "add_pin_api_pins_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PinRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pin"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pins/{pin_id}": {
+      "delete": {
+        "summary": "Delete Pin",
+        "operationId": "delete_pin_api_pins__pin_id__delete",
+        "parameters": [
+          {
+            "name": "pin_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Pin Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/trace": {
       "get": {
         "summary": "Trace",
@@ -5559,6 +5722,97 @@
         "required": ["id", "url"],
         "title": "Picked",
         "description": "One part a person Shift+clicked, and the page it was on."
+      },
+      "Pin": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "exact": {
+            "type": "string",
+            "title": "Exact"
+          },
+          "start": {
+            "type": "integer",
+            "title": "Start",
+            "default": 0
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "links": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Links",
+            "default": []
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created"
+          }
+        },
+        "type": "object",
+        "required": ["id", "key", "page", "exact", "created"],
+        "title": "Pin",
+        "description": "A passage of a source someone marked: the quote as it stands on its page."
+      },
+      "PinRequest": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "quote": {
+            "type": "string",
+            "title": "Quote"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "links": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Links",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": ["key", "page", "quote"],
+        "title": "PinRequest"
       },
       "PlaygroundInfo": {
         "properties": {

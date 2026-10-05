@@ -1,5 +1,6 @@
 import {
   Activity,
+  BookOpen,
   Brain,
   Dumbbell,
   FlaskConical,
@@ -53,6 +54,14 @@ export const NAV: NavItem[] = [
     description: "Two runs, sample by sample.",
     icon: GitCompareArrows,
     shortcut: "G C",
+    section: "workspace",
+  },
+  {
+    href: "/sources/",
+    title: "Sources",
+    description: "The papers, docs, slides and notebooks the project rests on.",
+    icon: BookOpen,
+    shortcut: "G S",
     section: "workspace",
   },
   {

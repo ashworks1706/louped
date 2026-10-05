@@ -18,7 +18,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Kbd } from "@/components/ui/kbd";
 import { q } from "@/lib/api";
-import { experimentHref } from "@/lib/href";
+import { experimentHref, sourceHref } from "@/lib/href";
 import { fullTitle, NAV, pluginItem } from "@/lib/nav";
 
 const DOCS = "https://github.com/ashworks1706/louped/tree/main/docs";
@@ -43,6 +43,7 @@ export function CommandMenu({ children }: { children: React.ReactNode }) {
   // Fetched only once the menu opens, so a page that never opens it pays nothing.
   const experiments = useQuery({ ...q.experiments(), enabled: open });
   const plugins = useQuery({ ...q.plugins(), enabled: open });
+  const sources = useQuery({ ...q.sources(), enabled: open });
   const canPick = useCanPick();
 
   React.useEffect(() => {
@@ -120,6 +121,23 @@ export function CommandMenu({ children }: { children: React.ReactNode }) {
                       <FlaskConical />
                       <span className="font-mono">{e.name}</span>
                       <span className="text-muted-foreground ml-auto text-xs">{e.status}</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+              {sources.data && sources.data.length > 0 && (
+                <CommandGroup heading="Sources">
+                  {sources.data.map((s) => (
+                    <CommandItem
+                      key={s.key}
+                      value={`${s.key} ${s.title}`}
+                      onSelect={() => run(() => router.push(sourceHref(s.key)))}
+                    >
+                      <BookOpen />
+                      <span className="truncate">{s.title}</span>
+                      <span className="text-muted-foreground ml-auto font-mono text-xs">
+                        {s.key}
+                      </span>
                     </CommandItem>
                   ))}
                 </CommandGroup>

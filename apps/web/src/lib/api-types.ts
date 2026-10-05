@@ -190,6 +190,67 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/sources/{key}/file": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Source File
+     * @description A source's file as it was kept, for the app's viewer.
+     */
+    get: operations["source_file_api_sources__key__file_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/pins": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Pins
+     * @description The pinned passages of one source, or of all.
+     */
+    get: operations["pins_api_pins_get"];
+    put?: never;
+    /**
+     * Add Pin
+     * @description Pin a quote on a page of a source: refused unless the words are on that page.
+     */
+    post: operations["add_pin_api_pins_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/pins/{pin_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete Pin */
+    delete: operations["delete_pin_api_pins__pin_id__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/trace": {
     parameters: {
       query?: never;
@@ -2277,6 +2338,53 @@ export interface components {
       text: string;
       data?: components["schemas"]["JsonValue"];
     };
+    /**
+     * Pin
+     * @description A passage of a source someone marked: the quote as it stands on its page.
+     */
+    Pin: {
+      /** Id */
+      id: string;
+      /** Key */
+      key: string;
+      /** Page */
+      page: number;
+      /** Exact */
+      exact: string;
+      /**
+       * Start
+       * @default 0
+       */
+      start: number;
+      /** Note */
+      note?: string | null;
+      /**
+       * Links
+       * @default []
+       */
+      links: string[];
+      /**
+       * Created
+       * Format: date-time
+       */
+      created: string;
+    };
+    /** PinRequest */
+    PinRequest: {
+      /** Key */
+      key: string;
+      /** Page */
+      page: number;
+      /** Quote */
+      quote: string;
+      /** Note */
+      note?: string | null;
+      /**
+       * Links
+       * @default []
+       */
+      links: string[];
+    };
     /** PlaygroundInfo */
     PlaygroundInfo: {
       /** Model */
@@ -3393,6 +3501,132 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["SourcePage"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  source_file_api_sources__key__file_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        key: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  pins_api_pins_get: {
+    parameters: {
+      query?: {
+        key?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Pin"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  add_pin_api_pins_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PinRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Pin"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  delete_pin_api_pins__pin_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        pin_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
         };
       };
       /** @description Validation Error */

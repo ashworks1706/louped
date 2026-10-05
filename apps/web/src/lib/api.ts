@@ -22,6 +22,10 @@ export type TokensView = Schemas["TokensView"];
 export type VegaView = Schemas["VegaView"];
 export type PlotlyView = Schemas["PlotlyView"];
 export type Trace = Schemas["Trace"];
+export type Source = Schemas["Source"];
+export type SourceHit = Schemas["Hit"];
+export type Pin = Schemas["Pin"];
+export type SourcePage = Schemas["SourcePage"];
 export type Pushed = Schemas["Pushed"];
 export type RemoteState = Schemas["RemoteState"];
 export type PluginInfo = Schemas["PluginInfo"];
@@ -236,6 +240,11 @@ export const setLabel = (run: string, sample: string, label: Label | null) =>
     `/runs/${encodeURIComponent(run)}/labels/${encodeURIComponent(sample)}`,
     { label },
   );
+/** A source's file as kept, for the viewer. */
+export const sourceFile = (key: string) => `${API}/api/sources/${encodeURIComponent(key)}/file`;
+export const addSource = (body: Schemas["SourceRequest"]) => post<Source>("/sources", body);
+export const addPin = (body: Schemas["PinRequest"]) => post<Pin>("/pins", body);
+export const deletePin = (id: string) => del(`/pins/${encodeURIComponent(id)}`);
 /** A blind pick of one pair by the side the person saw; null clears it. */
 export const abPick = (body: Schemas["AbPickRequest"]) => post<AbSession>("/ab/pick", body);
 /** What a Probe or Benchmark tool showed, kept as a run. */
@@ -298,6 +307,22 @@ export const q = {
   agreement: (id: string) => ({
     queryKey: ["agreement", id],
     queryFn: () => get<Agreement>(`/runs/${encodeURIComponent(id)}/agreement`),
+  }),
+  sources: () => ({
+    queryKey: ["sources"],
+    queryFn: () => get<Source[]>("/sources"),
+  }),
+  sourceSearch: (query: string) => ({
+    queryKey: ["source-search", query],
+    queryFn: () => get<SourceHit[]>(`/sources/search?q=${encodeURIComponent(query)}`),
+  }),
+  sourcePage: (key: string, page: number) => ({
+    queryKey: ["source-page", key, page],
+    queryFn: () => get<SourcePage>(`/sources/${encodeURIComponent(key)}/pages/${page}`),
+  }),
+  pins: (key?: string) => ({
+    queryKey: ["pins", key ?? null],
+    queryFn: () => get<Pin[]>(`/pins${key ? `?key=${encodeURIComponent(key)}` : ""}`),
   }),
   trace: (ref: string) => ({
     queryKey: ["trace", ref],

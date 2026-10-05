@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 
 import { mock, run, summary } from "./items-run";
+import { mockSources } from "./sources-api";
 
 // The rest of the app over a mocked API, on top of items-run's run m-1: an eval run with
 // samples (e-1), a training run with curves (t-1), a vector, a graph, a feature, a script to
@@ -82,6 +83,7 @@ const feature = {
 
 export async function mockPages(page: Page, parts: Record<string, object> = {}) {
   await mock(page, parts);
+  await mockSources(page);
   const json = (glob: string, body: unknown) => page.route(glob, (r) => r.fulfill({ json: body }));
   await json("**/api/runs", summaries);
   await json("**/api/runs/e-1", evalRun);

@@ -145,7 +145,9 @@ core                                     run metadata, paths, the project and it
   each listed in its `louped.added` tag. An experiment's own figures are `experiments/<name>/views/`.
 - Sources: `sources/` in the project (`louped.sources`): papers, docs, slides and notebooks listed
   in `sources/index.json` with key, origin URL and sha256; their text page by page in an FTS5
-  index at `<home>/sources.db`, rebuilt from the files when one changes.
+  index at `<home>/sources.db`, rebuilt from the files when one changes. Pins in
+  `sources/pins.jsonl` (W3C text quote selectors: exact, prefix, suffix), checked against the page's
+  text; the web app draws PDFs with pdf.js and renders `[@key pN]` in Markdown as citation chips.
 - Refs (`louped.core.refs`) address evidence: `run:<id>/<path>#<item>`, `experiment:<name>/<path>`.
   A vega or plotly figure whose marks are items says so (`items`; plotly trace `ids`), and
   `louped.stores.trace` follows a mark's ref to the derive script and commit, the item's record

@@ -25,6 +25,8 @@ import json
 import os
 import re
 import sqlite3
+import tempfile
+import threading
 import xml.etree.ElementTree as ET
 from contextlib import closing
 from datetime import UTC, datetime
@@ -66,7 +68,25 @@ class Hit(BaseModel):
     snippet: str
 
 
+class Pin(BaseModel):
+    """A passage of a source someone marked: the quote as it stands on its page."""
+
+    id: str
+    key: str
+    page: int
+    exact: str
+    #: Where the quote first stands in the page's text, spaces aside: the order pins are listed in.
+    start: int = 0
+    note: str | None = None
+    #: What it bears on: refs (run:…, experiment:…) or the addresses of parts of a page.
+    links: list[str] = []
+    created: datetime
+
+
 _LIST: TypeAdapter[list[Source]] = TypeAdapter(list[Source])
+PINS = "pins.jsonl"
+#: One writer of pins.jsonl at a time: the app and the agent can pin at once.
+_PINNING = threading.Lock()
 
 
 def sources_dir() -> Path:
@@ -157,6 +177,72 @@ def page_text(key: str, page: int) -> str:
     if not 1 <= page <= len(pages):
         raise ValueError(f"{key} has pages 1 to {len(pages)}; there is no page {page}")
     return pages[page - 1]
+
+
+def pins(key: str | None = None) -> list[Pin]:
+    """The pins in sources/pins.jsonl, of one source or of all, by source, page and position."""
+    path = sources_dir() / PINS
+    lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+    found = [Pin.model_validate_json(line) for line in lines if line.strip()]
+    return [p for p in found if key is None or p.key == key]
+
+
+def add_pin(key: str, page: int, quote: str, note: str | None = None,
+            links: list[str] | None = None) -> Pin:  # fmt: skip
+    """Pin a quote on a page of a source. The quote must be on that page, word for word (spaces
+    and line breaks aside): a pin is never a paraphrase. Pinning the same quote again keeps one
+    pin, with the note replaced when one is given and the links added to."""
+    text = page_text(key, page)
+    want = "".join(quote.split())
+    if not want:
+        raise ValueError("a pin quotes some words")
+    # compared with spaces and line breaks left out, as a selection in a PDF viewer may add or
+    # drop them at the ends of lines
+    kept = [i for i, c in enumerate(text) if not c.isspace()]
+    at = "".join(text[i] for i in kept).find(want)
+    if at < 0:
+        raise ValueError(f"{_flat(quote)[:80]!r} is not on page {page} of {key}: quote the words "
+                         "as they stand there (source_page shows them)")  # fmt: skip
+    exact = _flat(text[kept[at] : kept[at + len(want) - 1] + 1])
+    pin_id = hashlib.sha256(f"{key}\n{page}\n{want}".encode()).hexdigest()[:10]
+    with _PINNING:
+        every = pins()
+        old = next((p for p in every if p.id == pin_id), None)
+        pin = Pin(id=pin_id, key=key, page=page, exact=exact, start=at,
+                  note=note if note is not None else (old.note if old else None),
+                  links=list(dict.fromkeys([*(old.links if old else []), *(links or [])])),
+                  created=old.created if old else datetime.now(UTC))  # fmt: skip
+        _write_pins([pin if p.id == pin_id else p for p in every] if old else [*every, pin])
+    return pin
+
+
+def delete_pin(pin_id: str) -> None:
+    """Remove a pin; KeyError when there is none of that id."""
+    with _PINNING:
+        every = pins()
+        if not any(p.id == pin_id for p in every):
+            raise KeyError(f"no pin {pin_id!r}")
+        _write_pins([p for p in every if p.id != pin_id])
+
+
+def source_file(key: str) -> Path:
+    """A source's file, for the app to show."""
+    return inside(sources_dir(), source(key).file)
+
+
+def _flat(text: str) -> str:
+    """Text with every run of spaces and line breaks as one space, as a quote is compared."""
+    return " ".join(text.split())
+
+
+def _write_pins(found: list[Pin]) -> None:
+    path = sources_dir() / PINS
+    path.parent.mkdir(exist_ok=True)
+    found = sorted(found, key=lambda p: (p.key, p.page, p.start))
+    with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=path.parent, suffix=".tmp",
+                                     delete=False) as tmp:  # fmt: skip
+        tmp.write("".join(p.model_dump_json() + "\n" for p in found))
+    os.replace(tmp.name, path)
 
 
 def search(query: str, limit: int = 10) -> list[Hit]:

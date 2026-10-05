@@ -28,8 +28,23 @@ search index lives in louped's state folder and is rebuilt from the files whenev
 so it never needs committing.
 
 A Colab notebook kept in Google Drive needs your sign-in, so download it (File > Download .ipynb)
-and add the file instead.
+and add the file instead. louped fetches over https from public addresses only, never from this
+machine or its local network.
 
 Your agent searches `sources/` with `search_sources` before it looks anything up on the web,
 quotes from `source_page`, and keeps a new paper with `add_source`, which records the URL the
 file came from.
+
+## Read, pin and cite
+
+The Sources page (G S) searches every page and lists the sources. Open one to read it: a PDF as
+it prints, anything else as its text. Select words on the page and press Pin to keep that
+passage, with a note if you like. Pins are kept in `sources/pins.jsonl`, each with its quote,
+page and the words either side, so a pin can always be found again.
+
+A pin holds words that are on its page. A paraphrase is refused, by the app and by the agent's
+`pin` tool alike, so a citation always points at what the source says.
+
+Cite a page in any Markdown louped shows (an experiment's README, say) as
+`[@<key> p<page>]`, for example `[@sharma23 p4]`. It shows as a chip that opens the page, and on
+hover shows the source's title and the passages pinned there, or says the key is not a source.
