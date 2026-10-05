@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.2.0](https://github.com/ashworks1706/louped/compare/v0.1.3...v0.2.0) (2026-10-05)
+
+
+### Features
+
+* edit an experiment's README and a run's Markdown in the app, beside its rendering ([75e5e1a](https://github.com/ashworks1706/louped/commit/75e5e1ab35894d54dc712b4c5a22413584ca23b1))
+* project plugins add pages, routes, commands and agent tools without a louped release ([694844d](https://github.com/ashworks1706/louped/commit/694844dce9871074f4389d5a548ee139898bfe0b))
+* push and pull set up a remote and ask for a Hugging Face token when one is needed ([cea26f9](https://github.com/ashworks1706/louped/commit/cea26f9a5b317fff2f2240d961194fcf3f6de46f))
+* share runs through a remote, edit Markdown in the app, and project plugins ([c321a50](https://github.com/ashworks1706/louped/commit/c321a50e54655f81ed373363e6b4e3777fa4779c))
+* share runs through a remote, one-file cluster jobs, vega figures and a published dashboard ([0e7656a](https://github.com/ashworks1706/louped/commit/0e7656a1e3d6c946799fad468ee160b29ca34803))
+
+
+### Bug Fixes
+
+* guard a saved run Markdown path the way code scanning recognizes ([5490c4f](https://github.com/ashworks1706/louped/commit/5490c4f29efece42dbfe1348e8ad60255ac6a407))
+* one path check when a run's Markdown is saved ([aa0334e](https://github.com/ashworks1706/louped/commit/aa0334e1b222647b24689b6c7535a448c9fc4312))
+
 ## [0.1.3](https://github.com/ashworks1706/louped/compare/v0.1.2...v0.1.3) (2026-10-04)
 
 
