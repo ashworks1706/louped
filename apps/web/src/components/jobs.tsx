@@ -22,6 +22,7 @@ import { CopyButton } from "@/components/copy-button";
 import { DeleteButton } from "@/components/delete-button";
 import { EmptyState } from "@/components/empty-state";
 import { Help } from "@/components/help";
+import { part, partId, useRules } from "@/components/parts";
 import { askToNotify } from "@/components/notifier";
 import { QueryState } from "@/components/query-state";
 import { KindBadge, StatusDot } from "@/components/run-badges";
@@ -113,6 +114,7 @@ export function ProgressBar({ job, log }: { job: Job; log?: string }) {
 
 /** The queue on the Runs page: what is running and what ran, each opening its log. */
 export function JobsPanel() {
+  const rule = useRules();
   const health = useQuery(q.health());
   const jobs = useQuery({ ...q.jobs(), enabled: health.data?.launching === true });
   if (health.data?.launching !== true) return null;
@@ -120,7 +122,7 @@ export function JobsPanel() {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 text-sm font-medium">
+        <h2 className="flex items-center gap-2 text-sm font-medium" {...part("runs/heading/jobs")}>
           Jobs
           <Help label="What is a job?">
             A command started from Launch. Jobs run one at a time, in the order launched; the runs
@@ -130,7 +132,13 @@ export function JobsPanel() {
         <div className="flex flex-wrap items-center gap-2">
           <Sync />
           <ImportResult />
-          <Button asChild variant="outline" size="sm">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            {...part("runs/action/launch")}
+            className={cn(rule("runs/action/launch").hidden && "hidden")}
+          >
             <Link href="/launch/">
               <Rocket /> Launch
             </Link>
@@ -161,6 +169,7 @@ function JobRow({ job }: { job: Job }) {
   return (
     <Link
       href={jobHref(job.id)}
+      {...part(partId("runs/job", job.id))}
       className="hover:bg-accent/40 flex flex-col gap-2 px-4 py-3 transition-colors"
     >
       <div className="flex items-center gap-3">
@@ -379,6 +388,7 @@ function RunLinks({ log }: { log: string }) {
 
 /** Push and Pull with the project's remote, when it has one. */
 function Sync() {
+  const rule = useRules();
   const client = useQueryClient();
   const health = useQuery(q.health());
   const remote = health.data?.remote;
@@ -417,6 +427,8 @@ function Sync() {
             variant="ghost"
             size="sm"
             onClick={() => pull.mutate()}
+            {...part("runs/action/pull")}
+            className={cn(rule("runs/action/pull").hidden && "hidden")}
             disabled={pull.isPending}
             title={`Add the runs pushed to ${remote}`}
           >
@@ -426,6 +438,8 @@ function Sync() {
             variant="ghost"
             size="sm"
             onClick={() => push.mutate()}
+            {...part("runs/action/push")}
+            className={cn(rule("runs/action/push").hidden && "hidden")}
             disabled={push.isPending}
             title={`Push this louped's new runs to ${remote}`}
           >
@@ -437,6 +451,8 @@ function Sync() {
           variant="ghost"
           size="sm"
           onClick={() => setConnecting(true)}
+          {...part("runs/action/connect")}
+          className={cn(rule("runs/action/connect").hidden && "hidden")}
           title="Share runs through a remote"
         >
           <Cloud /> Connect
@@ -529,6 +545,7 @@ function Connect({
 
 /** Takes the louped-result-….tar.gz an exported job wrote elsewhere; its runs join Runs. */
 function ImportResult() {
+  const rule = useRules();
   const client = useQueryClient();
   const router = useRouter();
   const picker = useRef<HTMLInputElement>(null);
@@ -562,6 +579,8 @@ function ImportResult() {
         variant="ghost"
         size="sm"
         onClick={() => picker.current?.click()}
+        {...part("runs/action/import")}
+        className={cn(rule("runs/action/import").hidden && "hidden")}
         disabled={bring.isPending}
         title="The louped-result-….tar.gz a job exported to Sol, a cluster or a VM wrote"
       >

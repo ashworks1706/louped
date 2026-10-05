@@ -1,0 +1,250 @@
+"""Every part of a page by its address, what a layout may change about it, and the cues an agent
+shows a person on it.
+
+An address is "<area>/<kind>[/<name>...]": run/meta/model, items/stat/pressure,
+items/row/28, item/field/evidence/second_turn. Names are URL-encoded, so a name with a / in it
+(a folder, a file) stays one segment. Every part the app draws carries its address
+(data-part), so a person can Shift+click it and their agent reads which with ui_selection.
+
+A layout.json's "parts" changes parts by address; "*" in a key stands for any one segment:
+
+    {"parts": {"item/field/*/abstain": {"hidden": true},
+               "items/stat/pressure": {"label": "pushback", "note": "Read this one first."}}}
+
+Each kind takes only the rules that mean something for it (KINDS). A block of a region is
+changed in its region (set_layout), not here.
+"""
+
+from __future__ import annotations
+
+import re
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, JsonValue
+
+Rule = Literal["hidden", "label", "about", "note", "order", "default"]
+
+
+class PartRule(BaseModel):
+    """What a layout changes about the parts its key matches."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    #: Not drawn.
+    hidden: bool = False
+    #: Its name on the page instead of the built-in one.
+    label: str | None = Field(None, max_length=200)
+    #: What its ? says.
+    about: str | None = Field(None, max_length=2000)
+    #: Markdown drawn under it: how to read it, what to look at first.
+    note: str | None = Field(None, max_length=4000)
+    #: Its place among its siblings (fields, columns, cards), lowest first; unset ones keep
+    #: their order after the set ones.
+    order: int | None = None
+    #: A control's value when the page's URL sets none.
+    default: str | None = Field(None, max_length=200)
+
+
+class Kind(BaseModel):
+    #: The address with * for a name.
+    part: str
+    about: str
+    rules: list[Rule]
+
+
+ALL: list[Rule] = ["hidden", "label", "about", "note", "order"]
+LIST: list[Rule] = ["hidden", "label", "about", "order"]
+NAME: list[Rule] = ["hidden", "label"]
+CONTROL: list[Rule] = ["hidden", "label", "default"]
+#: Picked to hand the agent its data; not changed by a layout.
+PICK: list[Rule] = []
+
+_k = Kind
+KINDS: list[Kind] = [
+    # the app around every page
+    _k(part="panel/close", about="Closes a side panel.", rules=PICK),
+    _k(part="shell/nav/*", about="A page in the sidebar, by its path.",
+       rules=["hidden", "label", "order"]),
+    _k(part="shell/domain/*", about="A section in the top bar: workspace, behavior, efficiency.",
+       rules=["hidden", "label", "order"]),
+    _k(part="shell/*", about="The top bar's home link, sidebar switch, jobs, search, status and "
+       "theme switch.", rules=PICK),
+    _k(part="page/*/title", about="A page's title, by its path (runs, behavior-vectors).",
+       rules=["label"]),
+    _k(part="page/*/description", about="A page's one-line purpose.", rules=["hidden", "label"]),
+    # a run's page
+    _k(part="run/title", about="The run's name.", rules=PICK),
+    _k(part="run/back", about="The link back to Runs.", rules=["hidden"]),
+    _k(part="run/badge/*", about="The run's kind, host or status.", rules=["hidden"]),
+    _k(part="run/meta/*", about="The run's model, experiment, created time or id.", rules=LIST),
+    _k(part="run/delete", about="Moves the run to the trash.", rules=["hidden"]),
+    _k(part="run.overview/metrics/*", about="One metric's card in the metrics block.",
+       rules=ALL),
+    _k(part="run.overview/hardware/*", about="One hardware number: gpu-energy, gpu-power, "
+       "gpu-memory, ram.", rules=["hidden", "label", "about", "note"]),
+    _k(part="run.overview/provenance/*", about="One fact of how the run was made: ran-on, code, "
+       "seed, packages, command and the rest.", rules=LIST),
+    # a run's items: every item under every condition
+    _k(part="items/records", about="Which folder of per-item records to line up.",
+       rules=CONTROL),
+    _k(part="items/summary", about="The by-condition heading.", rules=["label", "note"]),
+    _k(part="items/stat/*", about="One condition's rate (or changed count) and its flips.",
+       rules=ALL),
+    _k(part="items/search", about="Searches the items.", rules=["hidden"]),
+    _k(part="items/compare", about="The field the conditions are compared on.", rules=CONTROL),
+    _k(part="items/against", about="The reference condition.", rules=CONTROL),
+    _k(part="items/show", about="Which items show: all, changed, changed:<c>, down:<c> (1→0), "
+       "up:<c> (0→1).", rules=CONTROL),
+    _k(part="items/count", about="How many items are shown.", rules=PICK),
+    _k(part="items/download", about="Downloads the items shown.", rules=["hidden"]),
+    _k(part="items/column/*", about="A column of the items table: the key, the text or a "
+       "condition.", rules=LIST),
+    _k(part="items/row/*", about="One item: its record in every condition.", rules=PICK),
+    _k(part="items/cell/*/*", about="One item under one condition.", rules=PICK),
+    _k(part="item/title", about="The open item's id.", rules=PICK),
+    _k(part="item/section/*", about="The item itself (item), or one condition's record of it.",
+       rules=NAME),
+    _k(part="item/field/*/*", about="One field of the item (section item) or of a condition's "
+       "record.", rules=LIST),
+    # one file's records, and one record
+    _k(part="records/column/*", about="A column of a records table.", rules=LIST),
+    _k(part="records/row/*", about="One record, by its place in the file.", rules=PICK),
+    _k(part="records/filter/*", about="A filter on a column with few values.", rules=PICK),
+    _k(part="records/*", about="A records table's search, count and download.", rules=PICK),
+    _k(part="record/field/*", about="One field of an open record.", rules=LIST),
+    # an eval's samples
+    _k(part="samples/column/*", about="A column of the samples table: #, input, target or a "
+       "score.", rules=LIST),
+    _k(part="samples/row/*", about="One sample (id, or id@epoch past the first).", rules=PICK),
+    _k(part="samples/score/*", about="Shows only the samples that failed a score.", rules=PICK),
+    _k(part="samples/*", about="The samples' search, count and judge agreement.", rules=PICK),
+    _k(part="sample/*", about="The open sample's title, log link and your pick.", rules=PICK),
+    # figures, config, files
+    _k(part="figures/figure/*", about="One figure, by its file.", rules=["hidden", "note"]),
+    _k(part="config/param/*", about="One parameter.", rules=["hidden", "about", "order"]),
+    _k(part="config/tag/*", about="One tag.", rules=["hidden", "about", "order"]),
+    _k(part="config/*", about="The parameters' or tags' heading (params, tags).", rules=PICK),
+    _k(part="artifacts/file/*", about="One of the run's files.", rules=PICK),
+    _k(part="artifacts/folder/*", about="A folder of the run's files.", rules=PICK),
+    _k(part="artifacts/whole/*", about="A folder's JSONL files read as one.", rules=PICK),
+    _k(part="artifacts/*", about="The file filter and the open file.", rules=PICK),
+    # an experiment's page and the lists of them
+    _k(part="experiment/meta/*", about="The experiment's axis, domain, runs or last run.",
+       rules=LIST),
+    _k(part="experiment/launch/*", about="Opens Launch on one of the experiment's scripts.",
+       rules=PICK),
+    _k(part="experiment/delete", about="Moves the experiment to the trash.", rules=["hidden"]),
+    _k(part="experiment/*", about="The experiment's name, status, question and back link.",
+       rules=PICK),
+    _k(part="experiments/row/*", about="One experiment in a list.", rules=PICK),
+    _k(part="experiments/domain/*", about="A domain's heading in a list.", rules=PICK),
+    _k(part="experiments/filter/*", about="A status filter: all, active, answered, parked.",
+       rules=PICK),
+    # runs tables
+    _k(part="runs/column/*", about="A column of a runs table: select, run, kind, model, "
+       "headline, status, created.", rules=LIST),
+    _k(part="runs/row/*", about="One run in a runs table.", rules=PICK),
+    _k(part="runs/filter/*", about="A runs filter: search, kind, experiment, status, clear.",
+       rules=PICK),
+    _k(part="runs/*", about="Runs' count and Compare.", rules=PICK),
+    _k(part="runs/action/*", about="Runs' push, pull, connect, import and launch.",
+       rules=["hidden"]),
+    _k(part="runs/heading/*", about="The Jobs or Runs heading on Runs.", rules=PICK),
+    _k(part="runs/job/*", about="One job in the queue.", rules=PICK),
+    # home
+    _k(part="home/stat/*", about="One of Home's numbers: live, active, answered, week.",
+       rules=ALL),
+    _k(part="home/live/*/*", about="A job or run going now.", rules=PICK),
+    _k(part="home/live/title", about="The Running heading.", rules=PICK),
+    _k(part="home/domain/*", about="A research domain's card.", rules=PICK),
+    _k(part="home/more/*", about="A link to every experiment or run.", rules=["hidden"]),
+]  # fmt: skip
+
+#: A part's address: lowercase area and kind, then names with no whitespace or slash.
+ADDRESS = re.compile(r"^[a-z.]+(/[^\s/]+)*$")
+
+
+def kind_of(key: str) -> Kind | None:
+    """The kind a layout key (or a part's address) names: same segments, a * in the kind
+    standing for any name; a kind with fewer *s (more exact) first, so run/delete is run/delete
+    and not run/*."""
+    segs = key.split("/")
+    fitting = [
+        k
+        for k in KINDS
+        if len(want := k.part.split("/")) == len(segs)
+        and all(w in ("*", s) for w, s in zip(want, segs, strict=True))
+    ]
+    return min(fitting, key=lambda k: k.part.count("*"), default=None)
+
+
+def check(parts: dict[str, PartRule]) -> list[str]:
+    """What is wrong with a layout's parts: keys that name no part, rules a part does not take."""
+    errors = []
+    for key, rule in parts.items():
+        kind = kind_of(key) if ADDRESS.match(key) else None
+        if kind is None:
+            errors.append(f"parts[{key!r}]: not a part's address (ui_page lists the kinds)")
+            continue
+        set_ = rule.model_dump(exclude_defaults=True)
+        if not set_:
+            errors.append(f"parts[{key!r}]: changes nothing")
+        if wrong := [r for r in set_ if r not in kind.rules]:
+            takes = ", ".join(kind.rules) or "nothing (it is picked, not changed)"
+            errors.append(f"parts[{key!r}]: {', '.join(wrong)} does not apply; it takes {takes}")
+    return errors
+
+
+class Picked(BaseModel):
+    """One part a person Shift+clicked, and the page it was on."""
+
+    id: str = Field(max_length=300, pattern=ADDRESS.pattern)
+    #: The page's path and query, such as /run/?id=m-1&tab=items.
+    url: str = Field(max_length=2000)
+    run: str | None = Field(None, max_length=300)
+    experiment: str | None = Field(None, max_length=300)
+    #: Its text as shown, cut short.
+    text: str = Field("", max_length=500)
+    #: What it stands for: an item's record in every condition, a condition's numbers, a field's
+    #: value. None for a part with nothing beyond its text.
+    data: JsonValue = None
+
+
+class Selection(BaseModel):
+    """What a person picked in the app, in the order they picked it, for their agent."""
+
+    parts: list[Picked] = Field(max_length=100)
+
+
+class ShowRequest(BaseModel):
+    """What an agent shows the person in the app."""
+
+    #: A page to open first (path and query, such as /run/?id=m-1&tab=items).
+    url: str | None = Field(None, max_length=2000, pattern=r"^/([^/\\].*)?$")
+    #: Parts to point at by address; the first one carries the note.
+    parts: list[str] = Field([], max_length=20)
+    #: Markdown beside the first part (or in the corner without one), until dismissed.
+    text: str | None = Field(None, max_length=4000)
+    #: highlight: an outline; spotlight: everything else dimmed; pointer: a dot that travels to it.
+    style: Literal["highlight", "spotlight", "pointer"] = "highlight"
+
+
+class Cue(ShowRequest):
+    id: int
+    #: When it was queued (Unix seconds); an app opened later shows only recent ones.
+    at: float
+    #: pending: no app has shown it yet; shown; missing: the app has none of its parts on that
+    #: page; superseded: a newer cue came before the app found its parts.
+    status: Literal["pending", "shown", "missing", "superseded"] = "pending"
+    missing: list[str] = []
+
+
+class Cues(BaseModel):
+    #: The server's clock, which a cue's at is on: an app judges a cue's age by it, not by its own.
+    now: float
+    cues: list[Cue]
+
+
+class Seen(BaseModel):
+    missing: list[str] = Field([], max_length=20)
+    superseded: bool = False

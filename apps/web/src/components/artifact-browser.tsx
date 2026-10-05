@@ -6,6 +6,7 @@ import { parseAsString, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 
 import { CopyButton } from "@/components/copy-button";
+import { part, partId } from "@/components/parts";
 import { Markdown } from "@/components/markdown";
 import { EditableText } from "@/components/markdown-editor";
 import { QueryState } from "@/components/query-state";
@@ -72,6 +73,7 @@ export function ArtifactBrowser({ run }: { run: RunDetail }) {
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="h-8 shrink-0 font-mono text-xs"
+            {...part("artifacts/filter")}
           />
         )}
         {[...groups].map(([dir, items]) => {
@@ -81,12 +83,16 @@ export function ArtifactBrowser({ run }: { run: RunDetail }) {
           return (
             <div key={dir} className="flex flex-col">
               {dir && (
-                <span className="text-muted-foreground px-2 pb-1 font-mono text-xs">
+                <span
+                  className="text-muted-foreground px-2 pb-1 font-mono text-xs"
+                  {...part(partId("artifacts/folder", dir))}
+                >
                   {dir}/ <span className="tabular-nums">· {items.length}</span>
                 </span>
               )}
               {jsonl > 1 && (
                 <FileButton
+                  id={partId("artifacts/whole", dir)}
                   label={`every file${dir ? ` in ${dir}/` : ""}, as one (${jsonl})`}
                   current={showWhole && whole === dir}
                   onClick={() => void setFile(`${dir}/*`)}
@@ -95,6 +101,7 @@ export function ArtifactBrowser({ run }: { run: RunDetail }) {
               {shown.slice(0, needle ? undefined : LIST_LIMIT).map((a) => (
                 <FileButton
                   key={a.path}
+                  id={partId("artifacts/file", a.path)}
                   label={dir ? a.path.slice(dir.length + 1) : a.path}
                   bytes={a.size}
                   current={!showWhole && a.path === picked.path}
@@ -110,7 +117,7 @@ export function ArtifactBrowser({ run }: { run: RunDetail }) {
           );
         })}
       </nav>
-      <section className="flex min-w-0 flex-col gap-3">
+      <section className="flex min-w-0 flex-col gap-3" {...part("artifacts/open")}>
         <div className="flex flex-wrap items-center gap-2">
           <FileText className="text-muted-foreground size-4" />
           <h2 className="font-mono text-sm">{title}</h2>
@@ -146,16 +153,19 @@ function FileButton({
   bytes,
   current,
   onClick,
+  id,
 }: {
   label: string;
   bytes?: number | null;
   current: boolean;
   onClick: () => void;
+  id: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      {...part(id)}
       aria-current={current ? "true" : undefined}
       className={cn(
         "hover:bg-accent flex shrink-0 items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left",

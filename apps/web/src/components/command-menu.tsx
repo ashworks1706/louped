@@ -6,7 +6,7 @@ import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
-import { setSelecting, useCanPoint } from "@/components/select-mode";
+import { setTapping, useCanPick } from "@/components/pick-parts";
 import {
   Command,
   CommandEmpty,
@@ -43,7 +43,7 @@ export function CommandMenu({ children }: { children: React.ReactNode }) {
   // Fetched only once the menu opens, so a page that never opens it pays nothing.
   const experiments = useQuery({ ...q.experiments(), enabled: open });
   const plugins = useQuery({ ...q.plugins(), enabled: open });
-  const canPoint = useCanPoint();
+  const canPick = useCanPick();
 
   React.useEffect(() => {
     let leader = false;
@@ -132,13 +132,13 @@ export function CommandMenu({ children }: { children: React.ReactNode }) {
                   <Moon />
                   <span>Toggle theme</span>
                 </CommandItem>
-                {canPoint && (
+                {canPick && (
                   <CommandItem
-                    value="Point your agent at a block select card change layout"
-                    onSelect={() => run(() => setSelecting(true))}
+                    value="Pick parts for your agent tap select card row change layout"
+                    onSelect={() => run(() => setTapping(true))}
                   >
                     <Crosshair />
-                    <span>Point your agent at a block</span>
+                    <span>Pick parts for your agent (or Shift+click)</span>
                   </CommandItem>
                 )}
                 <CommandItem

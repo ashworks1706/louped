@@ -2,6 +2,7 @@
 
 import { ArrowDown, ArrowUp, GitCompareArrows } from "lucide-react";
 import { Help } from "@/components/help";
+import { arrange, part, partId, useRules } from "@/components/parts";
 import { MetricName, Term } from "@/components/term";
 import { GLOSSARY, type Term as TermKey } from "@/lib/glossary";
 import Link from "next/link";
@@ -46,6 +47,8 @@ function SortHeader({
   onSort,
   className,
   help,
+  about,
+  id,
 }: {
   label: string;
   k: SortKey;
@@ -53,10 +56,12 @@ function SortHeader({
   onSort: (s: Sort) => void;
   className?: string;
   help?: TermKey;
+  about?: string | null;
+  id: string;
 }) {
   const active = sort.key === k;
   return (
-    <TableHead className={className}>
+    <TableHead className={className} {...part(id)}>
       <button
         type="button"
         className="hover:text-foreground inline-flex items-center gap-1"
@@ -65,14 +70,27 @@ function SortHeader({
         {label}
         {active && (sort.desc ? <ArrowDown className="size-3" /> : <ArrowUp className="size-3" />)}
       </button>
-      {help && (
+      {(about || help) && (
         <span className="ml-1">
-          <Help label={`What is ${label}?`}>{GLOSSARY[help]}</Help>
+          <Help label={`What is ${label}?`}>{about ?? GLOSSARY[help!]}</Help>
         </span>
       )}
     </TableHead>
   );
 }
+
+/** A column of the table: its address names it (runs/column/<id>), so a layout can rename,
+ * explain, reorder or hide it. */
+type Column = {
+  id: string;
+  label: string;
+  sort?: SortKey;
+  help?: TermKey;
+  head?: string;
+  cell?: string;
+  shown?: boolean;
+  render: (r: RunSummary, selected: boolean) => React.ReactNode;
+};
 
 const KINDS = ["all", "eval", "analysis", "training"] as const;
 const STATES = ["all", "live", "done", "failed"] as const;
@@ -131,6 +149,102 @@ export function RunsTable({
   const toggle = (id: string, on: boolean) =>
     setPicked((p) => (on ? [...p, id].slice(-2) : p.filter((x) => x !== id)));
 
+  const rule = useRules();
+  const col = (id: string) => partId("runs/column", id);
+  const all: Column[] = [
+    {
+      id: "select",
+      label: "Select",
+      head: "w-10",
+      shown: !compact,
+      render: (r, selected) => (
+        <Checkbox
+          aria-label={`Select ${r.name}`}
+          checked={selected}
+          onCheckedChange={(v) => toggle(r.id, !!v)}
+        />
+      ),
+    },
+    {
+      id: "run",
+      label: "Run",
+      sort: "name",
+      cell: "max-w-72",
+      render: (r) => (
+        <div className="flex min-w-0 flex-col">
+          <Link
+            href={runHref(r.id)}
+            className="truncate font-medium hover:underline"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {r.name}
+          </Link>
+          {!byExperiment ? null : r.experiment ? (
+            <ExperimentLink
+              name={r.experiment}
+              className="text-muted-foreground truncate text-xs"
+            />
+          ) : (
+            <span className="text-muted-foreground truncate text-xs">no experiment</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: "kind",
+      label: "Kind",
+      render: (r) => (
+        <>
+          <KindBadge kind={r.kind} /> <HostBadge host={r.host} />
+        </>
+      ),
+    },
+    {
+      id: "model",
+      label: "Model",
+      shown: !compact,
+      cell: "text-muted-foreground font-mono text-xs",
+      render: (r) => r.model ?? "—",
+    },
+    {
+      id: "headline",
+      label: "Headline",
+      sort: "metric",
+      help: "headline",
+      head: "text-right",
+      cell: "text-right",
+      render: (r) => {
+        const m = first(r);
+        return m ? (
+          <div className="flex flex-col items-end">
+            <MetricValue value={m[1]} err={m[2]} />
+            <MetricName k={m[0]} className="text-muted-foreground text-[11px]" />
+          </div>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        );
+      },
+    },
+    {
+      id: "status",
+      label: "Status",
+      shown: !compact,
+      render: (r) => <StatusDot status={r.status} samples={r.samples} total={r.total} />,
+    },
+    {
+      id: "created",
+      label: "Created",
+      sort: "created",
+      cell: "text-muted-foreground text-xs whitespace-nowrap",
+      render: (r) => ago(r.created),
+    },
+  ];
+  const columns = arrange(
+    all.filter((c) => c.shown !== false),
+    (c) => col(c.id),
+    rule,
+  );
+
   return (
     <div className="flex flex-col gap-3">
       {!compact && (
@@ -141,9 +255,11 @@ export function RunsTable({
             value={f.q}
             onChange={(e) => void setF({ q: e.target.value || null })}
             className="h-8 w-full sm:w-56"
+            {...part("runs/filter/search")}
           />
           <NativeSelect
             aria-label="Kind"
+            {...part("runs/filter/kind")}
             value={f.kind}
             onChange={(e) => void setF({ kind: e.target.value as (typeof KINDS)[number] })}
           >
@@ -155,6 +271,7 @@ export function RunsTable({
           {byExperiment && (
             <NativeSelect
               aria-label="Experiment"
+              {...part("runs/filter/experiment")}
               value={f.exp}
               onChange={(e) => void setF({ exp: e.target.value || null })}
             >
@@ -168,6 +285,7 @@ export function RunsTable({
           )}
           <NativeSelect
             aria-label="Status"
+            {...part("runs/filter/status")}
             value={f.state}
             onChange={(e) => void setF({ state: e.target.value as (typeof STATES)[number] })}
           >
@@ -177,12 +295,17 @@ export function RunsTable({
             <option value="failed">Failed</option>
           </NativeSelect>
           {filtering && (
-            <Button size="sm" variant="ghost" onClick={() => void setF(null)}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => void setF(null)}
+              {...part("runs/filter/clear")}
+            >
               Clear
             </Button>
           )}
           <div className="ml-auto flex items-center gap-3">
-            <span className="text-muted-foreground text-xs">
+            <span className="text-muted-foreground text-xs" {...part("runs/count")}>
               <span className="font-mono tabular-nums">{rows.length}</span>
               {rows.length !== runs.length && (
                 <>
@@ -197,6 +320,7 @@ export function RunsTable({
               variant={picked.length === 2 ? "default" : "outline"}
               disabled={picked.length !== 2}
               onClick={() => router.push(compareHref(picked[0], picked[1]))}
+              {...part("runs/compare")}
             >
               <GitCompareArrows />
               Compare
@@ -207,100 +331,67 @@ export function RunsTable({
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            {!compact && (
-              <TableHead className="w-10">
-                <span className="sr-only">Select</span>
-              </TableHead>
-            )}
-            <SortHeader label="Run" k="name" sort={sort} onSort={setSort} />
-            <TableHead>
-              <Term k="kind">Kind</Term>
-            </TableHead>
-            {!compact && <TableHead>Model</TableHead>}
-            <SortHeader
-              label="Headline"
-              k="metric"
-              sort={sort}
-              onSort={setSort}
-              className="text-right"
-              help="headline"
-            />
-            {!compact && <TableHead>Status</TableHead>}
-            <SortHeader label="Created" k="created" sort={sort} onSort={setSort} />
+            {columns.map((c) => {
+              const r = rule(col(c.id));
+              const label = r.label ?? c.label;
+              return c.sort ? (
+                <SortHeader
+                  key={c.id}
+                  id={col(c.id)}
+                  label={label}
+                  k={c.sort}
+                  sort={sort}
+                  onSort={setSort}
+                  className={c.head}
+                  help={c.help}
+                  about={r.about}
+                />
+              ) : (
+                <TableHead key={c.id} className={c.head} {...part(col(c.id))}>
+                  {c.id === "select" ? (
+                    <span className="sr-only">Select</span>
+                  ) : r.label || r.about ? (
+                    <span className="inline-flex items-center gap-1">
+                      {label}
+                      {r.about && <Help>{r.about}</Help>}
+                    </span>
+                  ) : c.id === "kind" ? (
+                    <Term k="kind">Kind</Term>
+                  ) : (
+                    label
+                  )}
+                </TableHead>
+              );
+            })}
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((r) => {
-            const m = first(r);
             const selected = picked.includes(r.id);
             return (
               <TableRow
                 key={r.id}
+                {...part(partId("runs/row", r.id))}
                 data-state={selected ? "selected" : undefined}
                 className="cursor-pointer"
                 onClick={() => router.push(runHref(r.id))}
               >
-                {!compact && (
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      aria-label={`Select ${r.name}`}
-                      checked={selected}
-                      onCheckedChange={(v) => toggle(r.id, !!v)}
-                    />
+                {columns.map((c) => (
+                  <TableCell
+                    key={c.id}
+                    className={c.cell}
+                    onClick={c.id === "select" ? (e) => e.stopPropagation() : undefined}
+                  >
+                    {c.render(r, selected)}
                   </TableCell>
-                )}
-                <TableCell className="max-w-72">
-                  <div className="flex min-w-0 flex-col">
-                    <Link
-                      href={runHref(r.id)}
-                      className="truncate font-medium hover:underline"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {r.name}
-                    </Link>
-                    {!byExperiment ? null : r.experiment ? (
-                      <ExperimentLink
-                        name={r.experiment}
-                        className="text-muted-foreground truncate text-xs"
-                      />
-                    ) : (
-                      <span className="text-muted-foreground truncate text-xs">no experiment</span>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <KindBadge kind={r.kind} /> <HostBadge host={r.host} />
-                </TableCell>
-                {!compact && (
-                  <TableCell className="text-muted-foreground font-mono text-xs">
-                    {r.model ?? "—"}
-                  </TableCell>
-                )}
-                <TableCell className="text-right">
-                  {m ? (
-                    <div className="flex flex-col items-end">
-                      <MetricValue value={m[1]} err={m[2]} />
-                      <MetricName k={m[0]} className="text-muted-foreground text-[11px]" />
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </TableCell>
-                {!compact && (
-                  <TableCell>
-                    <StatusDot status={r.status} samples={r.samples} total={r.total} />
-                  </TableCell>
-                )}
-                <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                  {ago(r.created)}
-                </TableCell>
+                ))}
               </TableRow>
             );
           })}
           {rows.length === 0 && (
             <TableRow className="hover:bg-transparent">
               <TableCell
-                colSpan={compact ? 4 : 7}
+                colSpan={columns.length}
                 className="text-muted-foreground py-8 text-center"
               >
                 No runs match these filters.

@@ -19,6 +19,7 @@ import {
 } from "recharts";
 
 import { Help } from "@/components/help";
+import { part, partId, PartData, PartNote, useRules } from "@/components/parts";
 import { QueryState } from "@/components/query-state";
 import { VegaFigure } from "@/components/vega-figure";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -47,17 +48,39 @@ import { TOOLTIP_STYLE } from "@/lib/chart";
 /** Every figure a run logged under views/, in file order. */
 export function RunViews({ id, live = false }: { id: string; live?: boolean }) {
   const views = useQuery(q.views(id, live));
+  const rule = useRules();
+  const at = (path: string) => partId("figures/figure", path);
   return (
     <QueryState query={views}>
       {(all) => (
         <div className="flex flex-col gap-6">
-          {all.map((v) => (
-            <Figure key={v.path} view={v.view} />
-          ))}
+          <PartData
+            prefix="figures"
+            resolve={(pid) => {
+              const found = all.find((v) => at(v.path) === pid);
+              return found ? { path: found.path, ...brief(found.view) } : null;
+            }}
+          />
+          {all
+            .filter((v) => !rule(at(v.path)).hidden)
+            .map((v) => (
+              <Figure key={v.path} view={v.view} id={at(v.path)} />
+            ))}
         </div>
       )}
     </QueryState>
   );
+}
+
+/** A figure for the agent: its kind, title and notes, and its data cut to the first rows. */
+function brief(view: View): Record<string, unknown> {
+  const cut = (v: unknown): unknown =>
+    Array.isArray(v)
+      ? v.slice(0, 50).map(cut)
+      : v && typeof v === "object"
+        ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, cut(x)]))
+        : v;
+  return cut(view) as Record<string, unknown>;
 }
 
 /** How to read a figure of each kind, for one logged without its own `about`. */
@@ -73,15 +96,18 @@ const READ: Record<View["kind"], string> = {
 };
 
 /** One figure of any kind, with its title, how to read it, and its note. */
-export function Figure({ view }: { view: View }) {
+export function Figure({ view, id }: { view: View; id?: string }) {
+  const rule = useRules();
+  const r = id ? rule(id) : {};
   return (
-    <figure className="rounded-xl border">
+    <figure className="rounded-xl border" {...(id ? part(id) : {})}>
       <figcaption className="flex flex-wrap items-baseline justify-between gap-2 border-b px-4 py-3">
         <span className="flex items-center gap-1.5 text-sm font-medium">
           {view.title}
           <Help label={`How to read ${view.title}`}>{view.about ?? READ[view.kind]}</Help>
         </span>
         {view.note && <span className="text-muted-foreground text-xs">{view.note}</span>}
+        <PartNote rule={r} className="basis-full" />
       </figcaption>
       <div className="p-4">
         {view.kind === "line" && <LineFigure view={view} />}

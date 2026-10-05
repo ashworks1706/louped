@@ -34,8 +34,9 @@ Open http://127.0.0.1:8000 and launch the example experiment.
    its results and `louped pull` brings them in.
 4. **Read the results**: every item under every condition, what changed, and out of how many.
    Edit a run's write-up beside its rendering; delete what you no longer need to the trash.
-5. **Share and shape it.** Push runs for others to pull, or publish a read-only dashboard. Point
-   at any part of a page and ask your agent to change it: layouts, notes, cards of your own.
+5. **Share and shape it.** Push runs for others to pull, or publish a read-only dashboard. Shift+click
+   any rows, cards or fields to ask your agent about them, or to have it change them; it points
+   back at what it means.
 
 Already have results? `louped view <folder>` opens them read-only.
 

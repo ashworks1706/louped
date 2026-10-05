@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { Help } from "@/components/help";
+import { arrange, part, partId, PartData, PartNote, useRules, type Rule } from "@/components/parts";
 import { Term } from "@/components/term";
 import { ScoreCell } from "@/components/metric";
 import { RecordFields, RecordsTable } from "@/components/record-view";
@@ -54,13 +55,18 @@ export function hasItems(run: RunDetail): boolean {
 export function ItemsView({ run }: { run: RunDetail }) {
   const folders = useMemo(() => itemFolders(run.artifacts.map((a) => a.path)), [run.artifacts]);
   const [set, setSet] = useQueryState("set", parseAsString);
-  const folder = folders.find((f) => f.dir === set) ?? folders[0];
+  const rule = useRules();
+  const records = rule("items/records");
+  const folder =
+    folders.find((f) => f.dir === (set ?? records.default)) ??
+    folders.find((f) => f.dir === set) ??
+    folders[0];
   if (!folder) return <p className="text-muted-foreground text-sm">No per-item files.</p>;
   return (
     <div className="flex flex-col gap-4">
-      {folders.length > 1 && (
-        <label className="flex items-center gap-2 text-sm">
-          <span className="text-muted-foreground">Records</span>
+      {folders.length > 1 && !records.hidden && (
+        <label className="flex items-center gap-2 text-sm" {...part("items/records")}>
+          <span className="text-muted-foreground">{records.label ?? "Records"}</span>
           <NativeSelect value={folder.dir} onChange={(e) => void setSet(e.target.value)}>
             {folders.map((f) => (
               <option key={f.dir} value={f.dir}>
@@ -146,6 +152,15 @@ function parseMeanings(text: string | undefined): {
   };
 }
 
+/** A record for the agent: long text cut, so a pick of many items stays readable. */
+function trim(value: unknown): unknown {
+  if (typeof value === "string") return value.length > 2000 ? `${value.slice(0, 2000)}…` : value;
+  if (Array.isArray(value)) return value.slice(0, 50).map(trim);
+  if (value && typeof value === "object")
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, trim(v)]));
+  return value;
+}
+
 type Transition = { down: number; up: number; wasOne: number; wasZero: number };
 
 /** One file's records, as a table or, split by a column (an arm, a condition), lined up item by
@@ -194,9 +209,13 @@ function Aligned({
   const fields = useMemo(() => (key ? sharedFields(tables, key) : []), [tables, key]);
   const [fieldParam, setField] = useQueryState("field", parseAsString);
   const [refParam, setRef] = useQueryState("ref", parseAsString);
-  const [show, setShow] = useQueryState("show", parseAsString);
+  const [showParam, setShow] = useQueryState("show", parseAsString);
   const [item, setItem] = useQueryState("item", parseAsString);
   const [search, setSearch] = useState("");
+  const rule = useRules();
+  // a control's value: the URL's, else the layout's default for it, else the app's
+  const control = (name: string) => rule(`items/${name}`);
+  const show = showParam ?? control("show").default ?? null;
 
   // a field with one value per file (the condition's own name) differs by construction
   const constant = useMemo(
@@ -208,9 +227,10 @@ function Aligned({
       ),
     [tables],
   );
-  const field =
-    fieldParam && fields.includes(fieldParam) ? fieldParam : defaultField(tables, fields);
-  const ref = refParam && names.includes(refParam) ? names.indexOf(refParam) : 0;
+  const wanted = fieldParam ?? control("compare").default;
+  const field = wanted && fields.includes(wanted) ? wanted : defaultField(tables, fields);
+  const against = refParam ?? control("against").default;
+  const ref = against && names.includes(against) ? names.indexOf(against) : 0;
 
   const items = useMemo(() => {
     if (!key) return [];
@@ -286,7 +306,7 @@ function Aligned({
       !it.id.toLowerCase().includes(needle)
     )
       return false;
-    if (!show) return true;
+    if (!show || show === "all") return true;
     if (show === "changed") return names.some((_, i) => differs(it, i));
     const [kind, cond] = show.split(":");
     const i = names.indexOf(cond);
@@ -300,19 +320,103 @@ function Aligned({
   });
   const opened = items.find((it) => it.id === item);
 
+  // what a picked part stands for: an item's record under every condition, a condition's numbers
+  const itemsData = (id: string) => {
+    const [, kind, a, b] = id.split("/").map(decodeURIComponent);
+    const found = items.find((it) => it.id === a);
+    const records = (it: (typeof items)[number]) =>
+      Object.fromEntries(names.map((n, i) => [n, trim(it.rows[i] ?? null)]));
+    if (kind === "row" && found)
+      return {
+        [key!]: found.id,
+        compared_on: field,
+        reference: names[ref],
+        records: records(found),
+      };
+    if (kind === "cell" && found) {
+      const i = names.indexOf(b);
+      return {
+        [key!]: found.id,
+        condition: b,
+        compared_on: field,
+        reference: names[ref],
+        differs: differs(found, i),
+        record: trim(found.rows[i] ?? null),
+        reference_record: trim(found.rows[ref] ?? null),
+      };
+    }
+    if (kind === "stat") {
+      const i = names.indexOf(a);
+      if (i < 0) return null;
+      const st = stats[i];
+      const ci = binary && st.n ? wilson(st.k, st.n) : null;
+      return {
+        condition: a,
+        field,
+        reference: names[ref],
+        ...(binary ? { rate: st.n ? st.k / st.n : null, k: st.k, n: st.n, interval95: ci } : {}),
+        ...(i === ref
+          ? {}
+          : binary
+            ? { down: `${st.t.down}/${st.t.wasOne}`, up: `${st.t.up}/${st.t.wasZero}` }
+            : { changed: `${st.changed}/${st.both}` }),
+      };
+    }
+    if (kind === "count") return { shown: shown.length, of: items.length, show: show ?? "all" };
+    if (kind === "column") return { column: a, compared_on: field };
+    return null;
+  };
+  const itemData = (id: string) => {
+    if (!opened) return null;
+    const [, kind, section, name] = id.split("/").map(decodeURIComponent);
+    const row = (s: string) =>
+      s === "item" ? opened.rows.find(Boolean) : opened.rows[names.indexOf(s)];
+    if (kind === "field")
+      return {
+        [key!]: opened.id,
+        section,
+        field: name,
+        value: trim(row(section)?.[name] ?? null),
+        meaning: about[name] ?? null,
+      };
+    if (kind === "section")
+      return { [key!]: opened.id, section, record: trim(row(section) ?? null) };
+    return { [key!]: opened.id };
+  };
+
+  // the table's columns as the layout orders them: the key, the text, then each condition
+  const columns = arrange(
+    [
+      { name: key, kind: "key" as const },
+      ...(text ? [{ name: text, kind: "text" as const }] : []),
+      ...names.map((n) => ({ name: n, kind: "condition" as const })),
+    ],
+    (c) => partId("items/column", c.name),
+    rule,
+  );
+  const columnRule = (c: string) => rule(partId("items/column", c));
+
   return (
     <div className="flex flex-col gap-4">
-      <Summary names={names} ref_={ref} field={field} binary={binary} stats={stats} />
+      <PartData prefix="items" resolve={itemsData} />
+      <PartData prefix="item" resolve={itemData} />
+      <Summary names={names} ref_={ref} field={field} binary={binary} stats={stats} rule={rule} />
       <div className="flex flex-wrap items-center gap-2">
-        <Input
-          placeholder="Search items…"
-          aria-label="Search items"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs"
-        />
-        <label className="flex items-center gap-1.5 text-xs">
-          <span className="text-muted-foreground">Compare on</span>
+        {!control("search").hidden && (
+          <Input
+            placeholder="Search items…"
+            aria-label="Search items"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-xs"
+            {...part("items/search")}
+          />
+        )}
+        <label
+          className={cn("flex items-center gap-1.5 text-xs", control("compare").hidden && "hidden")}
+          {...part("items/compare")}
+        >
+          <span className="text-muted-foreground">{control("compare").label ?? "Compare on"}</span>
           <NativeSelect
             value={field}
             onChange={(e) => void setField(e.target.value)}
@@ -323,8 +427,11 @@ function Aligned({
             ))}
           </NativeSelect>
         </label>
-        <label className="flex items-center gap-1.5 text-xs">
-          <span className="text-muted-foreground">against</span>
+        <label
+          className={cn("flex items-center gap-1.5 text-xs", control("against").hidden && "hidden")}
+          {...part("items/against")}
+        >
+          <span className="text-muted-foreground">{control("against").label ?? "against"}</span>
           <NativeSelect
             value={names[ref]}
             onChange={(e) => void setRef(e.target.value)}
@@ -335,14 +442,22 @@ function Aligned({
             ))}
           </NativeSelect>
         </label>
-        <label className="flex items-center gap-1.5 text-xs">
-          <span className="text-muted-foreground">Show</span>
+        <label
+          className={cn("flex items-center gap-1.5 text-xs", control("show").hidden && "hidden")}
+          {...part("items/show")}
+        >
+          <span className="text-muted-foreground">{control("show").label ?? "Show"}</span>
           <NativeSelect
-            value={show ?? ""}
-            onChange={(e) => void setShow(e.target.value || null)}
+            value={show ?? "all"}
+            onChange={(e) =>
+              // "every item" is the app's own default; over a layout's it has to be said
+              void setShow(
+                e.target.value === "all" && !control("show").default ? null : e.target.value,
+              )
+            }
             className="text-xs"
           >
-            <option value="">every item</option>
+            <option value="all">every item</option>
             <option value="changed">changed in any condition</option>
             {names.map((n, i) =>
               i === ref ? null : binary ? (
@@ -359,12 +474,14 @@ function Aligned({
             )}
           </NativeSelect>
         </label>
-        <span className="text-muted-foreground ml-auto font-mono text-xs">
+        <span className="text-muted-foreground ml-auto font-mono text-xs" {...part("items/count")}>
           {shown.length} of {items.length} items
         </span>
         <Button
           variant="outline"
           size="sm"
+          className={cn(control("download").hidden && "hidden")}
+          {...part("items/download")}
           title="Download the items shown, each with its record in every condition, as JSONL"
           onClick={() =>
             downloadJsonl(
@@ -383,22 +500,39 @@ function Aligned({
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="w-16 font-mono text-xs">{key}</TableHead>
-              {text && (
-                <TableHead className="hidden font-mono text-xs sm:table-cell">{text}</TableHead>
-              )}
-              {names.map((n, i) => (
-                <TableHead key={n} className="text-right font-mono text-xs whitespace-nowrap">
-                  {n}
-                  {i === ref && <span className="text-muted-foreground"> · ref</span>}
-                </TableHead>
-              ))}
+              {columns.map((c) => {
+                const r = columnRule(c.name);
+                const label = (
+                  <>
+                    {r.label ?? c.name}
+                    {c.kind === "condition" && names.indexOf(c.name) === ref && (
+                      <span className="text-muted-foreground"> · ref</span>
+                    )}
+                    {r.about && <Help>{r.about}</Help>}
+                  </>
+                );
+                return (
+                  <TableHead
+                    key={c.name}
+                    {...part(partId("items/column", c.name))}
+                    className={cn(
+                      "font-mono text-xs",
+                      c.kind === "key" && "w-16",
+                      c.kind === "text" && "hidden sm:table-cell",
+                      c.kind === "condition" && "text-right whitespace-nowrap",
+                    )}
+                  >
+                    <span className="inline-flex items-center gap-1">{label}</span>
+                  </TableHead>
+                );
+              })}
             </TableRow>
           </TableHeader>
           <TableBody>
             {shown.map((it) => (
               <TableRow
                 key={it.id}
+                {...part(partId("items/row", it.id))}
                 className="focus-visible:ring-ring/50 cursor-pointer outline-none focus-visible:ring-[3px] focus-visible:ring-inset"
                 data-state={item === it.id ? "selected" : undefined}
                 tabIndex={0}
@@ -409,29 +543,43 @@ function Aligned({
                   void setItem(it.id);
                 }}
               >
-                <TableCell className="text-muted-foreground font-mono text-xs">
-                  {it.id}
-                  {text && (
-                    <span className="text-foreground mt-1 line-clamp-2 block font-sans text-sm whitespace-normal sm:hidden">
-                      {brief(it.rows[ref]?.[text], 140)}
-                    </span>
-                  )}
-                </TableCell>
-                {text && (
-                  <TableCell className="hidden max-w-md truncate text-sm sm:table-cell">
-                    {brief(it.rows[ref]?.[text], 140)}
-                  </TableCell>
-                )}
-                {names.map((n, i) => (
-                  <TableCell key={n} className="text-right">
-                    <Cell
-                      value={it.rows[i]?.[field]}
-                      missing={!it.rows[i]}
-                      binary={binary}
-                      changed={differs(it, i)}
-                    />
-                  </TableCell>
-                ))}
+                {columns.map((c) => {
+                  if (c.kind === "key")
+                    return (
+                      <TableCell key={c.name} className="text-muted-foreground font-mono text-xs">
+                        {it.id}
+                        {text && !columnRule(text).hidden && (
+                          <span className="text-foreground mt-1 line-clamp-2 block font-sans text-sm whitespace-normal sm:hidden">
+                            {brief(it.rows[ref]?.[text], 140)}
+                          </span>
+                        )}
+                      </TableCell>
+                    );
+                  if (c.kind === "text")
+                    return (
+                      <TableCell
+                        key={c.name}
+                        className="hidden max-w-md truncate text-sm sm:table-cell"
+                      >
+                        {brief(it.rows[ref]?.[c.name], 140)}
+                      </TableCell>
+                    );
+                  const i = names.indexOf(c.name);
+                  return (
+                    <TableCell
+                      key={c.name}
+                      className="text-right"
+                      {...part(partId("items/cell", it.id, c.name))}
+                    >
+                      <Cell
+                        value={it.rows[i]?.[field]}
+                        missing={!it.rows[i]}
+                        binary={binary}
+                        changed={differs(it, i)}
+                      />
+                    </TableCell>
+                  );
+                })}
               </TableRow>
             ))}
           </TableBody>
@@ -494,17 +642,24 @@ function Summary({
   field,
   binary,
   stats,
+  rule,
 }: {
   names: string[];
   ref_: number;
   field: string;
   binary: boolean;
   stats: { both: number; changed: number; k: number; n: number; t: Transition }[];
+  rule: (id: string) => Rule;
 }) {
+  const heading = rule("items/summary");
+  const stat = (n: string) => partId("items/stat", n);
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-medium">
-        By condition
+      <div
+        className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-medium"
+        {...part("items/summary")}
+      >
+        {heading.label ?? "By condition"}
         {binary ? (
           <span className="text-muted-foreground flex items-center gap-3 text-xs font-normal">
             <Term k="wilson">rate, 95% interval</Term>
@@ -514,15 +669,19 @@ function Summary({
           <Help>{`How many items have a different ${field} from the reference, out of the items both files hold.`}</Help>
         )}
       </div>
+      <PartNote rule={heading} />
       <div className="grid overflow-hidden rounded-xl border sm:grid-cols-2 lg:grid-cols-4 [&>*]:-mr-px [&>*]:-mb-px [&>*]:border-r [&>*]:border-b">
-        {names.map((n, i) => {
+        {arrange(names, stat, rule).map((n) => {
+          const i = names.indexOf(n);
           const s = stats[i];
+          const r = rule(stat(n));
           const ci = binary ? wilson(s.k, s.n) : null;
           return (
-            <div key={n} className="flex flex-col gap-1 p-4">
-              <span className="text-muted-foreground font-mono text-xs">
-                {n}
+            <div key={n} className="flex flex-col gap-1 p-4" {...part(stat(n))}>
+              <span className="text-muted-foreground flex items-center gap-1 font-mono text-xs">
+                {r.label ?? n}
                 {i === ref_ && " · reference"}
+                {r.about && <Help>{r.about}</Help>}
               </span>
               {binary ? (
                 <>
@@ -553,6 +712,7 @@ function Summary({
               {i !== ref_ && !binary && (
                 <span className="text-muted-foreground text-xs">changed from the reference</span>
               )}
+              <PartNote rule={r} />
             </div>
           );
         })}
@@ -589,10 +749,14 @@ function ItemDetail({
   const item = Object.fromEntries(shared.map((k) => [k, present[0][k]]));
   const own = (r: Row) =>
     Object.fromEntries(Object.entries(r).filter(([k]) => !shared.includes(k) && !constant.has(k)));
+  const rule = useRules();
+  const section = (n: string) => partId("item/section", n);
+  const fieldOf = (n: string) => (k: string) => partId("item/field", n, k);
+  const itself = rule(section("item"));
   return (
     <>
       <div className="border-b px-6 py-4 pr-12">
-        <SheetTitle className="font-semibold">
+        <SheetTitle className="font-semibold" {...part("item/title")}>
           <span className="text-muted-foreground font-mono text-sm">{keyName}</span> {id}
         </SheetTitle>
         <SheetDescription className="text-muted-foreground text-xs">
@@ -601,10 +765,10 @@ function ItemDetail({
         </SheetDescription>
       </div>
       <div className="flex flex-1 flex-col gap-6 overflow-auto px-6 py-5">
-        {shared.length > 1 && (
-          <section className="flex flex-col gap-3 rounded-xl border p-4">
-            <h3 className="text-sm font-medium">The item</h3>
-            <RecordFields row={item} about={about} />
+        {shared.length > 1 && !itself.hidden && (
+          <section className="flex flex-col gap-3 rounded-xl border p-4" {...part(section("item"))}>
+            <h3 className="text-sm font-medium">{itself.label ?? "The item"}</h3>
+            <RecordFields row={item} about={about} partOf={fieldOf("item")} />
           </section>
         )}
         <div
@@ -613,6 +777,8 @@ function ItemDetail({
         >
           {names.map((n, i) => {
             const r = rows[i];
+            const own_ = rule(section(n));
+            if (own_.hidden) return null;
             const changed = new Set(
               r && base && i !== ref_
                 ? Object.keys(r).filter(
@@ -621,9 +787,9 @@ function ItemDetail({
                 : [],
             );
             return (
-              <section key={n} className="flex min-w-0 flex-col gap-3">
+              <section key={n} className="flex min-w-0 flex-col gap-3" {...part(section(n))}>
                 <h3 className="border-b pb-1 font-mono text-sm font-medium">
-                  {n}
+                  {own_.label ?? n}
                   {i === ref_ && <span className="text-muted-foreground"> · reference</span>}
                 </h3>
                 {r ? (
@@ -631,6 +797,7 @@ function ItemDetail({
                     row={shared.length > 1 ? own(r) : r}
                     changed={changed}
                     about={about}
+                    partOf={fieldOf(n)}
                   />
                 ) : (
                   <p className="text-muted-foreground text-sm">Not in this file.</p>

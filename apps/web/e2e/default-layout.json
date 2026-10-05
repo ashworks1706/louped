@@ -107,5 +107,6 @@
     "experiment.design": "default"
   },
   "errors": [],
-  "files": ["layout.json"]
+  "files": ["layout.json"],
+  "parts": {}
 }

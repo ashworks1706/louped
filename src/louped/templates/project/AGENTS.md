@@ -10,8 +10,9 @@ results.
 - `louped mcp`, registered in `.mcp.json`, drives the running app: `experiments`, `runs`, `run`,
   `samples`, `figures`, `compare` to read; `new_experiment`, `launch`, `job`, `export_job`,
   `import_result`, `push`, `pull` to act. Work started through it shows in the app. Start `louped serve` first.
-  `ui_page`, `ui_selection`, `set_layout` and `set_preset` change what the app's pages show; the
-  person can point at any block in the app, and `ui_selection` says which.
+  `ui_page`, `set_part`, `set_layout` and `set_preset` change what the app's pages show; the
+  person Shift+clicks any part of a page and `ui_selection` gives you those parts with their
+  data; `ui_show` points the person at parts, with a note.
 - Skills in `.claude/skills/`: `new-experiment`, `read-results`, `run-elsewhere`, `write-report`,
   `add-plugin`, `change-ui`.
 - The CLI does the same steps: `louped new`, `louped push`, `louped pull`, `louped --help`.

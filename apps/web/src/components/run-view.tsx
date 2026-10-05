@@ -44,8 +44,11 @@ import {
   type RunDetail,
 } from "@/lib/api";
 import { artifactQuery } from "@/lib/artifacts";
-import { ago, headline } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { ago, headline, metricLabel } from "@/lib/format";
 import { ExperimentLink } from "@/components/experiment-link";
+import { Help } from "@/components/help";
+import { arrange, part, partId, PartNote, PartScope, useRules } from "@/components/parts";
 
 export function RunView() {
   const [id] = useQueryState("id", parseAsString);
@@ -74,64 +77,86 @@ function RunLoaded({ id }: { id: string }) {
     );
   }
   return (
-    <>
+    <PartScope experiment={run.data.experiment}>
       <RunHeader run={run.data} />
       <section className="mx-auto max-w-6xl px-6 py-6">
         <RunTabs run={run.data} />
       </section>
-    </>
+    </PartScope>
   );
 }
 
 function RunHeader({ run }: { run: RunDetail }) {
+  const rule = useRules();
+  const meta: { name: string; label: string; value: React.ReactNode; className?: string }[] = [
+    { name: "model", label: "Model", value: run.model ?? "—", className: "font-mono" },
+    {
+      name: "experiment",
+      label: "Experiment",
+      value: run.experiment ? <ExperimentLink name={run.experiment} /> : "—",
+    },
+    { name: "created", label: "Created", value: ago(run.created) },
+    { name: "id", label: "Id", value: run.id, className: "font-mono text-xs leading-5" },
+  ];
+  const badge = (name: string, el: React.ReactNode) =>
+    rule(partId("run/badge", name)).hidden ? null : (
+      <span {...part(partId("run/badge", name))} className="inline-flex">
+        {el}
+      </span>
+    );
   return (
-    <header className="border-b" data-ui="run.header">
+    <header className="border-b">
       <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 py-6">
         <Link
           href="/runs/"
-          className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 text-xs"
+          className={cn(
+            "text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 text-xs",
+            rule("run/back").hidden && "hidden",
+          )}
+          {...part("run/back")}
         >
           <ArrowLeft className="size-3" /> Runs
         </Link>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">{run.name}</h1>
-          <KindBadge kind={run.kind} />
-          <HostBadge host={run.host} />
-          <StatusDot status={run.status} samples={run.samples} total={run.total} />
-          <div className="ml-auto">
-            <DeleteButton
-              what="run"
-              name={run.name}
-              undo={
-                run.id.startsWith("e-")
-                  ? "Its eval log moves to .louped/trash/logs; move it back to restore the run."
-                  : "MLflow keeps it marked deleted until mlflow gc; MlflowClient.restore_run brings it back."
-              }
-              remove={() => deleteRun(run.id)}
-              then="/runs/"
-              disabled={isLive(run.status) ? "Still running: cancel its job first" : undefined}
-            />
-          </div>
+          <h1 className="text-2xl font-semibold tracking-tight" {...part("run/title")}>
+            {run.name}
+          </h1>
+          {badge("kind", <KindBadge kind={run.kind} />)}
+          {badge("host", <HostBadge host={run.host} />)}
+          {badge(
+            "status",
+            <StatusDot status={run.status} samples={run.samples} total={run.total} />,
+          )}
+          {!rule("run/delete").hidden && (
+            <div className="ml-auto" {...part("run/delete")}>
+              <DeleteButton
+                what="run"
+                name={run.name}
+                undo={
+                  run.id.startsWith("e-")
+                    ? "Its eval log moves to .louped/trash/logs; move it back to restore the run."
+                    : "MLflow keeps it marked deleted until mlflow gc; MlflowClient.restore_run brings it back."
+                }
+                remove={() => deleteRun(run.id)}
+                then="/runs/"
+                disabled={isLive(run.status) ? "Still running: cancel its job first" : undefined}
+              />
+            </div>
+          )}
         </div>
         <dl className="text-muted-foreground flex flex-wrap gap-x-6 gap-y-1 text-sm">
-          <div className="flex gap-1.5">
-            <dt>Model</dt>
-            <dd className="text-foreground font-mono">{run.model ?? "—"}</dd>
-          </div>
-          <div className="flex gap-1.5">
-            <dt>Experiment</dt>
-            <dd className="text-foreground">
-              {run.experiment ? <ExperimentLink name={run.experiment} /> : "—"}
-            </dd>
-          </div>
-          <div className="flex gap-1.5">
-            <dt>Created</dt>
-            <dd className="text-foreground">{ago(run.created)}</dd>
-          </div>
-          <div className="flex gap-1.5">
-            <dt>Id</dt>
-            <dd className="text-foreground font-mono text-xs leading-5">{run.id}</dd>
-          </div>
+          {arrange(meta, (m) => partId("run/meta", m.name), rule).map((m) => {
+            const r = rule(partId("run/meta", m.name));
+            return (
+              <div key={m.name} className="flex gap-1.5" {...part(partId("run/meta", m.name))}>
+                <dt className="flex items-center gap-1">
+                  {r.label ?? m.label}
+                  {r.about && <Help>{r.about}</Help>}
+                </dt>
+                <dd className={cn("text-foreground", m.className)}>{m.value}</dd>
+              </div>
+            );
+          })}
         </dl>
       </div>
     </header>
@@ -177,7 +202,7 @@ function RunTabs({ run }: { run: RunDetail }) {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           {tabs.map((t) => (
-            <TabsTrigger key={t.value} value={t.value} data-ui={blockId("run.tabs", t.b, t.at)}>
+            <TabsTrigger key={t.value} value={t.value} data-part={blockId("run.tabs", t.b, t.at)}>
               {t.label}
             </TabsTrigger>
           ))}
@@ -236,9 +261,9 @@ function runTab(
         label: "Config",
         body: (
           <>
-            <KeyValues title="Parameters" values={run.params} />
+            <KeyValues title="Parameters" values={run.params} kind="config/param" />
             <div className="h-6" />
-            <KeyValues title="Tags" values={run.tags} />
+            <KeyValues title="Tags" values={run.tags} kind="config/tag" />
           </>
         ),
       };
@@ -261,6 +286,34 @@ function runTab(
     default:
       return null;
   }
+}
+
+/** The metrics block: a card per headline metric, each a part the layout can rename, explain,
+ * reorder or hide. */
+function Metrics({ metrics }: { metrics: ReturnType<typeof headline> }) {
+  const rule = useRules();
+  const id = (key: string) => partId("run.overview/metrics", key);
+  return (
+    <StatGrid>
+      {arrange(metrics, ([key]) => id(key), rule).map(([key, value, err]) => {
+        const r = rule(id(key));
+        return (
+          <div key={key} {...part(id(key))} className="flex flex-col gap-1 p-4">
+            {r.label || r.about ? (
+              <span className="text-muted-foreground flex items-center gap-1 text-xs">
+                {r.label ?? metricLabel(key)}
+                {r.about && <Help>{r.about}</Help>}
+              </span>
+            ) : (
+              <MetricName k={key} className="text-muted-foreground text-xs" />
+            )}
+            <MetricValue value={value} err={err} className="text-2xl font-medium" />
+            <PartNote rule={r} />
+          </div>
+        );
+      })}
+    </StatGrid>
+  );
 }
 
 /** The run.overview region: its blocks, each drawn when this run has something for it. */
@@ -289,18 +342,7 @@ function overviewBlock(
       return {
         body:
           metrics.length > 0 ? (
-            <StatGrid>
-              {metrics.map(([key, value, err]) => (
-                <div
-                  key={key}
-                  data-ui={`${blockId("run.overview", b)}/${key}`}
-                  className="flex flex-col gap-1 p-4"
-                >
-                  <MetricName k={key} className="text-muted-foreground text-xs" />
-                  <MetricValue value={value} err={err} className="text-2xl font-medium" />
-                </div>
-              ))}
-            </StatGrid>
+            <Metrics metrics={metrics} />
           ) : (
             <p className="text-muted-foreground text-sm">
               No metrics recorded.
@@ -418,6 +460,7 @@ type Meta = {
 /** Where and how the run was made: the machine, the code and the environment, from its tags and
  * the RunMeta (meta.json) it wrote next to its results. */
 function Provenance({ run }: { run: RunDetail }) {
+  const rule = useRules();
   const hasMeta = run.artifacts.some((a) => a.path === "meta.json");
   const hasCommand = run.artifacts.some((a) => a.path === "command.txt");
   const meta = useQuery({ ...artifactQuery(run.id, "meta.json"), enabled: hasMeta });
@@ -456,25 +499,35 @@ function Provenance({ run }: { run: RunDetail }) {
         .map(([k, v]) => `${k} ${v}`)
         .join(" · "),
     ]);
+  if (command.data)
+    rows.push([
+      "Command",
+      <span key="command" className="flex min-w-0 items-start gap-2">
+        <code className="bg-muted/50 min-w-0 flex-1 rounded-md p-2 font-mono text-xs break-all whitespace-pre-wrap">
+          {command.data.trim()}
+        </code>
+        <CopyButton text={command.data.trim()} />
+      </span>,
+    ]);
+  const id = (k: string) => partId("run.overview/provenance", k.toLowerCase().replace(/ /g, "-"));
   return (
     <dl className="divide-y rounded-xl border">
-      {rows.map(([k, v]) => (
-        <div key={k} className="grid grid-cols-[8rem_minmax(0,1fr)] gap-4 px-4 py-2 text-sm">
-          <dt className="text-muted-foreground">{k}</dt>
-          <dd className="font-mono text-xs leading-5 break-words">{v}</dd>
-        </div>
-      ))}
-      {command.data && (
-        <div className="grid grid-cols-[8rem_minmax(0,1fr)] gap-4 px-4 py-2 text-sm">
-          <dt className="text-muted-foreground">Command</dt>
-          <dd className="flex min-w-0 items-start gap-2">
-            <code className="bg-muted/50 min-w-0 flex-1 rounded-md p-2 font-mono text-xs break-all whitespace-pre-wrap">
-              {command.data.trim()}
-            </code>
-            <CopyButton text={command.data.trim()} />
-          </dd>
-        </div>
-      )}
+      {arrange(rows, ([k]) => id(k), rule).map(([k, v]) => {
+        const r = rule(id(k));
+        return (
+          <div
+            key={k}
+            {...part(id(k))}
+            className="grid grid-cols-[8rem_minmax(0,1fr)] gap-4 px-4 py-2 text-sm"
+          >
+            <dt className="text-muted-foreground flex items-start gap-1">
+              {r.label ?? k}
+              {r.about && <Help>{r.about}</Help>}
+            </dt>
+            <dd className="min-w-0 font-mono text-xs leading-5 break-words">{v}</dd>
+          </div>
+        );
+      })}
     </dl>
   );
 }
@@ -508,24 +561,42 @@ function Samples({ id, hasLog, live }: { id: string; hasLog: boolean; live: bool
   );
 }
 
-function KeyValues({ title, values }: { title: string; values: Record<string, string> }) {
-  const entries = Object.entries(values);
+function KeyValues({
+  title,
+  values,
+  kind,
+}: {
+  title: string;
+  values: Record<string, string>;
+  kind: "config/param" | "config/tag";
+}) {
+  const rule = useRules();
+  const entries = arrange(Object.entries(values), ([k]) => partId(kind, k), rule);
   return (
     <div>
-      <h2 className="mb-2 text-sm font-medium">{title}</h2>
+      <h2 className="mb-2 text-sm font-medium" {...part(`${kind}s`)}>
+        {title}
+      </h2>
       {entries.length === 0 ? (
         <p className="text-muted-foreground text-sm">None.</p>
       ) : (
         <dl className="divide-y rounded-xl border">
-          {entries.map(([k, v]) => (
-            <div
-              key={k}
-              className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 px-4 py-2 text-sm"
-            >
-              <dt className="text-muted-foreground truncate font-mono">{k}</dt>
-              <dd className="font-mono break-all">{v || "—"}</dd>
-            </div>
-          ))}
+          {entries.map(([k, v]) => {
+            const about = rule(partId(kind, k)).about;
+            return (
+              <div
+                key={k}
+                {...part(partId(kind, k))}
+                className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 px-4 py-2 text-sm"
+              >
+                <dt className="text-muted-foreground flex min-w-0 items-center gap-1 font-mono">
+                  <span className="truncate">{k}</span>
+                  {about && <Help>{about}</Help>}
+                </dt>
+                <dd className="font-mono break-all">{v || "—"}</dd>
+              </div>
+            );
+          })}
         </dl>
       )}
     </div>

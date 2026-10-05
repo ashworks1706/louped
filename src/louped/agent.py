@@ -37,12 +37,15 @@ with job; read results with run, figures, figure, samples and compare. A run too
 machine goes to a cluster with export_job; its result comes back with import_result.
 Report a difference only with its paired interval from compare, and name the run ids you used.
 Jobs run one at a time on this machine's GPU, so do not queue more than the question needs.
-The app's pages are data: ui_page shows them, ui_selection says which block the person pointed
-at, and set_layout and set_preset change them."""
+The app's pages are data: ui_page shows them and every kind of part on them; ui_selection says
+which parts the person Shift+clicked, with their data; set_layout, set_preset and set_part change
+them; ui_show opens a page and points the person at parts, with a note."""
 
 READ = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False)
 STOP = ToolAnnotations(read_only_hint=False, destructive_hint=True, open_world_hint=False)
+#: Seconds ui_show waits for the app: a poll, the page opening, eight seconds of looking.
+SHOW_WAIT = 15
 
 
 def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTransport | None = None):
@@ -265,17 +268,19 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
     async def ui_page(experiment: str | None = None) -> dict[str, Any]:
         """The app's pages as data: each region (home, run.tabs, run.overview, experiment.tabs,
         experiment.design) with its blocks and where they come from, the blocks each region can
-        hold, the presets, and the layout files. With experiment, as that experiment's page and
-        its runs' pages show. Change a region with set_layout or a preset with set_preset; the
-        change-ui skill says how to keep a page louped's own."""
+        hold, the presets, the layout files, the part rules in force, and every kind of part by
+        address with the rules it takes. With experiment, as that experiment's page and its runs'
+        pages show. Change a region with set_layout, a preset with set_preset and a part with
+        set_part; the change-ui skill says how to keep a page louped's own."""
         found = await get("/ui/layout", experiment=experiment)
         return {**found, **await get("/ui/catalog")}
 
     @mcp.tool(annotations=READ)
     async def ui_selection() -> dict[str, Any] | None:
-        """The block the person last pointed at in the app (select mode): its id
-        ("<region>/<block>", "/<key>" for one card in it), the page, its run or experiment, and
-        its text. None when they have not pointed at one since the server started."""
+        """What the person picked in the app with Shift+click: the page, its run or experiment,
+        and each part's address, text and data (an item's record under every condition, a
+        condition's numbers, a field's value). None when they have picked nothing since the
+        server started; parts is empty once they clear it."""
         return await get("/ui/selection")
 
     @mcp.tool(annotations=WRITE)
@@ -296,6 +301,41 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         "default" uses none, even over the project's; None names none in this file, so an
         experiment follows the project's. Regions set in layout.json stay over it."""
         return await send("PUT", "/ui/preset", json={"preset": preset, "experiment": experiment})
+
+    @mcp.tool(annotations=WRITE)
+    async def set_part(
+        part: str, rule: dict[str, Any] | None, experiment: str | None = None
+    ) -> dict[str, Any]:
+        """Change a part of the app's pages by its address (ui_selection gives it; * stands for
+        any one name, as in "item/field/*/abstain"): rule is any of hidden, label, about, note
+        (Markdown under it), order (among its siblings) and default (a control's value), as its
+        kind takes (ui_page lists them). None removes the rule. Saved in layout.json, the
+        project's or with experiment that experiment's; the app shows it at once."""
+        body = {"part": part, "rule": rule, "experiment": experiment}
+        return await send("PUT", "/ui/part", json=body)
+
+    @mcp.tool(annotations=WRITE)
+    async def ui_show(
+        url: str | None = None,
+        parts: list[str] | None = None,
+        text: str | None = None,
+        style: str = "highlight",
+    ) -> dict[str, Any]:
+        """Show the person something in the open app: open url (a path such as
+        "/run/?id=m-1&tab=items&item=28"), scroll to parts by address and point at them
+        (style highlight, spotlight to dim the rest, or pointer), with text (Markdown) beside the
+        first until they dismiss it. Use it to answer with the evidence on screen. Returns
+        whether the app showed it and which parts it could not find there."""
+        body = {"url": url, "parts": parts or [], "text": text, "style": style}
+        cue = await post("/ui/show", body)
+        # the app picks a cue up within a second, opens its page and looks for its parts for up
+        # to eight seconds
+        for _ in range(SHOW_WAIT * 2):
+            await asyncio.sleep(0.5)
+            cue = await get(f"/ui/show/{cue['id']}")
+            if cue["status"] != "pending":
+                return cue
+        return {**cue, "note": f"no open app showed it in {SHOW_WAIT} s; is the app open?"}
 
     async def _wait(job_id: str, seconds: int) -> dict[str, Any]:
         for _ in range(seconds * 2):

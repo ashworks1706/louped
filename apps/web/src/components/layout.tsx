@@ -6,6 +6,7 @@ import { Help } from "@/components/help";
 import { Markdown } from "@/components/markdown";
 import { PluginFrame } from "@/components/plugin-page";
 import { isSnapshot, q, type Block, type UiPage } from "@/lib/api";
+import { partId } from "@/lib/parts";
 import { cn } from "@/lib/utils";
 
 /** A page's regions, as louped.server.ui names them. */
@@ -34,7 +35,7 @@ export function ThemeTokens() {
   );
 }
 
-/** A block's id on the page, which select mode hands the person's agent:
+/** A block's address on the page, which Shift+click hands the person's agent:
  * "<region>/<block>", then what picks it out (a metric's key, a file, a figure, a plugin, or a
  * text block's place in its region). */
 export function blockId(region: Region, b: Block, at?: number): string {
@@ -44,7 +45,7 @@ export function blockId(region: Region, b: Block, at?: number): string {
     (b.index != null ? String(b.index) : null) ??
     b.plugin ??
     (b.block === "text" && at !== undefined ? String(at) : null);
-  return `${region}/${b.block}${which != null ? `/${which}` : ""}`;
+  return which != null ? partId(`${region}/${b.block}`, which) : `${region}/${b.block}`;
 }
 
 /** A text block: the layout's own Markdown. */
@@ -118,7 +119,7 @@ export function RegionGrid({
   const cell = ({ b, at, title, about, body }: (typeof drawn)[number]) => (
     <section
       key={`${blockId(region, b, at)}@${at}`}
-      data-ui={blockId(region, b, at)}
+      data-part={blockId(region, b, at)}
       className={cn(
         "flex min-w-0 flex-col",
         roomy ? "items-start gap-3 [&>*]:w-full [&>a]:w-auto" : "gap-2",

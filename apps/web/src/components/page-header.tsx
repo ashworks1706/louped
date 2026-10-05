@@ -1,3 +1,4 @@
+import { PageText } from "@/components/page-text";
 import { DOMAINS, type NavItem } from "@/lib/nav";
 
 /** Title and one-line purpose. A domain's page names its domain above the title; its overview is
@@ -13,8 +14,7 @@ export function PageHeader({ item, title }: { item: NavItem; title?: string }) {
             {domain.title}
           </p>
         )}
-        <h1 className="text-2xl font-semibold tracking-tight">{title ?? item.title}</h1>
-        <p className="text-muted-foreground text-sm">{item.description}</p>
+        <PageText href={item.href} title={title ?? item.title} description={item.description} />
       </div>
     </header>
   );

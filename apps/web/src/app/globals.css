@@ -111,12 +111,13 @@
   font-size: 12px;
 }
 
-/* Select mode: the block under the pointer is outlined; a click points the agent at it. */
-[data-selecting] [data-ui] {
-  cursor: crosshair;
+/* Picking parts: with Shift held (or tap mode on), the part under the pointer is outlined and a
+   click picks it for the agent instead of acting. */
+[data-shift] [data-part],
+[data-picking] [data-part] {
+  cursor: copy;
 }
-[data-selecting] [data-ui-hover] {
+[data-part-hover] {
   outline: 1px dashed var(--foreground);
-  outline-offset: 3px;
-  border-radius: calc(var(--radius) + 4px);
+  outline-offset: 2px;
 }

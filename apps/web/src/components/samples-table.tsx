@@ -6,6 +6,7 @@ import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 
 import { Help } from "@/components/help";
+import { arrange, part, partId, PartData, useRules } from "@/components/parts";
 import { ScoreCell } from "@/components/metric";
 import { QueryState } from "@/components/query-state";
 import { Transcript } from "@/components/transcript";
@@ -43,6 +44,22 @@ export function SamplesTable({
     [samples],
   );
   const judged = scoreNames.includes("b_wins");
+  const rule = useRules();
+  const col = (id: string) => partId("samples/column", id);
+  const rowId = (s: SampleSummary) =>
+    partId("samples/row", s.epoch === 1 ? s.id : `${s.id}@${s.epoch}`);
+  const columns = arrange(
+    [
+      { id: "#", head: "w-12", cell: "text-muted-foreground font-mono text-xs whitespace-nowrap" },
+      { id: "input", head: "", cell: "max-w-md truncate" },
+      { id: "target", head: "", cell: "max-w-40 truncate font-mono text-xs" },
+      ...scoreNames.map((n) => ({ id: n, head: "text-center", cell: "text-center", score: true })),
+    ],
+    (c) => col(c.id),
+    rule,
+  );
+  const value = (s: SampleSummary, id: string): React.ReactNode =>
+    id === "#" ? s.id : id === "input" ? s.input : id === "target" ? s.target : null;
   const rows = samples.filter(
     (s) =>
       (!failing || s.scores[failing] === 0) &&
@@ -51,13 +68,23 @@ export function SamplesTable({
 
   return (
     <div className="flex flex-col gap-3">
+      <PartData
+        prefix="samples"
+        resolve={(id) => {
+          const found = samples.find((s) => rowId(s) === id);
+          return found ? { id: found.id, epoch: found.epoch, input: found.input,
+                           target: found.target, scores: found.scores } : null; // prettier-ignore
+        }}
+      />
       {judged && <JudgeAgreement runId={runId} />}
       <div className="flex flex-wrap items-center gap-2">
         <Input
           placeholder="Filter samples…"
+          aria-label="Filter samples"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           className="max-w-xs"
+          {...part("samples/search")}
         />
         {scoreNames.map((name) => {
           const values = samples.map((s) => s.scores[name]).filter((v) => v != null) as number[];
@@ -70,6 +97,7 @@ export function SamplesTable({
               variant={active ? "default" : "outline"}
               onClick={() => setFailing(active ? null : name)}
               title={`Show only samples that failed ${name}`}
+              {...part(partId("samples/score", name))}
             >
               {name}
               <span className="font-mono text-xs opacity-70">
@@ -78,27 +106,31 @@ export function SamplesTable({
             </Button>
           );
         })}
-        <span className="text-muted-foreground ml-auto text-xs">
+        <span className="text-muted-foreground ml-auto text-xs" {...part("samples/count")}>
           {rows.length} of {samples.length}
         </span>
       </div>
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead className="w-12">#</TableHead>
-            <TableHead>Input</TableHead>
-            <TableHead>Target</TableHead>
-            {scoreNames.map((n) => (
-              <TableHead key={n} className="text-center">
-                {n}
-              </TableHead>
-            ))}
+            {columns.map((c) => {
+              const r = rule(col(c.id));
+              return (
+                <TableHead key={c.id} className={c.head} {...part(col(c.id))}>
+                  <span className="inline-flex items-center gap-1">
+                    {r.label ?? (c.id === "input" ? "Input" : c.id === "target" ? "Target" : c.id)}
+                    {r.about && <Help>{r.about}</Help>}
+                  </span>
+                </TableHead>
+              );
+            })}
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((s) => (
             <TableRow
               key={`${s.id}:${s.epoch}`}
+              {...part(rowId(s))}
               className="cursor-pointer"
               data-state={open === s.id && (epoch ?? 1) === s.epoch ? "selected" : undefined}
               onClick={() => {
@@ -106,14 +138,9 @@ export function SamplesTable({
                 void setEpoch(s.epoch === 1 ? null : s.epoch);
               }}
             >
-              <TableCell className="text-muted-foreground font-mono text-xs whitespace-nowrap">
-                {s.id}
-              </TableCell>
-              <TableCell className="max-w-md truncate">{s.input}</TableCell>
-              <TableCell className="max-w-40 truncate font-mono text-xs">{s.target}</TableCell>
-              {scoreNames.map((n) => (
-                <TableCell key={n} className="text-center">
-                  <ScoreCell value={s.scores[n]} />
+              {columns.map((c) => (
+                <TableCell key={c.id} className={c.cell}>
+                  {"score" in c ? <ScoreCell value={s.scores[c.id]} /> : value(s, c.id)}
                 </TableCell>
               ))}
             </TableRow>
@@ -162,10 +189,17 @@ function SampleSheetBody({
   return (
     <>
       <div className="flex items-center justify-between gap-4 border-b px-6 py-4 pr-12">
-        <SheetTitle className="font-semibold">Sample {sampleId}</SheetTitle>
+        <SheetTitle className="font-semibold" {...part("sample/title")}>
+          Sample {sampleId}
+        </SheetTitle>
         <SheetDescription className="sr-only">Conversation and scores</SheetDescription>
         {hasLog && (
-          <Button variant="ghost" size="sm" onClick={() => void setTab("log")}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => void setTab("log")}
+            {...part("sample/log")}
+          >
             <PanelsTopLeft /> Log
           </Button>
         )}
@@ -190,7 +224,10 @@ function JudgeAgreement({ runId }: { runId: string }) {
   const a = agree.data;
   if (!a) return null;
   return (
-    <div className="text-muted-foreground flex items-center gap-1.5 text-sm">
+    <div
+      className="text-muted-foreground flex items-center gap-1.5 text-sm"
+      {...part("samples/agreement")}
+    >
       {a.labelled === 0 ? (
         "Label pairs to check the judge against you."
       ) : (
@@ -222,7 +259,7 @@ function YourPick({ runId, sampleId }: { runId: string; sampleId: string }) {
     },
   });
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b px-6 py-3">
+    <div className="flex flex-wrap items-center gap-2 border-b px-6 py-3" {...part("sample/pick")}>
       <span className="text-muted-foreground flex items-center gap-1 text-xs">
         Your pick
         <Help label="Which is A?">

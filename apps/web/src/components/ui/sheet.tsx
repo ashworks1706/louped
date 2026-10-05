@@ -23,6 +23,7 @@ function SheetContent({
   className,
   children,
   side = "right",
+  onInteractOutside,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & { side?: keyof typeof SIDES }) {
   return (
@@ -34,10 +35,20 @@ function SheetContent({
           SIDES[side],
           className,
         )}
+        // the picked parts' tray and an agent's note sit above a panel without closing it
+        onInteractOutside={(e) => {
+          const t = e.target;
+          if (t instanceof Element && t.closest("[data-part-tray], [data-cue-note]"))
+            e.preventDefault();
+          else onInteractOutside?.(e);
+        }}
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="text-muted-foreground hover:bg-accent hover:text-foreground absolute top-4 right-4 rounded-md p-1 transition-colors">
+        <DialogPrimitive.Close
+          data-part="panel/close"
+          className="text-muted-foreground hover:bg-accent hover:text-foreground absolute top-4 right-4 rounded-md p-1 transition-colors"
+        >
           <X className="size-4" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>

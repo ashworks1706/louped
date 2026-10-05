@@ -35,7 +35,13 @@ The UI is the product: quiet, dense, keyboard-first.
 - Home, a run's page and an experiment's page draw their regions from the layout
   (`useLayout`, `RegionGrid`; `src/louped/server/ui.py` holds the catalog). A new piece of those
   pages is a block: add it to `CATALOG` and `DEFAULT` there and to the region's renderer here, so
-  agents can move it. Every block carries `data-ui="<region>/<block>"` for select mode.
+  agents can move it.
+- Every part a person can see or use (a card, a row, a cell, a field, a column, a control, a
+  heading) has an address: `part(partId("<area>/<kind>", ...names))` from `@/components/parts`,
+  its kind listed in `KINDS` in `src/louped/server/parts.py`. That is what Shift+click picks and
+  what `ui_show` points at. A part that takes rules reads them with `useRules()` and `arrange()`
+  (hidden, label, about, note, order, default), and registers its data with `PartData` so a pick
+  carries what it stands for. `e2e/parts.spec.ts` fails on anything without an address.
 - Plugin pages draw with the kit (`/kit/louped.css`, `/kit/louped.js`); when the app gains a
   look the kit lacks, add it to the kit too.
 - No client state library. View state lives in the URL; server data comes from the API.
