@@ -707,6 +707,143 @@
         }
       }
     },
+    "/api/ab": {
+      "get": {
+        "summary": "Ab Session",
+        "description": "Two eval runs' shared samples as blind pairs, with the person's picks so far.",
+        "operationId": "ab_session_api_ab_get",
+        "parameters": [
+          {
+            "name": "a",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "A"
+            }
+          },
+          {
+            "name": "b",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "B"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AbSession"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ab/pick": {
+      "post": {
+        "summary": "Ab Pick",
+        "description": "The person's pick of one pair, by the side they saw; null clears it.",
+        "operationId": "ab_pick_api_ab_pick_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AbPickRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AbSession"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ab/result": {
+      "get": {
+        "summary": "Ab Result",
+        "description": "B's win rate by the person's blind picks, with each judge run's agreement.",
+        "operationId": "ab_result_api_ab_result_get",
+        "parameters": [
+          {
+            "name": "a",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "A"
+            }
+          },
+          {
+            "name": "b",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "B"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AbResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/runs/{run_id}/agreement": {
       "get": {
         "summary": "Agreement",
@@ -2542,6 +2679,232 @@
   },
   "components": {
     "schemas": {
+      "AbJudge": {
+        "properties": {
+          "run": {
+            "type": "string",
+            "title": "Run"
+          },
+          "labelled": {
+            "type": "integer",
+            "title": "Labelled",
+            "description": "Pairs both the person and the judge picked."
+          },
+          "agreement": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agreement",
+            "description": "Share of those pairs with the same pick."
+          },
+          "kappa": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kappa",
+            "description": "Cohen's kappa: agreement beyond chance."
+          }
+        },
+        "type": "object",
+        "required": ["run", "labelled", "agreement", "kappa"],
+        "title": "AbJudge",
+        "description": "A judge run of the same two runs, against the person's picks."
+      },
+      "AbPair": {
+        "properties": {
+          "sample": {
+            "type": "string",
+            "title": "Sample"
+          },
+          "request": {
+            "type": "string",
+            "title": "Request"
+          },
+          "left": {
+            "type": "string",
+            "title": "Left"
+          },
+          "right": {
+            "type": "string",
+            "title": "Right"
+          },
+          "pick": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["left", "right", "tie"]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pick"
+          }
+        },
+        "type": "object",
+        "required": ["sample", "request", "left", "right"],
+        "title": "AbPair",
+        "description": "One pair to pick from, blind: which run gave left and which right is not said."
+      },
+      "AbPickRequest": {
+        "properties": {
+          "a": {
+            "type": "string",
+            "title": "A"
+          },
+          "b": {
+            "type": "string",
+            "title": "B"
+          },
+          "sample": {
+            "type": "string",
+            "title": "Sample"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["left", "right", "tie"]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Side"
+          }
+        },
+        "type": "object",
+        "required": ["a", "b", "sample", "side"],
+        "title": "AbPickRequest"
+      },
+      "AbResult": {
+        "properties": {
+          "a": {
+            "type": "string",
+            "title": "A"
+          },
+          "b": {
+            "type": "string",
+            "title": "B"
+          },
+          "labelled": {
+            "type": "integer",
+            "title": "Labelled"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "a_wins": {
+            "type": "integer",
+            "title": "A Wins"
+          },
+          "b_wins": {
+            "type": "integer",
+            "title": "B Wins"
+          },
+          "ties": {
+            "type": "integer",
+            "title": "Ties"
+          },
+          "b_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "B Rate",
+            "description": "B's win rate: B 1, tie 0.5, A 0, averaged."
+          },
+          "low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Low",
+            "description": "The rate's 95% bootstrap interval, low end."
+          },
+          "high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High",
+            "description": "The rate's 95% bootstrap interval, high end."
+          },
+          "judges": {
+            "items": {
+              "$ref": "#/components/schemas/AbJudge"
+            },
+            "type": "array",
+            "title": "Judges"
+          }
+        },
+        "type": "object",
+        "required": [
+          "a",
+          "b",
+          "labelled",
+          "total",
+          "a_wins",
+          "b_wins",
+          "ties",
+          "b_rate",
+          "low",
+          "high",
+          "judges"
+        ],
+        "title": "AbResult",
+        "description": "What the person's blind picks say: how often B won, with its 95% interval."
+      },
+      "AbSession": {
+        "properties": {
+          "a": {
+            "type": "string",
+            "title": "A"
+          },
+          "b": {
+            "type": "string",
+            "title": "B"
+          },
+          "pairs": {
+            "items": {
+              "$ref": "#/components/schemas/AbPair"
+            },
+            "type": "array",
+            "title": "Pairs"
+          },
+          "labelled": {
+            "type": "integer",
+            "title": "Labelled"
+          }
+        },
+        "type": "object",
+        "required": ["a", "b", "pairs", "labelled"],
+        "title": "AbSession",
+        "description": "A blind A/B of two eval runs: their shared samples, each side placed by a seed."
+      },
       "Agreement": {
         "properties": {
           "labelled": {

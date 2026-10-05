@@ -38,8 +38,10 @@ with job; read results with run, figures, figure, samples and compare. A figure 
 for (a chart of a file, points in 3D, an animation) is add_view, or derive when it needs a script
 over the run's files (new columns on its items); then ui_show. Evals are Inspect tasks: eval_tasks
 lists the project's and inspect_evals' to launch with "eval". Judging two eval runs is launch
-"judge" with --judge one of judges; a new criterion or prompt is new_judge. A run too large
-for this machine goes to a cluster with export_job; its result comes back with import_result.
+"judge" with --judge one of judges; a new criterion or prompt is new_judge. The person's own
+blind picks of two runs (Compare's Blind A/B) are ab_results; check a judge against them there.
+A run too large for this machine goes to a cluster with export_job; its result comes back with
+import_result.
 Report a difference only with its paired interval from compare (or cohort, for a run's items),
 and name the run ids you used. Items the person picks can be saved as a cohort and run again.
 Jobs run one at a time on this machine's GPU, so do not queue more than the question needs.
@@ -182,6 +184,14 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
             word = search.lower()
             found = [t for t in found if word in " ".join(str(v) for v in t.values()).lower()]
         return found
+
+    @mcp.tool(annotations=READ)
+    async def ab_results(a: str, b: str) -> dict[str, Any]:
+        """What the person's blind A/B picks of two eval runs say (Compare's Blind A/B): pairs
+        picked of total, A wins, B wins, ties, B's win rate (B 1, tie 0.5, A 0) with its 95%
+        interval, and each judge run of the same runs with its agreement and kappa against the
+        person. Report the rate with its interval and n, never alone."""
+        return await get("/ab/result", a=a, b=b)
 
     @mcp.tool(annotations=READ)
     async def judges() -> list[dict[str, Any]]:

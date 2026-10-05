@@ -117,6 +117,13 @@ MODEL = "louped/Qwen/Qwen2.5-7B-Instruct"  # optional
 Compare's **Judge** and Launch's `louped judge` offer every judge by name. Your agent writes one
 with `new_judge` when you ask for a new criterion.
 
+**Blind A/B** on Compare is the same comparison made by you: each pair's answers sit left and
+right in an order shuffled once and kept, so you never see which run gave which. Pick with the
+keys `1`, `2` or `0` for a tie. Once every pair is picked, **Reveal** locks the picks and shows
+B's win rate with its 95% interval and how often each judge of the same runs agreed with you (and
+its kappa), which is how to tell whether a judge can be trusted on this question. Picks are kept
+under `.louped/ab/`. Compare's per-sample answers are hidden while Blind A/B is open.
+
 ## Code from a paper
 
 If a paper's code needs its own package versions, run it in its own environment. Clone it at a

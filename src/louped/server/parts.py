@@ -212,6 +212,8 @@ KINDS: list[Kind] = [
     _k(part="compare/metric/*", about="One metric of both runs.", rules=PICK),
     _k(part="compare/score/*", about="One score's paired difference and interval.", rules=PICK),
     _k(part="compare/sample/*", about="One sample in both runs.", rules=PICK),
+    _k(part="compare/blind/*", about="Blind A/B: its button, progress, the request, the left or "
+       "right answer, tie, reveal, the result and each judge's agreement.", rules=PICK),
     _k(part="compare/open/title", about="The open sample's title.", rules=PICK),
     _k(part="compare/open/side/*", about="The open sample in run A or B.", rules=PICK),
     # Launch

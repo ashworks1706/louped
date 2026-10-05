@@ -22,6 +22,7 @@ import importlib.util
 import string
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -41,6 +42,22 @@ PROMPT = """Compare two answers to the same request.
 {second}
 
 {criterion} Think briefly, then end with one line: "Verdict: 1", "Verdict: 2" or "Verdict: tie"."""
+
+#: A pick's points toward B's win rate: B 1, a tie 0.5, A 0.
+POINTS = {"b": 1.0, "a": 0.0, "tie": 0.5}
+
+
+def pair_key(sample_id: object, epoch: int) -> str:
+    """A sample's key when pairing two runs: its id, with #epoch past the first epoch."""
+    return str(sample_id) if epoch == 1 else f"{sample_id}#{epoch}"
+
+
+def request_text(value: Any) -> str:
+    """A sample's input as one text: a string, or chat messages as "role: text" blocks."""
+    if isinstance(value, str):
+        return value
+    return "\n\n".join(f"{m.role}: {m.text}" for m in value)
+
 
 #: The model a judge runs on when neither it nor the launch names one.
 MODEL = "louped/Qwen/Qwen2.5-1.5B-Instruct"

@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { parseAsBoolean, parseAsString, useQueryState, useQueryStates } from "nuqs";
 import { useMemo, useState } from "react";
 
+import { BlindButton, BlindSheet } from "@/components/blind-ab";
 import { EmptyState } from "@/components/empty-state";
 import { Help } from "@/components/help";
 import { HistoryCharts } from "@/components/history-chart";
@@ -131,6 +132,7 @@ function Pickers({
 
 function Loaded({ a, b }: { a: string; b: string }) {
   const [ra, rb] = useQueries({ queries: [q.run(a), q.run(b)] });
+  const [blind] = useQueryState("blind", parseAsBoolean);
   const pending = ra.isError || !ra.data ? ra : rb;
   return (
     <section className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-8">
@@ -142,8 +144,14 @@ function Loaded({ a, b }: { a: string; b: string }) {
           {ra.data.kind === "eval" && rb.data.kind === "eval" && (
             <>
               <Judge a={a} b={b} />
-              <Paired a={a} b={b} />
-              <Samples a={ra.data} b={rb.data} />
+              <BlindSheet a={a} b={b} />
+              {/* each sample's labelled answers would unblind the picks: not drawn while open */}
+              {!blind && (
+                <>
+                  <Paired a={a} b={b} />
+                  <Samples a={ra.data} b={rb.data} />
+                </>
+              )}
             </>
           )}
         </>
@@ -211,6 +219,7 @@ function Judge({ a, b }: { a: string; b: string }) {
   const chosen = judges.data?.find((j) => j.name === name);
   return (
     <Part id="compare/section/judge" className="-mt-4 flex items-center justify-end gap-2">
+      <BlindButton />
       {(go.error ?? judges.error) && (
         <span className="text-negative text-xs">{(go.error ?? judges.error)!.message}</span>
       )}

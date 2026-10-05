@@ -307,6 +307,50 @@ class PairedScore(BaseModel):
     down: int
 
 
+class AbPair(BaseModel):
+    """One pair to pick from, blind: which run gave left and which right is not said."""
+
+    sample: str
+    request: str
+    left: str
+    right: str
+    pick: Literal["left", "right", "tie"] | None = None
+
+
+class AbSession(BaseModel):
+    """A blind A/B of two eval runs: their shared samples, each side placed by a seed."""
+
+    a: str
+    b: str
+    pairs: list[AbPair]
+    labelled: int
+
+
+class AbJudge(BaseModel):
+    """A judge run of the same two runs, against the person's picks."""
+
+    run: str
+    labelled: int = Field(description="Pairs both the person and the judge picked.")
+    agreement: float | None = Field(description="Share of those pairs with the same pick.")
+    kappa: float | None = Field(description="Cohen's kappa: agreement beyond chance.")
+
+
+class AbResult(BaseModel):
+    """What the person's blind picks say: how often B won, with its 95% interval."""
+
+    a: str
+    b: str
+    labelled: int
+    total: int
+    a_wins: int
+    b_wins: int
+    ties: int
+    b_rate: float | None = Field(description="B's win rate: B 1, tie 0.5, A 0, averaged.")
+    low: float | None = Field(description="The rate's 95% bootstrap interval, low end.")
+    high: float | None = Field(description="The rate's 95% bootstrap interval, high end.")
+    judges: list[AbJudge]
+
+
 class Agreement(BaseModel):
     """A judge run's agreement with a person's labels on its pairs."""
 
