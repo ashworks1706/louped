@@ -1,5 +1,51 @@
 # Changelog
 
+## [0.5.0](https://github.com/ashworks1706/louped/compare/v0.4.0...v0.5.0) (2026-10-05)
+
+
+### Features
+
+* agent-made figures (Plotly 3D and animation) and derived columns ([ed07d18](https://github.com/ashworks1706/louped/commit/ed07d18d29e39406f5e2fccb604ab75ad16f7092))
+* agent-made figures (Plotly 3D and animation) and derived columns ([d906e6d](https://github.com/ashworks1706/louped/commit/d906e6de06c062cdff8de109c2c453c33e9371b1))
+* an item opens on its claim or question ([93eb9e9](https://github.com/ashworks1706/louped/commit/93eb9e97a1081ce4bdc115d046e6a2ccb409a1be))
+* an item opens on its claim or question ([467f8b3](https://github.com/ashworks1706/louped/commit/467f8b357a05e5c05a3f6ea28c6d0437480a82d7))
+* blind A/B of two eval runs on Compare ([686b476](https://github.com/ashworks1706/louped/commit/686b476de5a4a12803a0d2d71bbedf917a6bc5e5))
+* blind A/B of two eval runs on Compare ([c76560a](https://github.com/ashworks1706/louped/commit/c76560a3ee4e969d94a8137dcd8b24d33d70b346))
+* every page's parts have addresses an agent can hint ([2e06d88](https://github.com/ashworks1706/louped/commit/2e06d88034df7b0d000a5f063d8b5ab46c0523ff))
+* every page's parts have addresses an agent can hint ([081cc76](https://github.com/ashworks1706/louped/commit/081cc76fa3334ee109426316b6bdbd7fd069a714))
+* every part of a page is addressable: Shift+click to pick, layout rules, agent cues ([0890529](https://github.com/ashworks1706/louped/commit/089052959d03760935a3c024a84d364c47b7d5e2))
+* every part of a page is addressable: Shift+click to pick, layout rules, agent cues ([a82b898](https://github.com/ashworks1706/louped/commit/a82b8984ea0da69021c91fbf1898e6d15bf0d777))
+* judges as project files, and an eval task picker on Launch ([0e948f5](https://github.com/ashworks1706/louped/commit/0e948f5fcdcb3bdbf12f482d21fa0ac31f36eae8))
+* judges as project files, and an eval task picker on Launch ([501e7f3](https://github.com/ashworks1706/louped/commit/501e7f3d376c63f11bc4b89766579b912fd259ac))
+* keep a Probe result as a run, compare vectors and overlay curves ([1da5f0d](https://github.com/ashworks1706/louped/commit/1da5f0db672b1938f38bfa425181d3d80ef795a6))
+* keep a Probe result as a run, compare vectors and overlay curves ([7b691d7](https://github.com/ashworks1706/louped/commit/7b691d78f2e3bef6ef5b49dbe97319f1bcb3ca41))
+* keep the project's sources and search them ([ea49f15](https://github.com/ashworks1706/louped/commit/ea49f15c24065496b038bff540426901d006de63))
+* keep the project's sources and search them ([ac601e8](https://github.com/ashworks1706/louped/commit/ac601e88b92053930fb8d0509256fde8eb69c2dd))
+* louped check and the ground-claims skill ([5c615ef](https://github.com/ashworks1706/louped/commit/5c615efb9fbcdb883e6f7344c29e11a4f0b7142d))
+* louped check and the ground-claims skill ([db0d7c2](https://github.com/ashworks1706/louped/commit/db0d7c29ef897099895e74a1f64af696d5c49a00))
+* notebooks as papermill jobs, shown as Jupyter pages ([5566ba6](https://github.com/ashworks1706/louped/commit/5566ba6d8bb4fe09b9a99f53cc06b16daa9637e5))
+* notebooks as papermill jobs, shown as Jupyter pages ([1d5345d](https://github.com/ashworks1706/louped/commit/1d5345dae6e33b22ad96bcbc0e9352280e047c21))
+* picked items become a cohort: read alone with paired intervals, saved, run again ([49c0343](https://github.com/ashworks1706/louped/commit/49c03433274218c27038935a35e5ce854c71723d))
+* picked items become a cohort: read alone with paired intervals, saved, run again ([156d247](https://github.com/ashworks1706/louped/commit/156d2474e64f2e332070d553bf05a7fcfa40c2ee))
+* read sources in the app, pin passages and cite them ([c3193e4](https://github.com/ashworks1706/louped/commit/c3193e4c9b43fadeddea2a74debb06f6e3d23650))
+* read sources in the app, pin passages and cite them ([b73e0b3](https://github.com/ashworks1706/louped/commit/b73e0b32fed7b9cfe23f01736a51aa0d10abdae8))
+* reports/ with decks, documents and exported figures ([61b65b9](https://github.com/ashworks1706/louped/commit/61b65b94c5eb1a17bb89d1b1ef2d98075723ab7d))
+* reports/ with decks, documents and exported figures ([f06eef2](https://github.com/ashworks1706/louped/commit/f06eef28d2cba3502f0db1a79e13fee2eb8b3e4b))
+* trace a figure's point to its rows, script and commit ([02137aa](https://github.com/ashworks1706/louped/commit/02137aae9e153bb756168dfa74100461bf8847ef))
+* trace a figure's point to its rows, script and commit ([e8607ef](https://github.com/ashworks1706/louped/commit/e8607efe8577afbc848c9082bdbb8fb94c9ddeea))
+
+
+### Bug Fixes
+
+* confine server-added source files before they reach add_source ([f5b51c7](https://github.com/ashworks1706/louped/commit/f5b51c701a45f9a345fd993c69bdd22166888719))
+* fetch sources from public addresses only; split file and URL adds ([836fb66](https://github.com/ashworks1706/louped/commit/836fb66dd87ed59adaba24902fe4fcba8d6f235f))
+* keep cohort files inside experiments/ whatever the experiment name ([1cfa302](https://github.com/ashworks1706/louped/commit/1cfa3028e10035500ff3be4945e78df9e7d9c14f))
+* keep the uninstalled fallback version in step with releases ([1ccfd22](https://github.com/ashworks1706/louped/commit/1ccfd22aa138df1cf01996e8e7c5a2f6b61e2653))
+* keep the uninstalled fallback version in step with releases ([eff9daf](https://github.com/ashworks1706/louped/commit/eff9daf9faeb44a8e75b15b7f23c50073e8e4f4f))
+* notebook review findings ([4d921df](https://github.com/ashworks1706/louped/commit/4d921df34c3ca1c7560dc7e82337ac92948211c5))
+* reports review findings ([d96f760](https://github.com/ashworks1706/louped/commit/d96f7603412d4db662d54e4e6eccfe62d0ff9f16))
+* resolve blind A/B files under the state folder ([dc920ce](https://github.com/ashworks1706/louped/commit/dc920ced5768168e19be7a4b6fee8b2294b99280))
+
 ## [0.4.0](https://github.com/ashworks1706/louped/compare/v0.3.0...v0.4.0) (2026-10-05)
 
 
