@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,8 @@ from louped.stores.types import (
     ToolCall,
 )
 from louped.stores.values import flatten, text, to_float
+
+log = logging.getLogger(__name__)
 
 PREFIX = "e-"
 
@@ -56,7 +59,8 @@ def eval_logs() -> list[tuple[Path, EvalLog]]:
         path = Path(info.name.removeprefix("file://"))
         try:
             found.append((path, _header(str(path), path.stat().st_mtime)))
-        except Exception:  # an unreadable or half-written log is skipped, not fatal
+        except Exception as exc:  # an unreadable or half-written log is skipped, not fatal
+            log.warning("skipping eval log %s: %s", path, exc)
             continue
     return found
 

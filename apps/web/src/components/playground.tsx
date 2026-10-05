@@ -16,7 +16,7 @@ import { toast } from "sonner";
 
 import { CopyButton } from "@/components/copy-button";
 import { EmptyState } from "@/components/empty-state";
-import { ExamplesButton } from "@/components/jobs";
+import { ExamplesButton } from "@/components/examples-button";
 import { QueryState } from "@/components/query-state";
 import { Help } from "@/components/help";
 import { arrange, Part, PartNote, part, partId, useRules } from "@/components/parts";

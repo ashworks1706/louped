@@ -250,6 +250,8 @@ function ExperimentTabs({ experiment: e }: { experiment: ExperimentDetail }) {
     const v = figures.data?.find((f) => f.path === path);
     if (v)
       return <Figure view={v.view} id={at(v.path)} source={`experiment:${e.name}/${v.path}`} />;
+    if (figures.isError)
+      return <p className="text-muted-foreground text-sm">{figures.error.message}</p>;
     return figures.isPending ? null : (
       <p className="text-muted-foreground text-sm">
         No figure{" "}

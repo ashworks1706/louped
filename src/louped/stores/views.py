@@ -9,12 +9,15 @@ file should not hide the rest.
 from __future__ import annotations
 
 import json
+import logging
 
 from pydantic import TypeAdapter, ValidationError
 
 from louped.core.paths import NAME, experiment_folder, inside
 from louped.stores import mlflow_runs
 from louped.stores.types import RunView, View
+
+log = logging.getLogger(__name__)
 
 DIR = "views"
 #: A figure's name: its file under views/, without .json.
@@ -31,7 +34,8 @@ def list_views(run_id: str) -> list[RunView] | None:
         data = mlflow_runs.read_artifact(run_id, path)
         try:
             out.append(RunView(path=path, view=_VIEW.validate_python(json.loads(data or b""))))
-        except (ValidationError, ValueError):
+        except (ValidationError, ValueError) as exc:  # not a figure this version draws
+            log.warning("skipping figure %s of %s: %s", path, run_id, exc)
             continue
     return out
 
@@ -54,13 +58,14 @@ def add_view(run_id: str, name: str, view: View) -> RunView | None:
 
 def experiment_views(experiment: str) -> list[RunView]:
     """An experiment's own figures, by file name; FileNotFoundError when there is no such
-    experiment. A file that is not a view is skipped."""
+    experiment. A file that is not a view is skipped, with a warning in the log."""
     folder = experiment_folder(experiment) / DIR
     out: list[RunView] = []
     for path in sorted(folder.glob("*.json")) if folder.is_dir() else []:
         try:
             view = _VIEW.validate_json(path.read_bytes())
-        except ValidationError:
+        except ValidationError as exc:
+            log.warning("skipping figure %s: %s", path, exc)
             continue
         out.append(RunView(path=f"{DIR}/{path.name}", view=view))
     return out

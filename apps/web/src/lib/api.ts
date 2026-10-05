@@ -66,7 +66,7 @@ export type PartRule = Schemas["PartRule"];
 export type Cue = Schemas["Cue"];
 export type Cues = Schemas["Cues"];
 export type CohortStats = Schemas["CohortStats"];
-export type SavedCohort = Schemas["Saved"];
+type SavedCohort = Schemas["Saved"];
 type CohortQuery = Schemas["CohortQuery"];
 type Cohort = Schemas["Cohort"];
 

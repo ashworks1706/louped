@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 const WEEK_MS = 7 * 24 * 3600 * 1000;
 
 /** The four numbers that say where the research stands, each opening the list behind it. */
-export function HomeStats() {
+function HomeStats() {
   const experiments = useQuery(q.experiments());
   const runs = useQuery(q.runs());
   const live = useLive();
@@ -47,14 +47,14 @@ export function HomeStats() {
           href="/runs/"
           part="home/stat/live"
           note={
-            !runs.data
+            !live.known
               ? undefined
               : live.jobs.length + live.runs.length === 0
                 ? "nothing running"
                 : `${live.jobs.length} jobs · ${live.runs.length} runs`
           }
         >
-          {runs.data ? live.jobs.length + live.runs.length : "—"}
+          {live.known ? live.jobs.length + live.runs.length : "—"}
         </Stat>
       ),
     },
@@ -111,19 +111,22 @@ export function HomeStats() {
 }
 
 /** Jobs and runs still going, for the Live strip and the sidebar. Jobs only on a server that
- * launches. */
+ * launches. known is false while either list is loading or could not be read, so a count is
+ * never shown for what was not seen. */
 export function useLive() {
   const health = useQuery(q.health());
-  const jobs = useQuery({ ...q.jobs(), retry: false, enabled: health.data?.launching === true });
+  const launching = health.data?.launching === true;
+  const jobs = useQuery({ ...q.jobs(), retry: false, enabled: launching });
   const runs = useQuery(q.runs());
   return {
     jobs: (jobs.data ?? []).filter((j) => isLive(j.status)),
     runs: (runs.data ?? []).filter((r) => isLive(r.status)),
+    known: runs.isSuccess && (!launching || jobs.isSuccess),
   };
 }
 
 /** What is running now, with progress; absent when nothing is. */
-export function LiveNow() {
+function LiveNow() {
   const live = useLive();
   if (live.jobs.length + live.runs.length === 0) return null;
   return (
@@ -171,7 +174,7 @@ export function LiveNow() {
 }
 
 /** The two research domains, each opening its own section, with how many questions it holds. */
-export function DomainCards() {
+function DomainCards() {
   const experiments = useQuery(q.experiments());
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

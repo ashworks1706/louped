@@ -23,6 +23,7 @@ import signal
 import subprocess
 import sys
 import threading
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
@@ -387,7 +388,10 @@ class Jobs:
         for path in self.dir.glob("*/job.json"):
             try:
                 found.append(Job.model_validate_json(path.read_text()))
-            except ValueError:  # a job file from another version, or damaged: not ours to run
+            except (
+                ValueError
+            ) as exc:  # a job file from another version, or damaged: not ours to run
+                log.warning("skipping job %s: %s", path.parent.name, exc)
                 continue
         return sorted(found, key=lambda j: j.created, reverse=True)
 
@@ -496,6 +500,17 @@ class Jobs:
         path = self.dir / job_id / "log.txt"
         text = path.read_bytes()[-TAIL:].decode(errors="replace") if path.exists() else ""
         return JobDetail(**job.model_dump(), log=text)
+
+
+def editing_guard(launching: bool) -> Callable[[], None]:
+    """A check that refuses a change (403) on a server started with --expose: its routes that
+    write call it first."""
+
+    def editing() -> None:
+        if not launching:
+            raise HTTPException(403, "editing is off: this server was started with --expose")
+
+    return editing
 
 
 def require_json(request: Request) -> None:

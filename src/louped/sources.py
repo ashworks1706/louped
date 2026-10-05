@@ -358,7 +358,9 @@ def _arxiv_title(paper: str, transport: httpx.BaseTransport | None) -> str | Non
 
 
 def _public(request: httpx.Request) -> None:
-    """Refuse a request to this machine or its network: a source comes from the internet."""
+    """Refuse a request to a local or private address (127.0.0.1, 10.x, ::1) or a local name
+    (localhost, *.local, *.internal): a source comes from the internet. The host is checked as
+    written, not resolved, so a public name pointing at a private address is not caught."""
     host = request.url.host
     try:
         local = not ipaddress.ip_address(host).is_global
