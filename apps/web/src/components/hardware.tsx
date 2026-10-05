@@ -108,9 +108,9 @@ export function Hardware({ history }: { history: History }) {
             <Stat
               label="GPU power, peak"
               part="run.overview/hardware/gpu-power"
-              note={`mean ${(mean(power.flat()) ?? 0).toFixed(0)} W`}
+              note={watts(mean(power.flat()), "mean ")}
             >
-              {`${Math.max(0, ...power.map((p) => peak(p) ?? 0)).toFixed(0)} W`}
+              {watts(peakOf(power.map(peak)))}
             </Stat>
             <Stat
               label="GPU memory, peak"
@@ -174,4 +174,15 @@ export function Hardware({ history }: { history: History }) {
       </div>
     </section>
   );
+}
+
+/** A power in watts, or — when no sample was logged. */
+function watts(w: number | null | undefined, prefix = "") {
+  return w == null ? "—" : `${prefix}${w.toFixed(0)} W`;
+}
+
+/** The largest of the peaks that exist; null when none does. */
+function peakOf(peaks: (number | null | undefined)[]) {
+  const seen = peaks.filter((p): p is number => p != null);
+  return seen.length ? Math.max(...seen) : null;
 }

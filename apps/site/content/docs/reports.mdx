@@ -4,8 +4,14 @@ description: Write-ups, decks, documents and figures, each number traced to the 
 ---
 
 `reports/` sits beside `experiments/` and `sources/`. It holds what the project hands to people:
-Markdown write-ups, slide decks (`.pptx`), Word documents (`.docx`), PDFs and figures. The
-Reports page (G O) lists them and shows each one as it will be read.
+
+- Markdown write-ups
+- slide decks (`.pptx`)
+- Word documents (`.docx`)
+- PDFs
+- figures
+
+The Reports page (G O) lists them and shows each one as it will be read.
 
 ## Export a figure
 
@@ -17,10 +23,12 @@ louped export run:m-3f2/views/umap.json --format png
 ```
 
 The file goes to `reports/figures/`. Beside it, `<file>.refs.json` keeps the figure's ref and its
-trace at the time of export: the run, the script that made the figure and the commit. A Vega-Lite
-figure exports through vl-convert. A Plotly figure exports through Kaleido, which draws it in
-Chrome; without Chrome, the export stops and says so. The figures the app draws itself, such as
-heatmaps and tables, do not export.
+trace at the time of export: the run, the script that made the figure and the commit.
+
+- A Vega-Lite figure exports through vl-convert.
+- A Plotly figure exports through Kaleido, which draws it in Chrome. Without Chrome, the export
+  stops and says so.
+- The figures the app draws itself, such as heatmaps and tables, do not export.
 
 The export does not write over a file of the same name, because a deck can show that file. To
 write over it, click Replace in the message, or add `--replace` in the terminal. To keep both,
@@ -29,10 +37,12 @@ give a new name with `--name`.
 ## Decks and documents
 
 Your agent writes decks with python-pptx and documents with python-docx, from the run's files and
-exported figures. It puts each number's ref beside the number: in a deck, in the slide's speaker
-notes; in a document, in the same paragraph or in the paragraph above a table.
+exported figures. It puts each number's ref beside the number:
 
-The Reports page draws a deck or document with LibreOffice when it is installed, as it prints.
+- In a deck, it puts the ref in the slide's speaker notes.
+- In a document, it puts the ref in the same paragraph, or in the paragraph above a table.
+
+When LibreOffice is installed, the Reports page draws a deck or document with it, as it prints.
 Without LibreOffice, it shows the text of each slide or paragraph and says why.
 
 ## Check before you hand it over
@@ -40,4 +50,5 @@ Without LibreOffice, it shows the text of each slide or paragraph and says why.
 `louped check` reads decks and documents in `reports/` as well as Markdown. For a deck it names
 the slide, and for a document the paragraph. It also checks that each exported figure's ref still
 resolves. A file that it cannot read, such as a damaged deck, is an issue of kind `file`. It
-does not stop the check. Office's lock files (`~$deck.pptx`) are skipped. See [Sources](/docs/sources#check-a-write-up) for what it looks for.
+does not stop the check. Office's lock files (`~$deck.pptx`) are skipped. See
+[Sources](/docs/sources#check-a-write-up) for what it looks for.

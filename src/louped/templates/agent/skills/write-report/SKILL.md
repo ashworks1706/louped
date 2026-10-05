@@ -1,6 +1,6 @@
 ---
 name: write-report
-description: Write or revise a louped run's report.md or an experiment README's Result, short and with every claim traced to a run. Use whenever you write up results for the user.
+description: Write or revise a louped run's report.md or an experiment README's Result, short and with every claim traced to a run. Use whenever you write up results for the person.
 ---
 
 A report is read by someone deciding what to do next. Give them the answer, the evidence and its
@@ -15,8 +15,8 @@ limits, and nothing else.
    a pilot.
 3. State a difference between conditions only from `compare` on the same items, with its paired
    interval. Otherwise say the runs are not comparable.
-4. Cite a paper only if you read it in this session from `sources/`, pinned the passage, and
-   cite it as `[@<key> p<page>]` (the ground-claims skill). Do not cite from memory or invent a
+4. Cite a paper only if you read it in this session from `sources/` and pinned the passage.
+   Cite it as `[@<key> p<page>]` (the ground-claims skill). Do not cite from memory or invent a
    reference. If a comparison to prior work needs a paper you have not read, write "not checked".
 5. Quote examples from the records exactly, with their item id. Show one item where the effect
    happened and one where it did not. Do not pick only the striking ones.
@@ -72,8 +72,8 @@ At most three claims. Put the rest in the records, the run page or a table.
 
 ## Decks and documents
 
-When the user asks for slides or a document, write it into `reports/` with python-pptx or
-python-docx, from the run's files. Export each figure first with `export_figure` and place the
+When the person asks for slides or a document, write it into `reports/` with python-pptx or
+python-docx, from the run's files. First export each figure with `export_figure`. Then place the
 file it returns. Put each number's ref in the slide's speaker notes, or in the document's
 paragraph (above a table, for the table). Keep the deck to the same claims as the report.
 
@@ -85,7 +85,7 @@ Re-read it as a reviewer would:
 - Check each number against its source.
 - For each claim, ask what result would have contradicted it.
 - Delete any sentence whose removal loses nothing.
-- Then point the user to the run page for the items behind the numbers.
+- Then point the person to the run page for the items behind the numbers.
 
 Sources: Google's Technical Writing One (developers.google.com/tech-writing/one), and Neel Nanda's
 "Highly Opinionated Advice on How to Write ML Papers" (alignmentforum.org, 2025).

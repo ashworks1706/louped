@@ -3,8 +3,8 @@ title: Write an experiment
 description: What goes in an experiment's folder, and how its results show in the app.
 ---
 
-An experiment is a folder in `experiments/`, named for its question. The app finds everything in it
-by its file names; nothing needs registering.
+An experiment is a folder in `experiments/`, named for its question. The app finds every file in it
+by its file name. You do not need to register anything.
 
 ```sh
 louped new does-pushback-flip-answers --domain honesty
@@ -34,13 +34,14 @@ extras: tracking, interp
 - `status` is `active`, `parked` or `answered`.
 - `extras` is optional. A job sent to a cluster installs only these.
 - The first paragraph of **Question** and of **Result** shows on the Experiments page.
-- **Edit** on the experiment's page edits the README in place, with its rendering beside it. So
-  does Edit on any text file a run logged: its `report.md`, examples to judge, or a JSON, JSONL,
-  CSV, YAML or TOML file. JSON, JSONL and TOML must still parse to be saved. The run then lists
-  the files under **Edited after** in its provenance, so its results never silently change.
+- **Edit** on the experiment's page edits the README in place, with its rendering beside it.
+- **Edit** also works on any text file a run logged: its `report.md`, examples to judge, or a
+  JSON, JSONL, CSV, YAML or TOML file. JSON, JSONL and TOML must still parse to be saved. The run
+  then lists the files under **Edited after** in its provenance. Thus its results never silently
+  change.
 - The bin button on an experiment, run or job page deletes it after one confirm. Nothing is gone
-  for good: an experiment's folder, an eval's log and a job move to `.louped/trash/`, and MLflow
-  keeps a deleted run until `mlflow gc`. A run or job still running must be stopped first.
+  for good. An experiment's folder, an eval's log and a job move to `.louped/trash/`. MLflow keeps
+  a deleted run until `mlflow gc`. Stop a run or job that is still running before you delete it.
 
 ### Domains
 
@@ -88,24 +89,29 @@ What the app shows depends on what the script writes:
 | `views.vega(title, spec)`, data inline      | **Figures**: any Vega-Lite chart            |
 | `views.plotly(title, data, frames=...)`     | **Figures**: 3D and animated charts         |
 
-A finding made by hand in Probe or Benchmark becomes a run too: **Save as run** keeps what the
-open tool showed (its figures, the prompt and the settings sent) under one of the experiments,
-or under `probe` or `benchmark` when it answers none yet.
+A finding made by hand in Probe or Benchmark becomes a run too. **Save as run** keeps what the
+open tool showed: its figures, the prompt and the settings sent. It saves them under one of the
+experiments. If the finding answers no experiment yet, it saves them under `probe` or `benchmark`.
 
 A run's files can grow after it ends. `louped derive <run> <script>` runs the script's
-`derive(files)` over a copy of them and logs what it returns into the run: rows keyed like the
-records become columns in **Items**, a figure lands on **Figures**. The script is logged beside
-them. Your agent does this when you ask for a column or chart the run lacks.
+`derive(files)` over a copy of them. It logs what the script returns into the run:
+
+- Rows keyed like the records become columns in **Items**.
+- A figure lands on **Figures**.
+
+The script is logged beside them. Your agent does this when you ask for a column or chart the run
+lacks.
 
 A figure whose points are the run's items can say so: `views.plotly(..., items=views.items(folder="raw"))`
-with each trace's `ids` set to the items' keys (for `vega`, `views.items(field="qid")`). Hovering
-a point then names its item, the files holding it and the script and commit that made the figure;
-clicking it opens the item in **Items**. Your agent follows the same chain with `trace`.
+with each trace's `ids` set to the items' keys (for `vega`, `views.items(field="qid")`). Then hover
+over a point to see its item, the files that hold it, and the script and commit that made the
+figure. Click the point to open the item in **Items**. Your agent follows the same chain with
+`trace`.
 
 ## Notebooks
 
-A notebook in the experiment's folder runs as a job. Tag one cell `parameters` (in Jupyter: the
-cell's property inspector) and set the variables a run can change there:
+A notebook in the experiment's folder runs as a job. Tag one cell `parameters` (in Jupyter, use the
+cell's property inspector). Set the variables a run can change in that cell:
 
 ```python
 n = 200        # items to read
@@ -119,13 +125,16 @@ louped notebook experiments/my-question/explore.ipynb --param n=50
 ```
 
 papermill runs the notebook in its own folder, with your values in a new cell after the
-parameters cell. A value is read as the type of the variable's default (or annotation): `n=50` is
-an int, and a value that does not parse as one stops the job. The run is in the notebook's
-experiment and keeps the parameters and the executed copy, `notebook/<name>.ipynb`, with every
-output. The run's **Artifacts** tab shows that copy as Jupyter does. A cell can log to the run
-with `mlflow.log_metric` or `louped.tracking.log_json`, as `run.py` does. A cell that raises
-fails the run, and the copy shows the cells up to it. A notebook from Colab needs the
-`parameters` tag added; Colab's `#@param` form fields are not read.
+parameters cell. A value is read as the type of the variable's default (or annotation). For
+example, `n=50` is an int, and a value that does not parse as an int stops the job.
+
+The run is in the notebook's experiment. It keeps the parameters and the executed copy,
+`notebook/<name>.ipynb`, with every output. The run's **Artifacts** tab shows that copy as Jupyter
+does. A cell can log to the run with `mlflow.log_metric` or `louped.tracking.log_json`, as `run.py`
+does. A cell that raises fails the run, and the copy shows the cells up to it.
+
+A notebook from Colab needs the `parameters` tag added. louped does not read Colab's `#@param` form
+fields.
 
 ## Evals and judges
 
@@ -133,8 +142,8 @@ An eval is an Inspect task: a `@task` function in an experiment's `task.py`, or 
 inspect_evals' benchmarks. **Browse** beside the task on Launch's `inspect eval` lists both,
 searchable by what they measure.
 
-A judge compares two eval runs' answers sample by sample, each pair in both orders, and logs B's
-win rate as a run. louped has one (`default`); a project adds its own as `judges/<name>.py`:
+A judge compares two eval runs' answers sample by sample, each pair in both orders. It logs B's win
+rate as a run. louped has one judge (`default`). A project adds its own as `judges/<name>.py`:
 
 ```python title="judges/honest.py"
 """Which answer admits what it does not know?"""
@@ -148,15 +157,22 @@ MODEL = "louped/Qwen/Qwen2.5-7B-Instruct"  # optional
 Compare's **Judge** and Launch's `louped judge` offer every judge by name. Your agent writes one
 with `new_judge` when you ask for a new criterion.
 
-**Blind A/B** on Compare is the same comparison made by you: each pair's answers sit left and
-right in an order shuffled once and kept, so you never see which run gave which. Pick with the
-keys `1`, `2` or `0` for a tie. Once every pair is picked, **Reveal** locks the picks and shows
-B's win rate with its 95% interval and how often each judge of the same runs agreed with you (and
-its kappa), which is how to tell whether a judge can be trusted on this question. Picks are kept
-under `.louped/ab/`. Compare's per-sample answers are hidden while Blind A/B is open.
+**Blind A/B** on Compare is the same comparison, made by you. Each pair's answers sit left and
+right, in an order shuffled once and kept. Thus you never see which run gave which answer. Pick with
+the keys `1`, `2` or `0` for a tie.
+
+When you have picked every pair, **Reveal** locks the picks. It then shows:
+
+- B's win rate with its 95% interval
+- how often each judge of the same runs agreed with you, and its kappa
+
+Use this agreement to decide whether you can trust a judge on this question. Picks are kept under
+`.louped/ab/`. Compare's per-sample answers are hidden while Blind A/B is open.
 
 ## Code from a paper
 
-If a paper's code needs its own package versions, run it in its own environment. Clone it at a
-fixed commit under `.louped/vendor/`, call it as a subprocess, and log its per-item records and
-report as above.
+If a paper's code needs its own package versions, run it in its own environment:
+
+1. Clone it at a fixed commit under `.louped/vendor/`.
+2. Call it as a subprocess.
+3. Log its per-item records and report as above.

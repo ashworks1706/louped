@@ -194,9 +194,7 @@ def create_app(
     async def bad_experiment(_: Request, exc: stores.BadExperiment) -> JSONResponse:
         return JSONResponse({"detail": str(exc)}, status_code=500)
 
-    def editing() -> None:
-        if not launching:
-            raise HTTPException(403, "editing is off: this server was started with --expose")
+    editing = launch.editing_guard(launching)
 
     @app.get("/api/health")
     def health() -> Health:

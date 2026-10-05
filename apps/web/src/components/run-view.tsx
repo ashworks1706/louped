@@ -468,10 +468,11 @@ function Provenance({ run }: { run: RunDetail }) {
   const meta = useQuery({ ...artifactQuery(run.id, "meta.json"), enabled: hasMeta });
   const command = useQuery({ ...artifactQuery(run.id, "command.txt"), enabled: hasCommand });
   let m: Meta = {};
+  let unreadable = false; // meta.json is there but not JSON: say so, do not guess its facts
   try {
     m = meta.data ? (JSON.parse(meta.data) as Meta) : {};
   } catch {
-    m = {};
+    unreadable = true;
   }
   const sha = run.tags["louped.git_sha"] || m.git?.sha || "";
   const dirty = (run.tags["louped.git_dirty"] ?? String(m.git?.dirty ?? "")) === "true";
@@ -484,7 +485,11 @@ function Provenance({ run }: { run: RunDetail }) {
     ],
     [
       "Code",
-      sha ? `${sha.slice(0, 12)}${dirty ? " (uncommitted changes)" : ""}` : "not a git checkout",
+      sha
+        ? `${sha.slice(0, 12)}${dirty ? " (uncommitted changes)" : ""}`
+        : unreadable
+          ? "unknown: meta.json does not parse"
+          : "not a git checkout",
     ],
   ];
   // files changed in the app after the run wrote them: its results are no longer only its own

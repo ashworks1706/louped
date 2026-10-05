@@ -138,7 +138,9 @@ function Viewer({ source: s }: { source: Source }) {
             </Part>
           )}
         </div>
-        <Pins source={s} pins={pins.data ?? []} />
+        <QueryState query={pins} rows={2}>
+          {(all) => <Pins source={s} pins={all} />}
+        </QueryState>
       </div>
     </>
   );

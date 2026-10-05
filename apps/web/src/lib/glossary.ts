@@ -11,7 +11,7 @@ export const GLOSSARY = {
   source: "The run that saved the vector, with the figures that chose its layer.",
   // runs
   kind: "eval: a model scored on a task. analysis: figures from a script, such as patching or a sweep. training: fine-tuning, with its curves.",
-  headline: "The run's last logged metric. Open the run for all of them.",
+  headline: "The run's first reported metric, at its final value. Open the run for all of them.",
   // compare
   delta: "B minus A: the changed run's score minus the baseline's, averaged over samples.",
   ratio: "B ÷ A. For a cost, under 1 is a saving; for throughput, over 1 is a speed-up.",
@@ -43,7 +43,7 @@ const SCORERS: Record<string, string> = {
   tool_errors: "Share of tool calls that errored. Lower is better.",
   called: "Share of samples that called the tool.",
   grounded: "Share of answers that used a tool's output.",
-  recall: "Share of the gold passages among those retrieved.",
+  recall: "Share of the gold passages found in the top k retrieved.",
   faithful: "How likely the retrieved text supports the answer.",
   b_wins:
     "Share of pairs a judge model preferred B, averaged over both answer orders. 0.5 is no preference.",

@@ -7,29 +7,21 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { Help } from "@/components/help";
+import { CohortSelect, CohortNote, useCohort } from "@/components/items-cohort";
+import { AlignedTable, type Item } from "@/components/items-table";
 import { arrange, part, partId, PartData, PartNote, useRules, type Rule } from "@/components/parts";
 import { Term } from "@/components/term";
-import { ScoreCell } from "@/components/metric";
 import { RecordFields, RecordsTable } from "@/components/record-view";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { cohortStats, isSnapshot, q, type PairedScore, type RunDetail } from "@/lib/api";
+import { cohortStats, isSnapshot, type PairedScore, type RunDetail } from "@/lib/api";
 import {
   artifactQuery,
   DERIVED,
   asBinary,
-  brief,
   defaultField,
   downloadJsonl,
   itemFolders,
@@ -273,12 +265,6 @@ function Aligned({
   const [refParam, setRef] = useQueryState("ref", parseAsString);
   const [showParam, setShow] = useQueryState("show", parseAsString);
   const [item, setItem] = useQueryState("item", parseAsString);
-  const [idsParamValue, setIds] = useQueryState("ids", parseAsString);
-  const [cohortName, setCohort] = useQueryState("cohort", parseAsString);
-  const saved = useQuery({
-    ...q.cohorts(run?.experiment ?? ""),
-    enabled: !!run?.experiment,
-  });
   const [search, setSearch] = useState("");
   const rule = useRules();
   // a control's value: the URL's, else the layout's default for it, else the app's
@@ -306,20 +292,8 @@ function Aligned({
     const order = [...new Set(tables.flatMap((t) => t.map((r) => String(r[key]))))];
     return order.map((id) => ({ id, rows: byKey.map((m) => m.get(id)) }));
   }, [tables, key]);
-  // a cohort: the items picked (ids in the URL) or saved by name; every item without one
-  const cohortWanted = cohortName ?? rule("items/cohort").default ?? null;
-  const savedCohort = saved.data?.find((c) => c.name === cohortWanted);
-  const cohortIds = useMemo(
-    () =>
-      idsParamValue ? idsParamValue.split(",").map(decodeURIComponent) : (savedCohort?.ids ?? null),
-    [idsParamValue, savedCohort],
-  );
-  const items = useMemo(() => {
-    if (!cohortIds) return every;
-    const want = new Set(cohortIds);
-    return every.filter((it) => want.has(it.id));
-  }, [every, cohortIds]);
-  const notHeld = cohortIds ? new Set(cohortIds).size - items.length : 0;
+  const cohort = useCohort(run?.experiment, every);
+  const { items } = cohort;
 
   // the item's own fields (its question, its answer): equal across the conditions for every item
   // that more than one file holds, and not a file's own name for itself
@@ -336,9 +310,9 @@ function Aligned({
   // each condition's paired difference from the reference on these items, from the server,
   // whose interval is the one compare and the agent report
   const paired = useQuery({
-    queryKey: ["cohort-stats", run?.id, run?.folder, field, names[ref], cohortIds],
+    queryKey: ["cohort-stats", run?.id, run?.folder, field, names[ref], cohort.ids],
     queryFn: () =>
-      cohortStats(run!.id, { ids: cohortIds, folder: run!.folder, field, reference: names[ref] }),
+      cohortStats(run!.id, { ids: cohort.ids, folder: run!.folder, field, reference: names[ref] }),
     enabled: !!run && !!key && !!field && !isSnapshot(),
     retry: false,
   });
@@ -358,8 +332,7 @@ function Aligned({
     ref,
     key,
   );
-  const textOf = (it: (typeof items)[number]) => it.rows[ref]?.[text!];
-  const differs = (it: (typeof items)[number], i: number) =>
+  const differs = (it: Item, i: number) =>
     i !== ref &&
     it.rows[i] !== undefined &&
     it.rows[ref] !== undefined &&
@@ -397,11 +370,6 @@ function Aligned({
   });
 
   const pairs = new Map((paired.data?.paired ?? []).map((p) => [p.name, p]));
-  const cohortLabel = idsParamValue
-    ? `${cohortIds!.length} picked`
-    : savedCohort
-      ? `cohort ${savedCohort.name}`
-      : null;
 
   const needle = search.toLowerCase();
   const shown = items.filter((it) => {
@@ -429,7 +397,7 @@ function Aligned({
   const itemsData = (id: string) => {
     const [, kind, a, b] = id.split("/").map(decodeURIComponent);
     const found = every.find((it) => it.id === a);
-    const records = (it: (typeof items)[number]) =>
+    const records = (it: Item) =>
       Object.fromEntries(names.map((n, i) => [n, trim(it.rows[i] ?? null)]));
     if (kind === "row" && found)
       return {
@@ -464,7 +432,7 @@ function Aligned({
         condition: a,
         field,
         reference: names[ref],
-        on: cohortLabel ?? "every item",
+        on: cohort.label ?? "every item",
         ...(p
           ? {
               paired: { n: p.n, diff: p.diff, interval95: [p.low, p.high], up: p.up, down: p.down },
@@ -499,19 +467,6 @@ function Aligned({
       return { [key!]: opened.id, section, record: trim(row(section) ?? null) };
     return { [key!]: opened.id };
   };
-
-  // the table's columns as the layout orders them: the key, the text, then each condition
-  const columns = arrange(
-    [
-      { name: key, kind: "key" as const },
-      ...(text ? [{ name: text, kind: "text" as const }] : []),
-      ...names.map((n) => ({ name: n, kind: "condition" as const })),
-      ...added.cols.map((n) => ({ name: n, kind: "derived" as const })),
-    ],
-    (c) => partId("items/column", c.name),
-    rule,
-  );
-  const columnRule = (c: string) => rule(partId("items/column", c));
 
   return (
     <div className="flex flex-col gap-4">
@@ -606,34 +561,7 @@ function Aligned({
             )}
           </NativeSelect>
         </label>
-        {(idsParamValue || (saved.data?.length ?? 0) > 0) && (
-          <label
-            className={cn(
-              "flex items-center gap-1.5 text-xs",
-              control("cohort").hidden && "hidden",
-            )}
-            {...part("items/cohort")}
-          >
-            <span className="text-muted-foreground">{control("cohort").label ?? "On"}</span>
-            <NativeSelect
-              value={idsParamValue ? "*picked" : (cohortWanted ?? "")}
-              onChange={(e) => {
-                if (e.target.value === "*picked") return;
-                void setIds(null);
-                void setCohort(e.target.value || null);
-              }}
-              className="text-xs"
-            >
-              <option value="">every item</option>
-              {idsParamValue && <option value="*picked">{cohortIds!.length} picked</option>}
-              {saved.data?.map((c) => (
-                <option key={c.name} value={c.name}>
-                  cohort {c.name} · {c.ids.length}
-                </option>
-              ))}
-            </NativeSelect>
-          </label>
-        )}
+        <CohortSelect cohort={cohort} />
         <span className="text-muted-foreground ml-auto font-mono text-xs" {...part("items/count")}>
           {shown.length} of {items.length} items
         </span>
@@ -656,113 +584,20 @@ function Aligned({
           <Download /> Items
         </Button>
       </div>
-      <CohortNote
-        name={cohortWanted}
-        found={!!savedCohort || !!idsParamValue}
-        loading={saved.isPending && !!run?.experiment}
-        note={idsParamValue ? null : (savedCohort?.note ?? null)}
-        notHeld={notHeld}
+      <CohortNote cohort={cohort} />
+      <AlignedTable
+        items={shown}
+        keyName={key}
+        text={text}
+        names={names}
+        ref_={ref}
+        field={field}
+        binary={binary}
+        derived={added}
+        differs={differs}
+        opened={item}
+        open={(id) => void setItem(id)}
       />
-      <div className="overflow-x-auto rounded-xl border">
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              {columns.map((c) => {
-                const r = columnRule(c.name);
-                const label = (
-                  <>
-                    {r.label ?? c.name}
-                    {c.kind === "condition" && names.indexOf(c.name) === ref && (
-                      <span className="text-muted-foreground"> · ref</span>
-                    )}
-                    {r.about && <Help>{r.about}</Help>}
-                  </>
-                );
-                return (
-                  <TableHead
-                    key={c.name}
-                    {...part(partId("items/column", c.name))}
-                    className={cn(
-                      "font-mono text-xs",
-                      c.kind === "key" && "w-16",
-                      c.kind === "text" && "hidden sm:table-cell",
-                      c.kind === "condition" && "text-right whitespace-nowrap",
-                      c.kind === "derived" && "whitespace-nowrap",
-                    )}
-                  >
-                    <span className="inline-flex items-center gap-1">{label}</span>
-                  </TableHead>
-                );
-              })}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {shown.map((it) => (
-              <TableRow
-                key={it.id}
-                {...part(partId("items/row", it.id))}
-                className="focus-visible:ring-ring/50 cursor-pointer outline-none focus-visible:ring-[3px] focus-visible:ring-inset"
-                data-state={item === it.id ? "selected" : undefined}
-                tabIndex={0}
-                onClick={() => void setItem(it.id)}
-                onKeyDown={(e) => {
-                  if (e.key !== "Enter" && e.key !== " ") return;
-                  e.preventDefault();
-                  void setItem(it.id);
-                }}
-              >
-                {columns.map((c) => {
-                  if (c.kind === "key")
-                    return (
-                      <TableCell key={c.name} className="text-muted-foreground font-mono text-xs">
-                        {it.id}
-                        {text && !columnRule(text).hidden && (
-                          <span className="text-foreground mt-1 line-clamp-2 block font-sans text-sm whitespace-normal sm:hidden">
-                            {brief(textOf(it), 140)}
-                          </span>
-                        )}
-                      </TableCell>
-                    );
-                  if (c.kind === "text")
-                    return (
-                      <TableCell
-                        key={c.name}
-                        className="hidden max-w-md truncate text-sm sm:table-cell"
-                      >
-                        {brief(textOf(it), 140)}
-                      </TableCell>
-                    );
-                  if (c.kind === "derived")
-                    return (
-                      <TableCell
-                        key={c.name}
-                        className="max-w-48 truncate font-mono text-xs"
-                        {...part(partId("items/cell", it.id, c.name))}
-                      >
-                        {brief(added.of(it.id)[c.name] ?? "", 60)}
-                      </TableCell>
-                    );
-                  const i = names.indexOf(c.name);
-                  return (
-                    <TableCell
-                      key={c.name}
-                      className="text-right"
-                      {...part(partId("items/cell", it.id, c.name))}
-                    >
-                      <Cell
-                        value={it.rows[i]?.[field]}
-                        missing={!it.rows[i]}
-                        binary={binary}
-                        changed={differs(it, i)}
-                      />
-                    </TableCell>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
       <Sheet open={!!opened} onOpenChange={(o) => !o && void setItem(null)}>
         <SheetContent className="sm:max-w-6xl">
           {opened && (
@@ -782,37 +617,6 @@ function Aligned({
         </SheetContent>
       </Sheet>
     </div>
-  );
-}
-
-function Cell({
-  value,
-  missing,
-  binary,
-  changed,
-}: {
-  value: unknown;
-  missing: boolean;
-  binary: boolean;
-  changed: boolean;
-}) {
-  if (missing) return <span className="text-muted-foreground font-mono text-xs">—</span>;
-  const b = binary ? asBinary(value) : null;
-  return (
-    <span
-      className={cn(
-        "inline-flex min-w-7 justify-end rounded px-1.5 py-0.5",
-        changed &&
-          (b === 0 ? "bg-negative/10" : b === 1 ? "bg-positive/10" : "bg-muted font-medium"),
-      )}
-      title={changed ? "differs from the reference" : undefined}
-    >
-      {b !== null ? (
-        <ScoreCell value={b} />
-      ) : (
-        <span className="font-mono text-xs">{brief(value, 30)}</span>
-      )}
-    </span>
   );
 }
 
@@ -922,36 +726,6 @@ function Paired({ p, binary }: { p: PairedScore; binary: boolean }) {
       {binary && " pts"} · {f(p.low)} to {f(p.high)}
       <Help>{`Paired difference from the reference over the ${p.n} items both hold, with its 95% bootstrap interval: the interval the agent and Compare report.`}</Help>
     </span>
-  );
-}
-
-/** What the items are read on, when not every item: a saved cohort's note, ids no file holds,
- * or a cohort name the experiment does not have. */
-function CohortNote({
-  name,
-  found,
-  loading,
-  note,
-  notHeld,
-}: {
-  name: string | null;
-  found: boolean;
-  loading: boolean;
-  note: string | null;
-  notHeld: number;
-}) {
-  if (!found && (!name || loading)) return null;
-  if (found && !note && notHeld === 0) return null;
-  return (
-    <div className="flex flex-col gap-1 text-xs" {...part("items/cohort/note")}>
-      {!found && <p className="text-negative">This experiment has no cohort {name}.</p>}
-      {note && <p className="text-muted-foreground">{note}</p>}
-      {notHeld > 0 && (
-        <p className="text-muted-foreground">
-          {notHeld} of the cohort&apos;s items are not in these files.
-        </p>
-      )}
-    </div>
   );
 }
 

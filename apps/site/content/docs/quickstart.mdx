@@ -18,30 +18,36 @@ it and read the **Items** tab.
 
 ## What `louped init` makes
 
-| Path           | What it is                                                  |
-| -------------- | ----------------------------------------------------------- |
-| `louped.toml`  | Marks the project's root. Commands work from any subfolder. |
-| `experiments/` | One folder per question. The example is here.               |
-| `AGENTS.md`    | Instructions for your coding agent.                         |
-| `.mcp.json`    | Connects your agent to the app.                             |
-| `.louped/`     | Runs, logs and jobs. Not committed to git.                  |
+| Path              | What it is                                                  |
+| ----------------- | ----------------------------------------------------------- |
+| `louped.toml`     | Marks the project's root. Commands work from any subfolder. |
+| `experiments/`    | One folder per question. The example is here.               |
+| `AGENTS.md`       | Instructions for your coding agent.                         |
+| `.mcp.json`       | Connects your agent to the app.                             |
+| `.claude/skills/` | The skills your agent follows, such as `new-experiment`.    |
+| `.gitignore`      | Keeps `.louped/` out of git.                                |
+| `.louped/`        | Runs, logs and jobs. Not committed to git.                  |
 
 ## Extras
 
 Install only what you use.
 
-| Extra      | Adds                                                        |
-| ---------- | ----------------------------------------------------------- |
-| `server`   | The app (`louped serve`)                                    |
-| `tracking` | Run records, and GPU, CPU and memory use during each run    |
-| `interp`   | Loading models, interventions and analyses (torch, nnsight) |
-| `agent`    | The MCP server your coding agent uses (`louped mcp`)        |
-| `evals`    | Inspect evals                                               |
-| `train`    | Fine-tuning (TRL, PEFT)                                     |
-| `rl`       | Tasks with checkable answers, for GRPO                      |
-| `rag`      | Retrieval (bm25s, sentence-transformers)                    |
-| `sae`      | Sparse autoencoders (SAELens)                               |
-| `data`     | Building training sets from logged model calls              |
+| Extra       | Adds                                                                                                     |
+| ----------- | -------------------------------------------------------------------------------------------------------- |
+| `server`    | The app (`louped serve`). It includes `tracking`, `evals`, `sync`, `sources`, `reports` and `notebooks`. |
+| `tracking`  | Run records, and GPU, CPU and memory use during each run                                                 |
+| `interp`    | Loading models, interventions and analyses (torch, nnsight)                                              |
+| `agent`     | The MCP server your coding agent uses (`louped mcp`)                                                     |
+| `evals`     | Inspect evals                                                                                            |
+| `train`     | Fine-tuning (TRL, PEFT)                                                                                  |
+| `rl`        | Tasks with checkable answers, for GRPO                                                                   |
+| `rag`       | Retrieval (bm25s, sentence-transformers)                                                                 |
+| `sae`       | Sparse autoencoders (SAELens)                                                                            |
+| `data`      | Building training sets from logged model calls                                                           |
+| `sync`      | `louped push` and `louped pull` to a remote                                                              |
+| `sources`   | Reading papers, slides, documents and notebooks in `sources/`                                            |
+| `reports`   | Exporting figures as SVG, PNG or PDF                                                                     |
+| `notebooks` | Running notebooks as jobs, and showing them as Jupyter does                                              |
 
 ## Results you already have
 

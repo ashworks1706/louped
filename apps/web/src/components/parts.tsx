@@ -29,7 +29,7 @@ function matches(key: string, id: string) {
 
 /** The rules in force for one address: every matching key, the more specific (fewer *) over the
  * broader. */
-export function ruleFor(rules: Record<string, PartRule> | undefined, id: string): Rule {
+function ruleFor(rules: Record<string, PartRule> | undefined, id: string): Rule {
   if (!rules) return {};
   return Object.keys(rules)
     .filter((k) => matches(k, id))

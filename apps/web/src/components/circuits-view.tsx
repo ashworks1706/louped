@@ -6,7 +6,7 @@ import Link from "next/link";
 import { parseAsString, useQueryState } from "nuqs";
 
 import { EmptyState } from "@/components/empty-state";
-import { ExamplesButton } from "@/components/jobs";
+import { ExamplesButton } from "@/components/examples-button";
 import { part } from "@/components/parts";
 import { QueryState } from "@/components/query-state";
 import { Button } from "@/components/ui/button";

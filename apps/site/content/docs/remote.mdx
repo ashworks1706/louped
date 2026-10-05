@@ -6,7 +6,7 @@ description: Keep runs in a remote everyone can pull from, send jobs to a cluste
 ## A remote for runs
 
 Runs live in `.louped/`, which git ignores. To share them, or to keep them beside the code, give
-the project a remote. The quickest way is **Runs → Connect**, or a first `louped push`:
+the project a remote. To set one, use **Runs → Connect** or a first `louped push`:
 
 - Leave the remote empty to use a private Hugging Face Storage Bucket of your own, named after the
   project (`hf://buckets/<you>/<project>`). louped creates the bucket.
@@ -29,27 +29,32 @@ louped pull   # every bundle this louped has not pulled
 ```
 
 **Runs** has the same **Push** and **Pull** buttons. If an `hf://` remote finds no token, they open
-Connect to ask for one. Each push writes a new folder and rewrites nothing, so two people or
+Connect to ask for one. Each push writes a new folder and rewrites nothing. Thus two people or two
 machines never conflict. A bundle holds Inspect logs, an MLflow store with its artifacts, and
-`result.json` saying where it ran. Model weights stay out.
+`result.json`, which tells where it ran. Model weights stay out.
 
 ## Run on a cluster
 
-1. In the app, open **Launch**, set the options, choose **Run on** (ASU Sol, a Slurm cluster or
-   another machine) and press **Export**.
-2. Copy what downloads to the cluster and submit it:
+1. In the app, open **Launch**.
+2. Set the options.
+3. In **Run on**, choose ASU Sol, a Slurm cluster or another machine.
+4. Press **Export**.
+5. Copy the downloaded file to the cluster.
+6. Submit it:
 
    ```sh
    sbatch louped-<id>.sh     # or: bash louped-<id>.sh on a plain machine
    ```
 
-   When the project is a pushed git commit, the export is this one file: the job clones the
-   project at that commit. Otherwise it is `louped-<id>.tar.gz`, and the app says why. Unpack it
-   and run its `job.sh` instead.
+   When the project is a pushed git commit, the export is this one file. The job clones the
+   project at that commit. Otherwise the export is `louped-<id>.tar.gz`, and the app says why.
+   Unpack it and run its `job.sh` instead.
 
-3. With a remote set, the job pushes its results itself. Press **Pull** on **Runs**, or run
-   `louped pull`. Without one, copy `louped-result-<id>.tar.gz` back and open
-   **Runs → Import result** (or run `louped import louped-result-<id>.tar.gz`).
+7. Get the results back:
+   - With a remote set, the job pushes its results itself. Press **Pull** on **Runs**, or run
+     `louped pull`.
+   - Without a remote, copy `louped-result-<id>.tar.gz` back. Then open **Runs → Import result**
+     (or run `louped import louped-result-<id>.tar.gz`).
 
 Pulled and imported runs show like local ones, marked with where they ran.
 
@@ -58,9 +63,10 @@ Pulled and imported runs show like local ones, marked with where they ran.
 - **Hugging Face token**: gated models (such as Llama) and `hf://` remotes need one on the
   cluster. Run `hf auth login` there once, or export `HF_TOKEN` before `sbatch`. A job that pushes
   to an `hf://` remote checks for the token before it runs, not after.
-- **Private repositories**: the cluster needs access to clone it, such as an SSH key on GitHub.
+- **Private repositories**: the cluster needs access to clone the repository, such as an SSH key on
+  GitHub.
 - **First run**: run the job's install line once on a login node. The job then reuses the
-  downloaded packages, which avoids timeouts and compute nodes without internet.
+  downloaded packages. This avoids timeouts and the need for internet on compute nodes.
 - **Smaller installs**: list the extras your experiment needs in its README (`extras: tracking`).
   The job installs only those.
 - **Sol**: jobs use the `public` partition and QOS. Models and packages are cached under
@@ -79,4 +85,5 @@ root:
 - **Vercel**: `vercel deploy site/`.
 - **GitHub Pages**: a user or organization site (`<user>.github.io`).
 
-Nothing runs there. Launching, the Playground, labelling and comparing two runs are off.
+Nothing runs there. Launching, Probe, Benchmark, labeling and comparing two runs are off.
+Sources and reports are not in it.

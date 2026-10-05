@@ -34,7 +34,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from louped.core import experiments_dir
 from louped.core.project import FILE, base, config
 from louped.server import parts as parts_
-from louped.server.launch import require_json
+from louped.server.launch import editing_guard, require_json
 from louped.server.parts import KINDS, Cue, Cues, PartRule, Seen, Selection, ShowRequest
 
 Region = Literal["home", "run.tabs", "run.overview", "experiment.tabs", "experiment.design"]
@@ -460,9 +460,7 @@ def router(launching: bool, mounted: dict[str, list[str]]) -> APIRouter:
     cues: list[Cue] = []
     plugins = mounted if launching else None
 
-    def editing() -> None:
-        if not launching:
-            raise HTTPException(403, "editing is off: this server was started with --expose")
+    editing = editing_guard(launching)
 
     def current(experiment: str | None) -> tuple[Path, Layout]:
         path, name = _file(experiment)

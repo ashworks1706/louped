@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { EmptyState } from "@/components/empty-state";
-import { ExamplesButton } from "@/components/jobs";
+import { ExamplesButton } from "@/components/examples-button";
 import { QueryState } from "@/components/query-state";
 import { RunsTable } from "@/components/runs-table";
 import { Button } from "@/components/ui/button";

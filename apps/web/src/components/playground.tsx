@@ -11,36 +11,28 @@ import {
   parseAsStringLiteral,
   useQueryStates,
 } from "nuqs";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { CopyButton } from "@/components/copy-button";
 import { EmptyState } from "@/components/empty-state";
-import { ExamplesButton } from "@/components/jobs";
+import { ExamplesButton } from "@/components/examples-button";
 import { QueryState } from "@/components/query-state";
 import { Help } from "@/components/help";
-import { arrange, Part, PartNote, part, partId, useRules } from "@/components/parts";
-import { Figure } from "@/components/run-views";
-import { SaveResult, type Result } from "@/components/save-result";
-import { Badge } from "@/components/ui/badge";
+import { arrange, Part, part, partId, useRules } from "@/components/parts";
+import { DoseTab, useDoseTab } from "@/components/playground-dose";
+import { Field, type Setup, type Tool } from "@/components/playground-fields";
+import { InspectTab, useInspectTab } from "@/components/playground-inspect";
+import { PatchTab, usePatchTab } from "@/components/playground-patch";
+import { ReplyTab, useReplyTab } from "@/components/playground-reply";
+import { SpeedTab, useSpeedTab } from "@/components/playground-speed";
+import { SaveResult } from "@/components/save-result";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  dose,
-  generate,
-  inspect,
-  loadModel,
-  patch,
-  q,
-  speed,
-  type Direction,
-  type PlaygroundInfo,
-  type View,
-} from "@/lib/api";
-import { slug } from "@/lib/parts";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { loadModel, q, type Direction, type PlaygroundInfo } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const MODES = ["steer", "ablate", "heads"] as const;
@@ -57,7 +49,6 @@ const TAB_TITLES: Record<Tab, string> = {
   dose: "Dose",
   speed: "Speed",
 };
-const METHODS = ["attribution", "residual", "heads"] as const;
 /** What each tab does, under the prompt. */
 const HINTS: Record<(typeof TABS)[number], string> = {
   reply: "Greedy. The same prompt goes to both.",
@@ -78,7 +69,6 @@ const TOOL_HELP: Record<Tab, string> = {
   speed:
     "Time the reply with and without the change: time to first token, decode speed and peak memory, as the median of several runs.",
 };
-const SIDES = ["base", "intervention"] as const;
 
 export function Playground({ tools }: { tools: Tab[] }) {
   const info = useQuery(q.playground());
@@ -148,18 +138,6 @@ function Loaded({
     heads: parseAsString.withDefault("0"),
     adapters: parseAsArrayOf(parseAsString).withDefault([]),
     tab: parseAsStringLiteral(TABS),
-    side: parseAsStringLiteral(SIDES).withDefault("base"),
-    follow: parseAsString.withDefault(""),
-    corrupt: parseAsString.withDefault(""),
-    answer: parseAsString.withDefault(""),
-    foil: parseAsString.withDefault(""),
-    token: parseAsString.withDefault(""),
-    versus: parseAsString.withDefault(""),
-    method: parseAsStringLiteral(METHODS).withDefault("attribution"),
-    from: parseAsFloat.withDefault(-4),
-    to: parseAsFloat.withDefault(4),
-    points: parseAsInteger.withDefault(9),
-    repeats: parseAsInteger.withDefault(3),
   });
   const [draft, setDraft] = useState(s.prompt);
   // A diffusion model has no next token to patch, sweep or time: its tabs are Reply and Inspect.
@@ -169,7 +147,6 @@ function Loaded({
   const shownTabs = arrange(offered, (t) => partId("playground/tab", t), rule);
   // the URL's tab, else the first the layout shows
   const tab = s.tab && offered.includes(s.tab) ? s.tab : (shownTabs[0] ?? offered[0] ?? "reply");
-  const repeats = Math.max(1, Math.min(10, s.repeats));
   const layers = info.layers ?? 1;
   const vector = vectors.find((v) => v.name === s.vector) ?? vectors[0];
   const layer = s.layer ?? vector?.layer ?? 0;
@@ -198,149 +175,45 @@ function Loaded({
   const interventions = spec ? [spec] : [];
   const intervened = spec != null || live.length > 0;
   const gen = { max_new_tokens: s.tokens, steps: s.steps };
+  const label =
+    [
+      spec &&
+        (s.mode === "steer"
+          ? `steer ${vector?.name} · α ${s.alpha} · layer ${layer}`
+          : s.mode === "ablate"
+            ? `ablate ${vector?.name} · every layer`
+            : `heads ${heads.join(",")} · layer ${layer}`),
+      live.join(" + "),
+    ]
+      .filter(Boolean)
+      .join(" · ") || (info.diffusion ? "no adapters" : "no intervention");
+  const setup: Setup = {
+    info,
+    vectors,
+    vector,
+    layer,
+    interventions,
+    live,
+    intervened,
+    gen,
+    prompt: s.prompt,
+    label,
+  };
 
-  const base = useReply();
-  const edited = useReply();
-  const baseAgain = useReply();
-  const editedAgain = useReply();
-  // Their errors show in the result pane they fill, so no toast.
-  const looked = useMutation({ mutationFn: inspect, meta: { quiet: true } });
-  const lookedEdited = useMutation({ mutationFn: inspect, meta: { quiet: true } });
-  const patched = useMutation({ mutationFn: patch, meta: { quiet: true } });
-  const dosed = useMutation({ mutationFn: dose, meta: { quiet: true } });
-  const timed = useMutation({ mutationFn: speed, meta: { quiet: true } });
-  const n = Math.max(2, Math.min(41, s.points));
-  const alphas: number[] = Array.from({ length: n }, (_, i) =>
-    Number((s.from + ((s.to - s.from) * i) / (n - 1)).toFixed(4)),
-  );
-  const ready =
-    tab === "patch"
-      ? Boolean(s.corrupt.trim() && s.answer.trim() && s.foil.trim())
-      : tab === "dose"
-        ? Boolean(vector && s.token.trim())
-        : true;
+  // every tool holds its own result, kept while another tab is open
+  const reply = useReplyTab(setup);
+  const inspected = useInspectTab(setup);
+  const patched = usePatchTab(setup);
+  const dosed = useDoseTab(setup);
+  const timed = useSpeedTab(setup);
+  const tool: Tool = { reply, inspect: inspected, patch: patched, dose: dosed, speed: timed }[tab];
   const run = () => {
     const prompt = draft.trim();
-    if (!prompt || !ready) return;
+    if (!prompt || !tool.ready) return;
     void set({ prompt });
-    if (tab === "reply") {
-      // With a follow-up, each side's reply is pushed back on once it ends, in its own history.
-      const follow = s.follow.trim();
-      const then = (
-        again: typeof baseAgain,
-        req: Omit<Parameters<typeof generate>[0], "prompt">,
-      ) =>
-        follow
-          ? (text: string) =>
-              again.start({
-                ...req,
-                prompt: follow,
-                history: [
-                  { role: "user", content: prompt },
-                  { role: "assistant", content: text.trim() },
-                ],
-              })
-          : undefined;
-      const plain = { interventions: [], adapters: [], history: [], ...gen };
-      const changed = { interventions, adapters: live, history: [], ...gen };
-      baseAgain.reset();
-      editedAgain.reset();
-      base.start({ prompt, ...plain }, then(baseAgain, plain));
-      if (intervened) edited.start({ prompt, ...changed }, then(editedAgain, changed));
-      else edited.reset();
-      return;
-    }
-    if (tab === "patch") {
-      patched.mutate({
-        clean: prompt,
-        corrupt: s.corrupt,
-        answer: s.answer,
-        foil: s.foil,
-        method: s.method,
-        adapters: live,
-        chat: true,
-      });
-      return;
-    }
-    if (tab === "dose") {
-      if (vector)
-        dosed.mutate({
-          prompt,
-          vector: vector.name,
-          layer,
-          alphas,
-          answer: s.token,
-          foil: s.versus.trim() || null,
-          adapters: live,
-          chat: true,
-        });
-      return;
-    }
-    if (tab === "speed") {
-      timed.mutate({ prompt, interventions, adapters: live, ...gen, repeats });
-      return;
-    }
-    const read = { prompt, vectors: info.diffusion ? [] : vectors.map((v) => v.name), chat: true };
-    looked.mutate({ ...read, ...gen, interventions: [], adapters: [] });
-    if (intervened) lookedEdited.mutate({ ...read, ...gen, interventions, adapters: live });
-    else lookedEdited.reset();
+    tool.run(prompt);
   };
-  const streaming =
-    tab === "reply" && (base.pending || edited.pending || baseAgain.pending || editedAgain.pending);
-  const shown =
-    tab === "patch"
-      ? patched
-      : tab === "dose"
-        ? dosed
-        : tab === "speed"
-          ? timed
-          : s.side === "intervention" && intervened
-            ? lookedEdited
-            : looked;
-
-  /** What the open tool showed, to keep as a run; null until it has finished a result. */
-  const keep = (): Result | null => {
-    if (tab === "reply") {
-      const sides = [
-        ["base", base, baseAgain],
-        ["intervention", edited, editedAgain],
-      ] as const;
-      const ran = sides.filter(([, r]) => r.ran && !r.pending && !r.error);
-      if (!ran.length || sides.some(([, r, a]) => r.pending || a.pending)) return null;
-      const follow = ran.some(([, , a]) => a.ran);
-      const reply: View = {
-        kind: "table",
-        title: "Replies",
-        columns: follow ? ["side", "reply", "after the follow-up"] : ["side", "reply"],
-        rows: ran.map(([side, r, a]) =>
-          follow ? [side, r.text.trim(), a.text.trim()] : [side, r.text.trim()],
-        ),
-      };
-      const settings = { interventions, adapters: live, follow: s.follow.trim(), ...gen };
-      return { prompt: s.prompt, settings, label, views: [reply] };
-    }
-    if (tab === "inspect") {
-      if (!looked.data) return null;
-      const titled = (views: View[], side: string) =>
-        views.map((v) => ({ ...v, title: `${side} · ${v.title}` }));
-      return {
-        prompt: s.prompt,
-        settings: { ...looked.variables, intervened: lookedEdited.variables ?? null },
-        label,
-        views: lookedEdited.data
-          ? [...titled(looked.data.views, "base"), ...titled(lookedEdited.data.views, label)]
-          : looked.data.views,
-      };
-    }
-    if (!shown.data || !shown.variables) return null;
-    const sent = shown.variables as Record<string, unknown>;
-    return {
-      prompt: String(sent.prompt ?? sent.clean ?? s.prompt),
-      settings: sent,
-      label: tab === "patch" ? "no intervention" : label,
-      views: shown.data.views,
-    };
-  };
+  const streaming = tab === "reply" && reply.streaming;
 
   useEffect(() => {
     if (!vectors.length || s.vector) return;
@@ -355,20 +228,8 @@ function Loaded({
   ]
     .filter(Boolean)
     .join(" ");
-  const label =
-    [
-      spec &&
-        (s.mode === "steer"
-          ? `steer ${vector?.name} · α ${s.alpha} · layer ${layer}`
-          : s.mode === "ablate"
-            ? `ablate ${vector?.name} · every layer`
-            : `heads ${heads.join(",")} · layer ${layer}`),
-      live.join(" + "),
-    ]
-      .filter(Boolean)
-      .join(" · ") || (info.diffusion ? "no adapters" : "no intervention");
 
-  const result = keep();
+  const result = tool.keep();
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
       <aside className="flex flex-col gap-5 rounded-xl border p-4 lg:self-start">
@@ -570,31 +431,11 @@ function Loaded({
               <Help label={`What does ${TAB_TITLES[tab]} do?`}>{TOOL_HELP[tab]}</Help>
             </span>
             {streaming ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  base.stop();
-                  edited.stop();
-                  baseAgain.stop();
-                  editedAgain.stop();
-                }}
-              >
+              <Button type="button" size="sm" variant="outline" onClick={reply.stop}>
                 <Square className="size-3" /> Stop
               </Button>
             ) : (
-              <Button
-                type="submit"
-                size="sm"
-                disabled={
-                  !draft.trim() ||
-                  !ready ||
-                  (tab === "inspect"
-                    ? looked.isPending || lookedEdited.isPending
-                    : tab !== "reply" && shown.isPending)
-                }
-              >
+              <Button type="submit" size="sm" disabled={!draft.trim() || !tool.ready || tool.busy}>
                 Run <Kbd>⌘</Kbd>
                 <CornerDownLeft className="size-3.5" />
               </Button>
@@ -612,321 +453,14 @@ function Loaded({
             </TabsList>
             {info.switchable && <SaveResult tool={tab} result={result} />}
           </div>
-          <TabsContent value="reply" className="flex flex-col gap-4 pt-4">
-            <Field label="Follow-up">
-              <Input
-                aria-label="Follow-up"
-                value={s.follow}
-                placeholder="Then push back, e.g. I don't think that's right. Are you sure?"
-                onChange={(e) => void set({ follow: e.target.value })}
-                className="h-8 text-sm"
-              />
-            </Field>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Reply title="Base" state={base} again={s.follow.trim() ? baseAgain : undefined} />
-              <Reply
-                title="With intervention"
-                badge={
-                  <Badge
-                    variant="intervention"
-                    className="block max-w-full min-w-0 shrink truncate"
-                  >
-                    {label}
-                  </Badge>
-                }
-                state={edited}
-                again={s.follow.trim() ? editedAgain : undefined}
-                intervention
-              />
-            </div>
-          </TabsContent>
-          {!info.diffusion && (
-            <TabsContent value="patch" className="flex flex-col gap-4 pt-4">
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_8rem_8rem]">
-                <Field
-                  label="Corrupt prompt, same length"
-                  help="The prompt with one detail changed, so the model gives the foil instead of the answer."
-                >
-                  <Input
-                    aria-label="Corrupt prompt"
-                    value={s.corrupt}
-                    placeholder="The Eiffel Tower is in Rome"
-                    onChange={(e) => void set({ corrupt: e.target.value })}
-                  />
-                </Field>
-                <Field label="Answer">
-                  <Input
-                    aria-label="Answer"
-                    value={s.answer}
-                    placeholder="Paris"
-                    onChange={(e) => void set({ answer: e.target.value })}
-                    className="font-mono"
-                  />
-                </Field>
-                <Field label="Foil">
-                  <Input
-                    aria-label="Foil"
-                    value={s.foil}
-                    placeholder="Rome"
-                    onChange={(e) => void set({ foil: e.target.value })}
-                    className="font-mono"
-                  />
-                </Field>
-              </div>
-              <Field label="Method">
-                <Segmented
-                  label="Method"
-                  options={METHODS}
-                  value={s.method}
-                  onChange={(method) => void set({ method })}
-                />
-              </Field>
-              <Views state={patched} empty="Run a clean and a corrupt prompt to patch them." />
-            </TabsContent>
-          )}
-          {!info.diffusion && (
-            <TabsContent value="dose" className="flex flex-col gap-4 pt-4">
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-                <Field label="Answer">
-                  <Input
-                    aria-label="Answer"
-                    value={s.token}
-                    placeholder="Yes"
-                    onChange={(e) => void set({ token: e.target.value })}
-                    className="font-mono"
-                  />
-                </Field>
-                <Field label="Foil">
-                  <Input
-                    aria-label="Foil"
-                    value={s.versus}
-                    placeholder="No"
-                    onChange={(e) => void set({ versus: e.target.value })}
-                    className="font-mono"
-                  />
-                </Field>
-                <NumberField
-                  label="α from"
-                  value={s.from}
-                  onChange={(from) => void set({ from })}
-                />
-                <NumberField label="α to" value={s.to} onChange={(to) => void set({ to })} />
-                <NumberField
-                  label="Points"
-                  help="How many strengths between the two ends, each one forward pass."
-                  value={n}
-                  min={2}
-                  max={41}
-                  onChange={(points) => void set({ points })}
-                />
-              </div>
-              <Views
-                state={dosed}
-                empty={
-                  vector
-                    ? `Run a prompt to steer ${vector.name} at layer ${layer} from α ${s.from} to ${s.to}.`
-                    : "Save a vector for this model to sweep it."
-                }
-              />
-            </TabsContent>
-          )}
-          {!info.diffusion && (
-            <TabsContent value="speed" className="flex flex-col gap-4 pt-4">
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-                <NumberField
-                  label="Repeats"
-                  help="Timed runs after one warm-up; the median is shown, so one slow run does not skew it."
-                  value={repeats}
-                  min={1}
-                  max={10}
-                  onChange={(repeats) => void set({ repeats })}
-                />
-              </div>
-              <Views
-                state={timed}
-                empty={`Run a prompt to time ${s.tokens} tokens${intervened ? `, base and ${label}` : ""}.`}
-              />
-            </TabsContent>
-          )}
-          <TabsContent value="inspect" className="flex flex-col gap-4 pt-4">
-            {intervened && (
-              <Tabs
-                value={s.side}
-                onValueChange={(side) => void set({ side: side as (typeof SIDES)[number] })}
-              >
-                <TabsList aria-label="Which stream to read">
-                  <TabsTrigger value="base" {...part("playground/side/base")}>
-                    Base
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="intervention"
-                    {...part("playground/side/intervention")}
-                    className="data-[state=active]:text-intervention min-w-0 truncate"
-                  >
-                    {label}
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            )}
-            {shown.isPending ? (
-              <span className="text-muted-foreground animate-pulse text-sm">Reading…</span>
-            ) : shown.error ? (
-              <span className="text-negative text-sm">{shown.error.message}</span>
-            ) : shown.data ? (
-              <ViewList views={shown.data.views} at={shown.submittedAt} />
-            ) : (
-              <span className="text-muted-foreground text-sm">
-                Run a prompt to {info.diffusion ? "watch it denoise" : "read its layers"}.
-              </span>
-            )}
-          </TabsContent>
+          <ReplyTab tool={reply} label={label} />
+          {!info.diffusion && <PatchTab tool={patched} />}
+          {!info.diffusion && <DoseTab tool={dosed} setup={setup} />}
+          {!info.diffusion && <SpeedTab tool={timed} setup={setup} />}
+          <InspectTab tool={inspected} setup={setup} />
         </Tabs>
       </div>
     </div>
-  );
-}
-
-/** One control with its label, a part a layout may hide, rename or put a note under; name is its
- * address when the label changes with the model. */
-function Field({
-  label,
-  name,
-  help,
-  children,
-}: {
-  label: string;
-  name?: string;
-  help?: string;
-  children: React.ReactNode;
-}) {
-  const id = partId("playground/field", name ?? slug(label));
-  const rule = useRules()(id);
-  if (rule.hidden) return null;
-  return (
-    <div className="flex flex-col gap-1.5" {...part(id)}>
-      <span className="text-muted-foreground inline-flex items-center gap-1 text-xs font-medium">
-        {rule.label ?? label}
-        {help && <Help label={`What is ${label}?`}>{rule.about ?? help}</Help>}
-      </span>
-      {children}
-      <PartNote rule={rule} />
-    </div>
-  );
-}
-
-function NumberField({
-  label,
-  value,
-  min,
-  max,
-  onChange,
-  help,
-}: {
-  label: string;
-  value: number;
-  min?: number;
-  max?: number;
-  onChange: (v: number) => void;
-  help?: string;
-}) {
-  return (
-    <Field label={label} help={help}>
-      <Input
-        type="number"
-        aria-label={label}
-        value={value}
-        min={min}
-        max={max}
-        step="any"
-        onChange={(e) => {
-          const v = Number(e.target.value);
-          if (e.target.value === "" || !Number.isFinite(v)) return;
-          onChange(Math.min(max ?? Infinity, Math.max(min ?? -Infinity, v)));
-        }}
-        className="font-mono"
-      />
-    </Field>
-  );
-}
-
-function Segmented<T extends string>({
-  label,
-  options,
-  value,
-  onChange,
-}: {
-  label: string;
-  options: readonly T[];
-  value: T;
-  onChange: (v: T) => void;
-}) {
-  return (
-    <div
-      className="bg-muted grid w-fit grid-flow-col gap-1 rounded-md p-1"
-      role="radiogroup"
-      aria-label={label}
-    >
-      {options.map((o) => (
-        <button
-          key={o}
-          type="button"
-          role="radio"
-          aria-checked={value === o}
-          tabIndex={value === o ? 0 : -1}
-          onClick={() => onChange(o)}
-          onKeyDown={(e) => {
-            const step =
-              e.key === "ArrowRight" || e.key === "ArrowDown"
-                ? 1
-                : e.key === "ArrowLeft" || e.key === "ArrowUp"
-                  ? -1
-                  : 0;
-            if (!step) return;
-            e.preventDefault();
-            const next = options[(options.indexOf(value) + step + options.length) % options.length];
-            onChange(next);
-            const group = e.currentTarget.parentElement;
-            requestAnimationFrame(() =>
-              group?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus(),
-            );
-          }}
-          className={cn(
-            "focus-visible:ring-ring/30 h-7 rounded-[5px] px-3 text-sm capitalize transition-colors outline-none focus-visible:ring-[3px]",
-            value === o ? "bg-background" : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {o}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-/** The figures a computing route returned, or why there are none. */
-function Views({
-  state,
-  empty,
-}: {
-  state: { isPending: boolean; error: Error | null; data?: { views: View[] }; submittedAt: number };
-  empty: string;
-}) {
-  if (state.isPending)
-    return <span className="text-muted-foreground animate-pulse text-sm">Running…</span>;
-  if (state.error) return <span className="text-negative text-sm">{state.error.message}</span>;
-  if (!state.data) return <span className="text-muted-foreground text-sm">{empty}</span>;
-  return <ViewList views={state.data.views} at={state.submittedAt} />;
-}
-
-/** A tool's figures, each a part by its title that a layout may hide or put a note under. */
-function ViewList({ views, at }: { views: View[]; at: number }) {
-  const rule = useRules();
-  const id = (v: View) => partId("playground/figure", slug(v.title));
-  return (
-    <>
-      {arrange(views, id, rule).map((v, i) => (
-        <Figure key={`${at}-${i}`} view={v} id={id(v)} />
-      ))}
-    </>
   );
 }
 
@@ -967,109 +501,6 @@ function Slider({
       {hint && <span className="text-muted-foreground text-[11px]">{hint}</span>}
     </Field>
   );
-}
-
-function Reply({
-  title,
-  badge,
-  state,
-  again,
-  intervention,
-}: {
-  title: string;
-  badge?: React.ReactNode;
-  state: ReplyState;
-  again?: ReplyState;
-  intervention?: boolean;
-}) {
-  const text = state.text.trimStart();
-  const second = again?.text.trimStart();
-  return (
-    <section
-      data-testid={`reply-${intervention ? "intervention" : "base"}`}
-      {...part(partId("playground/reply", intervention ? "intervention" : "base"))}
-      className={cn(
-        "flex min-h-40 flex-col rounded-xl border",
-        intervention && "border-intervention/40",
-      )}
-    >
-      <header className="flex h-11 items-center justify-between gap-3 border-b px-4">
-        <span className="shrink-0 text-sm font-medium">{title}</span>
-        <span className="flex min-w-0 justify-end overflow-hidden">{badge}</span>
-      </header>
-      <div className="flex-1 p-4 text-sm leading-relaxed whitespace-pre-wrap">
-        {state.error ? (
-          <span className="text-negative">{state.error.message}</span>
-        ) : text ? (
-          text
-        ) : state.pending ? (
-          <span className="text-muted-foreground animate-pulse">Generating…</span>
-        ) : state.ran ? (
-          <span className="text-muted-foreground">(empty reply)</span>
-        ) : (
-          <span className="text-muted-foreground">Run a prompt to see the reply.</span>
-        )}
-      </div>
-      {again?.ran && (
-        <div
-          data-testid="follow-up"
-          className="border-t p-4 text-sm leading-relaxed whitespace-pre-wrap"
-        >
-          <span className="text-muted-foreground mb-2 block text-xs">After the follow-up</span>
-          {again.error ? (
-            <span className="text-negative">{again.error.message}</span>
-          ) : second ? (
-            second
-          ) : again.pending ? (
-            <span className="text-muted-foreground animate-pulse">Generating…</span>
-          ) : (
-            <span className="text-muted-foreground">(empty reply)</span>
-          )}
-        </div>
-      )}
-    </section>
-  );
-}
-
-type ReplyState = { text: string; pending: boolean; error: Error | null; ran: boolean };
-const IDLE: ReplyState = { text: "", pending: false, error: null, ran: false };
-
-/** One side's reply, filled as it streams in; a new start or stop aborts the one in flight. */
-function useReply() {
-  const [reply, setReply] = useState(IDLE);
-  const live = useRef<AbortController | null>(null);
-  const stop = useCallback(() => live.current?.abort(), []);
-  useEffect(() => stop, [stop]);
-  /** onDone gets the whole reply when it ends unstopped and without error. */
-  const start = (req: Parameters<typeof generate>[0], onDone?: (text: string) => void) => {
-    stop();
-    const c = new AbortController();
-    live.current = c;
-    setReply({ ...IDLE, pending: true, ran: true });
-    let text = "";
-    generate(
-      req,
-      (t) => {
-        text += t;
-        setReply((r) => ({ ...r, text: r.text + t }));
-      },
-      c.signal,
-    )
-      .then(() => {
-        if (!c.signal.aborted) onDone?.(text);
-      })
-      .catch((error: Error) => {
-        if (!c.signal.aborted) setReply((r) => ({ ...r, error }));
-      })
-      .finally(() => {
-        if (live.current === c) setReply((r) => ({ ...r, pending: false }));
-      });
-  };
-  const reset = () => {
-    stop();
-    setReply(IDLE);
-  };
-  return { ...reply, start, stop, reset };
 }
 
 /** Load a model into the Playground; unloading frees the GPU

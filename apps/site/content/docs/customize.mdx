@@ -4,17 +4,28 @@ description: Pick any part of a page for your agent, have it change any part, an
 ---
 
 Every part of a page has an address: each card, row, cell, field, column and control. Your agent
-can rename, explain, reorder or hide any of them, set a control's default, add notes, and move or
-add whole blocks. The page updates as it works, with no build or restart.
+can:
+
+- rename, explain, reorder or hide any of them
+- set a control's default
+- add notes
+- move or add whole blocks
+
+The page updates as it works, with no build or restart.
 
 ## Pick parts with Shift+click
 
-Hold Shift and click any part of a page to pick it; Shift+click it again to drop it. Pick as
-many as you like, across pages. A tray at the bottom lists them, and your agent reads them with
-`ui_selection`, each with what it stands for: an item's record under every condition, a
-condition's rate and flips, a field's value and meaning. So you can pick two rows and ask "why
-did pushback flip this one and not that one?". On a touch screen, **Pick parts** in ⌘K turns
-taps into picks. **Copy** gives the same as text, for an agent without louped's tools:
+Hold Shift and click any part of a page to pick it. Shift+click it again to drop it. Pick as many
+as you like, across pages. A tray at the bottom lists them. Your agent reads them with
+`ui_selection`, each with what it stands for:
+
+- an item's record under every condition
+- a condition's rate and flips
+- a field's value and meaning
+
+Thus you can pick two rows and ask "why did pushback flip this one and not that one?". On a touch
+screen, **Pick parts** in ⌘K turns taps into picks. **Copy** gives the same as text, for an agent
+without louped's tools:
 
 ```
 louped part items/row/28
@@ -26,12 +37,15 @@ data: {"qid":"28","compared_on":"correct","records":{"baseline":{...},"pressure"
 
 ## Items you pick are a cohort
 
-Pick rows on a run's Items tab and the tray offers **Only these**: every condition read on just
-those items, each with its paired difference from the reference and 95% interval. **Save
-cohort** writes them, with a note on what they share, to
-`experiments/<name>/cohorts/<cohort>.json`; commit it with the experiment. The Items tab's **On**
-menu switches between every item and the saved cohorts, and **Run on it** opens Launch with
-`--cohort` filled in. A run.py takes it with one option:
+When you pick rows on a run's Items tab, the tray offers **Only these**. It reads every condition
+on just those items, each with its paired difference from the reference and 95% interval.
+
+- **Save cohort** writes them, with a note on what they share, to
+  `experiments/<name>/cohorts/<cohort>.json`. Commit it with the experiment.
+- The Items tab's **On** menu switches between every item and the saved cohorts.
+- **Run on it** opens Launch with `--cohort` filled in.
+
+A run.py takes it with one option:
 
 ```python
 cohort: str | None = None
@@ -44,14 +58,19 @@ The run is tagged with the cohort, and its page says so.
 
 ## Your agent points back
 
-`ui_show` lets your agent open a page, scroll to parts and point at them, with a short note
-beside the first: "pressure flipped this one". It hears back which parts were not on the page.
+With `ui_show`, your agent opens a page, scrolls to parts and points at them. It puts a short note
+beside the first part, for example "pressure flipped this one". It hears back which parts were not
+on the page.
 
 ## Change any part
 
-A layout's `parts` change parts by address; `*` stands for any one name. Every page has them:
-Runs and a run's tabs, Probe and Benchmark (each control, tool and figure), Vectors, Circuits,
-a feature, Compare, Launch (each of a script's options) and a job.
+A layout's `parts` change parts by address. `*` stands for any one name. Every page has parts:
+
+- Runs and a run's tabs
+- Probe and Benchmark (each control, tool and figure)
+- Vectors, Circuits, a feature, Compare
+- Launch (each of a script's options)
+- a job
 
 ```json title="experiments/rational-updating/layout.json"
 {
@@ -76,7 +95,8 @@ a feature, Compare, Launch (each of a script's options) and a job.
 | `order`   | Its place among its siblings (fields, columns, cards) |
 | `default` | A control's value when the page's link sets none      |
 
-Each kind of part takes the rules that mean something for it; `ui_page` lists them, and a rule
+Addresses on the Probe and Benchmark pages start with `playground/`, the name of the tools both
+pages use. Each kind of part takes only the rules that apply to it. `ui_page` lists them. A rule
 that does not apply is refused with the reason.
 
 ## Layouts
@@ -111,11 +131,11 @@ Every region can also hold `text` (your own Markdown) and `plugin` (a page from 
 [plugins](/docs/plugins)). Any block takes `title`, `about` (its ?) and `width`: `full`, `half`
 (two side by side) or `side` (a narrow column beside the rest).
 
-`views` shows every figure in `experiments/<name>/views/`, which your agent adds with `add_view`;
-`view` (`path`) shows one. A figure can be any of louped's kinds or `plotly`, which draws 3D
-points and surfaces and plays `frames` as an animation.
+`views` shows every figure in `experiments/<name>/views/`. Your agent adds them with `add_view`.
+`view` (`path`) shows one. A figure can be any of louped's kinds or `plotly`. `plotly` draws 3D
+points and surfaces, and plays `frames` as an animation.
 
-A file that does not check is not used. The page shows what is wrong and falls back to the layout
+A file that fails its check is not used. The page shows what is wrong and falls back to the layout
 below it: the project's, then the preset, then the default.
 
 ## Presets
@@ -128,7 +148,7 @@ below it: the project's, then the preset, then the default.
 
 ## Theme
 
-`louped.toml` sets the app's tokens: `radius`, and the colours for each mode. Plugin pages get them
+`louped.toml` sets the app's tokens: `radius`, and the colors for each mode. Plugin pages get them
 too.
 
 ```toml title="louped.toml"
@@ -139,12 +159,13 @@ radius = "0.25rem"
 border = "oklch(1 0 0 / 15%)"
 ```
 
-The colours are `background`, `foreground`, `card`, `muted`, `muted-foreground`, `accent`,
+The colors are `background`, `foreground`, `card`, `muted`, `muted-foreground`, `accent`,
 `border`, `input`, `ring`, `primary`, `secondary` (each with its `-foreground`), `positive`,
-`negative` and `intervention`, the one accent, which marks an active intervention.
+`negative` and `intervention`. `intervention` is the one accent; it marks an active intervention.
 
 ## What stays
 
-The look is louped's own, so every project reads the same: parts change what they say and
-whether they show, not their style. Layouts, the theme and plugin blocks load only on your machine; a [published
-dashboard](/docs/remote#publish-a-read-only-dashboard) shows your layouts without plugins.
+The look is louped's own, so every project reads the same. Parts change what they say and whether
+they show, not their style. Layouts, the theme and plugin blocks load only on your machine. A
+[published dashboard](/docs/remote#publish-a-read-only-dashboard) shows your layouts without
+plugins.

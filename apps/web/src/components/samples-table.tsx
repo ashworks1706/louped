@@ -233,14 +233,15 @@ function JudgeAgreement({ runId }: { runId: string }) {
       ) : (
         <>
           Agrees with you on <span className="text-foreground font-mono">{pct(a.agreement)}</span>{" "}
-          of {a.labelled} of {a.total} pairs · κ{" "}
+          of the {a.labelled} pairs you labelled (of {a.total}) · κ{" "}
           <span className="text-foreground font-mono">{num(a.kappa, 2)}</span>
         </>
       )}
       <Help label="What is judge agreement?">
         Open a pair and pick the better answer yourself. Agreement is the share of your picks the
         judge matched. κ (Cohen&apos;s kappa) discounts matches expected by chance: 1 is perfect, 0
-        is chance. Trust the judge&apos;s win rate only when κ is high.
+        is chance, and below 0 is worse than chance. Trust the judge&apos;s win rate only when κ is
+        0.6 or more, and you labelled enough pairs.
       </Help>
     </div>
   );

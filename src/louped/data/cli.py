@@ -174,7 +174,10 @@ def run(cmd: Command) -> None:
 
             path = _ledger(cmd.name, cmd.ledger)
             examples = read_jsonl(cmd.src or _dir(cmd.name) / "verified.jsonl")
-            loop(examples, path, cmd.by or os.environ.get("USER", ""), cmd.limit)
+            by = cmd.by or os.environ.get("USER")
+            if not by:
+                raise SystemExit("say who reviews with --by: each decision records it")
+            loop(examples, path, by, cmd.limit)
         case Curate():
             examples = read_jsonl(cmd.src or _dir(cmd.name) / "verified.jsonl")
             ledger = curate.load(_ledger(cmd.name, cmd.ledger))

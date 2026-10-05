@@ -4,7 +4,7 @@ description: Which model families work with which parts of louped.
 ---
 
 louped works with a model family when it can find the model's layers. Tests run on a tiny model
-offline; real checkpoints are not downloaded in CI.
+offline. CI does not download real checkpoints.
 
 **tested**: covered by the tests. **smoke**: run once on a small random copy of the architecture.
 **expected**: should work, not run. **no**: does not work.
@@ -24,7 +24,7 @@ Masked diffusion models (LLaDA, Dream, nanoDiff, any Hugging Face masked LM) wor
 training and adapter phases, but not for interventions or analyses.
 
 A model with its own code on the Hub loads with `remote_code=true`. This runs that code on your
-machine, so use it only for repositories you trust, and pin `revision`.
+machine. Use it only for repositories you trust, and pin `revision`.
 
 To add a family whose layers live elsewhere, add its path to `BLOCK_PATHS` (and the norm, attention
 and output paths) in `src/louped/models/load.py`.

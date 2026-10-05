@@ -5,7 +5,7 @@ import { Move3d } from "lucide-react";
 import Link from "next/link";
 
 import { EmptyState } from "@/components/empty-state";
-import { ExamplesButton } from "@/components/jobs";
+import { ExamplesButton } from "@/components/examples-button";
 import { PartData, part, partId, useRules } from "@/components/parts";
 import { QueryState } from "@/components/query-state";
 import { Figure } from "@/components/run-views";

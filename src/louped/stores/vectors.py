@@ -7,11 +7,14 @@ the Direction under "louped". Reading it directly keeps the server free of the i
 from __future__ import annotations
 
 import json
+import logging
 import struct
 
 from pydantic import ValidationError
 
 from louped.core import Direction, vectors_dir
+
+log = logging.getLogger(__name__)
 
 
 def _header(path) -> dict:
@@ -28,6 +31,7 @@ def list_vectors() -> list[Direction]:
             meta = _header(path).get("__metadata__", {}).get("louped")
             if meta:
                 found.append(Direction.model_validate_json(meta))
-        except (OSError, ValueError, struct.error, ValidationError):
+        except (OSError, ValueError, struct.error, ValidationError) as exc:
+            log.warning("skipping direction %s: %s", path, exc)  # damaged, or from another version
             continue
     return sorted(found, key=lambda d: d.created, reverse=True)

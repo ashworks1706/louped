@@ -22,7 +22,7 @@ export const artifactQuery = (run: string, path: string) => ({
   },
 });
 
-export type ArtifactKind =
+type ArtifactKind =
   "markdown" | "json" | "jsonl" | "table" | "text" | "image" | "notebook" | "other";
 
 const TEXT = /\.(txt|log|out|err|ya?ml|toml|cfg|ini|py|sh|diff|patch)$/i;
@@ -124,7 +124,7 @@ export function asBinary(v: unknown): 0 | 1 | null {
 
 /** More files than this in one folder are not conditions of one comparison (a folder of traces,
  * one file per request), so the Items view leaves them to Artifacts. */
-export const MAX_CONDITIONS = 12;
+const MAX_CONDITIONS = 12;
 
 /** Where louped derive writes a run's added per-item columns, one JSONL file each. */
 export const DERIVED = "derived";

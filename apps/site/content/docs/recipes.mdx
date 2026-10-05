@@ -15,13 +15,13 @@ endpoint:
 
 - **Evals**: add it to a grid as `endpoint(name, url)`.
 - **Speed and cost**: `louped endpoint-bench http://127.0.0.1:8080/v1` measures time to first
-  token, latency and throughput at different numbers of requests at once. On the same machine it
-  also reports energy per token.
+  token, latency and throughput. It measures them at different numbers of requests at once. On the
+  same machine it also reports energy per token.
 
 ## Code in another language
 
-Call the program from `run.py` as a subprocess (for example `cargo bench`), then log its numbers
-with `mlflow.log_metrics` and its per-item files as artifacts.
+Call the program from `run.py` as a subprocess (for example `cargo bench`). Log its numbers with
+`mlflow.log_metrics`. Log its per-item files as artifacts.
 
 ## Agents
 
@@ -31,11 +31,11 @@ with `mlflow.log_metrics` and its per-item files as artifacts.
 
 ## Retrieval
 
-Log one record per question and setup (no retrieval, retrieved passages) with recall, the answer
-and its score, then line them up on the Items tab. To test retrieval inside the model, use the
+Log one record per question and setup (no retrieval, retrieved passages), with recall, the answer
+and its score. Then line them up on the Items tab. To test retrieval inside the model, use the
 `inject` intervention.
 
 ## Adapters and small models
 
-Load several LoRA adapters as a bank and switch them per request or partway through a reply. To
-see what a weight format costs, run `louped bench <model> --quants none int8 int4` next to an eval.
+Load LoRA adapters as a bank. Switch them per request or partway through a reply. To see what a
+weight format costs, run `louped bench <model> --quants none int8 int4` next to an eval.

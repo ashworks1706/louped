@@ -86,17 +86,18 @@ def show(console: Console, example: Example, index: int, total: int) -> None:
 
 
 def edit(text: str) -> str | None:
-    """The text after the reviewer edited it. None when nothing changed or the editor failed."""
+    """The text after the reviewer edited it; None when nothing changed. SystemExit when the
+    editor cannot start or exits with an error, so a broken $EDITOR is not read as no change."""
     editor = os.environ.get("VISUAL") or os.environ.get("EDITOR") or FALLBACK_EDITOR
     with tempfile.TemporaryDirectory() as directory:
         path = Path(directory) / "reply.md"
         path.write_text(text, encoding="utf-8")
         try:
             completed = subprocess.run([*shlex.split(editor), str(path)], check=False)
-        except OSError:
-            return None
+        except OSError as exc:
+            raise SystemExit(f"could not run the editor {editor!r}: {exc}") from exc
         if completed.returncode != 0:
-            return None
+            raise SystemExit(f"the editor {editor!r} exited with {completed.returncode}")
         edited = path.read_text(encoding="utf-8")
     return None if edited.strip() == text.strip() else edited.strip()
 

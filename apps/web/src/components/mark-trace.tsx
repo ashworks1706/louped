@@ -11,7 +11,7 @@ import { itemHref } from "@/lib/href";
 const ITEM = /^run:([^/#]+)\/([^#]+)#([\s\S]+)$/;
 
 /** The Items tab with a traced item open, from the trace's item step. */
-export function itemPage(trace: Trace): string | null {
+function itemPage(trace: Trace): string | null {
   const step = trace.steps.find((s) => s.what === "item");
   const m = step && ITEM.exec(step.ref);
   if (!m) return null;
