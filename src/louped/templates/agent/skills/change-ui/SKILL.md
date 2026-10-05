@@ -1,6 +1,6 @@
 ---
 name: change-ui
-description: Change what louped's pages show (reorder, hide, rename or explain any card, row, field, column or control; add text or a card; add a tab; pick a preset; set the theme), and show the user parts of the app with a note. Use when the user asks to change a page or the look, refers to parts they picked in the app, or when an answer is clearer pointed at on screen.
+description: Change what louped's pages show (reorder, hide, rename or explain any card, row, field, column or control; add text or a card; add a tab; pick a preset; set the theme; make a new figure or column from a run's files), and show the user parts of the app with a note. Use when the user asks to change a page or the look, refers to parts they picked in the app, or when an answer is clearer pointed at on screen.
 ---
 
 1. Find what the user means:
@@ -25,6 +25,20 @@ description: Change what louped's pages show (reorder, hide, rename or explain a
      block or tab; `about` is its ?; `width` is `full`, `half` (two side by side) or `side`.
    - Add a built-in block: `metric` (`key`), `file` (`path`), as a block or its own tab,
      `figure` (`index`), `text` (`text`, Markdown) for a note.
+   - Something the run's files hold but no page shows (points in 3D, an animation, a new column
+     such as "x classified"): make it, then place it, in this order:
+     - A new column on the items: `derive` with a script whose `derive(files)` returns rows
+       keyed like the records (`qid`). It shows in Items as `<name>.<field>` and in the item's
+       panel. Keep the script in `experiments/<name>/derive/` so it is committed.
+     - A figure from one run: `derive` returning a figure, or `add_view` with `run_id` when you
+       computed it yourself. It lands on the run's Figures tab (`figures/figure/views%2F<name>.json`).
+       Use the `plotly` kind for 3D (`scatter3d`, `surface`) or `frames` (it plays them).
+     - A figure across runs of a question: `add_view` with `experiment`; it is kept in
+       `experiments/<name>/views/` and shows on the experiment's page
+       (`experiment/view/views%2F<name>.json`).
+     - A page of its own only when it is a tool, not a figure: a plugin (below).
+     To change it later, call `add_view` or `derive` again with the same name. Then `ui_show` the
+     user to it with a one-line note. Data stays inline (no URLs) and every figure gets an `about`.
    - Only when nothing built in shows it, a `plugin` block (`plugin`, and `page` for a file in
      its `panel/`): follow `add-plugin`, and build the page from the kit (step 5).
 4. Scope: a change for one experiment's pages goes in its layout (`experiment` set); one for every

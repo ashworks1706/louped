@@ -137,6 +137,8 @@ KINDS: list[Kind] = [
        rules=LIST),
     _k(part="experiment/launch/*", about="Opens Launch on one of the experiment's scripts.",
        rules=PICK),
+    _k(part="experiment/view/*", about="A figure an agent added to the experiment's page, by "
+       "its file (views/<name>.json).", rules=["hidden", "note", "order"]),
     _k(part="experiment/delete", about="Moves the experiment to the trash.", rules=["hidden"]),
     _k(part="experiment/*", about="The experiment's name, status, question and back link.",
        rules=PICK),

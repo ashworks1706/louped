@@ -20,6 +20,7 @@ export type TableView = Schemas["TableView"];
 export type ScatterView = Schemas["ScatterView"];
 export type TokensView = Schemas["TokensView"];
 export type VegaView = Schemas["VegaView"];
+export type PlotlyView = Schemas["PlotlyView"];
 export type Pushed = Schemas["Pushed"];
 export type RemoteState = Schemas["RemoteState"];
 export type PluginInfo = Schemas["PluginInfo"];
@@ -366,6 +367,14 @@ export const q = {
       isSnapshot()
         ? Promise.resolve([] as SavedCohort[])
         : get<SavedCohort[]>(`/experiments/${encodeURIComponent(experiment)}/cohorts`),
+  }),
+  /** An experiment's own figures; a published dashboard has none. */
+  experimentViews: (experiment: string) => ({
+    queryKey: ["experiment-views", experiment],
+    queryFn: () =>
+      isSnapshot()
+        ? Promise.resolve([] as RunView[])
+        : get<RunView[]>(`/experiments/${encodeURIComponent(experiment)}/views`),
   }),
   experiment: (name: string) => ({
     queryKey: ["experiment", name],

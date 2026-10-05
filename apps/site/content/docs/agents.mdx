@@ -17,23 +17,28 @@ test.
 
 ## Tools the agent gets
 
-| Tool                                                | What it does                               |
-| --------------------------------------------------- | ------------------------------------------ |
-| `experiments`, `experiment`, `runs`, `run`          | Lists questions and runs                   |
-| `samples`, `sample`, `figures`, `figure`, `compare` | Reads results                              |
-| `new_experiment`                                    | Starts a question                          |
-| `launchables`, `launch_options`, `launch`           | Starts a job                               |
-| `jobs`, `job`, `cancel_job`                         | Follows or stops jobs                      |
-| `export_job`, `import_result`                       | Sends a job to a cluster, brings it back   |
-| `push`, `pull`                                      | Shares runs through the remote             |
-| `ui_page`, `ui_selection`                           | Reads the app's pages and what you picked  |
-| `set_part`, `set_layout`, `set_preset`              | Changes what a page shows                  |
-| `ui_show`                                           | Points you at parts of a page, with a note |
-| `cohort`, `cohorts`, `save_cohort`                  | Reads and saves a set of a run's items     |
+| Tool                                                | What it does                                |
+| --------------------------------------------------- | ------------------------------------------- |
+| `experiments`, `experiment`, `runs`, `run`          | Lists questions and runs                    |
+| `samples`, `sample`, `figures`, `figure`, `compare` | Reads results                               |
+| `new_experiment`                                    | Starts a question                           |
+| `launchables`, `launch_options`, `launch`           | Starts a job                                |
+| `jobs`, `job`, `cancel_job`                         | Follows or stops jobs                       |
+| `export_job`, `import_result`                       | Sends a job to a cluster, brings it back    |
+| `push`, `pull`                                      | Shares runs through the remote              |
+| `ui_page`, `ui_selection`                           | Reads the app's pages and what you picked   |
+| `set_part`, `set_layout`, `set_preset`              | Changes what a page shows                   |
+| `ui_show`                                           | Points you at parts of a page, with a note  |
+| `cohort`, `cohorts`, `save_cohort`                  | Reads and saves a set of a run's items      |
+| `add_view`, `derive`                                | Adds a figure or columns from a run's files |
 
 Work the agent starts shows in the app like your own. To ask about or change something on a
 page, Shift+click it (as many parts as you like) and your agent gets them with their data
 ([Customize the app](/docs/customize)).
+
+Ask for a view the app lacks ("these claims in 3D", "a column for which ones hedge") and the agent
+makes it where it belongs: a column in the run's Items, a figure on the run or on the experiment's
+page, then points you at it. Ask again to change it; it keeps the name.
 
 ## Without `louped init`
 

@@ -85,10 +85,16 @@ What the app shows depends on what the script writes:
 | Metrics logged over steps                   | **Overview**; two runs overlaid on Compare  |
 | A view from `louped.analysis.views`         | **Figures** (table, line, scatter, heatmap) |
 | `views.vega(title, spec)`, data inline      | **Figures**: any Vega-Lite chart            |
+| `views.plotly(title, data, frames=...)`     | **Figures**: 3D and animated charts         |
 
 A finding made by hand in Probe or Benchmark becomes a run too: **Save as run** keeps what the
 open tool showed (its figures, the prompt and the settings sent) under one of the experiments,
 or under `probe` or `benchmark` when it answers none yet.
+
+A run's files can grow after it ends. `louped derive <run> <script>` runs the script's
+`derive(files)` over a copy of them and logs what it returns into the run: rows keyed like the
+records become columns in **Items**, a figure lands on **Figures**. The script is logged beside
+them. Your agent does this when you ask for a column or chart the run lacks.
 
 ## Code from a paper
 

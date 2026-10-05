@@ -21,6 +21,7 @@ import {
 import { Help } from "@/components/help";
 import { part, partId, PartData, PartNote, useRules } from "@/components/parts";
 import { QueryState } from "@/components/query-state";
+import { PlotlyFigure } from "@/components/plotly-figure";
 import { VegaFigure } from "@/components/vega-figure";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
@@ -93,6 +94,7 @@ const READ: Record<View["kind"], string> = {
   tokens:
     "Each token is shaded by the picked series: darker is a larger value. Hover a token for its number.",
   vega: "A chart the run drew itself. Hover marks for their values.",
+  plotly: "A figure the run drew itself. Drag to turn a 3D one, scroll to zoom, hover points.",
 };
 
 /** One figure of any kind, with its title, how to read it, and its note. */
@@ -116,6 +118,7 @@ export function Figure({ view, id }: { view: View; id?: string }) {
         {view.kind === "table" && <TableFigure view={view} />}
         {view.kind === "tokens" && <TokensFigure view={view} />}
         {view.kind === "vega" && <VegaFigure view={view} />}
+        {view.kind === "plotly" && <PlotlyFigure view={view} />}
       </div>
     </figure>
   );

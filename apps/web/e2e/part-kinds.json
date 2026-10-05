@@ -255,6 +255,11 @@
     "rules": []
   },
   {
+    "part": "experiment/view/*",
+    "about": "A figure an agent added to the experiment's page, by its file (views/<name>.json).",
+    "rules": ["hidden", "note", "order"]
+  },
+  {
     "part": "experiment/delete",
     "about": "Moves the experiment to the trash.",
     "rules": ["hidden"]

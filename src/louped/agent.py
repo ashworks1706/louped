@@ -34,8 +34,10 @@ runs appear as it writes them.
 Work like this: read the experiments and runs first. Start a question with new_experiment, then
 edit its README and run.py in the project (the project's AGENTS.md says what goes where). Start
 work with launchables, launch_options and launch (a script is "script:<name>/run.py"); follow it
-with job; read results with run, figures, figure, samples and compare. A run too large for this
-machine goes to a cluster with export_job; its result comes back with import_result.
+with job; read results with run, figures, figure, samples and compare. A figure the person asks
+for (a chart of a file, points in 3D, an animation) is add_view, or derive when it needs a script
+over the run's files (new columns on its items); then ui_show. A run too large
+for this machine goes to a cluster with export_job; its result comes back with import_result.
 Report a difference only with its paired interval from compare (or cohort, for a run's items),
 and name the run ids you used. Items the person picks can be saved as a cohort and run again.
 Jobs run one at a time on this machine's GPU, so do not queue more than the question needs.
@@ -133,6 +135,39 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         if not 0 <= index < len(found):
             raise ToolError(f"{run_id} has {len(found)} figures")
         return found[index]["view"]
+
+    @mcp.tool(annotations=WRITE)
+    async def add_view(
+        name: str, view: dict[str, Any], run_id: str | None = None, experiment: str | None = None
+    ) -> dict[str, Any]:
+        """Draw a figure the person asked for, from data you have read or computed, and keep it:
+        with run_id, in that run's Figures (views/<name>.json; an analysis or training run);
+        with experiment, on its page (experiments/<experiment>/views/<name>.json, to commit).
+        The same name replaces it, which is how to edit it. view is a figure as figure returns
+        one: heatmap, line, scatter, table, tokens, vega (any Vega-Lite spec, data inline; its
+        params animate) or plotly (traces inline: scatter3d for points in 3D, frames to play).
+        Give it an about: how to read it. Then point the person at it with ui_show: the part is
+        figures/figure/<path> on the run's figures tab, experiment/view/<path> on the
+        experiment's page."""
+        if (run_id is None) == (experiment is None):
+            raise ToolError("give run_id or experiment, one of them")
+        where = (f"/runs/{quote(run_id, safe='')}" if run_id
+                 else f"/experiments/{quote(experiment or '', safe='')}")  # fmt: skip
+        return await send("PUT", f"{where}/views/{quote(name, safe='')}", json=view)
+
+    @mcp.tool(annotations=WRITE)
+    async def derive(run_id: str, script: str, name: str | None = None) -> dict[str, Any]:
+        """Compute something new from a run's files and keep it with the run, through the job
+        queue (so a script that embeds on the GPU waits its turn). script is a Python file you
+        wrote in the project, experiments/<name>/derive/<what>.py, with derive(files: Path):
+        files is a folder with a copy of every file the run logged. Return rows (dicts with the
+        records' key, such as {"qid": 28, "label": "hedged"}) for new columns on the run's Items
+        (part items/column/<name>.<field>), or a figure as add_view takes one (views/<name>.json
+        on its Figures tab: plotly scatter3d for points in 3D). Waits up to ten minutes and
+        returns the job; its log ends with what was added. Then ui_show the person to it."""
+        options = {"run": run_id, "script": script, **({"--name": name} if name else {})}
+        job = await post("/launch", {"id": "derive", "options": options})
+        return await _wait(job["id"], 600)
 
     @mcp.tool(annotations=READ)
     async def samples(run_id: str, limit: int = 20, offset: int = 0) -> list[dict[str, Any]]:

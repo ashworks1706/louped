@@ -6,6 +6,7 @@ experiments/. Each tool's own environment variable still wins when it is set.
 """
 
 import os
+import re
 from pathlib import Path
 
 from louped.core.project import base
@@ -68,3 +69,29 @@ def trash(path: Path, kind: str) -> Path:
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(path, target)
     return target
+
+
+#: A name louped files a thing under (a cohort, a figure, a derived file): lowercase letters,
+#: digits and -.
+NAME = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
+
+
+def inside(root: Path, *parts: str) -> Path:
+    """root/parts, refused (ValueError) when it would lead out of root: a name with .. or a /."""
+    base_ = os.path.realpath(root)
+    path = os.path.realpath(os.path.join(base_, *parts))
+    if not path.startswith(base_ + os.sep):
+        raise ValueError(f"{'/'.join(parts)!r} is not a name under {root}")
+    return Path(path)
+
+
+def experiment_folder(experiment: str) -> Path:
+    """An experiment's folder, directly under experiments/ with its README; FileNotFoundError
+    when there is none."""
+    folder = inside(experiments_dir(), experiment)
+    if (
+        folder.parent != Path(os.path.realpath(experiments_dir()))
+        or not (folder / "README.md").is_file()
+    ):
+        raise FileNotFoundError(f"no experiment {experiment!r} under {experiments_dir()}")
+    return folder

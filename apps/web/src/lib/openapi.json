@@ -415,6 +415,100 @@
         }
       }
     },
+    "/api/runs/{run_id}/views/{name}": {
+      "put": {
+        "summary": "Add View",
+        "description": "A figure added to a run after it ran: views/<name>.json, replacing one of that name.\nOnly an MLflow run (an analysis or training) takes one.",
+        "operationId": "add_view_api_runs__run_id__views__name__put",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/HeatmapView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LineView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ScatterView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/TableView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/TokensView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/VegaView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PlotlyView"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "kind",
+                  "mapping": {
+                    "heatmap": "#/components/schemas/HeatmapView",
+                    "line": "#/components/schemas/LineView",
+                    "scatter": "#/components/schemas/ScatterView",
+                    "table": "#/components/schemas/TableView",
+                    "tokens": "#/components/schemas/TokensView",
+                    "vega": "#/components/schemas/VegaView",
+                    "plotly": "#/components/schemas/PlotlyView"
+                  }
+                },
+                "title": "Req"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/runs/{run_id}/features": {
       "get": {
         "summary": "Feature List",
@@ -1054,6 +1148,144 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Saved"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/experiments/{name}/views": {
+      "get": {
+        "summary": "Experiment Views",
+        "description": "The experiment's own figures, under experiments/<name>/views/.",
+        "operationId": "experiment_views_api_experiments__name__views_get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RunView"
+                  },
+                  "title": "Response Experiment Views Api Experiments  Name  Views Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/experiments/{name}/views/{view}": {
+      "put": {
+        "summary": "Save Experiment View",
+        "description": "Writes experiments/<name>/views/<view>.json, replacing one of that name.",
+        "operationId": "save_experiment_view_api_experiments__name__views__view__put",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "view",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "View"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/HeatmapView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LineView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ScatterView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/TableView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/TokensView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/VegaView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PlotlyView"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "kind",
+                  "mapping": {
+                    "heatmap": "#/components/schemas/HeatmapView",
+                    "line": "#/components/schemas/LineView",
+                    "scatter": "#/components/schemas/ScatterView",
+                    "table": "#/components/schemas/TableView",
+                    "tokens": "#/components/schemas/TokensView",
+                    "vega": "#/components/schemas/VegaView",
+                    "plotly": "#/components/schemas/PlotlyView"
+                  }
+                },
+                "title": "Req"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
                 }
               }
             }
@@ -3651,6 +3883,9 @@
                 },
                 {
                   "$ref": "#/components/schemas/VegaView"
+                },
+                {
+                  "$ref": "#/components/schemas/PlotlyView"
                 }
               ],
               "discriminator": {
@@ -3658,6 +3893,7 @@
                 "mapping": {
                   "heatmap": "#/components/schemas/HeatmapView",
                   "line": "#/components/schemas/LineView",
+                  "plotly": "#/components/schemas/PlotlyView",
                   "scatter": "#/components/schemas/ScatterView",
                   "table": "#/components/schemas/TableView",
                   "tokens": "#/components/schemas/TokensView",
@@ -4503,6 +4739,75 @@
         "required": ["model", "layers"],
         "title": "PlaygroundInfo"
       },
+      "PlotlyView": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "plotly",
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "data": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Data"
+          },
+          "layout": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Layout",
+            "default": {}
+          },
+          "frames": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frames"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "about": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "About"
+          }
+        },
+        "type": "object",
+        "required": ["kind", "title", "data"],
+        "title": "PlotlyView",
+        "description": "A Plotly figure with its data inline: what Vega-Lite does not draw, such as points in 3D\n(scatter3d, surface) and figures that play through frames. The UI loads Plotly only when one\nis shown."
+      },
       "PluginInfo": {
         "properties": {
           "name": {
@@ -4910,6 +5215,9 @@
               },
               {
                 "$ref": "#/components/schemas/VegaView"
+              },
+              {
+                "$ref": "#/components/schemas/PlotlyView"
               }
             ],
             "title": "View",
@@ -4918,6 +5226,7 @@
               "mapping": {
                 "heatmap": "#/components/schemas/HeatmapView",
                 "line": "#/components/schemas/LineView",
+                "plotly": "#/components/schemas/PlotlyView",
                 "scatter": "#/components/schemas/ScatterView",
                 "table": "#/components/schemas/TableView",
                 "tokens": "#/components/schemas/TokensView",
@@ -5089,6 +5398,9 @@
                 },
                 {
                   "$ref": "#/components/schemas/VegaView"
+                },
+                {
+                  "$ref": "#/components/schemas/PlotlyView"
                 }
               ],
               "discriminator": {
@@ -5096,6 +5408,7 @@
                 "mapping": {
                   "heatmap": "#/components/schemas/HeatmapView",
                   "line": "#/components/schemas/LineView",
+                  "plotly": "#/components/schemas/PlotlyView",
                   "scatter": "#/components/schemas/ScatterView",
                   "table": "#/components/schemas/TableView",
                   "tokens": "#/components/schemas/TokensView",

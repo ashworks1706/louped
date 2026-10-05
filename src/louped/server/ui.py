@@ -184,6 +184,12 @@ CATALOG: dict[Region, list[Kind]] = {
     "experiment.tabs": [
         Kind(block="design", about="The experiment's design region (experiment.design)."),
         Kind(block="runs", about="The experiment's runs."),
+        Kind(block="views", about="The experiment's own figures (experiments/<name>/views/)."),
+        Kind(
+            block="view",
+            about="One of the experiment's figures as a tab of its own.",
+            needs=["path"],
+        ),
         TEXT,
         PLUGIN,
     ],
@@ -191,6 +197,16 @@ CATALOG: dict[Region, list[Kind]] = {
         Kind(block="readme", about="The README, rendered and editable."),
         Kind(block="result", about="The README's Result section."),
         Kind(block="runs", about="The experiment's runs."),
+        Kind(
+            block="views",
+            about="The experiment's own figures (experiments/<name>/views/); "
+            "absent when it has none.",
+        ),
+        Kind(
+            block="view",
+            about="One of the experiment's figures, by its path (views/x.json).",
+            needs=["path"],
+        ),
         TEXT,
         PLUGIN,
     ],
@@ -207,7 +223,11 @@ DEFAULT: dict[Region, list[Block]] = {
         _b(block=b) for b in ("error", "metrics", "history", "hardware", "report", "provenance")
     ],
     "experiment.tabs": [_b(block="design"), _b(block="runs")],
-    "experiment.design": [_b(block="readme"), _b(block="result", width="side")],
+    "experiment.design": [
+        _b(block="readme"),
+        _b(block="result", width="side"),
+        _b(block="views"),
+    ],
 }
 
 #: Starting points: each sets some regions, the default the rest.

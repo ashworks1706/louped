@@ -1,5 +1,6 @@
 """Views over the stores other tools write: Inspect logs, MLflow, experiments/, graphs. They only
-read, but for a person's own words (labels, an experiment's README, a run's text files) and for
+read, but for a person's own words (labels, an experiment's README, a run's text files), the
+figures an agent adds to a run or an experiment, and for
 deleting an experiment or a run, which moves it to the trash rather than removing it.
 
 Each view is empty until its tool has written something, so the server answers with whatever
@@ -31,16 +32,19 @@ from louped.stores.runs import (
     write_text,
 )
 from louped.stores.vectors import list_vectors
+from louped.stores.views import add_view, experiment_views, save_experiment_view
 
 __all__ = [
     "BadExperiment",
     "CohortStats",
     "NotFound",
+    "add_view",
     "agreement",
     "cohort",
     "compare",
     "delete_experiment",
     "delete_run",
+    "experiment_views",
     "get_experiment",
     "get_feature",
     "get_labels",
@@ -54,6 +58,7 @@ __all__ = [
     "list_vectors",
     "list_views",
     "read_readme",
+    "save_experiment_view",
     "set_label",
     "write_readme",
     "write_text",

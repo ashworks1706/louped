@@ -146,6 +146,27 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/runs/{run_id}/views/{name}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Add View
+     * @description A figure added to a run after it ran: views/<name>.json, replacing one of that name.
+     *     Only an MLflow run (an analysis or training) takes one.
+     */
+    put: operations["add_view_api_runs__run_id__views__name__put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/runs/{run_id}/features": {
     parameters: {
       query?: never;
@@ -388,6 +409,46 @@ export interface paths {
      * @description Writes experiments/<name>/cohorts/<cohort>.json, replacing one of that name.
      */
     put: operations["save_cohort_api_experiments__name__cohorts__cohort__put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/experiments/{name}/views": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Experiment Views
+     * @description The experiment's own figures, under experiments/<name>/views/.
+     */
+    get: operations["experiment_views_api_experiments__name__views_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/experiments/{name}/views/{view}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Save Experiment View
+     * @description Writes experiments/<name>/views/<view>.json, replacing one of that name.
+     */
+    put: operations["save_experiment_view_api_experiments__name__views__view__put"];
     post?: never;
     delete?: never;
     options?: never;
@@ -1483,6 +1544,7 @@ export interface components {
         | components["schemas"]["TableView"]
         | components["schemas"]["TokensView"]
         | components["schemas"]["VegaView"]
+        | components["schemas"]["PlotlyView"]
       )[];
     };
     /** Job */
@@ -1843,6 +1905,42 @@ export interface components {
        */
       switchable: boolean;
     };
+    /**
+     * PlotlyView
+     * @description A Plotly figure with its data inline: what Vega-Lite does not draw, such as points in 3D
+     *     (scatter3d, surface) and figures that play through frames. The UI loads Plotly only when one
+     *     is shown.
+     */
+    PlotlyView: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      kind: "plotly";
+      /** Title */
+      title: string;
+      /** Data */
+      data: {
+        [key: string]: unknown;
+      }[];
+      /**
+       * Layout
+       * @default {}
+       */
+      layout: {
+        [key: string]: unknown;
+      };
+      /** Frames */
+      frames?:
+        | {
+            [key: string]: unknown;
+          }[]
+        | null;
+      /** Note */
+      note?: string | null;
+      /** About */
+      about?: string | null;
+    };
     /** PluginInfo */
     PluginInfo: {
       /** Name */
@@ -1981,7 +2079,8 @@ export interface components {
         | components["schemas"]["ScatterView"]
         | components["schemas"]["TableView"]
         | components["schemas"]["TokensView"]
-        | components["schemas"]["VegaView"];
+        | components["schemas"]["VegaView"]
+        | components["schemas"]["PlotlyView"];
     };
     /** SampleDetail */
     SampleDetail: {
@@ -2053,6 +2152,7 @@ export interface components {
         | components["schemas"]["TableView"]
         | components["schemas"]["TokensView"]
         | components["schemas"]["VegaView"]
+        | components["schemas"]["PlotlyView"]
       )[];
     };
     /** Saved */
@@ -2743,6 +2843,49 @@ export interface operations {
       };
     };
   };
+  add_view_api_runs__run_id__views__name__put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: string;
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json":
+          | components["schemas"]["HeatmapView"]
+          | components["schemas"]["LineView"]
+          | components["schemas"]["ScatterView"]
+          | components["schemas"]["TableView"]
+          | components["schemas"]["TokensView"]
+          | components["schemas"]["VegaView"]
+          | components["schemas"]["PlotlyView"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RunView"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   feature_list_api_runs__run_id__features_get: {
     parameters: {
       query?: never;
@@ -3213,6 +3356,80 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Saved"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  experiment_views_api_experiments__name__views_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RunView"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  save_experiment_view_api_experiments__name__views__view__put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+        view: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json":
+          | components["schemas"]["HeatmapView"]
+          | components["schemas"]["LineView"]
+          | components["schemas"]["ScatterView"]
+          | components["schemas"]["TableView"]
+          | components["schemas"]["TokensView"]
+          | components["schemas"]["VegaView"]
+          | components["schemas"]["PlotlyView"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RunView"];
         };
       };
       /** @description Validation Error */
