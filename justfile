@@ -75,6 +75,10 @@ install-check: web-build
 site:
     cd {{site}} && pnpm dev
 
+# remake the landing page's screenshots and demo video from a fresh demo project (apps/site/demo)
+site-demo:
+    uv run --with pillow bash apps/site/demo/make.sh
+
 # the louped image
 image:
     docker build -t louped .

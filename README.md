@@ -13,7 +13,7 @@ your cluster, with open-weight models.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://louped.vercel.app/demo/items-dark.png">
-  <img alt="Sixteen questions under three conditions: what pushback and evidence did to each answer" src="https://louped.vercel.app/demo/items-light.png">
+  <img alt="Fifty items under three conditions, each against the reference: a re-analysis of released CAA results" src="https://louped.vercel.app/demo/items-light.png">
 </picture>
 
 ## Start
