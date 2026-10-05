@@ -104,12 +104,16 @@ writes these with `set_layout`, which checks them first. They are plain files to
 | `home`              | `stats`, `live`, `domains`, `active`, `latest`                                                |
 | `run.tabs`          | `overview`, `items`, `figures`, `samples`, `log`, `artifacts`, `config`, `file`               |
 | `run.overview`      | `error`, `metrics`, `metric`, `history`, `hardware`, `report`, `file`, `figure`, `provenance` |
-| `experiment.tabs`   | `design`, `runs`                                                                              |
-| `experiment.design` | `readme`, `result`, `runs`                                                                    |
+| `experiment.tabs`   | `design`, `runs`, `views`, `view`                                                             |
+| `experiment.design` | `readme`, `result`, `runs`, `views`, `view`                                                   |
 
 Every region can also hold `text` (your own Markdown) and `plugin` (a page from one of your
 [plugins](/docs/plugins)). Any block takes `title`, `about` (its ?) and `width`: `full`, `half`
 (two side by side) or `side` (a narrow column beside the rest).
+
+`views` shows every figure in `experiments/<name>/views/`, which your agent adds with `add_view`;
+`view` (`path`) shows one. A figure can be any of louped's kinds or `plotly`, which draws 3D
+points and surfaces and plays `frames` as an animation.
 
 A file that does not check is not used. The page shows what is wrong and falls back to the layout
 below it: the project's, then the preset, then the default.

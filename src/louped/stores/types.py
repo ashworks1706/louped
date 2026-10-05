@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 RunKind = Literal["eval", "analysis", "training"]
 
@@ -205,8 +206,52 @@ class VegaView(BaseModel):
     about: str | None = None
 
 
+class PlotlyView(BaseModel):
+    """A Plotly figure with its data inline: what Vega-Lite does not draw, such as points in 3D
+    (scatter3d, surface) and figures that play through frames. The UI loads Plotly only when one
+    is shown."""
+
+    kind: Literal["plotly"]
+    title: str
+    #: Plotly traces, each with its data inline.
+    data: list[dict[str, Any]] = Field(min_length=1)
+    layout: dict[str, Any] = {}
+    #: Frames to play through, each a {"name", "data"}: an animation with a slider.
+    frames: list[dict[str, Any]] | None = None
+    note: str | None = None
+    #: How to read the figure, behind the ? beside its title.
+    about: str | None = None
+
+    @model_validator(mode="after")
+    def _inline(self) -> PlotlyView:
+        if _fetches([self.data, self.layout, self.frames]):
+            raise ValueError("a plotly view's data must be inline: no urls")
+        traces = [*self.data, *(t for f in self.frames or [] for t in f.get("data", []))]
+        if maps := sorted({t.get("type") for t in traces if _MAP.match(str(t.get("type", "")))}):
+            raise ValueError(f"{', '.join(maps)} fetch map tiles or shapes from the web: "
+                             "draw it with scatter or heatmap instead")  # fmt: skip
+        if keys := sorted({"geo", "map", "mapbox", "images"} & self.layout.keys()):
+            raise ValueError(f"layout {', '.join(keys)} fetch from the web: leave them out")
+        if any("name" not in f for f in self.frames or []):
+            raise ValueError("every frame needs a name: the slider steps by it")
+        return self
+
+
+#: Trace types that load tiles or shapes from the web whatever the figure says.
+_MAP = re.compile(r"^(scattergeo|choropleth|scattermap|choroplethmap|densitymap)")
+
+
+def _fetches(obj: Any) -> bool:
+    """Whether any text in obj is a url a browser would fetch (http, //, data:)."""
+    if isinstance(obj, str):
+        return obj.startswith(("http:", "https:", "//", "data:"))
+    if isinstance(obj, dict):
+        return any(_fetches(v) for v in obj.values())
+    return isinstance(obj, list) and any(_fetches(v) for v in obj)
+
+
 View = Annotated[
-    HeatmapView | LineView | ScatterView | TableView | TokensView | VegaView,
+    HeatmapView | LineView | ScatterView | TableView | TokensView | VegaView | PlotlyView,
     Field(discriminator="kind"),
 ]
 

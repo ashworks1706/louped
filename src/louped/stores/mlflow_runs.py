@@ -181,6 +181,47 @@ def write_text(run_id: str, path: str, text: str) -> bool:
     return True
 
 
+#: The tag naming the files added after the run (an agent's figure), so the run says so.
+ADDED = "louped.added"
+
+
+def add_text(run_id: str, path: str, text: str) -> bool:
+    """Write a text file into a run after it ran (a new figure, or a new version of one added
+    before) and add it to the run's louped.added tag; False when there is no such run."""
+    rel = Path(path)
+    if rel.is_absolute() or ".." in rel.parts:
+        raise ValueError(f"{path}: a path inside the run's artifacts")
+    _check(path, text)
+    client = _client()
+    if client is None:
+        return False
+    try:
+        run = client.get_run(run_id.removeprefix(PREFIX))
+    except Exception as exc:
+        if _missing(exc):
+            return False
+        raise
+    client.log_text(run.info.run_id, text, rel.as_posix())
+    added = {p for p in run.data.tags.get(ADDED, "").split(",") if p} | {rel.as_posix()}
+    client.set_tag(run.info.run_id, ADDED, ",".join(sorted(added)))
+    return True
+
+
+def download_all(run_id: str, dest: Path) -> bool:
+    """Copy every file a run logged into dest; False when there is no such run."""
+    client = _client()
+    if client is None:
+        return False
+    try:
+        client.get_run(run_id.removeprefix(PREFIX))
+    except Exception as exc:
+        if _missing(exc):
+            return False
+        raise
+    client.download_artifacts(run_id.removeprefix(PREFIX), "", str(dest))
+    return True
+
+
 def _check(path: str, text: str) -> None:
     """A structured file must still parse: an edit never leaves a run's data unreadable."""
     kind = path.lower().rsplit(".", 1)[-1]

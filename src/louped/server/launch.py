@@ -99,6 +99,10 @@ COMMANDS = {
         "Time to first token, latency and throughput of OpenAI-compatible servers by concurrency.",
     ),
     "judge": ("Judge", "Two eval runs judged pairwise by a local model: B's win rate over A."),
+    "derive": (
+        "Derive",
+        "A script over a run's files: new columns on its Items, or a figure, kept with the run.",
+    ),
     "examples": (
         "Examples",
         "Example runs for every page from a tiny model trained here: "

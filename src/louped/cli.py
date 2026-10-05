@@ -257,6 +257,19 @@ class Judge:
 
 
 @dataclass(frozen=True)
+class Derive:
+    """A script over a run's files, kept with the run: its derive(files) returns rows (new
+    columns on the run's Items, as derived/<name>.jsonl) or a figure (views/<name>.json)."""
+
+    run: tyro.conf.Positional[str]
+    """The run's id (an analysis or training run)."""
+    script: tyro.conf.Positional[Path]
+    """A Python file with derive(files: Path), such as experiments/<name>/derive/<what>.py."""
+    name: str | None = None
+    """What it is logged as; the script's name when empty."""
+
+
+@dataclass(frozen=True)
 class Mcp:
     """An MCP server on stdio for coding agents, over a running louped serve: read experiments,
     runs, figures and compares; launch, follow and cancel jobs. Needs the agent extra."""
@@ -295,6 +308,7 @@ Command = (
     | Annotated[Bench, tyro.conf.subcommand("bench")]
     | Annotated[EndpointBench, tyro.conf.subcommand("endpoint-bench")]
     | Annotated[Judge, tyro.conf.subcommand("judge")]
+    | Annotated[Derive, tyro.conf.subcommand("derive")]
     | Annotated[Mcp, tyro.conf.subcommand("mcp")]
     | Annotated[Examples, tyro.conf.subcommand("examples")]
     | Annotated[Version, tyro.conf.subcommand("version")]
@@ -319,6 +333,7 @@ COMMANDS = {
     "bench",
     "endpoint-bench",
     "judge",
+    "derive",
     "mcp",
     "examples",
     "version",
@@ -540,6 +555,15 @@ def main() -> None:
             try:
                 print(judge(cmd.a, cmd.b, cmd.model, cmd.criterion, cmd.limit, cmd.max_tokens))
             except ValueError as exc:
+                raise SystemExit(str(exc)) from exc
+        case Derive() as cmd:
+            import json
+
+            from louped.derive import derive
+
+            try:
+                print(json.dumps({"run": cmd.run, "added": derive(cmd.run, cmd.script, cmd.name)}))
+            except (ValueError, FileNotFoundError) as exc:
                 raise SystemExit(str(exc)) from exc
         case Mcp() as cmd:
             try:

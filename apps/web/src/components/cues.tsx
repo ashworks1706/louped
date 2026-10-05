@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -19,6 +19,9 @@ const FIND_MS = 8000;
 const SETTLE_MS = 800;
 /** A cue with no note fades by itself after this; one with a note stays until dismissed. */
 const FADE_MS = 6000;
+/** What an agent writes before pointing at it (a figure, a column, a run's files), so a cue's
+ * page reads it again. */
+const FRESHENED = new Set(["run", "runs", "views", "artifact", "experiment", "experiment-views"]);
 
 const find = (id: string) => document.querySelector<HTMLElement>(`[data-part="${CSS.escape(id)}"]`);
 
@@ -27,6 +30,7 @@ const find = (id: string) => document.querySelector<HTMLElement>(`[data-part="${
 export function Cues() {
   const canShow = useCanPick();
   const router = useRouter();
+  const client = useQueryClient();
   const last = useRef<number | null>(null);
   const [cue, setCue] = useState<{ cue: Cue; ids: string[] } | null>(null);
   // the cue being shown; a newer one takes over, the next poll (often empty) does not stop it
@@ -54,6 +58,10 @@ export function Cues() {
     // the one it takes over from never found its parts: its agent hears so
     if (before > 0 && before !== next.id) void cueSeen(before, [], true).catch(() => undefined);
     const stopped = () => showing.current !== next.id;
+    // the agent may have just written what it points at (a figure, a column): read it again
+    void client.invalidateQueries({
+      predicate: (q) => FRESHENED.has(String(q.queryKey[0])),
+    });
     void (async () => {
       const started = Date.now();
       const target = next.url ? new URL(next.url, location.origin) : null;
@@ -87,7 +95,7 @@ export function Cues() {
       showing.current = 0;
       await cueSeen(next.id, missing).catch(() => undefined);
     })();
-  }, [cues.data, router]);
+  }, [cues.data, router, client]);
   useEffect(
     () => () => {
       showing.current = -1; // unmounted: whatever is looking stops

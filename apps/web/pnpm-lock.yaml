@@ -50,6 +50,9 @@ importers:
       nuqs:
         specifier: ^2.10.1
         version: 2.10.1(next@16.3.6(@babel/core@7.29.7)(@playwright/test@1.63.0)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)
+      plotly.js-dist-min:
+        specifier: ^4.1.1
+        version: 4.1.1
       react:
         specifier: 19.2.8
         version: 19.2.8
@@ -90,6 +93,9 @@ importers:
       '@types/node':
         specifier: ^20
         version: 20.19.43
+      '@types/plotly.js-dist-min':
+        specifier: ^2.3.4
+        version: 2.3.4
       '@types/react':
         specifier: ^19
         version: 19.3.0
@@ -1046,6 +1052,12 @@ packages:
 
   '@types/node@20.19.43':
     resolution: {integrity: sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA==}
+
+  '@types/plotly.js-dist-min@2.3.4':
+    resolution: {integrity: sha512-ISwLFV6Zs/v3DkaRFLyk2rvYAfVdnYP2VVVy7h+fBDWw52sn7sMUzytkWiN4M75uxr1uz1uiBioePTDpAfoFIg==}
+
+  '@types/plotly.js@3.0.14':
+    resolution: {integrity: sha512-3JZH20UBXQ8rZFPeV40fKinx5Le0T2cuz6kM8LEYkkAuDrljzezlwvZuXnXQhyBost7YwgKxEDg7SVTIBbA6eg==}
 
   '@types/react-dom@19.3.0':
     resolution: {integrity: sha512-ZI7bU42mZXXKHn/qNLEw2IrbiINU7X5+vfgdixBHkCNpYWXjKgfQ/P+uyGb5CjOLB9UcnTeg3rylQtV2hym44Q==}
@@ -2655,6 +2667,9 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
+  plotly.js-dist-min@4.1.1:
+    resolution: {integrity: sha512-4Jg6n9FKcn5WBuqHESZmueEBYOLjGlsz8ivzMCl03WCX+GAAOgIALvdONwIi54JDMq0tkxbu+vs5Yj7QSPQtgg==}
+
   pluralize@8.0.0:
     resolution: {integrity: sha512-Nc3IT5yHzflTfbjgqWcCPpo7DaKy4FnpB0l/zCAW0Tc7jxAiuqSxHasntB3D7887LSrA93kDJ9IXovxJYxyLCA==}
     engines: {node: '>=4'}
@@ -4245,6 +4260,12 @@ snapshots:
   '@types/node@20.19.43':
     dependencies:
       undici-types: 6.21.0
+
+  '@types/plotly.js-dist-min@2.3.4':
+    dependencies:
+      '@types/plotly.js': 3.0.14
+
+  '@types/plotly.js@3.0.14': {}
 
   '@types/react-dom@19.3.0(@types/react@19.3.0)':
     dependencies:
@@ -6175,6 +6196,8 @@ snapshots:
   playwright@1.63.0:
     dependencies:
       playwright-core: 1.63.0
+
+  plotly.js-dist-min@4.1.1: {}
 
   pluralize@8.0.0: {}
 

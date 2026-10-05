@@ -21,6 +21,7 @@ import {
   useLayout,
 } from "@/components/layout";
 import { QueryState } from "@/components/query-state";
+import { Figure } from "@/components/run-views";
 import { RunsTable } from "@/components/runs-table";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -226,8 +227,33 @@ function ExperimentTabs({ experiment: e }: { experiment: ExperimentDetail }) {
   const client = useQueryClient();
   const layout = useLayout(e.name);
   const plugins = useQuery(q.plugins());
+  const figures = useQuery(q.experimentViews(e.name));
+  const rule = useRules();
   const [chosen, setTab] = useQueryState("tab", parseAsString);
   if (!layout.data) return <QueryState query={layout}>{() => null}</QueryState>;
+  const at = (path: string) => partId("experiment/view", path);
+  const shownViews = arrange(figures.data ?? [], (v) => at(v.path), rule);
+  const views = (
+    <div className="flex flex-col gap-4">
+      {shownViews.map((v) => (
+        <Figure key={v.path} view={v.view} id={at(v.path)} />
+      ))}
+    </div>
+  );
+  /** One of the experiment's figures by its path, or what is missing. */
+  const one = (path: string) => {
+    const v = figures.data?.find((f) => f.path === path);
+    if (v) return <Figure view={v.view} id={at(v.path)} />;
+    return figures.isPending ? null : (
+      <p className="text-muted-foreground text-sm">
+        No figure{" "}
+        <span className="font-mono">
+          experiments/{e.name}/{path}
+        </span>
+        .
+      </p>
+    );
+  };
   const runs =
     e.runs.length === 0 ? (
       <EmptyState
@@ -278,6 +304,10 @@ function ExperimentTabs({ experiment: e }: { experiment: ExperimentDetail }) {
             };
           case "runs":
             return { title: "Runs", body: runs };
+          case "views":
+            return shownViews.length ? { body: views } : null;
+          case "view":
+            return { body: one(b.path!) };
           case "plugin":
             return {
               body: <PluginBlock b={b} page="experiment.html" query={{ experiment: e.name }} />,
@@ -296,19 +326,27 @@ function ExperimentTabs({ experiment: e }: { experiment: ExperimentDetail }) {
           ? { value: "design", label: "Design and result", body: design }
           : b.block === "runs"
             ? { value: "runs", label: "Runs", body: runs, count: e.runs.length }
-            : b.block === "plugin"
-              ? {
-                  value: `x-${b.plugin}`,
-                  label: plugins.data?.find((p) => p.name === b.plugin)?.title ?? b.plugin!,
-                  body: (
-                    <PluginFrame
-                      name={b.plugin!}
-                      page={b.page ?? "experiment.html"}
-                      query={{ experiment: e.name }}
-                    />
-                  ),
-                }
-              : null;
+            : b.block === "views"
+              ? { value: "views", label: "Figures", body: views, count: shownViews.length }
+              : b.block === "view"
+                ? {
+                    value: `v-${b.path}`,
+                    label: figures.data?.find((f) => f.path === b.path)?.view.title ?? b.path!,
+                    body: one(b.path!),
+                  }
+                : b.block === "plugin"
+                  ? {
+                      value: `x-${b.plugin}`,
+                      label: plugins.data?.find((p) => p.name === b.plugin)?.title ?? b.plugin!,
+                      body: (
+                        <PluginFrame
+                          name={b.plugin!}
+                          page={b.page ?? "experiment.html"}
+                          query={{ experiment: e.name }}
+                        />
+                      ),
+                    }
+                  : null;
     return tab ? [{ count: undefined, ...tab, b, at, label: b.title ?? tab.label }] : [];
   });
   const tab = chosen && tabs.some((t) => t.value === chosen) ? chosen : tabs[0]?.value;

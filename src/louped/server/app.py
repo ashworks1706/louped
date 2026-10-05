@@ -37,6 +37,7 @@ from louped.stores.types import (
     RunView,
     SampleDetail,
     SampleSummary,
+    View,
 )
 from louped.sync import configured
 
@@ -188,6 +189,23 @@ def create_app(
     def views(run_id: str) -> list[RunView]:
         return stores.list_views(run_id)
 
+    @app.put("/api/runs/{run_id}/views/{name}", dependencies=[Depends(launch.require_json)])
+    def add_view(run_id: str, name: str, req: View) -> RunView:
+        """A figure added to a run after it ran: views/<name>.json, replacing one of that name.
+        Only an MLflow run (an analysis or training) takes one."""
+        editing()
+        try:
+            added = stores.add_view(run_id, name, req)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        if added is None:
+            raise HTTPException(
+                404,
+                f"no analysis or training run {run_id}: an eval run's "
+                "figures go on its experiment's page",
+            )
+        return added
+
     @app.get("/api/runs/{run_id}/features")
     def feature_list(run_id: str) -> list[int]:
         return stores.list_features(run_id)
@@ -290,6 +308,23 @@ def create_app(
         editing()
         try:
             return cohorts.save(name, cohort, req)
+        except (ValueError, FileNotFoundError) as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.get("/api/experiments/{name}/views")
+    def experiment_views(name: str) -> list[RunView]:
+        """The experiment's own figures, under experiments/<name>/views/."""
+        try:
+            return stores.experiment_views(name)
+        except (ValueError, FileNotFoundError) as exc:
+            raise HTTPException(404, str(exc)) from exc
+
+    @app.put("/api/experiments/{name}/views/{view}", dependencies=[Depends(launch.require_json)])
+    def save_experiment_view(name: str, view: str, req: View) -> RunView:
+        """Writes experiments/<name>/views/<view>.json, replacing one of that name."""
+        editing()
+        try:
+            return stores.save_experiment_view(name, view, req)
         except (ValueError, FileNotFoundError) as exc:
             raise HTTPException(400, str(exc)) from exc
 

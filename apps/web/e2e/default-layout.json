@@ -96,6 +96,10 @@
       {
         "block": "result",
         "width": "side"
+      },
+      {
+        "block": "views",
+        "width": "full"
       }
     ]
   },

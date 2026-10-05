@@ -118,8 +118,12 @@ export function asBinary(v: unknown): 0 | 1 | null {
  * one file per request), so the Items view leaves them to Artifacts. */
 export const MAX_CONDITIONS = 12;
 
+/** Where louped derive writes a run's added per-item columns, one JSONL file each. */
+export const DERIVED = "derived";
+
 /** Folders holding two to MAX_CONDITIONS JSONL files: one file per condition, the same items in
  * each. */
+
 export function itemFolders(paths: string[]): { dir: string; files: string[] }[] {
   const by = new Map<string, string[]>();
   for (const p of paths) {
@@ -127,10 +131,14 @@ export function itemFolders(paths: string[]): { dir: string; files: string[] }[]
     const dir = p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "";
     by.set(dir, [...(by.get(dir) ?? []), p]);
   }
-  return [...by]
-    .filter(([, files]) => files.length >= 2 && files.length <= MAX_CONDITIONS)
-    .map(([dir, files]) => ({ dir, files: orderConditions(files) }))
-    .sort((a, b) => a.dir.localeCompare(b.dir));
+  return (
+    [...by]
+      // derived/ holds columns added to the items (louped derive), not conditions
+      .filter(([dir]) => dir !== DERIVED)
+      .filter(([, files]) => files.length >= 2 && files.length <= MAX_CONDITIONS)
+      .map(([dir, files]) => ({ dir, files: orderConditions(files) }))
+      .sort((a, b) => a.dir.localeCompare(b.dir))
+  );
 }
 
 const REFERENCE = /^(baseline|base|control|reference|original|unmitigated|before)$/i;

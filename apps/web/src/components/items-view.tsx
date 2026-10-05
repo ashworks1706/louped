@@ -27,11 +27,13 @@ import {
 import { cohortStats, isSnapshot, q, type PairedScore, type RunDetail } from "@/lib/api";
 import {
   artifactQuery,
+  DERIVED,
   asBinary,
   brief,
   defaultField,
   downloadJsonl,
   itemFolders,
+  kindOf,
   joinKey,
   parseJsonl,
   sharedFields,
@@ -83,6 +85,9 @@ export function ItemsView({ run }: { run: RunDetail }) {
         dir={folder.dir}
         files={folder.files}
         meanings={run.artifacts.find((a) => a.path === join(folder.dir, FIELDS))?.path}
+        derived={run.artifacts
+          .map((a) => a.path)
+          .filter((p) => p.startsWith(`${DERIVED}/`) && kindOf(p) === "jsonl")}
       />
     </div>
   );
@@ -98,19 +103,26 @@ function Folder({
   dir,
   files,
   meanings,
+  derived,
 }: {
   runId: string;
   experiment: string | null | undefined;
   dir: string;
   files: string[];
   meanings?: string;
+  derived: string[];
 }) {
   const queries = useQueries({ queries: files.map((f) => artifactQuery(runId, f)) });
+  const added = useQueries({ queries: derived.map((f) => artifactQuery(runId, f)) });
   const about = useQuery({ ...artifactQuery(runId, meanings ?? ""), enabled: !!meanings });
-  const failed = queries.find((q) => q.error);
+  const failed = [...queries, ...added].find((q) => q.error);
   if (failed) return <p className="text-negative text-sm">{String(failed.error)}</p>;
-  if (queries.some((q) => q.data === undefined)) return <Skeleton className="h-64 w-full" />;
+  if ([...queries, ...added].some((q) => q.data === undefined && !q.error))
+    return <Skeleton className="h-64 w-full" />;
   const tables = queries.map((q) => parseJsonl(q.data!).rows);
+  const columns = derived.flatMap((f, i) =>
+    added[i].data === undefined ? [] : [{ name: stem(f), rows: parseJsonl(added[i].data!).rows }],
+  );
   // a folder of traces (one request a file) is not conditions over the same items
   if (tables.every((t) => traceShape(t) !== null)) {
     const dir = files[0].includes("/") ? files[0].slice(0, files[0].lastIndexOf("/")) : "";
@@ -142,6 +154,7 @@ function Folder({
         tables={tables}
         about={meaning.meanings}
         run={{ id: runId, experiment: experiment ?? null, folder: dir }}
+        derived={columns}
       />
     </div>
   );
@@ -222,14 +235,39 @@ function Aligned({
   tables,
   about = {},
   run,
+  derived = [],
 }: {
   files: string[];
   tables: Row[][];
   about?: Record<string, string>;
   run?: Source;
+  /** Columns added to the items (derived/<name>.jsonl), each row keyed as the records are. */
+  derived?: { name: string; rows: Row[] }[];
 }) {
   const names = files.map(stem);
   const key = useMemo(() => joinKey(tables), [tables]);
+  // each added column by item: <file>.<field>, for the files keyed as the records are
+  const added = useMemo(() => {
+    const out = new Map<string, Row>();
+    const cols: string[] = [];
+    const unkeyed: string[] = [];
+    for (const d of derived) {
+      if (!key) continue;
+      if (!d.rows.some((r) => key in r)) {
+        unkeyed.push(d.name);
+        continue;
+      }
+      const fields = [...new Set(d.rows.flatMap((r) => Object.keys(r)))].filter((f) => f !== key);
+      cols.push(...fields.map((f) => `${d.name}.${f}`));
+      for (const r of d.rows) {
+        const id = String(r[key]);
+        const got = out.get(id) ?? {};
+        for (const f of fields) if (f in r) got[`${d.name}.${f}`] = r[f];
+        out.set(id, got);
+      }
+    }
+    return { cols, unkeyed, of: (id: string) => out.get(id) ?? {} };
+  }, [derived, key]);
   const fields = useMemo(() => (key ? sharedFields(tables, key) : []), [tables, key]);
   const [fieldParam, setField] = useQueryState("field", parseAsString);
   const [refParam, setRef] = useQueryState("ref", parseAsString);
@@ -468,6 +506,7 @@ function Aligned({
       { name: key, kind: "key" as const },
       ...(text ? [{ name: text, kind: "text" as const }] : []),
       ...names.map((n) => ({ name: n, kind: "condition" as const })),
+      ...added.cols.map((n) => ({ name: n, kind: "derived" as const })),
     ],
     (c) => partId("items/column", c.name),
     rule,
@@ -488,6 +527,12 @@ function Aligned({
         pairs={pairs}
         pairedError={paired.error ? String(paired.error) : (paired.data?.unpaired ?? null)}
       />
+      {added.unkeyed.length > 0 && key && (
+        <p className="text-negative text-xs">
+          {added.unkeyed.map((n) => `${DERIVED}/${n}.jsonl`).join(", ")} has no {key} on its rows,
+          so its columns cannot be matched to the items.
+        </p>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         {!control("search").hidden && (
           <Input
@@ -642,6 +687,7 @@ function Aligned({
                       c.kind === "key" && "w-16",
                       c.kind === "text" && "hidden sm:table-cell",
                       c.kind === "condition" && "text-right whitespace-nowrap",
+                      c.kind === "derived" && "whitespace-nowrap",
                     )}
                   >
                     <span className="inline-flex items-center gap-1">{label}</span>
@@ -686,6 +732,16 @@ function Aligned({
                         {brief(textOf(it), 140)}
                       </TableCell>
                     );
+                  if (c.kind === "derived")
+                    return (
+                      <TableCell
+                        key={c.name}
+                        className="max-w-48 truncate font-mono text-xs"
+                        {...part(partId("items/cell", it.id, c.name))}
+                      >
+                        {brief(added.of(it.id)[c.name] ?? "", 60)}
+                      </TableCell>
+                    );
                   const i = names.indexOf(c.name);
                   return (
                     <TableCell
@@ -720,6 +776,7 @@ function Aligned({
               itemFields={itemFields}
               text={text}
               about={about}
+              derived={added.of(opened.id)}
             />
           )}
         </SheetContent>
@@ -911,9 +968,12 @@ function ItemDetail({
   itemFields,
   text,
   about,
+  derived,
 }: {
   id: string;
   text: string | null;
+  /** Its added columns (louped derive), by <file>.<field>. */
+  derived: Row;
   keyName: string;
   names: string[];
   rows: (Row | undefined)[];
@@ -956,10 +1016,10 @@ function ItemDetail({
             </span>
           )}
         </SheetTitle>
-        {details.length > 0 && !itself.hidden && (
+        {details.length + Object.keys(derived).length > 0 && !itself.hidden && (
           <div {...part(section("item"))}>
             <RecordFields
-              row={Object.fromEntries(details.map((k) => [k, item[k]]))}
+              row={{ ...Object.fromEntries(details.map((k) => [k, item[k]])), ...derived }}
               about={about}
               partOf={fieldOf("item")}
               inline

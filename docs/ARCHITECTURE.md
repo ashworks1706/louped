@@ -73,7 +73,7 @@ function, wrapped once as an Inspect scorer (`inspect_ext.as_scorer`) and once a
 | Probes | scikit-learn | library |
 | Retrieval, reranking, NLI | bm25s, sentence-transformers | library |
 | Tracking | MLflow on SQLite, Inspect logs | library |
-| API and UI | FastAPI; Next.js static export, shadcn/ui, TanStack Query, nuqs, Recharts | |
+| API and UI | FastAPI; Next.js static export, shadcn/ui, TanStack Query, nuqs, Recharts, Plotly (3D, animation; loaded when shown) | |
 
 Rejected: verifiers (pulls in hosted-API clients; TRL's environments cover it), vLLM, EasySteer and
 cluster launchers such as submitit (a job runs here through louped's own provider, or is exported as
@@ -120,10 +120,10 @@ experiments                              leaf, in a project; nothing imports it
 cli
 server | agent | init                    FastAPI over the stores; Playground; launching jobs; the
                                          MCP server, an HTTP client of the API; louped init
-train | sweep | grid | sync | features | circuits | judge | bench
+train | sweep | grid | sync | features | circuits | judge | bench | derive
                                          training recipes and sweeps; steering sweeps; condition
                                          grids; SAE dashboards; attribution graphs; pairwise judging;
-                                         serving cost
+                                         serving cost; columns and figures from a run's files
 stores | tracking | analysis | inspect_ext
                                          read Inspect logs and MLflow; start a run; lens, patching,
                                          probes, attention, SAE features as views; the louped/
@@ -139,8 +139,10 @@ core                                     run metadata, paths, the project and it
 
 - Evals: Inspect `.eval` logs hold transcripts and per-sample scores.
 - Everything else: an MLflow run with params, metrics and artifacts. Figures are JSON under
-  `views/` in five shapes (heatmap, line, scatter, table, tokens; `louped.analysis.views`); SAE
-  dashboards are JSON under `features/`.
+  `views/` in seven kinds (heatmap, line, scatter, table, tokens, vega, plotly;
+  `louped.analysis.views`); SAE dashboards are JSON under `features/`. `louped derive` and an
+  agent's `add_view` add to a finished run: columns under `derived/`, figures under `views/`,
+  each listed in its `louped.added` tag. An experiment's own figures are `experiments/<name>/views/`.
 - Directions: one safetensors file each under `<LOUPED_HOME>/vectors`, provenance in the header,
   read without torch so `louped serve` needs no interp extra.
 - SAEs load through SAELens; louped reads the residual at the SAE's hook with nnsight, so the model

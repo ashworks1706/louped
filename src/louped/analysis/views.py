@@ -1,10 +1,11 @@
 """The shapes the Run page's Figures tab renders. A run stores each as JSON under views/ in MLflow.
 
-Six kinds cover the figures: a heatmap (patching: layer by position; attention: one
+Seven kinds cover the figures: a heatmap (patching: layer by position; attention: one
 slice per layer and head; the logit lens and a diffusion trajectory, each cell labelled with its
 token), a line chart (anything by layer), a scatter (one labelled point per condition: quality
 against cost), a table, tokens (text coloured by a per-token value), and vega: any other chart as
-a Vega-Lite spec with its data inline, so a new figure needs no change to the UI.
+a Vega-Lite spec with its data inline, so a new figure needs no change to the UI; and plotly,
+for what Vega-Lite does not draw: points in 3D, and figures that play through frames.
 Keeping them as data, not images, is what lets the UI hover, sort and link them. Each takes
 `about`: one or two sentences on how to read it, shown behind a ? beside its title.
 """
@@ -137,6 +138,21 @@ def vega(
     if _loads(spec):
         raise ValueError("a vega view's data must be inline (data.values), not loaded from a url")
     return {"kind": "vega", "title": title, "spec": spec, "note": note, "about": about}
+
+
+def plotly(
+    title: str,
+    data: list[dict[str, Any]],
+    layout: dict[str, Any] | None = None,
+    frames: list[dict[str, Any]] | None = None,
+    note: str | None = None,
+    about: str | None = None,
+) -> dict[str, Any]:
+    """A Plotly figure (https://plotly.com/javascript/): traces with their data inline, such as
+    {"type": "scatter3d", "x": [...], "y": [...], "z": [...], "text": [...]}. With frames, each
+    {"name": ..., "data": [...]}, it plays through them. The UI draws it in its own theme."""
+    return {"kind": "plotly", "title": title, "data": data, "layout": layout or {},
+            "frames": frames, "note": note, "about": about}  # fmt: skip
 
 
 def _loads(spec: Any) -> bool:
