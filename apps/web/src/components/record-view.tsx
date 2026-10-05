@@ -61,6 +61,7 @@ export function RecordFields({
   changed,
   about,
   partOf,
+  inline,
 }: {
   row: Row;
   changed?: Set<string>;
@@ -68,12 +69,14 @@ export function RecordFields({
   about?: Record<string, string>;
   /** Each field's address, which the layout's part rules follow (label, about, order, hidden). */
   partOf?: (field: string) => string;
+  /** Side by side, for a few short fields. */
+  inline?: boolean;
 }) {
   const rule = useRules();
   const at = partOf ?? ((k: string) => partId("record/field", k));
   const fields = arrange(Object.entries(row), ([k]) => at(k), rule);
   return (
-    <dl className="flex flex-col gap-3">
+    <dl className={inline ? "flex flex-wrap gap-x-6 gap-y-2" : "flex flex-col gap-3"}>
       {fields.map(([k, v]) => {
         const r = rule(at(k));
         const meaning = r.about ?? about?.[k];

@@ -119,9 +119,9 @@ test("an item opens on what it is, with what its fields mean", async ({ page }, 
   await mock(page);
   await page.goto("/run/?id=m-1&tab=items&item=28");
   const dialog = page.getByRole("dialog");
-  const item = dialog.locator("section").filter({ hasText: "The item" });
-  await expect(item.getByText(claim)).toBeVisible();
-  await expect(item.getByText("gold")).toBeVisible();
+  // its claim is the title, its other fields (gold) under it
+  await expect(dialog.locator('[data-part="item/title"]')).toHaveText(claim);
+  await expect(dialog.locator('[data-part="item/section/item"]').getByText("gold")).toBeVisible();
   // the conditions' columns show only what can differ between them
   await expect(
     dialog.locator("section").filter({ hasText: "pressure" }).getByText(claim),
@@ -135,9 +135,7 @@ test("an item whose conditions agree still opens on what it is", async ({ page }
   await mock(page);
   await page.goto("/run/?id=m-1&tab=items&item=29");
   const dialog = page.getByRole("dialog");
-  await expect(
-    dialog.locator("section").filter({ hasText: "The item" }).getByText("Other."),
-  ).toBeVisible();
+  await expect(dialog.locator('[data-part="item/title"]')).toContainText("Other.");
   const pressure = dialog.locator("section").filter({ hasText: "pressure" });
   await expect(pressure.getByText("pred")).toBeVisible();
   await expect(pressure.getByText("Other.")).toHaveCount(0);

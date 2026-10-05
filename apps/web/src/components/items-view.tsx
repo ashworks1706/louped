@@ -38,7 +38,7 @@ import {
   splitBy,
   splitColumns,
   stem,
-  textField,
+  itemText,
   traceShape,
   wilson,
   type Row,
@@ -314,7 +314,13 @@ function Aligned({
     );
 
   const binary = every.every((it) => it.rows.every((r) => !r || asBinary(r[field]) !== null));
-  const text = textField(tables[ref], key);
+  // what the items are: their claim or question, held the same in every condition
+  const text = itemText(
+    every.find((it) => it.rows[ref] && it.rows.filter(Boolean).length > 1)?.rows ?? [],
+    ref,
+    key,
+  );
+  const textOf = (it: (typeof items)[number]) => it.rows[ref]?.[text!];
   const differs = (it: (typeof items)[number], i: number) =>
     i !== ref &&
     it.rows[i] !== undefined &&
@@ -666,7 +672,7 @@ function Aligned({
                         {it.id}
                         {text && !columnRule(text).hidden && (
                           <span className="text-foreground mt-1 line-clamp-2 block font-sans text-sm whitespace-normal sm:hidden">
-                            {brief(it.rows[ref]?.[text], 140)}
+                            {brief(textOf(it), 140)}
                           </span>
                         )}
                       </TableCell>
@@ -677,7 +683,7 @@ function Aligned({
                         key={c.name}
                         className="hidden max-w-md truncate text-sm sm:table-cell"
                       >
-                        {brief(it.rows[ref]?.[c.name], 140)}
+                        {brief(textOf(it), 140)}
                       </TableCell>
                     );
                   const i = names.indexOf(c.name);
@@ -712,6 +718,7 @@ function Aligned({
               ref_={ref}
               constant={constant}
               itemFields={itemFields}
+              text={text}
               about={about}
             />
           )}
@@ -902,9 +909,11 @@ function ItemDetail({
   ref_,
   constant,
   itemFields,
+  text,
   about,
 }: {
   id: string;
+  text: string | null;
   keyName: string;
   names: string[];
   rows: (Row | undefined)[];
@@ -918,29 +927,50 @@ function ItemDetail({
   const shared = itemFields.filter((k) => present[0] && k in present[0]);
   const item = Object.fromEntries(shared.map((k) => [k, present[0][k]]));
   const own = (r: Row) =>
-    Object.fromEntries(Object.entries(r).filter(([k]) => !shared.includes(k) && !constant.has(k)));
+    Object.fromEntries(
+      Object.entries(r).filter(([k]) => !shared.includes(k) && !constant.has(k) && k !== text),
+    );
   const rule = useRules();
   const section = (n: string) => partId("item/section", n);
   const fieldOf = (n: string) => (k: string) => partId("item/field", n, k);
   const itself = rule(section("item"));
+  // the item's other fields (its gold answer), under its text
+  const details = shared.filter((k) => k !== keyName && k !== text);
+  const said = text ? rows.find((r) => r && typeof r[text] === "string")?.[text] : null;
   return (
     <>
-      <div className="border-b px-6 py-4 pr-12">
-        <SheetTitle className="font-semibold" {...part("item/title")}>
-          <span className="text-muted-foreground font-mono text-sm">{keyName}</span> {id}
+      <div className="flex flex-col gap-2 border-b px-6 py-4 pr-12">
+        <span className="text-muted-foreground font-mono text-xs">
+          {keyName} {id}
+        </span>
+        <SheetTitle
+          className="text-base leading-snug font-semibold whitespace-pre-wrap"
+          {...part("item/title")}
+        >
+          {typeof said === "string" ? (
+            said
+          ) : (
+            <span className="text-muted-foreground text-sm font-normal">
+              These records don&apos;t say what the item is. Write its claim or question in every
+              row (a <code className="font-mono">claim</code> field in run.py) to see it here.
+            </span>
+          )}
         </SheetTitle>
+        {details.length > 0 && !itself.hidden && (
+          <div {...part(section("item"))}>
+            <RecordFields
+              row={Object.fromEntries(details.map((k) => [k, item[k]]))}
+              about={about}
+              partOf={fieldOf("item")}
+              inline
+            />
+          </div>
+        )}
         <SheetDescription className="text-muted-foreground text-xs">
-          The item, then what each condition did with it; fields that differ from {names[ref_]} are
-          outlined.
+          What each condition did with it; fields that differ from {names[ref_]} are outlined.
         </SheetDescription>
       </div>
       <div className="flex flex-1 flex-col gap-6 overflow-auto px-6 py-5">
-        {shared.length > 1 && !itself.hidden && (
-          <section className="flex flex-col gap-3 rounded-xl border p-4" {...part(section("item"))}>
-            <h3 className="text-sm font-medium">{itself.label ?? "The item"}</h3>
-            <RecordFields row={item} about={about} partOf={fieldOf("item")} />
-          </section>
-        )}
         <div
           className="grid gap-6"
           style={{ gridTemplateColumns: `repeat(auto-fit, minmax(16rem, 1fr))` }}
