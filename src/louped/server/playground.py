@@ -4,7 +4,8 @@ logit lens, attention and projections onto saved directions as views, the same s
 Figures tab draws. Patch compares a clean and a corrupt prompt layer by position (or by head);
 dose sweeps a saved direction's strength and reads the next token; speed times a reply base
 and changed, beside the model's footprint. Generate takes earlier turns,
-so a reply can be pushed back on.
+so a reply can be pushed back on. Save keeps what a tool showed as a run, so a finding made here
+lands beside the experiments' runs.
 
 Loaded with a bank of adapters, each request names the adapters live for it. A masked diffusion
 model takes no interventions: generate sends its reply once denoised, and inspect returns its
@@ -18,6 +19,7 @@ unloads it to free the GPU, on a server that launches jobs (not one started with
 from __future__ import annotations
 
 import logging
+import re
 import sys
 import threading
 from collections.abc import AsyncIterator
@@ -26,7 +28,7 @@ from typing import Any, Literal
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.concurrency import iterate_in_threadpool
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, JsonValue, model_validator
 
 from louped.server.launch import require_json
 from louped.stores.types import View
@@ -143,6 +145,35 @@ class DoseRequest(BaseModel):
     foil: str | None = None
     adapters: list[str] = []
     chat: bool = True
+
+
+Tool = Literal["reply", "inspect", "patch", "dose", "speed"]
+#: The experiment a saved result goes under when the request names none: Probe's tools answer
+#: what the model does, Speed what it costs.
+SAVED_UNDER: dict[str, str] = {"speed": "benchmark"}
+#: An experiment's name as a folder under experiments/ has it.
+EXPERIMENT = r"^[a-z0-9][a-z0-9-]{0,63}$"
+
+
+class SaveRequest(BaseModel):
+    """What one tool showed, kept as a run: its figures, the prompt and the settings sent."""
+
+    tool: Tool
+    experiment: str | None = Field(None, pattern=EXPERIMENT)
+    prompt: str = Field(min_length=1, max_length=8000)
+    #: The request the tool sent (interventions, adapters, answer, alphas...), kept as JSON.
+    settings: dict[str, JsonValue] = {}
+    #: The intervention in words (steer refusal, strength 2, layer 3), the run's name.
+    label: str = Field("", max_length=200)
+    views: list[View] = Field(min_length=1, max_length=32)
+
+
+class SavedResult(BaseModel):
+    run: str
+
+
+def _file(title: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-") or "view"
 
 
 def router(switchable: bool = False) -> APIRouter:
@@ -408,5 +439,28 @@ def router(switchable: bool = False) -> APIRouter:
         return InspectResponse.model_validate(
             {"views": [speed_view(timings, req.repeats), footprint(m)]}
         )
+
+    @api.post("/save", dependencies=[Depends(require_json)])
+    def save(req: SaveRequest) -> SavedResult:
+        """A tool's result as an analysis run: each figure under views/, the prompt and settings
+        beside them, tagged louped.source=playground."""
+        import mlflow
+
+        from louped.tracking import log_json, start_run
+
+        if not switchable:
+            raise HTTPException(403, "saving is off on a server started with --expose")
+        model = cur().model
+        if model is None:
+            raise HTTPException(409, "no model is loaded")
+        experiment = req.experiment or SAVED_UNDER.get(req.tool, "probe")
+        params = {"model": model, "tool": req.tool, "intervention": req.label or "none"}
+        with start_run(experiment, name=f"{req.tool} · {req.label or model}", params=params) as r:
+            mlflow.set_tag("louped.source", "playground")
+            mlflow.log_text(req.prompt, "prompt.txt")
+            log_json(req.settings, "settings.json")
+            for i, view in enumerate(req.views):
+                log_json(view.model_dump(), f"views/{i:02d}-{_file(view.title)}.json")
+        return SavedResult(run=f"m-{r.info.run_id}")
 
     return api

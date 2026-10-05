@@ -6,8 +6,9 @@ import Link from "next/link";
 
 import { EmptyState } from "@/components/empty-state";
 import { ExamplesButton } from "@/components/jobs";
-import { PartData, part, partId } from "@/components/parts";
+import { PartData, part, partId, useRules } from "@/components/parts";
 import { QueryState } from "@/components/query-state";
+import { Figure } from "@/components/run-views";
 import { Term } from "@/components/term";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,6 +66,7 @@ export function VectorsTable() {
                 <div className="rounded-xl border">
                   <Rows vectors={all.filter((v) => v.model === model)} />
                 </div>
+                {all.filter((v) => v.model === model).length > 1 && <Alike model={model} />}
               </section>
             ))}
           </div>
@@ -72,6 +74,14 @@ export function VectorsTable() {
       }}
     </QueryState>
   );
+}
+
+/** How alike a model's vectors are: a new one near 0 to the rest is new; two near 1 are one. */
+function Alike({ model }: { model: string }) {
+  const fig = useQuery(q.similarity(model));
+  const id = partId("vectors/similar", model);
+  if (useRules()(id).hidden || !fig.data) return null;
+  return <Figure view={fig.data} id={id} />;
 }
 
 function Rows({ vectors }: { vectors: Direction[] }) {

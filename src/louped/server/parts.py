@@ -176,6 +176,8 @@ KINDS: list[Kind] = [
        "strength, layer, heads, tokens, method, follow-up, answer, foil, points and the rest.",
        rules=["hidden", "label", "about", "note"]),
     _k(part="playground/prompt", about="The prompt and Run.", rules=PICK),
+    _k(part="playground/save", about="Keeps what the open tool showed as a run.",
+       rules=["hidden"]),
     _k(part="playground/tab/*", about="A tool: reply, inspect, patch, dose, speed.",
        rules=["hidden", "label", "order"]),
     _k(part="playground/side/*", about="Which stream Inspect reads: base or intervention.",
@@ -187,6 +189,10 @@ KINDS: list[Kind] = [
     _k(part="vectors/model/*", about="A model's heading over its vectors.", rules=PICK),
     _k(part="vectors/column/*", about="A column of the vectors table.", rules=PICK),
     _k(part="vectors/row/*", about="One saved vector, by name.", rules=PICK),
+    _k(part="vectors/similar/*", about="How alike a model's vectors are: the cosine of each "
+       "pair.", rules=["hidden", "note"]),
+    # a metric over steps, on a run's page or two runs' on Compare
+    _k(part="curves/metric/*", about="One metric's curve over steps.", rules=PICK),
     # attribution graphs
     _k(part="circuits/graph", about="Which graph is shown.", rules=PICK),
     _k(part="circuits/viewer", about="circuit-tracer's viewer of the graph.", rules=PICK),
@@ -199,7 +205,7 @@ KINDS: list[Kind] = [
     _k(part="compare/pick/*", about="The baseline (a), the changed run (b) and the swap.",
        rules=PICK),
     _k(part="compare/run/*", about="Run A or B's card.", rules=PICK),
-    _k(part="compare/section/*", about="Metrics, paired, samples or judge.",
+    _k(part="compare/section/*", about="Metrics, curves, paired, samples or judge.",
        rules=["hidden", "note"]),
     _k(part="compare/metric/*", about="One metric of both runs.", rules=PICK),
     _k(part="compare/score/*", about="One score's paired difference and interval.", rules=PICK),
