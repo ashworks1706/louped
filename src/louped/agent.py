@@ -34,7 +34,8 @@ runs appear as it writes them.
 Work like this: read the experiments and runs first. Start a question with new_experiment, then
 edit its README and run.py in the project (the project's AGENTS.md says what goes where). Start
 work with launchables, launch_options and launch (a script is "script:<name>/run.py"); follow it
-with job; read results with run, figures, figure, samples and compare. A figure the person asks
+with job; read results with run, figures, figure, samples and compare; trace says where a figure's
+mark or a record comes from (its rows, script and commit). A figure the person asks
 for (a chart of a file, points in 3D, an animation) is add_view, or derive when it needs a script
 over the run's files (new columns on its items); then ui_show. Evals are Inspect tasks: eval_tasks
 lists the project's and inspect_evals' to launch with "eval". Judging two eval runs is launch
@@ -140,6 +141,14 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
             raise ToolError(f"{run_id} has {len(found)} figures")
         return found[index]["view"]
 
+    @mcp.tool(annotations=READ)
+    async def trace(ref: str) -> dict[str, Any]:
+        """Where a piece of evidence comes from, from it down to the run: a figure, the derive
+        script that made it and its commit, an item's record in every file that holds it, and
+        the run with its commit. ref is run:<run id>[/<path>][#<item>], such as a figure's mark
+        run:m-1/views/umap.json#17, or experiment:<name>/views/<figure>.json[#<item>]."""
+        return await get("/trace", ref=ref)
+
     @mcp.tool(annotations=WRITE)
     async def add_view(
         name: str, view: dict[str, Any], run_id: str | None = None, experiment: str | None = None
@@ -150,9 +159,12 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         The same name replaces it, which is how to edit it. view is a figure as figure returns
         one: heatmap, line, scatter, table, tokens, vega (any Vega-Lite spec, data inline; its
         params animate) or plotly (traces inline: scatter3d for points in 3D, frames to play).
-        Give it an about: how to read it. Then point the person at it with ui_show: the part is
-        figures/figure/<path> on the run's figures tab, experiment/view/<path> on the
-        experiment's page."""
+        Give it an about: how to read it. When its marks are items of a run (points of an
+        embedding, one per record), give it items: {"run": None or the run, "folder": the item
+        folder}, the ids of each plotly trace (or, for vega, items.field: the data field) being
+        the items' keys; then a mark opens its item and trace follows it. Then point the
+        person at it with ui_show: the part is figures/figure/<path> on the run's figures tab,
+        experiment/view/<path> on the experiment's page."""
         if (run_id is None) == (experiment is None):
             raise ToolError("give run_id or experiment, one of them")
         where = (f"/runs/{quote(run_id, safe='')}" if run_id

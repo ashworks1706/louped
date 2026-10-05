@@ -19,10 +19,21 @@ const token = (el: Element, name: string) => getComputedStyle(el).getPropertyVal
 
 /** A Vega-Lite spec drawn in the app's theme. Data is inline only: a spec naming a url is not
  * drawn, and the loader refuses every load besides, so a shared run's chart fetches nothing. */
-export function VegaFigure({ view }: { view: VegaView }) {
+export function VegaFigure({
+  view,
+  onMark,
+}: {
+  view: VegaView;
+  onMark?: (key: string | null, picked: boolean) => void;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const { resolvedTheme } = useTheme();
+  const mark = useRef(onMark);
+  useEffect(() => {
+    mark.current = onMark;
+  }, [onMark]);
+  const field = view.items?.field;
   const remote = loads(view.spec);
   useEffect(() => {
     const el = ref.current;
@@ -72,6 +83,22 @@ export function VegaFigure({ view }: { view: VegaView }) {
             mark: { color: ink, tooltip: true },
           },
         });
+        if (field) {
+          // the item a mark stands for: the datum's key field, when the figure names one
+          const keyOf = (item: unknown) => {
+            const datum = (item as { datum?: Record<string, unknown> } | null)?.datum;
+            const v = datum?.[field];
+            return v == null ? null : String(v);
+          };
+          result.view.addEventListener("mouseover", (_, item) =>
+            mark.current?.(keyOf(item), false),
+          );
+          result.view.addEventListener("mouseout", () => mark.current?.(null, false));
+          result.view.addEventListener("click", (_, item) => {
+            const key = keyOf(item);
+            if (key !== null) mark.current?.(key, true);
+          });
+        }
         if (done) result.finalize();
         else finalize = () => result.finalize();
         setError(null);
@@ -83,7 +110,7 @@ export function VegaFigure({ view }: { view: VegaView }) {
       done = true;
       finalize();
     };
-  }, [view.spec, resolvedTheme, remote]);
+  }, [view.spec, resolvedTheme, remote, field]);
   const said = remote ? "data must be inline (data.values), not loaded from a url" : error;
   return (
     <>

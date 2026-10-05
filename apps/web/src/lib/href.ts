@@ -5,6 +5,10 @@ import type { Experiment } from "@/lib/api";
 export const runHref = (id: string, tab?: string) =>
   `/run/?id=${encodeURIComponent(id)}${tab ? `&tab=${tab}` : ""}`;
 
+/** A run's Items tab with one item open, in its item folder ("" for the top level). */
+export const itemHref = (run: string, folder: string, item: string) =>
+  `${runHref(run, "items")}&set=${encodeURIComponent(folder)}&item=${encodeURIComponent(item)}`;
+
 export const jobHref = (id: string) => `/job/?id=${encodeURIComponent(id)}`;
 
 /** The pages a domain's experiments live under; the checks file under behavior's. */

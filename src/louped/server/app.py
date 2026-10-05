@@ -44,6 +44,7 @@ from louped.stores.types import (
     RunView,
     SampleDetail,
     SampleSummary,
+    Trace,
     View,
 )
 from louped.sync import configured
@@ -205,6 +206,15 @@ def create_app(
             return stores.cohort(run_id, req.ids, req.folder, req.field, req.reference)
         except ValueError as exc:
             raise HTTPException(422, str(exc)) from exc
+
+    @app.get("/api/trace")
+    def trace(ref: str) -> Trace:
+        """Where a ref's evidence comes from: a figure's mark down to the script that made the
+        figure, the item's rows in every file, and the run with its commit."""
+        try:
+            return stores.trace(ref)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
 
     @app.get("/api/runs/{run_id}/views")
     def views(run_id: str) -> list[RunView]:

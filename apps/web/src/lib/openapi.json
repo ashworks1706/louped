@@ -372,6 +372,46 @@
         }
       }
     },
+    "/api/trace": {
+      "get": {
+        "summary": "Trace",
+        "description": "Where a ref's evidence comes from: a figure's mark down to the script that made the\nfigure, the item's rows in every file, and the run with its commit.",
+        "operationId": "trace_api_trace_get",
+        "parameters": [
+          {
+            "name": "ref",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ref"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Trace"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/runs/{run_id}/views": {
       "get": {
         "summary": "Views",
@@ -4414,6 +4454,46 @@
         "required": ["views"],
         "title": "InspectResponse"
       },
+      "ItemSource": {
+        "properties": {
+          "run": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run"
+          },
+          "folder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folder"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          }
+        },
+        "type": "object",
+        "title": "ItemSource",
+        "description": "Which items a figure's marks stand for, so a mark opens its item and traces to the rows,\nscript and commit behind it. A plotly figure names each mark's item in its trace's `ids`; a\nvega figure in the data field `field`."
+      },
       "Job": {
         "properties": {
           "id": {
@@ -5415,6 +5495,16 @@
               }
             ],
             "title": "About"
+          },
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ItemSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -6853,6 +6943,83 @@
         "required": ["function", "arguments"],
         "title": "ToolCall"
       },
+      "Trace": {
+        "properties": {
+          "ref": {
+            "type": "string",
+            "title": "Ref"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/TraceStep"
+            },
+            "type": "array",
+            "title": "Steps"
+          }
+        },
+        "type": "object",
+        "required": ["ref", "steps"],
+        "title": "Trace",
+        "description": "Where a ref's evidence comes from: the figure, the script that made it, the item's rows in\nevery file, and the run with its commit."
+      },
+      "TraceStep": {
+        "properties": {
+          "ref": {
+            "type": "string",
+            "title": "Ref"
+          },
+          "what": {
+            "type": "string",
+            "enum": ["figure", "script", "item", "run"],
+            "title": "What"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "commit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commit"
+          },
+          "dirty": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dirty"
+          },
+          "rows": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": ["ref", "what", "title"],
+        "title": "TraceStep",
+        "description": "One link of a trace, from what was asked about down to the run it came from."
+      },
       "Turn": {
         "properties": {
           "role": {
@@ -6943,6 +7110,16 @@
               }
             ],
             "title": "About"
+          },
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ItemSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",

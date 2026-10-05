@@ -10,9 +10,9 @@ logged. It returns rows or a figure:
   logged as views/<name>.json, on the run's Figures tab.
 
 The script is logged beside what it made (derived/<name>.py), with the commit and packages it
-ran under (derived/<name>.meta.json), and the run's louped.added tag lists all three, so the run
-says what was added to it and how. It runs as a job from the queue,
-so one that embeds text on the GPU waits its turn.
+ran under and the file it made (derived/<name>.meta.json, its "output"), and the run's
+louped.added tag lists all three, so the run says what was added to it and how. It runs as a job
+from the queue, so one that embeds text on the GPU waits its turn.
 """
 
 from __future__ import annotations
@@ -50,7 +50,10 @@ def derive(run_id: str, script: Path, name: str | None = None) -> str:
     for where, what in (
         (path, text),
         (f"derived/{name}.py", script.read_text(encoding="utf-8")),
-        (f"derived/{name}.meta.json", capture().model_dump_json(indent=2)),
+        (
+            f"derived/{name}.meta.json",
+            json.dumps({**capture().model_dump(mode="json"), "output": path}, indent=2),
+        ),
     ):
         if not mlflow_runs.add_text(run_id, where, what):
             raise FileNotFoundError(f"no run {run_id}")

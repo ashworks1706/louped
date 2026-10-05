@@ -8,12 +8,30 @@ import type { PlotlyView } from "@/lib/api";
 /** Reads a token's current value, so the figure follows the theme. */
 const token = (el: Element, name: string) => getComputedStyle(el).getPropertyValue(name).trim();
 
+/** The item a point stands for: its trace's id for it, when the trace names its items. */
+const keyOf = (p: Plotly.PlotDatum | undefined) => {
+  const ids = (p?.data as { ids?: unknown[] } | undefined)?.ids;
+  const id = p && ids?.[p.pointNumber];
+  return id == null ? null : String(id);
+};
+
 /** A Plotly figure in the app's theme: points in 3D, surfaces, figures that play through frames.
- * Plotly loads only when one is shown; the server refuses a figure that names a url. */
-export function PlotlyFigure({ view }: { view: PlotlyView }) {
+ * Plotly loads only when one is shown; the server refuses a figure that names a url. With
+ * onMark, hovering a point says which item it stands for and clicking one picks it. */
+export function PlotlyFigure({
+  view,
+  onMark,
+}: {
+  view: PlotlyView;
+  onMark?: (key: string | null, picked: boolean) => void;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const { resolvedTheme } = useTheme();
+  const mark = useRef(onMark);
+  useEffect(() => {
+    mark.current = onMark;
+  }, [onMark]);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -83,6 +101,13 @@ export function PlotlyFigure({ view }: { view: PlotlyView }) {
           topojsonURL: "",
         });
         if (frames.length) await Plotly.addFrames(el, frames as Plotly.Frame[]);
+        const plot = el as unknown as Plotly.PlotlyHTMLElement;
+        plot.on("plotly_hover", (e) => mark.current?.(keyOf(e.points[0]), false));
+        plot.on("plotly_unhover", () => mark.current?.(null, false));
+        plot.on("plotly_click", (e) => {
+          const key = keyOf(e.points[0]);
+          if (key !== null) mark.current?.(key, true);
+        });
         if (done) Plotly.purge(el);
         else purge = () => Plotly.purge(el);
         setError(null);

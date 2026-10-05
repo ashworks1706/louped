@@ -19,6 +19,7 @@ import {
 } from "recharts";
 
 import { Help } from "@/components/help";
+import { MarkTrace, useOpenMark } from "@/components/mark-trace";
 import { part, partId, PartData, PartNote, useRules } from "@/components/parts";
 import { QueryState } from "@/components/query-state";
 import { PlotlyFigure } from "@/components/plotly-figure";
@@ -65,7 +66,7 @@ export function RunViews({ id, live = false }: { id: string; live?: boolean }) {
           {all
             .filter((v) => !rule(at(v.path)).hidden)
             .map((v) => (
-              <Figure key={v.path} view={v.view} id={at(v.path)} />
+              <Figure key={v.path} view={v.view} id={at(v.path)} source={`run:${id}/${v.path}`} />
             ))}
         </div>
       )}
@@ -97,10 +98,24 @@ const READ: Record<View["kind"], string> = {
   plotly: "A figure the run drew itself. Drag to turn a 3D one, scroll to zoom, hover points.",
 };
 
-/** One figure of any kind, with its title, how to read it, and its note. */
-export function Figure({ view, id }: { view: View; id?: string }) {
+/** One figure of any kind, with its title, how to read it, and its note. With source, the
+ * figure's own ref, a figure whose marks are items says which item a hovered mark is and where
+ * it comes from, and a click opens it. */
+export function Figure({ view, id, source }: { view: View; id?: string; source?: string }) {
   const rule = useRules();
   const r = id ? rule(id) : {};
+  const [mark, setMark] = useState<string | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+  const open = useOpenMark(source);
+  const traced = source && (view.kind === "plotly" || view.kind === "vega") && view.items;
+  const onMark = traced
+    ? (key: string | null, picked: boolean) => {
+        setFailed(null);
+        if (picked && key)
+          open(key).catch((e: unknown) => setFailed(e instanceof Error ? e.message : String(e)));
+        else setMark(key);
+      }
+    : undefined;
   return (
     <figure className="rounded-xl border" {...(id ? part(id) : {})}>
       <figcaption className="flex flex-wrap items-baseline justify-between gap-2 border-b px-4 py-3">
@@ -117,8 +132,13 @@ export function Figure({ view, id }: { view: View; id?: string }) {
         {view.kind === "scatter" && <ScatterFigure view={view} />}
         {view.kind === "table" && <TableFigure view={view} />}
         {view.kind === "tokens" && <TokensFigure view={view} />}
-        {view.kind === "vega" && <VegaFigure view={view} />}
-        {view.kind === "plotly" && <PlotlyFigure view={view} />}
+        {view.kind === "vega" && <VegaFigure view={view} onMark={onMark} />}
+        {view.kind === "plotly" && <PlotlyFigure view={view} onMark={onMark} />}
+        {traced && (
+          <p className="mt-2 text-xs" aria-live="polite" data-testid="mark-trace">
+            <MarkTrace source={source} mark={mark} failed={failed} />
+          </p>
+        )}
       </div>
     </figure>
   );

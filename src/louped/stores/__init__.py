@@ -31,6 +31,7 @@ from louped.stores.runs import (
     list_views,
     write_text,
 )
+from louped.stores.trace import trace
 from louped.stores.vectors import list_vectors
 from louped.stores.views import add_view, experiment_views, save_experiment_view
 
@@ -60,6 +61,7 @@ __all__ = [
     "read_readme",
     "save_experiment_view",
     "set_label",
+    "trace",
     "write_readme",
     "write_text",
 ]

@@ -416,6 +416,7 @@ function RunFigure({ id, index, b, live }: { id: string; index: number; b: Block
               title: b.title ?? all[index].view.title,
               about: b.about ?? all[index].view.about,
             }}
+            source={`run:${id}/${all[index].path}`}
           />
         ) : (
           <p className="text-muted-foreground text-sm">

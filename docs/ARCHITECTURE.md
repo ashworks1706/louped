@@ -143,6 +143,10 @@ core                                     run metadata, paths, the project and it
   `louped.analysis.views`); SAE dashboards are JSON under `features/`. `louped derive` and an
   agent's `add_view` add to a finished run: columns under `derived/`, figures under `views/`,
   each listed in its `louped.added` tag. An experiment's own figures are `experiments/<name>/views/`.
+- Refs (`louped.core.refs`) address evidence: `run:<id>/<path>#<item>`, `experiment:<name>/<path>`.
+  A vega or plotly figure whose marks are items says so (`items`; plotly trace `ids`), and
+  `louped.stores.trace` follows a mark's ref to the derive script and commit, the item's record
+  in every file, and the run's commit (`GET /api/trace`, MCP `trace`).
 - Judges: `judges/<name>.py` in the project, read without running for the list
   (`louped.core.judges`) and imported only by a judging job. Eval tasks are Inspect tasks: the
   project's `@task` functions and inspect_evals' `eval.yaml` metadata (`louped.stores.catalog`).

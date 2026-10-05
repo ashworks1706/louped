@@ -96,6 +96,11 @@ A run's files can grow after it ends. `louped derive <run> <script>` runs the sc
 records become columns in **Items**, a figure lands on **Figures**. The script is logged beside
 them. Your agent does this when you ask for a column or chart the run lacks.
 
+A figure whose points are the run's items can say so: `views.plotly(..., items=views.items(folder="raw"))`
+with each trace's `ids` set to the items' keys (for `vega`, `views.items(field="qid")`). Hovering
+a point then names its item, the files holding it and the script and commit that made the figure;
+clicking it opens the item in **Items**. Your agent follows the same chain with `trace`.
+
 ## Evals and judges
 
 An eval is an Inspect task: a `@task` function in an experiment's `task.py`, or any of

@@ -130,14 +130,28 @@ def tokens(
             "about": about}  # fmt: skip
 
 
+def items(
+    run: str | None = None, folder: str | None = None, field: str | None = None
+) -> dict[str, Any]:
+    """Which items a figure's marks stand for, so a mark opens its item and traces to its rows:
+    the run (None for the figure's own), its item folder (None for its first) and, for vega, the
+    data field holding each mark's item key. A plotly figure gives the keys as each trace's ids."""
+    return {"run": run, "folder": folder, "field": field}
+
+
 def vega(
-    title: str, spec: dict[str, Any], note: str | None = None, about: str | None = None
+    title: str,
+    spec: dict[str, Any],
+    note: str | None = None,
+    about: str | None = None,
+    items: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Any chart as a Vega-Lite spec (https://vega.github.io/vega-lite/). The UI draws it in its
     own theme, so leave colours and fonts out; data must be inline (`data.values`)."""
     if _loads(spec):
         raise ValueError("a vega view's data must be inline (data.values), not loaded from a url")
-    return {"kind": "vega", "title": title, "spec": spec, "note": note, "about": about}
+    return {"kind": "vega", "title": title, "spec": spec, "note": note, "about": about,
+            "items": items}  # fmt: skip
 
 
 def plotly(
@@ -147,12 +161,14 @@ def plotly(
     frames: list[dict[str, Any]] | None = None,
     note: str | None = None,
     about: str | None = None,
+    items: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """A Plotly figure (https://plotly.com/javascript/): traces with their data inline, such as
     {"type": "scatter3d", "x": [...], "y": [...], "z": [...], "text": [...]}. With frames, each
-    {"name": ..., "data": [...]}, it plays through them. The UI draws it in its own theme."""
+    {"name": ..., "data": [...]}, it plays through them. The UI draws it in its own theme. With
+    items, each trace's ids are its points' item keys."""
     return {"kind": "plotly", "title": title, "data": data, "layout": layout or {},
-            "frames": frames, "note": note, "about": about}  # fmt: skip
+            "frames": frames, "note": note, "about": about, "items": items}  # fmt: skip
 
 
 def _loads(spec: Any) -> bool:

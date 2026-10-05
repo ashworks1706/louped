@@ -75,7 +75,7 @@ def folders(paths: list[str]) -> dict[str, list[str]]:
     }
 
 
-def _rows(run_id: str, path: str) -> list[Row]:
+def read_rows(run_id: str, path: str) -> list[Row]:
     rows = []
     text = read_artifact(run_id, path).decode("utf-8")
     for i, line in enumerate(text.splitlines(), 1):
@@ -110,7 +110,7 @@ def join_key(tables: list[list[Row]]) -> str | None:
     return next((n for n in KEY_NAMES if n in found), found[0] if found else None)
 
 
-def _text(v: object) -> str:
+def key_text(v: object) -> str:
     """An item's id as text, as the app writes it (JavaScript's String): 3.0 is "3"."""
     if isinstance(v, float) and v.is_integer():
         return str(int(v))
@@ -159,7 +159,7 @@ def cohort(
         raise ValueError(f"no folder {folder!r} of conditions; there are {list(found)}")
     files = found[folder]
     names = [_stem(f) for f in files]
-    tables = [_rows(run_id, f) for f in files]
+    tables = [read_rows(run_id, f) for f in files]
     key = join_key(tables)
     if key is None:
         raise ValueError(f"the files in {folder!r} share no field naming an item once in each")
@@ -181,7 +181,7 @@ def cohort(
     if reference not in names:
         raise ValueError(f"no condition {reference!r}; there are {names}")
 
-    by = [{_text(r[key]): r for r in t} for t in tables]
+    by = [{key_text(r[key]): r for r in t} for t in tables]
     held = list(dict.fromkeys(i for b in by for i in b))
     wanted = held if ids is None else list(dict.fromkeys(ids))
     missing = [i for i in wanted if not any(i in b for b in by)]

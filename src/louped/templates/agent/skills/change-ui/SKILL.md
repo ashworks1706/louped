@@ -33,6 +33,10 @@ description: Change what louped's pages show (reorder, hide, rename or explain a
      - A figure from one run: `derive` returning a figure, or `add_view` with `run_id` when you
        computed it yourself. It lands on the run's Figures tab (`figures/figure/views%2F<name>.json`).
        Use the `plotly` kind for 3D (`scatter3d`, `surface`) or `frames` (it plays them).
+       When each mark is one of the run's items (a point per record), give the figure `items`
+       (`{"folder": "<item folder>"}`; `"run"` too on an experiment's figure) and each trace
+       `ids` with the items' keys, or for `vega` `items.field`, the data field holding them.
+       Then hovering a mark names its item and source, a click opens it, and `trace` follows it.
      - A figure across runs of a question: `add_view` with `experiment`; it is kept in
        `experiments/<name>/views/` and shows on the experiment's page
        (`experiment/view/views%2F<name>.json`).

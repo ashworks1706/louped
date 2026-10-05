@@ -194,6 +194,21 @@ class TokensView(BaseModel):
     about: str | None = None
 
 
+class ItemSource(BaseModel):
+    """Which items a figure's marks stand for, so a mark opens its item and traces to the rows,
+    script and commit behind it. A plotly figure names each mark's item in its trace's `ids`; a
+    vega figure in the data field `field`."""
+
+    #: The run whose items they are; None for the run the figure is in. An experiment's own
+    #: figure has no run of its own, so it names one.
+    run: str | None = None
+    #: The run's item folder, as the Items tab names it ("" for the top level); None when the
+    #: run has one.
+    folder: str | None = None
+    #: For a vega figure: the data field holding each mark's item key.
+    field: str | None = None
+
+
 class VegaView(BaseModel):
     """Any chart as a Vega-Lite spec with its data inline: what the other kinds do not draw."""
 
@@ -204,6 +219,14 @@ class VegaView(BaseModel):
     note: str | None = None
     #: How to read the figure, behind the ? beside its title.
     about: str | None = None
+    #: The items its marks stand for; items.field names the data field holding their keys.
+    items: ItemSource | None = None
+
+    @model_validator(mode="after")
+    def _keyed(self) -> VegaView:
+        if self.items is not None and not self.items.field:
+            raise ValueError("a vega figure's items name the data field holding each mark's key")
+        return self
 
 
 class PlotlyView(BaseModel):
@@ -221,6 +244,8 @@ class PlotlyView(BaseModel):
     note: str | None = None
     #: How to read the figure, behind the ? beside its title.
     about: str | None = None
+    #: The items its marks stand for, each trace naming its points' items in `ids`.
+    items: ItemSource | None = None
 
     @model_validator(mode="after")
     def _inline(self) -> PlotlyView:
@@ -234,6 +259,11 @@ class PlotlyView(BaseModel):
             raise ValueError(f"layout {', '.join(keys)} fetch from the web: leave them out")
         if any("name" not in f for f in self.frames or []):
             raise ValueError("every frame needs a name: the slider steps by it")
+        if self.items is not None and not any(t.get("ids") for t in traces):
+            raise ValueError("a plotly figure with items names each point's item in its "
+                             "trace's ids")  # fmt: skip
+        if self.items is not None and self.items.field is not None:
+            raise ValueError("a plotly figure's items are its traces' ids: leave field out")
         return self
 
 
@@ -285,6 +315,28 @@ class RunView(BaseModel):
 
     path: str
     view: View
+
+
+class TraceStep(BaseModel):
+    """One link of a trace, from what was asked about down to the run it came from."""
+
+    #: Its address, which trace takes too.
+    ref: str
+    what: Literal["figure", "script", "item", "run"]
+    title: str
+    #: For a script or a run: the commit it ran at, and whether the tree had changes then.
+    commit: str | None = None
+    dirty: bool | None = None
+    #: For an item: its record in each file that holds it, by the file's path.
+    rows: dict[str, dict[str, Any]] | None = None
+
+
+class Trace(BaseModel):
+    """Where a ref's evidence comes from: the figure, the script that made it, the item's rows in
+    every file, and the run with its commit."""
+
+    ref: str
+    steps: list[TraceStep]
 
 
 class Graph(BaseModel):
