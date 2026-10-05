@@ -127,6 +127,9 @@ def list_artifact_paths(run_id: str, path: str) -> list[str] | None:
 def write_markdown(run_id: str, path: str, text: str) -> bool:
     """Replace a Markdown file a run already logged, in its local artifact folder; False when the
     run or file is not there. Refused for anything but .md, and for a store that is not local."""
+    rel = Path(path)
+    if rel.is_absolute() or ".." in rel.parts:
+        raise ValueError("bad path")
     if not path.endswith(".md"):
         raise ValueError("only a run's Markdown files are edited here")
     artifact_path = Path(path)
@@ -144,7 +147,7 @@ def write_markdown(run_id: str, path: str, text: str) -> bool:
     if not uri.startswith("file://") and not uri.startswith("/"):
         raise ValueError(f"{run_id}'s artifacts are not on this machine ({uri})")
     folder = Path(uri.removeprefix("file://")).resolve()
-    target = (folder / path).resolve()
+    target = (folder / rel).resolve()
     if not target.is_relative_to(folder) or not target.is_file():
         return False
     target.write_text(text, encoding="utf-8")
