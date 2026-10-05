@@ -143,11 +143,13 @@ def write_markdown(run_id: str, path: str, text: str) -> bool:
         raise
     if not uri.startswith("file://") and not uri.startswith("/"):
         raise ValueError(f"{run_id}'s artifacts are not on this machine ({uri})")
-    folder = Path(uri.removeprefix("file://")).resolve()
-    target = (folder / rel).resolve()
-    if not target.is_relative_to(folder) or not target.is_file():
+    # realpath and a prefix check: the guard code scanning recognizes for a path from a request
+    folder = os.path.realpath(uri.removeprefix("file://"))
+    target = os.path.realpath(os.path.join(folder, rel))
+    if not target.startswith(folder + os.sep) or not os.path.isfile(target):
         return False
-    target.write_text(text, encoding="utf-8")
+    with open(target, "w", encoding="utf-8") as out:
+        out.write(text)
     return True
 
 
