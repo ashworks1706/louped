@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 
 from pydantic import ValidationError
 
+from louped.core import trash
 from louped.stores import evals, mlflow_runs, views
 from louped.stores.types import (
     FeatureDashboard,
@@ -62,11 +63,24 @@ def read_artifact(run_id: str, path: str) -> bytes:
     return data
 
 
-def write_markdown(run_id: str, path: str, text: str) -> None:
-    """Replace a Markdown file a run logged (its report, its examples to judge)."""
-    done = run_id.startswith(mlflow_runs.PREFIX) and mlflow_runs.write_markdown(run_id, path, text)
+def write_text(run_id: str, path: str, text: str) -> None:
+    """Replace a text file a run logged (its report, its examples to judge, a JSON result)."""
+    done = run_id.startswith(mlflow_runs.PREFIX) and mlflow_runs.write_text(run_id, path, text)
     if not done:
         raise NotFound(f"{run_id}/{path}")
+
+
+def delete_run(run_id: str) -> None:
+    """Delete a run that has ended: an eval's log moves to the trash; an MLflow run is marked
+    deleted, which MLflow keeps until `mlflow gc`. A run still writing is refused (ValueError)."""
+    run = get_run(run_id)
+    if run.status.lower() in ("started", "running", "queued"):
+        raise ValueError(f"{run_id} is still running: cancel its job first")
+    found = evals.log_of(run_id)
+    if found is not None:
+        trash(found[0], "logs")
+    elif not mlflow_runs.delete_run(run_id):
+        raise NotFound(run_id)
 
 
 def list_views(run_id: str) -> list[RunView]:

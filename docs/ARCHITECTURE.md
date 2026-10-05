@@ -82,7 +82,8 @@ remote or is imported),
 TransformerLens (reimplements architectures, lags new models), Hydra (each tool keeps its native
 config; scripts use tyro), W&B (its server is not free to self-host), a plugin registry or marketplace (Inspect's
 registries and Python entry points exist; a project's own plugins/ folder is all louped reads,
-see louped.core.plugins).
+see louped.core.plugins: routes, a command, MCP tools, and static pages shown at a sidebar entry
+or as a tab on every run and experiment).
 
 ## Research axes and domains
 

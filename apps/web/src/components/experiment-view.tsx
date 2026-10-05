@@ -3,16 +3,26 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, FlaskConical, Rocket } from "lucide-react";
 import Link from "next/link";
-import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
+import { parseAsString, useQueryState } from "nuqs";
 
 import { EmptyState } from "@/components/empty-state";
 import { StatusLabel } from "@/components/experiments-list";
-import { EditableMarkdown } from "@/components/markdown-editor";
+import { EditableText } from "@/components/markdown-editor";
+import { DeleteButton } from "@/components/delete-button";
+import { PluginFrame, usePluginTabs } from "@/components/plugin-page";
 import { QueryState } from "@/components/query-state";
 import { RunsTable } from "@/components/runs-table";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { isLive, q, readme, saveReadme, type ExperimentDetail, type Launchable } from "@/lib/api";
+import {
+  deleteExperiment,
+  isLive,
+  q,
+  readme,
+  saveReadme,
+  type ExperimentDetail,
+  type Launchable,
+} from "@/lib/api";
 import { ago } from "@/lib/format";
 import { axisPath, experimentHref } from "@/lib/href";
 
@@ -89,7 +99,16 @@ function ExperimentHeader({ experiment: e }: { experiment: ExperimentDetail }) {
               {e.question ?? "No question written yet. Add one under ## Question in its README."}
             </p>
           </div>
-          <LaunchActions name={e.name} />
+          <div className="flex items-start gap-2">
+            <LaunchActions name={e.name} />
+            <DeleteButton
+              what="experiment"
+              name={e.name}
+              undo={`Its folder moves to .louped/trash/experiments; move it back to experiments/ to restore it. Its ${e.runs.length} runs stay.`}
+              remove={() => deleteExperiment(e.name)}
+              then={`${axisPath(e.axis)}/experiments/`}
+            />
+          </div>
         </div>
         <dl className="text-muted-foreground flex flex-wrap gap-x-6 gap-y-1 text-sm">
           <div className="flex gap-1.5">
@@ -160,14 +179,13 @@ function firstRun(
   return { href: experimentHref(name, axis, "design"), label: "How it runs" };
 }
 
-const TABS = ["design", "runs"] as const;
-
 function ExperimentTabs({ experiment: e }: { experiment: ExperimentDetail }) {
   const own = useOwnLaunchables(e.name);
   const client = useQueryClient();
-  const [tab, setTab] = useQueryState("tab", parseAsStringLiteral(TABS).withDefault("design"));
+  const plugins = usePluginTabs("experiment");
+  const [tab, setTab] = useQueryState("tab", parseAsString.withDefault("design"));
   return (
-    <Tabs value={tab} onValueChange={(v) => void setTab(v as (typeof TABS)[number])}>
+    <Tabs value={tab} onValueChange={(v) => void setTab(v)}>
       <TabsList>
         <TabsTrigger value="design">Design and result</TabsTrigger>
         <TabsTrigger value="runs" aria-label={`Runs (${e.runs.length})`}>
@@ -176,11 +194,16 @@ function ExperimentTabs({ experiment: e }: { experiment: ExperimentDetail }) {
             {e.runs.length}
           </span>
         </TabsTrigger>
+        {plugins.map((p) => (
+          <TabsTrigger key={p.name} value={`x-${p.name}`}>
+            {p.title}
+          </TabsTrigger>
+        ))}
       </TabsList>
       <TabsContent value="design">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <article className="max-w-3xl min-w-0">
-            <EditableMarkdown
+            <EditableText
               name="README.md"
               shown={e.readme}
               source={() => readme(e.name)}
@@ -214,6 +237,11 @@ function ExperimentTabs({ experiment: e }: { experiment: ExperimentDetail }) {
           <RunsTable runs={e.runs} byExperiment={false} />
         )}
       </TabsContent>
+      {plugins.map((p) => (
+        <TabsContent key={p.name} value={`x-${p.name}`}>
+          <PluginFrame name={p.name} page="experiment.html" query={{ experiment: e.name }} />
+        </TabsContent>
+      ))}
     </Tabs>
   );
 }

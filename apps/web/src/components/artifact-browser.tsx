@@ -6,7 +6,8 @@ import { parseAsString, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 
 import { CopyButton } from "@/components/copy-button";
-import { EditableMarkdown } from "@/components/markdown-editor";
+import { Markdown } from "@/components/markdown";
+import { EditableText } from "@/components/markdown-editor";
 import { QueryState } from "@/components/query-state";
 import { LinedUp } from "@/components/items-view";
 import { Timeline } from "@/components/trace-view";
@@ -19,6 +20,7 @@ import {
   artifactQuery,
   artifactUrl,
   asRecords,
+  editable,
   kindOf,
   parseDelimited,
   parseJsonl,
@@ -240,22 +242,35 @@ function TextPreview({ runId, path }: { runId: string; path: string }) {
 
 function Rendered({ runId, path, text }: { runId: string; path: string; text: string }) {
   const client = useQueryClient();
+  const name = path.slice(path.lastIndexOf("/") + 1);
+  const view = (t: string) => <View path={path} name={name} text={t} />;
+  if (!editable(path)) return view(text);
+  const editor = (
+    <EditableText
+      name={name}
+      shown={text}
+      preview={view}
+      save={async (t) => {
+        await saveArtifact(runId, path, t);
+        await client.invalidateQueries({ queryKey: ["artifact", runId, path] });
+        await client.invalidateQueries({ queryKey: ["run", runId] }); // its louped.edited tag
+      }}
+    />
+  );
+  return kindOf(path) === "markdown" ? (
+    <article className="rounded-xl border px-6 py-5">{editor}</article>
+  ) : (
+    editor
+  );
+}
+
+/** A text file drawn for its kind: Markdown rendered, records as a table, the rest as text. */
+function View({ path, name, text }: { path: string; name: string; text: string }) {
   switch (kindOf(path)) {
     case "markdown":
-      return (
-        <article className="rounded-xl border px-6 py-5">
-          <EditableMarkdown
-            name={path.slice(path.lastIndexOf("/") + 1)}
-            shown={text}
-            save={async (t) => {
-              await saveArtifact(runId, path, t);
-              await client.invalidateQueries({ queryKey: ["artifact", runId, path] });
-            }}
-          />
-        </article>
-      );
+      return <Markdown>{text}</Markdown>;
     case "json":
-      return <JsonFile text={text} name={path.slice(path.lastIndexOf("/") + 1)} />;
+      return <JsonFile text={text} name={name} />;
     case "jsonl": {
       const { rows, bad } = parseJsonl(text);
       return (
@@ -265,7 +280,7 @@ function Rendered({ runId, path, text }: { runId: string; path: string; text: st
               {bad} lines did not parse as JSON and are left out.
             </p>
           )}
-          <Records rows={rows} name={path.slice(path.lastIndexOf("/") + 1)} />
+          <Records rows={rows} name={name} />
         </>
       );
     }
@@ -273,7 +288,7 @@ function Rendered({ runId, path, text }: { runId: string; path: string; text: st
       return (
         <RecordsTable
           rows={parseDelimited(text, path.toLowerCase().endsWith(".tsv") ? "\t" : ",")}
-          name={path.slice(path.lastIndexOf("/") + 1)}
+          name={name}
         />
       );
     default:

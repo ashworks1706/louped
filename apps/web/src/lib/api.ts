@@ -121,6 +121,21 @@ export const saveArtifact = (run: string, path: string, text: string) =>
     { text },
   );
 
+async function del(path: string): Promise<void> {
+  const res = await fetch(`${API}/api${path}`, {
+    method: "DELETE",
+    headers: { "content-type": "application/json" },
+  });
+  if (!res.ok) throw new ApiError(res.status, await detail(res, path));
+}
+
+/** Moves an experiment's folder to the trash; its runs stay. */
+export const deleteExperiment = (name: string) => del(`/experiments/${encodeURIComponent(name)}`);
+/** Deletes a run that has ended: an eval's log goes to the trash, an MLflow run is marked deleted. */
+export const deleteRun = (id: string) => del(`/runs/${encodeURIComponent(id)}`);
+/** Moves a job that has ended, with its log, to the trash; its runs stay. */
+export const deleteJob = (id: string) => del(`/launch/jobs/${encodeURIComponent(id)}`);
+
 async function post<T>(path: string, body: unknown): Promise<T> {
   return (await send(path, body)).json() as Promise<T>;
 }

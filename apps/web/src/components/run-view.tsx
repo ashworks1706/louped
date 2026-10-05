@@ -12,7 +12,7 @@ import { ArtifactBrowser } from "@/components/artifact-browser";
 import { CopyButton } from "@/components/copy-button";
 import { EmptyState } from "@/components/empty-state";
 import { hasItems, ItemsView } from "@/components/items-view";
-import { EditableMarkdown } from "@/components/markdown-editor";
+import { EditableText } from "@/components/markdown-editor";
 import { Hardware, hasHardware } from "@/components/hardware";
 import { HistoryCharts } from "@/components/history-chart";
 import { MetricValue } from "@/components/metric";
@@ -22,8 +22,10 @@ import { RunViews } from "@/components/run-views";
 import { StatGrid } from "@/components/stat-grid";
 import { SamplesTable } from "@/components/samples-table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DeleteButton } from "@/components/delete-button";
+import { PluginFrame, usePluginTabs } from "@/components/plugin-page";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { API, isLive, q, saveArtifact, type RunDetail } from "@/lib/api";
+import { API, deleteRun, isLive, q, saveArtifact, type RunDetail } from "@/lib/api";
 import { artifactQuery } from "@/lib/artifacts";
 import { ago, headline } from "@/lib/format";
 import { ExperimentLink } from "@/components/experiment-link";
@@ -79,6 +81,20 @@ function RunHeader({ run }: { run: RunDetail }) {
           <KindBadge kind={run.kind} />
           <HostBadge host={run.host} />
           <StatusDot status={run.status} samples={run.samples} total={run.total} />
+          <div className="ml-auto">
+            <DeleteButton
+              what="run"
+              name={run.name}
+              undo={
+                run.id.startsWith("e-")
+                  ? "Its eval log moves to .louped/trash/logs; move it back to restore the run."
+                  : "MLflow keeps it marked deleted until mlflow gc; MlflowClient.restore_run brings it back."
+              }
+              remove={() => deleteRun(run.id)}
+              then="/runs/"
+              disabled={isLive(run.status) ? "Still running: cancel its job first" : undefined}
+            />
+          </div>
         </div>
         <dl className="text-muted-foreground flex flex-wrap gap-x-6 gap-y-1 text-sm">
           <div className="flex gap-1.5">
@@ -121,6 +137,7 @@ function RunTabs({ run }: { run: RunDetail }) {
   const hasFigures = run.artifacts.some((a) => a.path.startsWith("views/"));
   const hasFiles = run.artifacts.some((a) => !a.path.startsWith("views/"));
   const items = hasItems(run);
+  const plugins = usePluginTabs("run");
   // A run whose results are only figures opens on them.
   const tab = chosen ?? (hasFigures && headline(run.metrics).length === 0 ? "figures" : "overview");
   return (
@@ -133,6 +150,11 @@ function RunTabs({ run }: { run: RunDetail }) {
         {run.log && <TabsTrigger value="log">Log</TabsTrigger>}
         {hasFiles && <TabsTrigger value="artifacts">Artifacts</TabsTrigger>}
         <TabsTrigger value="config">Config</TabsTrigger>
+        {plugins.map((p) => (
+          <TabsTrigger key={p.name} value={`x-${p.name}`}>
+            {p.title}
+          </TabsTrigger>
+        ))}
       </TabsList>
       <TabsContent value="overview">
         <Overview run={run} />
@@ -167,6 +189,11 @@ function RunTabs({ run }: { run: RunDetail }) {
         <div className="h-6" />
         <KeyValues title="Tags" values={run.tags} />
       </TabsContent>
+      {plugins.map((p) => (
+        <TabsContent key={p.name} value={`x-${p.name}`}>
+          <PluginFrame name={p.name} page="run.html" query={{ run: run.id }} />
+        </TabsContent>
+      ))}
     </Tabs>
   );
 }
@@ -214,7 +241,7 @@ function Report({ runId }: { runId: string }) {
       <QueryState query={text}>
         {(md) => (
           <article className="rounded-xl border px-6 py-5">
-            <EditableMarkdown
+            <EditableText
               name="report.md"
               shown={md}
               save={async (t) => {
@@ -265,6 +292,9 @@ function Provenance({ run }: { run: RunDetail }) {
       sha ? `${sha.slice(0, 12)}${dirty ? " (uncommitted changes)" : ""}` : "not a git checkout",
     ],
   ];
+  // files changed in the app after the run wrote them: its results are no longer only its own
+  if (run.tags["louped.edited"])
+    rows.push(["Edited after", run.tags["louped.edited"].split(",").join(" · ")]);
   if (m.started_at) rows.push(["Started", m.started_at]);
   if (m.python) rows.push(["Python", m.python]);
   if (m.platform) rows.push(["Platform", m.platform]);

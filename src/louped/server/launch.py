@@ -30,7 +30,7 @@ from typing import Any, Literal
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from louped.core import experiments_dir, home, logs_dir
+from louped.core import experiments_dir, home, logs_dir, trash
 
 log = logging.getLogger(__name__)
 
@@ -394,6 +394,15 @@ class Jobs:
                 os.killpg(proc.pid, signal.SIGTERM)  # the worker records it when it exits
             return job
 
+    def delete(self, job_id: str) -> None:
+        """Move a job that has ended, with its output, to <home>/trash/jobs; its runs stay."""
+        with self.lock:
+            job = self.get(job_id)
+            if job.status in ("queued", "running"):
+                raise HTTPException(409, f"job {job_id} is {job.status}: cancel it first")
+            # The folder is the one listed, not one built from the request's id.
+            trash(next(d for d in self.dir.iterdir() if d.name == job.id), "jobs")
+
     def work(self) -> None:
         import fcntl
 
@@ -505,6 +514,10 @@ def router(enabled: bool) -> APIRouter:
     from louped.server import remote  # it builds on this module
 
     remote.routes(api, queue, known)
+
+    @api.delete("/jobs/{job_id}", dependencies=[Depends(require_json)])
+    def delete(job_id: str) -> None:
+        queue().delete(job_id)
 
     @api.post("/jobs/{job_id}/cancel", dependencies=[Depends(require_json)])
     def cancel(job_id: str) -> Job:

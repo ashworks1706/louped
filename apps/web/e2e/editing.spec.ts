@@ -56,3 +56,42 @@ for (const launching of [true, false]) {
     await expect(page.locator("article strong")).toHaveText("right");
   });
 }
+
+test("a run's JSONL file is edited beside its table, and the run says it was", async ({
+  page,
+}, info) => {
+  let rows = '{"qid": 1, "verdict": ""}\n';
+  let edited = "";
+  await page.route("**/api/health", (r) =>
+    r.fulfill({ json: { status: "ok", version: "0", home: "/x", launching: true, remote: null } }),
+  );
+  await page.route("**/api/launch/jobs", (r) => r.fulfill({ json: [] }));
+  await page.route("**/api/runs/m-1", (r) =>
+    r.fulfill({
+      json: {
+        ...run,
+        artifacts: [{ path: "verdicts.jsonl", size: 30 }],
+        tags: edited ? { "louped.edited": edited } : {},
+      },
+    }),
+  );
+  await page.route("**/api/runs/m-1/artifacts/verdicts.jsonl", (r) => {
+    if (r.request().method() === "PUT") {
+      rows = (r.request().postDataJSON() as { text: string }).text;
+      edited = "verdicts.jsonl";
+      return r.fulfill({ json: { text: rows } });
+    }
+    return r.fulfill({ body: rows });
+  });
+  await page.goto("/run/?id=m-1&tab=artifacts");
+  await page.getByRole("button", { name: "Edit verdicts.jsonl" }).click();
+  const box = page.getByRole("textbox", { name: "verdicts.jsonl" });
+  await box.fill('{"qid": 1, "verdict": "right"}\n');
+  await expect(page.getByLabel("Preview").getByText("right")).toBeVisible();
+  await page.screenshot({ path: info.outputPath("editing-jsonl.png"), fullPage: true });
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(box).toHaveCount(0);
+  expect(rows).toBe('{"qid": 1, "verdict": "right"}\n');
+  await page.getByRole("tab", { name: "Overview" }).click();
+  await expect(page.getByText("Edited after")).toBeVisible();
+});

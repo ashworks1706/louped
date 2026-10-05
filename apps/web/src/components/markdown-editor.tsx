@@ -11,15 +11,17 @@ import { Kbd } from "@/components/ui/kbd";
 import { Textarea } from "@/components/ui/textarea";
 import { q } from "@/lib/api";
 
-/** Markdown with an Edit button when this server allows edits: the text beside its rendering as
- * you type, saved in place. source is what is edited, when it differs from what is shown (a
+/** A text file with an Edit button when this server allows edits: the text beside its rendering
+ * as you type, saved in place. Markdown renders as Markdown; preview renders anything else (a
+ * JSON file as its table). source is what is edited, when it differs from what is shown (a
  * README's front matter); save writes it. */
-export function EditableMarkdown({
+export function EditableText({
   name,
   children,
   shown,
   source,
   save,
+  preview = (text) => <Markdown>{text}</Markdown>,
 }: {
   /** The file, as the person knows it: README.md, report.md. */
   name: string;
@@ -28,6 +30,7 @@ export function EditableMarkdown({
   shown: string;
   source?: () => Promise<string>;
   save: (text: string) => Promise<unknown>;
+  preview?: (text: string) => ReactNode;
 }) {
   const health = useQuery(q.health());
   const [draft, setDraft] = useState<string | null>(null);
@@ -59,7 +62,7 @@ export function EditableMarkdown({
             <Pencil /> Edit
           </Button>
         )}
-        {children ?? <Markdown>{shown}</Markdown>}
+        {children ?? preview(shown)}
       </div>
     );
   const keys = (e: React.KeyboardEvent) => {
@@ -76,12 +79,12 @@ export function EditableMarkdown({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={keys}
-          spellCheck
+          spellCheck={name.toLowerCase().endsWith(".md")}
           autoFocus
           className="min-h-96 font-mono text-xs leading-relaxed"
         />
         <div className="min-w-0 rounded-md border px-4 py-3" aria-label="Preview">
-          <Markdown>{draft}</Markdown>
+          {preview(draft)}
         </div>
       </div>
       <div className="flex items-center gap-2">

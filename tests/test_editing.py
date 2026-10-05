@@ -1,4 +1,4 @@
-"""A person's own words edited from the app: an experiment's README, a run's Markdown."""
+"""A person's own words edited from the app: an experiment's README, a run's text files."""
 
 from pathlib import Path
 
@@ -31,17 +31,28 @@ def test_a_readme_is_edited_whole_and_must_keep_its_front_matter(tmp_path: Path)
     assert exposed.status_code == 403
 
 
-def test_a_runs_markdown_is_edited_in_place_and_nothing_else(tmp_path: Path) -> None:
+def test_a_runs_text_files_are_edited_in_place_and_the_run_says_so(tmp_path: Path) -> None:
     (tmp_path / "examples.md").write_text("Verdict: \n")
     (tmp_path / "data.json").write_text("{}")
+    (tmp_path / "rows.jsonl").write_text('{"a": 1}\n')
+    (tmp_path / "weights.bin").write_bytes(b"\0")
     with start_run("q", name="r") as run:
-        mlflow.log_artifact(str(tmp_path / "examples.md"))
-        mlflow.log_artifact(str(tmp_path / "data.json"))
+        for name in ("examples.md", "data.json", "rows.jsonl", "weights.bin"):
+            mlflow.log_artifact(str(tmp_path / name))
     rid = f"m-{run.info.run_id}"
     api = client()
     done = api.put(f"/api/runs/{rid}/artifacts/examples.md", json={"text": "Verdict: right\n"})
     assert done.status_code == 200
     assert api.get(f"/api/runs/{rid}/artifacts/examples.md").text == "Verdict: right\n"
-    assert api.put(f"/api/runs/{rid}/artifacts/data.json", json={"text": "x"}).status_code == 400
+    put = lambda path, text: api.put(f"/api/runs/{rid}/artifacts/{path}", json={"text": text})  # noqa: E731
+    assert put("data.json", '{"n": 2}').status_code == 200
+    assert put("data.json", "x").status_code == 400  # must still parse
+    assert put("rows.jsonl", '{"a": 1}\n{"a": 2}\n').status_code == 200
+    bad = put("rows.jsonl", '{"a": 1}\nnope\n')
+    assert bad.status_code == 400 and "line 2" in bad.text
+    assert put("weights.bin", "x").status_code == 400  # not text
+    assert api.get(f"/api/runs/{rid}/artifacts/data.json").json() == {"n": 2}
+    tags = api.get(f"/api/runs/{rid}").json()["tags"]
+    assert tags["louped.edited"] == "data.json,examples.md,rows.jsonl"
     assert api.put(f"/api/runs/{rid}/artifacts/new.md", json={"text": "x"}).status_code == 404
     assert api.put(f"/api/runs/{rid}/artifacts/../x.md", json={"text": "x"}).status_code == 404

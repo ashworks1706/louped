@@ -22,7 +22,8 @@ The UI is the product: quiet, dense, keyboard-first.
 - Every page has an empty state with what fills it: a link into the app (Launch, Load examples).
   A terminal command only where the app cannot act, such as starting the server or making an
   experiment folder (the app does not create experiment folders; it edits only a README and a
-  run's Markdown, with the text beside its rendering, and never when shared).
+  run's text files, with the text beside its rendering, and deletes only to the trash after
+  one confirm; never when shared).
 - Launching opens the job's page; jobs are followed on Runs, never on Launch.
 - Every figure has a ? beside its title saying how to read it: the view's `about`, set where the
   figure is made.
