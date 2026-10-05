@@ -247,10 +247,11 @@ def create_app(
         """A file or URL added to sources/, its text to the search index."""
         editing()
         try:
+            if library.is_url(req.location):
+                return library.add_url(req.location, req.key, req.title)
             # a file must be inside the project: over HTTP the app never reads elsewhere
-            location = (req.location if library.is_url(req.location)
-                        else inside(experiments_dir().parent, req.location))  # fmt: skip
-            return library.add_source(location, req.key, req.title)
+            path = inside(experiments_dir().parent, req.location)
+            return library.add_file(path, req.key, req.title)
         except (ValueError, FileNotFoundError) as exc:
             raise HTTPException(400, str(exc)) from exc
         except httpx.HTTPError as exc:

@@ -120,6 +120,8 @@ def web(request: httpx.Request) -> httpx.Response:
     if url == "https://raw.githubusercontent.com/o/r/main/nb/explore.ipynb":
         nb = nbformat.v4.new_notebook(cells=[nbformat.v4.new_code_cell("print(1)")])
         return httpx.Response(200, text=nbformat.writes(nb))
+    if url == "https://example.org/to-local.pdf":
+        return httpx.Response(302, headers={"location": "https://10.0.0.1/x.pdf"})
     if url == "https://example.org/blog":
         return httpx.Response(200, text="<html></html>", headers={"content-type": "text/html"})
     return httpx.Response(404)
@@ -143,6 +145,10 @@ def test_urls_are_fetched_once_with_where_they_came_from() -> None:
         ("http://arxiv.org/abs/2310.13548", "https only"),
         ("https://colab.research.google.com/drive/1xyz", "Download .ipynb"),
         ("https://example.org/blog", "a web page, not a file"),
+        ("https://127.0.0.1:8000/x.pdf", "not on the internet"),
+        ("https://[::1]/x.pdf", "not on the internet"),
+        ("https://localhost/x.pdf", "not on the internet"),
+        ("https://example.org/to-local.pdf", "not on the internet"),
     ):
         with pytest.raises(ValueError, match=why):
             add_source(url, transport=to)

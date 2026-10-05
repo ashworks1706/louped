@@ -20,6 +20,7 @@ change under it. A notebook on GitHub, or opened from GitHub in Colab, is fetche
 from __future__ import annotations
 
 import hashlib
+import ipaddress
 import json
 import os
 import re
@@ -93,24 +94,36 @@ def is_url(location: str) -> bool:
     return re.match(r"^https?://", location) is not None
 
 
-def add_source(location: str | Path, key: str | None = None, title: str | None = None,
+def add_source(location: str, key: str | None = None, title: str | None = None,
                transport: httpx.BaseTransport | None = None) -> Source:  # fmt: skip
-    """Add a file or a URL to sources/ and its text to the search index. A key already taken is
-    refused unless it is the same file again, which returns the one there. A Path is always a
-    file; the server passes one already confined to the project."""
+    """Add a file or an https URL to sources/ (add_file, add_url)."""
+    if is_url(location):
+        return add_url(location, key, title, transport)
+    return add_file(Path(location).expanduser(), key, title)
+
+
+def add_url(url: str, key: str | None = None, title: str | None = None,
+            transport: httpx.BaseTransport | None = None) -> Source:  # fmt: skip
+    """Fetch a file from the internet into sources/, recording the URL it came from."""
+    if not url.startswith("https://"):
+        raise ValueError(f"{url} is not https: louped fetches over https only")
+    resolved, found_title, suggested = _resolve(url, transport)
+    data, kind = _fetch(resolved, transport)
+    return _keep(data, kind, key, title, found_title, suggested, origin=url)
+
+
+def add_file(path: Path, key: str | None = None, title: str | None = None) -> Source:
+    """Copy a file into sources/. The server passes only a path already inside the project."""
+    if not path.is_file():
+        raise FileNotFoundError(f"no file {path}")
+    return _keep(path.read_bytes(), _kind(path.name), key, title, None, path.stem, origin=None)
+
+
+def _keep(data: bytes, kind: Kind, key: str | None, title: str | None, found_title: str | None,
+          suggested: str, origin: str | None) -> Source:  # fmt: skip
+    """Write a source's bytes and list it in the index, its text read to check it. A key already
+    taken is refused unless it is the same file again, which returns the one there."""
     root = sources_dir()
-    if isinstance(location, str) and is_url(location):
-        if not location.startswith("https://"):
-            raise ValueError(f"{location} is not https: louped fetches over https only")
-        url, found_title, suggested = _resolve(location, transport)
-        data, kind = _fetch(url, transport)
-        origin: str | None = location
-    else:
-        path = Path(location).expanduser()
-        if not path.is_file():
-            raise FileNotFoundError(f"no file {location}")
-        kind = _kind(path.name)
-        data, origin, found_title, suggested = path.read_bytes(), None, None, path.stem
     key = key or _slug(title or found_title or suggested)
     if not NAME.match(key):
         raise ValueError(f"{key!r} is not a source key: lowercase letters, digits and -")
@@ -128,7 +141,7 @@ def add_source(location: str | Path, key: str | None = None, title: str | None =
         text, own_title = _read(tmp, kind)
     except Exception as exc:
         tmp.unlink()
-        raise ValueError(f"{location} is not a readable {kind}: {exc}") from exc
+        raise ValueError(f"{origin or suggested} is not a readable {kind}: {exc}") from exc
     os.replace(tmp, target)
     added = Source(key=key, title=title or found_title or own_title or suggested, kind=kind,
                    file=target.name, origin=origin, sha256=sha, added=datetime.now(UTC),
@@ -243,9 +256,23 @@ def _arxiv_title(paper: str, transport: httpx.BaseTransport | None) -> str | Non
     return " ".join(title.split()) if title else None
 
 
+def _public(request: httpx.Request) -> None:
+    """Refuse a request to this machine or its network: a source comes from the internet."""
+    host = request.url.host
+    try:
+        local = not ipaddress.ip_address(host).is_global
+    except ValueError:
+        local = host == "localhost" or host.endswith((".localhost", ".local", ".internal"))
+    if local:
+        raise ValueError(f"{request.url} is not on the internet: louped fetches sources from "
+                         "public addresses only")  # fmt: skip
+
+
 def _fetch(url: str, transport: httpx.BaseTransport | None) -> tuple[bytes, Kind]:
     """A URL's bytes, at most MAX_BYTES, and their kind from the type the server gives."""
-    with (httpx.Client(transport=transport, timeout=60, follow_redirects=True) as client,
+    hooks = {"request": [_public]}  # every request, redirects too
+    with (httpx.Client(transport=transport, timeout=60, follow_redirects=True,
+                       event_hooks=hooks) as client,
           client.stream("GET", url) as r):  # fmt: skip
         r.raise_for_status()
         if not str(r.url).startswith("https://"):
