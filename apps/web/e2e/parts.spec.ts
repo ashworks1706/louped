@@ -71,6 +71,9 @@ const PAGES: [string, string][] = [
   ["compare sample", "/compare/?a=e-1&b=e-1&changed=false&sample=1"],
   ["launch", "/launch/?id=script%3Ahello%2Frun.py"],
   ["job", "/job/?id=j1"],
+  ["sources", "/sources/?q=pushback"],
+  ["pdf source", "/source/?key=pushback"],
+  ["slide source", "/source/?key=deck"],
 ];
 
 for (const [name, url] of PAGES) {

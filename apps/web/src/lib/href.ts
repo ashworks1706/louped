@@ -9,6 +9,10 @@ export const runHref = (id: string, tab?: string) =>
 export const itemHref = (run: string, folder: string, item: string) =>
   `${runHref(run, "items")}&set=${encodeURIComponent(folder)}&item=${encodeURIComponent(item)}`;
 
+/** A source's viewer, at a page. */
+export const sourceHref = (key: string, page?: number) =>
+  `/source/?key=${encodeURIComponent(key)}${page ? `&page=${page}` : ""}`;
+
 export const jobHref = (id: string) => `/job/?id=${encodeURIComponent(id)}`;
 
 /** The pages a domain's experiments live under; the checks file under behavior's. */
@@ -26,3 +30,12 @@ export const featureHref = (run: string, feature: number) =>
 
 /** A cohort's ids in the URL: comma-separated, each URL-encoded. */
 export const idsParam = (ids: string[]) => ids.map(encodeURIComponent).join(",");
+
+/** A URL's host to show; the URL as it is when it does not parse. */
+export function host(url: string) {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
+}

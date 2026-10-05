@@ -121,3 +121,59 @@
   outline: 1px dashed var(--foreground);
   outline-offset: 2px;
 }
+
+/* A PDF page's text over its drawing (pdf.js TextLayer): invisible words to select, at the
+   positions pdf.js gives them. From pdf.js's own viewer CSS, cut to what the page needs. The page
+   is paper in either theme, so its tints take the light theme's foreground. */
+.pdf-page {
+  --foreground: oklch(0.145 0 0);
+}
+.pdf-page .textLayer {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  line-height: 1;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  z-index: 0;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+}
+.pdf-page .textLayer :is(span, br) {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+}
+.pdf-page .textLayer > :not(.markedContent),
+.pdf-page .textLayer .markedContent span:not(.markedContent) {
+  z-index: 1;
+  --font-height: 0;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  --scale-x: 1;
+  --rotate: 0deg;
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+.pdf-page .textLayer .markedContent {
+  display: contents;
+}
+.pdf-page .textLayer .endOfContent {
+  display: block;
+  position: absolute;
+  inset: 100% 0 0;
+  z-index: 0;
+  cursor: default;
+  user-select: none;
+}
+.pdf-page .textLayer ::selection {
+  background: color-mix(in oklch, var(--foreground) 25%, transparent);
+  color: transparent;
+}
+/* a pinned passage, on a PDF or a text page */
+.pinned {
+  background: color-mix(in oklch, var(--foreground) 18%, transparent);
+  border-radius: 2px;
+}

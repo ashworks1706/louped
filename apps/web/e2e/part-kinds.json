@@ -490,6 +490,46 @@
     "rules": []
   },
   {
+    "part": "sources/search",
+    "about": "Search the project's sources, every word.",
+    "rules": []
+  },
+  {
+    "part": "sources/hit/*/*",
+    "about": "One page a search found, by source key and page.",
+    "rules": []
+  },
+  {
+    "part": "sources/source/*",
+    "about": "One source in the list, by key.",
+    "rules": []
+  },
+  {
+    "part": "sources/heading",
+    "about": "The count of sources.",
+    "rules": []
+  },
+  {
+    "part": "sources/table",
+    "about": "The list of sources.",
+    "rules": ["note"]
+  },
+  {
+    "part": "sources/add",
+    "about": "Adds a source: a file in the project or an https URL.",
+    "rules": ["hidden", "note"]
+  },
+  {
+    "part": "source/*",
+    "about": "A source's viewer: its header, page controls, the page, Pin.",
+    "rules": []
+  },
+  {
+    "part": "source/pin/*",
+    "about": "One pinned passage of the source, by id.",
+    "rules": []
+  },
+  {
     "part": "launch/group/*",
     "about": "A group of things to launch.",
     "rules": []

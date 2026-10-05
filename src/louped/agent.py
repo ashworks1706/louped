@@ -162,6 +162,23 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         """One page of a source's text, counted from 1: what to quote, word for word."""
         return await get(f"/sources/{quote(key, safe='')}/pages/{page}")
 
+    @mcp.tool(annotations=READ)
+    async def pins(key: str | None = None) -> list[dict[str, Any]]:
+        """The passages pinned in the project's sources (of one source, or all), each with its
+        quote, page, note and what it is linked to. Cite one as [@<key> p<page>]."""
+        return await get("/pins", key=key)
+
+    @mcp.tool(annotations=WRITE)
+    async def pin(
+        key: str, page: int, quote: str, note: str | None = None, links: list[str] | None = None
+    ) -> dict[str, Any]:
+        """Pin the passage a claim rests on: quote is the words exactly as source_page shows them
+        (a paraphrase is refused), links what it bears on (a ref such as experiment:<name> or
+        run:<id>, or a part's address). Then cite it in Markdown as [@<key> p<page>]: the app
+        shows the quote when it is hovered."""
+        return await post("/pins", {"key": key, "page": page, "quote": quote, "note": note,
+                                    "links": links or []})  # fmt: skip
+
     @mcp.tool(annotations=FETCH)
     async def add_source(
         location: str, key: str | None = None, title: str | None = None

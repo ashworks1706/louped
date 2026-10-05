@@ -1,6 +1,7 @@
 """The project's sources/: files and URLs kept, read page by page, searched and quoted."""
 
 import json
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import httpx
@@ -12,7 +13,7 @@ from pptx import Presentation
 from test_agent import call, tools
 
 from louped.server import create_app
-from louped.sources import add_source, list_sources, page_text, search
+from louped.sources import add_pin, add_source, list_sources, page_text, pins, search
 
 
 def pdf(*pages: str) -> bytes:
@@ -179,3 +180,58 @@ def test_sources_through_the_api_and_mcp(tmp_path: Path) -> None:
     readonly = TestClient(create_app(launching=False), base_url="http://localhost")
     assert readonly.post("/api/sources", json={"location": "x"}).status_code == 403
     assert readonly.get("/api/sources/search", params={"q": "cave"}).json()[0]["key"] == "pushback"
+
+
+def test_a_pin_holds_words_on_its_page_and_is_kept_once(tmp_path: Path) -> None:
+    (tmp_path / "paper.pdf").write_bytes(pdf("Models cave to pushback when pressed", "Evidence"))
+    mcp = tools()
+    call(mcp, "add_source", location=str(tmp_path / "paper.pdf"), key="pushback")
+    got = call(mcp, "pin", key="pushback", page=1, quote="cave  to\npushback",
+               note="the caving claim", links=["experiment:pressure"])  # fmt: skip
+    assert (got["exact"], got["start"]) == ("cave to pushback", 6)
+    # the same words again: one pin, the note kept, the links added to
+    again = add_pin("pushback", 1, "cave to pushback", links=["run:m-1"])
+    assert (again.id, again.note) == (got["id"], "the caving claim")
+    assert again.links == ["experiment:pressure", "run:m-1"]
+    add_pin("pushback", 2, "Evidence")
+    assert [(p.page, p.exact) for p in pins("pushback")] == [(1, "cave to pushback"),
+                                                             (2, "Evidence")]  # fmt: skip
+    with pytest.raises(ValueError, match="is not on page 2"):
+        add_pin("pushback", 2, "cave to pushback")
+    with pytest.raises(KeyError):
+        add_pin("nope", 1, "x")
+    api = TestClient(create_app(launching=True), base_url="http://localhost")
+    assert api.get("/api/sources/pushback/file").content.startswith(b"%PDF")
+    assert api.get("/api/sources/nope/file").status_code == 404
+    paraphrase = api.post("/api/pins", json={"key": "pushback", "page": 1, "quote": "caves"})
+    assert paraphrase.status_code == 400
+    assert api.post("/api/pins", json={"key": "nope", "page": 1, "quote": "x"}).status_code == 404
+    assert [p["page"] for p in call(mcp, "pins", key="pushback")] == [1, 2]
+    gone = {"content-type": "application/json"}
+    assert api.request("DELETE", f"/api/pins/{got['id']}", headers=gone).status_code == 200
+    assert api.request("DELETE", f"/api/pins/{got['id']}", headers=gone).status_code == 404
+    assert [p.page for p in pins()] == [2]
+    readonly = TestClient(create_app(launching=False), base_url="http://localhost")
+    assert readonly.post("/api/pins", json={"key": "pushback", "page": 2,
+                                            "quote": "Evidence"}).status_code == 403  # fmt: skip
+
+
+def test_a_quote_selected_across_lines_is_found_and_pins_written_at_once_are_all_kept(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "notes.md").write_text("Models cave to\npushback when pressed.\n")
+    add_source(str(tmp_path / "notes.md"))
+    # a PDF viewer's selection can lose the break between lines, or gain one
+    assert add_pin("notes", 1, "cave topushback").exact == "cave to pushback"
+    assert add_pin("notes", 1, "cave to pushback").id == pins("notes")[0].id
+    words = ["Models", "cave", "to", "pushback", "when", "pressed."]
+    with ThreadPoolExecutor(8) as pool:
+        list(pool.map(lambda w: add_pin("notes", 1, w), words))
+    assert len(pins("notes")) == 1 + len(words)
+    # an index entry naming a file outside sources/ is refused, not read
+    index = tmp_path / "sources" / "index.json"
+    entries = json.loads(index.read_text())
+    entries[0]["file"] = "../notes.md"
+    index.write_text(json.dumps(entries))
+    api = TestClient(create_app(), base_url="http://localhost")
+    assert api.get("/api/sources/notes/file").status_code == 400

@@ -18,7 +18,7 @@ import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -101,6 +101,15 @@ class SourceRequest(BaseModel):
     location: str
     key: str | None = None
     title: str | None = None
+
+
+class PinRequest(BaseModel):
+    key: str
+    page: int
+    #: The words as they stand on the page.
+    quote: str
+    note: str | None = None
+    links: list[str] = []
 
 
 class SourcePage(BaseModel):
@@ -241,6 +250,42 @@ def create_app(
             raise HTTPException(404, exc.args[0]) from exc
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
+
+    @app.get("/api/sources/{key}/file")
+    def source_file(key: str) -> FileResponse:
+        """A source's file as it was kept, for the app's viewer."""
+        try:
+            path = library.source_file(key)
+        except KeyError as exc:
+            raise HTTPException(404, exc.args[0]) from exc
+        except ValueError as exc:  # an index entry naming a file outside sources/
+            raise HTTPException(400, str(exc)) from exc
+        kind = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+        return FileResponse(path, media_type=kind, headers={"Cache-Control": "no-cache"})
+
+    @app.get("/api/pins")
+    def pins(key: str | None = None) -> list[library.Pin]:
+        """The pinned passages of one source, or of all."""
+        return library.pins(key)
+
+    @app.post("/api/pins", dependencies=[Depends(launch.require_json)])
+    def add_pin(req: PinRequest) -> library.Pin:
+        """Pin a quote on a page of a source: refused unless the words are on that page."""
+        editing()
+        try:
+            return library.add_pin(req.key, req.page, req.quote, req.note, req.links)
+        except KeyError as exc:
+            raise HTTPException(404, exc.args[0]) from exc
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.delete("/api/pins/{pin_id}", dependencies=[Depends(launch.require_json)])
+    def delete_pin(pin_id: str) -> None:
+        editing()
+        try:
+            library.delete_pin(pin_id)
+        except KeyError as exc:
+            raise HTTPException(404, exc.args[0]) from exc
 
     @app.post("/api/sources", dependencies=[Depends(launch.require_json)])
     def add_source(req: SourceRequest) -> library.Source:
