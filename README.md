@@ -33,6 +33,9 @@ Open http://127.0.0.1:8000 and launch the example experiment.
 3. **Run it** on your machine, or send it to a Slurm cluster; with a remote set, the job pushes
    its results and `louped pull` brings them in.
 4. **Read the results**: every item under every condition, what changed, and out of how many.
+   Edit a run's write-up beside its rendering; delete what you no longer need to the trash.
+5. **Share and extend.** Push runs for others to pull, publish a read-only dashboard, or add your
+   own pages, run tabs and tools as plugins.
 
 Already have results? `louped view <folder>` opens them read-only.
 
