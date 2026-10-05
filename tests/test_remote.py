@@ -93,6 +93,24 @@ def test_a_sol_bundle_asks_sol_for_its_gpu_and_runs_the_launch_command(tmp_path:
     assert listed["status"] == "exported" and listed["title"].endswith("· sol")
 
 
+def test_a_sol_job_pushing_to_an_hf_bucket_finds_the_login_token_before_it_runs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    experiment(tmp_path)
+    monkeypatch.setenv("LOUPED_REMOTE", "hf://buckets/ash/runs")
+    target = {"provider": "sol", "gpu": "a100", "gpus": 1}
+    got = client().post("/api/launch/export", json={"id": "script:hello/run.py", "target": target})
+    assert got.status_code == 200, got.text
+    assert "hf auth login" in got.headers["x-louped-note"]
+    script = (unpack(got.content, tmp_path / "far") / "job.sh").read_text()
+    # the cache goes to scratch, but the token stays where hf auth login wrote it
+    token = script.index(
+        'HF_TOKEN_PATH="${HF_TOKEN_PATH:-${HF_HOME:-$HOME/.cache/huggingface}/token}"'
+    )
+    assert token < script.index('export HF_HOME="${HF_HOME:-/scratch')
+    assert script.index("h.get_token() is None") < script.index("experiments/hello/run.py")
+
+
 def test_a_job_installs_the_extras_its_experiment_declares(tmp_path: Path) -> None:
     experiment(tmp_path)
     api = client()

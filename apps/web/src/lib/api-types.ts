@@ -572,6 +572,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/launch/remote": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Connect */
+    post: operations["connect_api_launch_remote_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/launch/import-path": {
     parameters: {
       query?: never;
@@ -672,6 +689,19 @@ export interface components {
       only_b: number;
       /** Scores */
       scores: components["schemas"]["PairedScore"][];
+    };
+    /** Connect */
+    Connect: {
+      /**
+       * Remote
+       * @default
+       */
+      remote: string;
+      /**
+       * Token
+       * @default
+       */
+      token: string;
     };
     /**
      * Direction
@@ -1332,6 +1362,13 @@ export interface components {
       bundle: string | null;
       /** Runs */
       runs: string[];
+    };
+    /** RemoteState */
+    RemoteState: {
+      /** Remote */
+      remote: string | null;
+      /** Token */
+      token: boolean;
     };
     /** RunDetail */
     RunDetail: {
@@ -2746,6 +2783,39 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Imported"][];
+        };
+      };
+    };
+  };
+  connect_api_launch_remote_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Connect"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RemoteState"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

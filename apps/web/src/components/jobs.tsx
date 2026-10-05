@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
+  Cloud,
   CloudDownload,
   CloudUpload,
   Rocket,
@@ -24,8 +25,12 @@ import { askToNotify } from "@/components/notifier";
 import { QueryState } from "@/components/query-state";
 import { KindBadge, StatusDot } from "@/components/run-badges";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
+  ApiError,
   cancelJob,
+  connectRemote,
   importResult,
   isLive,
   launch,
@@ -366,9 +371,13 @@ function Sync() {
   const client = useQueryClient();
   const health = useQuery(q.health());
   const remote = health.data?.remote;
+  const [connecting, setConnecting] = useState(false);
+  // a missing Hugging Face token opens Connect instead of an error
+  const needsToken = (error: Error) => error instanceof ApiError && error.status === 401;
   const push = useMutation({
     mutationFn: pushRuns,
-    meta: { action: "Push" },
+    meta: { action: "Push", quiet: needsToken },
+    onError: (e) => needsToken(e) && setConnecting(true),
     onSuccess: (done) =>
       toast(done.bundle ? `${done.runs.length} runs pushed` : "Nothing new to push", {
         description: <span className="font-mono">{done.remote}</span>,
@@ -376,7 +385,8 @@ function Sync() {
   });
   const pull = useMutation({
     mutationFn: pullRuns,
-    meta: { action: "Pull" },
+    meta: { action: "Pull", quiet: needsToken },
+    onError: (e) => needsToken(e) && setConnecting(true),
     onSuccess: (found) => {
       void client.invalidateQueries({ queryKey: ["jobs"] });
       void client.invalidateQueries({ queryKey: ["runs"] });
@@ -388,28 +398,121 @@ function Sync() {
       });
     },
   });
-  if (!remote) return null;
   return (
     <>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => pull.mutate()}
-        disabled={pull.isPending}
-        title={`Add the runs pushed to ${remote}`}
-      >
-        <CloudDownload /> Pull
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => push.mutate()}
-        disabled={push.isPending}
-        title={`Push this louped's new runs to ${remote}`}
-      >
-        <CloudUpload /> Push
-      </Button>
+      {remote ? (
+        <>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => pull.mutate()}
+            disabled={pull.isPending}
+            title={`Add the runs pushed to ${remote}`}
+          >
+            <CloudDownload /> Pull
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => push.mutate()}
+            disabled={push.isPending}
+            title={`Push this louped's new runs to ${remote}`}
+          >
+            <CloudUpload /> Push
+          </Button>
+        </>
+      ) : (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setConnecting(true)}
+          title="Share runs through a remote"
+        >
+          <Cloud /> Connect
+        </Button>
+      )}
+      <Connect open={connecting} onOpenChange={setConnecting} remote={remote ?? ""} />
     </>
+  );
+}
+
+/** Sets the remote runs are pushed to and pulled from, and a Hugging Face token for an hf:// one. */
+function Connect({
+  open,
+  onOpenChange,
+  remote,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  remote: string;
+}) {
+  const client = useQueryClient();
+  const connect = useMutation({
+    mutationFn: connectRemote,
+    meta: { action: "Connect" },
+    onSuccess: (done) => {
+      void client.invalidateQueries({ queryKey: ["health"] });
+      onOpenChange(false);
+      toast("Remote set", { description: <span className="font-mono">{done.remote}</span> });
+    },
+  });
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex flex-col gap-4 p-5">
+        <div className="flex flex-col gap-1">
+          <DialogTitle className="text-sm font-medium">Connect a remote</DialogTitle>
+          <DialogDescription className="text-muted-foreground text-xs">
+            Where runs are pushed and pulled, saved in louped.toml. The token stays on this machine,
+            where Hugging Face&apos;s own tools keep it.
+          </DialogDescription>
+        </div>
+        <form
+          className="flex flex-col gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const form = new FormData(e.currentTarget);
+            connect.mutate({
+              remote: String(form.get("remote") ?? ""),
+              token: String(form.get("token") ?? ""),
+            });
+          }}
+        >
+          <label className="flex flex-col gap-1 text-xs">
+            Remote
+            <Input
+              name="remote"
+              defaultValue={remote}
+              placeholder="Empty: a private HF bucket of your own"
+              className="font-mono placeholder:font-sans"
+              autoComplete="off"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs">
+            <span>
+              Hugging Face token{" "}
+              <a
+                className="text-muted-foreground underline underline-offset-2"
+                href="https://huggingface.co/settings/tokens"
+                target="_blank"
+                rel="noreferrer"
+              >
+                (write access)
+              </a>
+            </span>
+            <Input
+              name="token"
+              type="password"
+              placeholder="Empty if this machine is signed in"
+              className="font-mono placeholder:font-sans"
+              autoComplete="off"
+            />
+          </label>
+          <Button type="submit" size="sm" className="self-end" disabled={connect.isPending}>
+            Connect
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

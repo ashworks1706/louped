@@ -12,7 +12,10 @@ results.
   `import_result`, `push`, `pull` to act. Work started through it shows in the app. Start `louped serve` first.
 - Skills in `.claude/skills/`: `new-experiment`, `read-results`, `run-elsewhere`, `write-report`,
   `add-plugin`.
-- The CLI does the same steps: `louped new`, `louped import`, `louped --help`.
+- The CLI does the same steps: `louped new`, `louped push`, `louped pull`, `louped --help`.
+- Never ask for a Hugging Face token in chat. If push or pull says one is missing, ask the person
+  to press Connect on Runs or run `louped push` in a terminal: both ask for it and keep it out of
+  the project.
 
 ## The method
 
@@ -38,7 +41,7 @@ results.
 
 | Path              | What                                                  |
 | ----------------- | ----------------------------------------------------- |
-| `louped.toml`      | the project's root and settings (its domains)         |
+| `louped.toml`      | the project's root and settings (domains, remote)     |
 | `experiments/`    | the questions; committed                              |
 | `plugins/`        | the project's own pages, routes and tools; committed  |
 | `.louped/`         | runs, eval logs, jobs, caches; gitignored, rebuildable |

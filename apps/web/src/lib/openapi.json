@@ -1309,6 +1309,44 @@
         }
       }
     },
+    "/api/launch/remote": {
+      "post": {
+        "summary": "Connect",
+        "operationId": "connect_api_launch_remote_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Connect"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemoteState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/launch/import-path": {
       "post": {
         "summary": "Import Path",
@@ -1504,6 +1542,22 @@
         "type": "object",
         "required": ["a", "b", "only_a", "only_b", "scores"],
         "title": "Comparison"
+      },
+      "Connect": {
+        "properties": {
+          "remote": {
+            "type": "string",
+            "title": "Remote",
+            "default": ""
+          },
+          "token": {
+            "type": "string",
+            "title": "Token",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "Connect"
       },
       "Direction": {
         "properties": {
@@ -3101,6 +3155,28 @@
         "type": "object",
         "required": ["remote", "bundle", "runs"],
         "title": "Pushed"
+      },
+      "RemoteState": {
+        "properties": {
+          "remote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remote"
+          },
+          "token": {
+            "type": "boolean",
+            "title": "Token"
+          }
+        },
+        "type": "object",
+        "required": ["remote", "token"],
+        "title": "RemoteState"
       },
       "RunDetail": {
         "properties": {

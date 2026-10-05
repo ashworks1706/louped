@@ -76,6 +76,36 @@ test("Runs offers Push and Pull when the project has a remote", async ({ page },
   await page.screenshot({ path: info.outputPath("runs-remote.png"), fullPage: true });
 });
 
+test("a missing token opens Connect, which sets the remote", async ({ page }, info) => {
+  let remote: string | null = null;
+  await page.route("**/api/health", (r) =>
+    r.fulfill({ json: { status: "ok", version: "0", home: "/x", launching: true, remote } }),
+  );
+  await page.route("**/api/launch/jobs", (r) => r.fulfill({ json: [] }));
+  await page.route("**/api/runs", (r) => r.fulfill({ json: [] }));
+  const sent: unknown[] = [];
+  await page.route("**/api/launch/remote", (r) => {
+    sent.push(r.request().postDataJSON());
+    remote = "hf://buckets/ash/proj";
+    return r.fulfill({ json: { remote, token: true } });
+  });
+  await page.route("**/api/launch/pull", (r) =>
+    r.fulfill({ status: 401, json: { detail: "needs a Hugging Face token" } }),
+  );
+  await page.goto("/runs/");
+  await page.getByRole("button", { name: "Connect" }).click();
+  const dialog = page.getByRole("dialog", { name: "Connect a remote" });
+  await dialog.getByLabel("Hugging Face token").fill("hf_x");
+  await page.screenshot({ path: info.outputPath("connect.png") });
+  await dialog.getByRole("button", { name: "Connect" }).click();
+  await expect(page.getByText("Remote set")).toBeVisible();
+  expect(sent).toEqual([{ remote: "", token: "hf_x" }]);
+  await page.getByRole("button", { name: "Pull" }).click(); // the token is gone again: asked, not failed
+  await expect(page.getByRole("dialog", { name: "Connect a remote" })).toBeVisible();
+  await expect(page.getByText("Pull failed")).toHaveCount(0);
+  await expect(dialog.getByLabel("Remote")).toHaveValue("hf://buckets/ash/proj");
+});
+
 test("a vega spec that loads data from a url is refused", async ({ page }) => {
   const remote = { ...vega, spec: { ...vega.spec, data: { url: "https://example.com/x.csv" } } };
   let asked = false;

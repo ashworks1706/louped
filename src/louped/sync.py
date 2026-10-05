@@ -17,10 +17,12 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import secrets
 import shutil
 import socket
 import tempfile
+import tomllib
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -28,7 +30,7 @@ from pathlib import Path
 from typing import Any
 
 from louped.core import home, logs_dir, tracking_uri
-from louped.core.project import config, root
+from louped.core.project import FILE, base, config, root
 
 #: What a bundle's result.json must hold for import; the rest is provenance.
 RESULT = "result.json"
@@ -74,6 +76,90 @@ def is_local(url: str) -> bool:
     """Whether the remote is a folder on this machine, which another machine cannot reach."""
     protocol = _fs(url)[0].protocol
     return bool({"file", "local"} & set(protocol if isinstance(protocol, tuple) else [protocol]))
+
+
+#: An HF Storage Bucket remote: hf://buckets/<user>/<name>[/folder].
+BUCKETS = "hf://buckets/"
+
+
+class NeedsToken(ValueError):
+    """An hf:// remote with no Hugging Face token on this machine."""
+
+
+def bucket(url: str) -> str | None:
+    """The bucket id (<user>/<name>) of an hf:// bucket remote; None for any other remote."""
+    if not url.startswith(BUCKETS):
+        return None
+    parts = url[len(BUCKETS) :].split("/")
+    if len(parts) < 2 or not all(parts[:2]):
+        raise ValueError(f"{url}: an HF bucket remote is {BUCKETS}<user>/<name>")
+    return "/".join(parts[:2])
+
+
+def has_token() -> bool:
+    from huggingface_hub import get_token
+
+    return get_token() is not None
+
+
+def save_token(token: str) -> str:
+    """Check a Hugging Face token and keep it where huggingface_hub keeps it (`hf auth login`'s
+    place), not in the project. Returns the account it belongs to."""
+    from huggingface_hub import login, whoami
+
+    try:
+        user = str(whoami(token=token)["name"])
+    except OSError as exc:  # HfHubHTTPError, a 401 for a bad token: say so
+        raise ValueError(f"Hugging Face did not accept that token: {exc}") from exc
+    login(token=token, skip_if_logged_in=False)
+    return user
+
+
+def suggested() -> str | None:
+    """A remote for this project when none is set: a bucket of the signed-in account named after
+    the project's folder. None without a token."""
+    if not has_token():
+        return None
+    from huggingface_hub import whoami
+
+    return f"{BUCKETS}{whoami()['name']}/{_slug(base().name).lower()}"
+
+
+def set_remote(url: str) -> None:
+    """Write `remote = "<url>"` into the project's louped.toml, replacing one that is there."""
+    found = root()
+    if found is None:
+        raise ValueError("not in a louped project: run louped init first")
+    path = found / FILE
+    line = f"remote = {json.dumps(url.rstrip('/'))}"
+    lines = path.read_text(encoding="utf-8").splitlines()
+    at = next((i for i, x in enumerate(lines) if re.match(r"\s*remote\s*=", x)), None)
+    if at is not None:
+        lines[at] = line
+    else:  # a top-level key goes before the first table
+        first = next((i for i, x in enumerate(lines) if x.startswith("[")), len(lines))
+        lines[first:first] = [line, ""] if first < len(lines) else ["", line]
+    text = "\n".join(lines) + "\n"
+    if tomllib.loads(text).get("remote") != url.rstrip("/"):
+        raise ValueError(f"{path}: could not set remote there; add {line} by hand")
+    path.write_text(text, encoding="utf-8")
+
+
+def ready(url: str, create: bool) -> None:
+    """Check what an hf:// remote needs before using it: a token, and with create, the bucket,
+    made private if it does not exist."""
+    found = bucket(url)
+    if found is None:
+        return
+    if not has_token():
+        raise NeedsToken(
+            f"{url} needs a Hugging Face token with write access: run `hf auth login`, "
+            "set HF_TOKEN, or paste one in the app"
+        )
+    if create:
+        from huggingface_hub import create_bucket
+
+        create_bucket(found, private=True, exist_ok=True)
 
 
 def _fs(url: str) -> tuple[Any, str]:
@@ -288,6 +374,7 @@ def push(url: str | None = None, result: Path | None = None) -> Pushed:
     """Push this home's new runs to the remote as one bundle. With result, a job's result.json,
     the bundle carries its job, host and exit code, and the job's log.txt beside it."""
     remote = remote_url(url)
+    ready(remote, create=True)
     fs, top = _fs(remote)
     meta = json.loads(result.read_text(encoding="utf-8")) if result else None
     host = (meta or {}).get("host") or os.environ.get("LOUPED_HOST") or socket.gethostname()
@@ -322,6 +409,7 @@ def pull(
     """Add every bundle in the remote this home has not pulled. finish sees each bundle's folder
     before it is deleted (a job's log)."""
     remote = remote_url(url)
+    ready(remote, create=False)
     fs, top = _fs(remote)
     try:
         entries = sorted(fs.ls(top, detail=False))

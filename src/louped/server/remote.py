@@ -145,7 +145,7 @@ command -v uv >/dev/null || {{ curl -LsSf https://astral.sh/uv/install.sh | sh; 
 export PATH="$HOME/.local/bin:$PATH"
 {fetch}{install}
 source .venv/bin/activate
-started=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+{token}started=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 set +e
 {command} 2>&1 | tee out/log.txt
 code=${{PIPESTATUS[0]}}
@@ -176,6 +176,12 @@ fi
 echo "Pushing failed (above), so the result is packed to bring back by hand."
 """
 
+#: An hf:// remote: say a missing token before the run, not after it.
+TOKEN = """python -c 'import huggingface_hub as h, sys; sys.exit(h.get_token() is None)' || {
+  echo "No Hugging Face token here, which pushing to $LOUPED_REMOTE needs:"
+  echo "run hf auth login once on this machine, or set HF_TOKEN."; exit 1; }
+"""
+
 #: A one-file job gets the project from git at the exported commit.
 FETCH = """[ -d repo ] || git clone --quiet {url} repo
 git -C repo fetch --quiet
@@ -189,7 +195,7 @@ README = """louped job {job_id}: {title}
 3. {back}
 
 The job installs its environment with uv{cache_note}. Gated Hugging Face models need HF_TOKEN set
-before you run it{hf_push}. If compute nodes have no internet, run the install and model download
+before you run it. If compute nodes have no internet, run the install and model download
 once on a login node first: the same commands as job.sh up to `source .venv/bin/activate`.
 """
 
@@ -311,7 +317,10 @@ def export(req: ExportRequest, jobs: Jobs, title: str) -> tuple[Path, str]:
     else:
         install = f"uv sync --locked --no-dev {flags}"
     sol = target.provider == "sol"
-    scratch = ('export HF_HOME="${HF_HOME:-/scratch/$USER/huggingface}"\n'
+    # the cache moves to scratch; the token stays where `hf auth login` on the cluster put it
+    token = "${HF_HOME:-$HOME/.cache/huggingface}/token"
+    scratch = (f'export HF_TOKEN_PATH="${{HF_TOKEN_PATH:-{token}}}"\n'
+               'export HF_HOME="${HF_HOME:-/scratch/$USER/huggingface}"\n'
                'export UV_CACHE_DIR="${UV_CACHE_DIR:-/scratch/$USER/uv-cache}"\n')  # fmt: skip
     run = "bash job.sh" if target.provider == "shell" else "sbatch job.sh"
     host = {"sol": "sol", "slurm": "slurm", "shell": "vm"}[target.provider]
@@ -320,10 +329,13 @@ def export(req: ExportRequest, jobs: Jobs, title: str) -> tuple[Path, str]:
     back = (f"Its results are pushed to {remote}: Pull on louped's Runs page." if remote else
             f"When it ends, bring back louped-result-{job_id}.tar.gz and import it on louped's "
             "Runs page (or `louped import` it).")  # fmt: skip
+    if remote and sync.bucket(remote):
+        back += " Pushing there needs a Hugging Face token: run hf auth login once on that machine."
     parts = {"header": "\n".join(header), "job_id": job_id, "title": title, "run": run,
              "cache": scratch if sol else "", "command": shlex.join(command), "host": host,
              "remote": f'export LOUPED_REMOTE="${{LOUPED_REMOTE:-{remote}}}"\n' if remote else "",
-             "push": PUSH if remote else "", "install": install}  # fmt: skip
+             "push": PUSH if remote else "", "install": install,
+             "token": TOKEN if remote and sync.bucket(remote) else ""}  # fmt: skip
     if isinstance(clone, Clone) or (clone is None and source is None):
         fetch = FETCH.format(url=shlex.quote(clone.url), commit=clone.commit) if clone else ""
         if clone and experiments_dir().is_dir():
@@ -345,14 +357,9 @@ def export(req: ExportRequest, jobs: Jobs, title: str) -> tuple[Path, str]:
         (root / "job.sh").write_text(script, encoding="utf-8")
         (root / "job.sh").chmod(0o755)
         cache_note = ", caching it and models under /scratch/$USER" if sol else ""
-        hf_push = (
-            ", and so does pushing to an hf:// remote"
-            if remote and remote.startswith("hf:")
-            else ""
-        )
-        (root / "README.txt").write_text(README.format(job_id=job_id, title=title, where=where,
-                                                       run=run, cache_note=cache_note, back=back,
-                                                       hf_push=hf_push))  # fmt: skip
+        readme = README.format(job_id=job_id, title=title, where=where, run=run,
+                               cache_note=cache_note, back=back)  # fmt: skip
+        (root / "README.txt").write_text(readme)
         manifest = {"job": job_id, "title": title, "argv": command, "target": target.model_dump(),
                     "louped": __version__, "request": req.model_dump(exclude={"target"}),
                     "skipped": _skipped(root)}  # fmt: skip
@@ -490,6 +497,19 @@ class ImportPath(BaseModel):
     path: str
 
 
+class Connect(BaseModel):
+    #: The remote to set in louped.toml; empty for a private HF bucket of the signed-in account.
+    remote: str = ""
+    #: A Hugging Face token, kept where `hf auth login` keeps it; empty to use the one there.
+    token: str = ""
+
+
+class RemoteState(BaseModel):
+    remote: str | None
+    #: Whether a Hugging Face token is on this machine, which an hf:// remote needs.
+    token: bool
+
+
 def routes(api: APIRouter, queue: Callable[[], Jobs], known: Callable[[str], Launchable]) -> None:
     """Export, import, push and pull on the launch router: all write to this machine or the
     remote, so all are off with --expose, like launching."""
@@ -529,6 +549,22 @@ def routes(api: APIRouter, queue: Callable[[], Jobs], known: Callable[[str], Lau
         jobs = queue()
         return await run_in_threadpool(_remote, lambda: pull_results(jobs))
 
+    @api.post("/remote", dependencies=[Depends(require_json)])
+    async def connect(req: Connect) -> RemoteState:
+        queue()
+
+        def setup() -> RemoteState:
+            if req.token.strip():
+                sync.save_token(req.token.strip())
+            url = req.remote.strip() or sync.suggested()
+            if url is None:
+                raise sync.NeedsToken("a Hugging Face token is needed for a bucket of your own")
+            sync.ready(url, create=True)
+            sync.set_remote(url)
+            return RemoteState(remote=sync.configured(), token=sync.has_token())
+
+        return await run_in_threadpool(_remote, setup)
+
     @api.post("/import-path", dependencies=[Depends(require_json)])
     async def import_path(req: ImportPath) -> Imported:
         path = Path(req.path).expanduser()
@@ -538,9 +574,12 @@ def routes(api: APIRouter, queue: Callable[[], Jobs], known: Callable[[str], Lau
 
 
 def _remote[T](call: Callable[[], T]) -> T:
-    """A push or pull, with a missing or unreachable remote said as a 400, not a crash."""
+    """A push or pull, with a missing or unreachable remote said as a 400, not a crash, and a
+    missing Hugging Face token as a 401, for the app to ask for one."""
     try:
         return call()
+    except sync.NeedsToken as exc:
+        raise HTTPException(401, str(exc)) from exc
     except (ValueError, OSError) as exc:
         raise HTTPException(400, str(exc)) from exc
 

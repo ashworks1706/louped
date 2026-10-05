@@ -5,8 +5,15 @@ description: Keep runs in a remote everyone can pull from, send jobs to a cluste
 
 ## A remote for runs
 
-Runs live in `.louped/`, which git ignores. To share them, or to keep them beside the code, set a
-remote in `louped.toml`:
+Runs live in `.louped/`, which git ignores. To share them, or to keep them beside the code, give
+the project a remote. The quickest way is **Runs → Connect**, or a first `louped push`:
+
+- Leave the remote empty to use a private Hugging Face Storage Bucket of your own, named after the
+  project (`hf://buckets/<you>/<project>`). louped creates the bucket.
+- Paste a Hugging Face token with write access if this machine is not signed in. It is kept where
+  `hf auth login` keeps it, never in the project.
+
+Either way, the remote is saved to `louped.toml`. You can also set it there by hand:
 
 ```toml
 remote = "hf://buckets/<user>/<name>"   # a Hugging Face Storage Bucket
@@ -21,10 +28,10 @@ louped push   # this louped's new runs, as one new bundle in the remote
 louped pull   # every bundle this louped has not pulled
 ```
 
-**Runs** has the same **Push** and **Pull** buttons. Each push writes a new folder and rewrites
-nothing, so two people or machines never conflict. A bundle holds Inspect logs, an MLflow store
-with its artifacts, and `result.json` saying where it ran. Model weights stay out. An `hf://`
-remote needs `hf auth login` or `HF_TOKEN`.
+**Runs** has the same **Push** and **Pull** buttons. If an `hf://` remote finds no token, they open
+Connect to ask for one. Each push writes a new folder and rewrites nothing, so two people or
+machines never conflict. A bundle holds Inspect logs, an MLflow store with its artifacts, and
+`result.json` saying where it ran. Model weights stay out.
 
 ## Run on a cluster
 
@@ -48,8 +55,9 @@ Pulled and imported runs show like local ones, marked with where they ran.
 
 ### Tips
 
-- **Gated models** (such as Llama) and `hf://` remotes: run `hf auth login` on the cluster, or
-  export `HF_TOKEN` before `sbatch`.
+- **Hugging Face token**: gated models (such as Llama) and `hf://` remotes need one on the
+  cluster. Run `hf auth login` there once, or export `HF_TOKEN` before `sbatch`. A job that pushes
+  to an `hf://` remote checks for the token before it runs, not after.
 - **Private repositories**: the cluster needs access to clone it, such as an SSH key on GitHub.
 - **First run**: run the job's install line once on a login node. The job then reuses the
   downloaded packages, which avoids timeouts and compute nodes without internet.

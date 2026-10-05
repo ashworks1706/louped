@@ -160,7 +160,9 @@ class Import:
 @dataclass(frozen=True)
 class Push:
     """Push the runs this louped made and has not pushed to the remote, as one new bundle: `remote`
-    in louped.toml, or LOUPED_REMOTE. Needs the sync extra."""
+    in louped.toml, or LOUPED_REMOTE. At a terminal it asks for a remote when none is set (a
+    private HF bucket of your own by default) and for a Hugging Face token when an hf:// remote
+    needs one. Needs the sync extra."""
 
     remote: str | None = None
     """A remote other than the configured one: any fsspec URL, such as hf://buckets/<user>/<name>."""
@@ -373,6 +375,30 @@ def _imported(done: Imported) -> str:
     return f"{len(done.runs)} runs from {done.host} (exit {done.exit_code}){again}"
 
 
+def _connect(given: str | None) -> None:
+    """At a terminal, ask for what push and pull lack: a remote for the project, and a Hugging Face
+    token for an hf:// one. Elsewhere (a cluster job) they fail with what to set instead."""
+    import sys
+    from getpass import getpass
+
+    from louped import sync
+
+    if not sys.stdin.isatty():
+        return
+    url = given or sync.configured()
+    if url is None:
+        url = input("Remote (Enter for a private Hugging Face bucket of your own): ").strip()
+    if (not url or sync.bucket(url)) and not sync.has_token():
+        print("A Hugging Face token with write access: https://huggingface.co/settings/tokens")
+        print(f"Signed in as {sync.save_token(getpass('Token: ').strip())}")
+    if not url:
+        url = sync.suggested()
+        assert url is not None  # a token was just saved
+    if given is None and sync.configured() is None:
+        sync.set_remote(url)
+        print(f"remote = {url} (louped.toml)")
+
+
 def _plugin_command() -> bool:
     """Run `louped <name> ...` with the project plugin of that name's main, when no command of
     louped's own has the name; whether one ran."""
@@ -460,6 +486,7 @@ def main() -> None:
             from louped.sync import push
 
             try:
+                _connect(cmd.remote)
                 pushed = push(cmd.remote, cmd.result)
             except ValueError as exc:
                 raise SystemExit(str(exc)) from exc
@@ -470,6 +497,7 @@ def main() -> None:
             from louped.server.remote import pull_results
 
             try:
+                _connect(cmd.remote)
                 pulled = pull_results(Jobs(work=False), cmd.remote)
             except ValueError as exc:
                 raise SystemExit(str(exc)) from exc

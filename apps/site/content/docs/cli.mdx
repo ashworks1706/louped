@@ -14,7 +14,7 @@ project by looking for `louped.toml` in the current folder and its parents.
 | `louped new <name> --domain <d>` | Starts an experiment                                        |
 | `louped mcp`                     | The MCP server for your coding agent                        |
 | `louped import <file>`           | Adds results from a cluster job                             |
-| `louped push` / `louped pull`    | Shares runs through the project's remote                    |
+| `louped push` / `louped pull`    | Shares runs through the project's remote; sets one up first |
 | `louped publish <dir>`           | Writes a read-only dashboard as static files                |
 | `louped grid <yaml>`             | Compares conditions against a baseline                      |
 | `louped train <recipe> <yaml>`   | Fine-tunes: `sft`, `dpo`, `grpo`, `classify`, `reft`        |
@@ -27,6 +27,7 @@ project by looking for `louped.toml` in the current folder and its parents.
 | `louped data ...`                | Builds training sets from logged model calls                |
 | `louped examples`                | Fills every page with example runs from a tiny model        |
 | `louped version`                 | Prints the version                                          |
+| `louped <plugin>`                | Runs a project plugin's command                             |
 
 ## Environment variables
 
@@ -35,6 +36,12 @@ project by looking for `louped.toml` in the current folder and its parents.
 | `LOUPED_HOME`             | `.louped/` in the project     |
 | `LOUPED_EXPERIMENTS`      | `experiments/` in the project |
 | `LOUPED_SYSTEM_METRICS=0` | Turns off hardware sampling   |
+| `LOUPED_REMOTE`           | `remote` in `louped.toml`     |
+| `HF_TOKEN`                | The `hf auth login` token     |
+
+The first `louped push` or `louped pull` in a project with no remote asks for one. Press Enter
+for a private Hugging Face bucket of your own. It also asks for a Hugging Face token when an
+`hf://` remote finds none, and saves the remote to `louped.toml`.
 
 `louped serve --host` needs `--expose`. An exposed server is read-only: no launching or model
 loading.

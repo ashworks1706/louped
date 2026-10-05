@@ -21,6 +21,7 @@ export type ScatterView = Schemas["ScatterView"];
 export type TokensView = Schemas["TokensView"];
 export type VegaView = Schemas["VegaView"];
 export type Pushed = Schemas["Pushed"];
+export type RemoteState = Schemas["RemoteState"];
 export type PluginInfo = Schemas["PluginInfo"];
 export type View = RunView["view"];
 export type Direction = Schemas["Direction"];
@@ -163,6 +164,9 @@ export async function exportJob(req: ExportRequest): Promise<{ name: string; not
 export const pushRuns = () => post<Pushed>("/launch/push", {});
 /** Adds the runs in the remote this louped has not pulled. */
 export const pullRuns = () => post<Imported[]>("/launch/pull", {});
+/** Sets the project's remote (empty: a private HF bucket of your own), keeping a token if given. */
+export const connectRemote = (body: Schemas["Connect"]) =>
+  post<RemoteState>("/launch/remote", body);
 
 /** Adds a result archive from another machine to this louped. */
 export async function importResult(file: File): Promise<Imported> {

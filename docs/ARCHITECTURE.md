@@ -77,7 +77,8 @@ function, wrapped once as an Inspect scorer (`inspect_ext.as_scorer`) and once a
 
 Rejected: verifiers (pulls in hosted-API clients; TRL's environments cover it), vLLM, EasySteer and
 cluster launchers such as submitit (a job runs here through louped's own provider, or is exported as
-a bundle whose job.sh the cluster's own scheduler runs and whose result is imported back),
+a bundle whose job.sh the cluster's own scheduler runs and whose result comes back through the
+remote or is imported),
 TransformerLens (reimplements architectures, lags new models), Hydra (each tool keeps its native
 config; scripts use tyro), W&B (its server is not free to self-host), a plugin registry or marketplace (Inspect's
 registries and Python entry points exist; a project's own plugins/ folder is all louped reads,
@@ -168,7 +169,9 @@ never with `--expose`.
 Runs move between machines as bundles (`louped.sync`): a folder laid out as a louped home (Inspect
 logs, an MLflow store with its artifacts, result.json). `louped push` writes one per push into the
 remote, any fsspec URL (`remote` in louped.toml); `louped pull` and `louped import` add a bundle's
-runs to the stores, skipping runs already there. `louped publish` (server/publish.py) writes the UI
+runs to the stores, skipping runs already there. An `hf://buckets/` remote is made, private, on
+the first push; its token is huggingface_hub's own (`hf auth login`, HF_TOKEN), which the app's
+Connect dialog and the CLI's first push ask for and never write into the project. `louped publish` (server/publish.py) writes the UI
 with every GET answer its pages ask for as static files, for any static host.
 
 `louped mcp` is a stdio MCP server for coding agents. It imports nothing from the server: it calls

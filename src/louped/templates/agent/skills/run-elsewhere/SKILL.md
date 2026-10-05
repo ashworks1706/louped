@@ -14,13 +14,16 @@ description: Run a louped experiment on a Slurm cluster (such as ASU Sol) or a V
    work.
 4. You cannot reach the cluster, so tell the user exactly what to run:
    - Copy the file to the cluster's scratch.
-   - On a login node, export `HF_TOKEN` (or run `hf auth login`). Gated models need it, and so
-     does pushing to an `hf://` remote.
+   - Once per cluster, run `hf auth login` on a login node (or export `HF_TOKEN`). Gated models
+     need it, and so does pushing to an `hf://` remote. The job stops before running if that
+     remote finds no token.
    - Run `sbatch louped-<id>.sh`, or `bash` on a VM. For a tarball, unpack it and run its
      `job.sh` the same way. Then follow the `.out` file.
 5. Bring the result back:
    - **With a remote** (`remote` in louped.toml): the job pushes its own results. Call `pull` (or
-     press Pull on Runs). Its runs then read like local ones, marked with the host.
+     press Pull on Runs). Its runs then read like local ones, marked with the host. If no remote is
+     set, ask the user to press Connect on Runs, or run `louped push` in a terminal. Either one
+     sets up a private HF bucket and asks for their token. Never ask for the token in chat.
    - **Without one**: the user brings back `louped-result-<id>.tar.gz`. Import it with
      `import_result <path>`.
 6. Read the result with `read-results`. Write it up with `write-report`.

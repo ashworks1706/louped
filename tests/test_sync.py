@@ -3,9 +3,12 @@
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 
 from louped import stores, sync
 from louped.analysis import views
+from louped.cli import _connect
+from louped.server import create_app
 
 
 @pytest.mark.usefixtures("two_runs")
@@ -65,3 +68,64 @@ def test_a_relative_remote_is_the_projects_and_a_missing_one_is_said(
 def test_a_vega_view_may_carry_a_url_column_in_its_rows() -> None:
     spec = {"mark": "point", "data": {"values": [{"url": "https://x", "y": 1}]}}
     assert views.vega("v", spec)["spec"] == spec
+
+
+TOML = """# a project
+
+[domains.honesty]
+axis = "behavior"
+"""
+
+
+def test_an_hf_bucket_remote_asks_for_a_token_and_connect_sets_one_up(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import huggingface_hub
+
+    monkeypatch.delenv("LOUPED_REMOTE", raising=False)
+    (tmp_path / "proj").mkdir()
+    (tmp_path / "proj" / "louped.toml").write_text(TOML)
+    monkeypatch.chdir(tmp_path / "proj")
+    signed: list[str] = []
+    made: list[tuple[str, bool]] = []
+    monkeypatch.setattr(huggingface_hub, "get_token", lambda: signed[-1] if signed else None)
+    monkeypatch.setattr(huggingface_hub, "whoami", lambda token=None: {"name": "ash"})
+    monkeypatch.setattr(huggingface_hub, "login", lambda token, **_: signed.append(token))
+
+    def create(bucket: str, private: bool, exist_ok: bool) -> None:
+        made.append((bucket, private))
+
+    monkeypatch.setattr(huggingface_hub, "create_bucket", create)
+
+    assert sync.bucket("hf://buckets/ash/runs/sub") == "ash/runs" and sync.bucket("s3://b") is None
+    with pytest.raises(ValueError, match="<user>/<name>"):
+        sync.bucket("hf://buckets/ash")
+    with pytest.raises(sync.NeedsToken):
+        sync.push("hf://buckets/ash/runs")
+    api = TestClient(create_app(launching=True), base_url="http://localhost")
+    assert api.post("/api/launch/push", json={}).status_code == 400  # no remote at all
+    monkeypatch.setenv("LOUPED_REMOTE", "hf://buckets/ash/runs")
+    assert api.post("/api/launch/pull", json={}).status_code == 401  # the app asks for a token
+    monkeypatch.delenv("LOUPED_REMOTE")
+    assert api.post("/api/launch/remote", json={}).status_code == 401
+
+    # the app: a token and no remote make a private bucket of the account, named for the project
+    got = api.post("/api/launch/remote", json={"token": "hf_x"})
+    assert got.json() == {"remote": "hf://buckets/ash/proj", "token": True}, got.text
+    assert signed == ["hf_x"] and made == [("ash/proj", True)]
+    text = (tmp_path / "proj" / "louped.toml").read_text()
+    assert text.startswith('# a project\n\nremote = "hf://buckets/ash/proj"\n\n[domains.honesty]')
+    sync.set_remote("runs")  # set again: replaced, not added
+    assert sync.configured() == str(tmp_path / "proj" / "runs")
+    assert (tmp_path / "proj" / "louped.toml").read_text().count("remote =") == 1
+
+    # the terminal: asked for the remote, and for a token only when an hf:// one needs it
+    (tmp_path / "proj" / "louped.toml").write_text(TOML)
+    signed.clear()
+    monkeypatch.setattr("sys.stdin.isatty", lambda: True)
+    monkeypatch.setattr("builtins.input", lambda _: "")
+    monkeypatch.setattr("getpass.getpass", lambda _: "hf_y ")
+    _connect(None)
+    assert signed == ["hf_y"] and sync.configured() == "hf://buckets/ash/proj"
+    _connect(None)  # set up: nothing asked again
+    assert signed == ["hf_y"]
