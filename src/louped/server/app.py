@@ -24,6 +24,7 @@ from pydantic import BaseModel, Field
 
 from louped import __version__, stores
 from louped import sources as library
+from louped.check import Issue, check
 from louped.core import Direction, cohorts, home
 from louped.core.judges import Judge, find_judges, write_judge
 from louped.core.paths import experiments_dir, inside
@@ -301,6 +302,16 @@ def create_app(
             raise HTTPException(400, str(exc)) from exc
         except httpx.HTTPError as exc:
             raise HTTPException(502, f"could not fetch {req.location}: {exc}") from exc
+
+    @app.get("/api/check")
+    def grounded(path: str | None = None) -> list[Issue]:
+        """What in the project's Markdown is not grounded (louped check): a file or folder in
+        the project, or every .md under experiments/ and reports/."""
+        try:
+            where = [inside(experiments_dir().parent, path)] if path else None
+            return check(where)
+        except (ValueError, FileNotFoundError) as exc:
+            raise HTTPException(400, str(exc)) from exc
 
     @app.get("/api/trace")
     def trace(ref: str) -> Trace:

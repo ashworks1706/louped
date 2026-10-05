@@ -120,6 +120,7 @@ experiments                              leaf, in a project; nothing imports it
 cli
 server | agent | init                    FastAPI over the stores; Playground; launching jobs; the
                                          MCP server, an HTTP client of the API; louped init
+check                                    what in the project's Markdown is not grounded
 train | sweep | grid | sync | features | circuits | judge | bench | derive | sources
                                          training recipes and sweeps; steering sweeps; condition
                                          grids; SAE dashboards; attribution graphs; pairwise judging;
@@ -146,8 +147,10 @@ core                                     run metadata, paths, the project and it
 - Sources: `sources/` in the project (`louped.sources`): papers, docs, slides and notebooks listed
   in `sources/index.json` with key, origin URL and sha256; their text page by page in an FTS5
   index at `<home>/sources.db`, rebuilt from the files when one changes. Pins in
-  `sources/pins.jsonl` (W3C text quote selectors: exact, prefix, suffix), checked against the page's
+  `sources/pins.jsonl` (the quote as it stands on its page), checked against the page's
   text; the web app draws PDFs with pdf.js and renders `[@key pN]` in Markdown as citation chips.
+  `louped.check` lists result numbers with no ref or citation beside them, citations without a
+  pinned page, refs that do not resolve, and pins whose quote left its page.
 - Refs (`louped.core.refs`) address evidence: `run:<id>/<path>#<item>`, `experiment:<name>/<path>`.
   A vega or plotly figure whose marks are items says so (`items`; plotly trace `ids`), and
   `louped.stores.trace` follows a mark's ref to the derive script and commit, the item's record

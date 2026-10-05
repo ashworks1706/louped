@@ -260,6 +260,18 @@ class Judge:
 
 
 @dataclass(frozen=True)
+class Check:
+    """Check the project's Markdown is grounded: each result number (0.92, 78%, 12/40) beside a
+    ref or citation, each citation on a pinned page, each ref resolving, each pin still on its
+    page. Exits 1 when anything is not."""
+
+    paths: tyro.conf.Positional[tuple[Path, ...]] = ()
+    """Markdown files or folders; every .md under experiments/ and reports/ when none."""
+    json: bool = False
+    """Print the issues as JSON."""
+
+
+@dataclass(frozen=True)
 class Derive:
     """A script over a run's files, kept with the run: its derive(files) returns rows (new
     columns on the run's Items, as derived/<name>.jsonl) or a figure (views/<name>.json)."""
@@ -350,6 +362,7 @@ Command = (
     | Annotated[EndpointBench, tyro.conf.subcommand("endpoint-bench")]
     | Annotated[Judge, tyro.conf.subcommand("judge")]
     | Annotated[Derive, tyro.conf.subcommand("derive")]
+    | Annotated[Check, tyro.conf.subcommand("check")]
     | Annotated[Sources, tyro.conf.subcommand("source")]
     | Annotated[Mcp, tyro.conf.subcommand("mcp")]
     | Annotated[Examples, tyro.conf.subcommand("examples")]
@@ -376,6 +389,7 @@ COMMANDS = {
     "endpoint-bench",
     "judge",
     "derive",
+    "check",
     "source",
     "mcp",
     "examples",
@@ -600,6 +614,22 @@ def main() -> None:
                             cmd.judge))  # fmt: skip
             except (ValueError, FileNotFoundError) as exc:
                 raise SystemExit(str(exc)) from exc
+        case Check() as cmd:
+            import json
+
+            from louped.check import check
+
+            try:
+                issues = check(list(cmd.paths) or None)
+            except (ValueError, FileNotFoundError) as exc:
+                raise SystemExit(str(exc)) from exc
+            if cmd.json:
+                print(json.dumps([i.model_dump() for i in issues], indent=2))
+            else:
+                for i in issues:
+                    print(f"{i.file}:{i.line}: {i.message}")
+                print(f"{len(issues)} issue{'' if len(issues) == 1 else 's'}")
+            raise SystemExit(1 if issues else 0)
         case Derive() as cmd:
             import json
 

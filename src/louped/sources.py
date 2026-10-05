@@ -192,18 +192,14 @@ def add_pin(key: str, page: int, quote: str, note: str | None = None,
     """Pin a quote on a page of a source. The quote must be on that page, word for word (spaces
     and line breaks aside): a pin is never a paraphrase. Pinning the same quote again keeps one
     pin, with the note replaced when one is given and the links added to."""
-    text = page_text(key, page)
     want = "".join(quote.split())
     if not want:
         raise ValueError("a pin quotes some words")
-    # compared with spaces and line breaks left out, as a selection in a PDF viewer may add or
-    # drop them at the ends of lines
-    kept = [i for i, c in enumerate(text) if not c.isspace()]
-    at = "".join(text[i] for i in kept).find(want)
-    if at < 0:
+    found = find_quote(page_text(key, page), quote)
+    if found is None:
         raise ValueError(f"{_flat(quote)[:80]!r} is not on page {page} of {key}: quote the words "
                          "as they stand there (source_page shows them)")  # fmt: skip
-    exact = _flat(text[kept[at] : kept[at + len(want) - 1] + 1])
+    at, exact = found
     pin_id = hashlib.sha256(f"{key}\n{page}\n{want}".encode()).hexdigest()[:10]
     with _PINNING:
         every = pins()
@@ -214,6 +210,18 @@ def add_pin(key: str, page: int, quote: str, note: str | None = None,
                   created=old.created if old else datetime.now(UTC))  # fmt: skip
         _write_pins([pin if p.id == pin_id else p for p in every] if old else [*every, pin])
     return pin
+
+
+def find_quote(text: str, quote: str) -> tuple[int, str] | None:
+    """Where a quote first stands in a page's text, and its words as they stand there. Compared
+    with spaces and line breaks left out, as a selection in a PDF viewer may add or drop them at
+    the ends of lines; None when it is not there."""
+    want = "".join(quote.split())
+    kept = [i for i, c in enumerate(text) if not c.isspace()]
+    at = "".join(text[i] for i in kept).find(want) if want else -1
+    if at < 0:
+        return None
+    return at, _flat(text[kept[at] : kept[at + len(want) - 1] + 1])
 
 
 def delete_pin(pin_id: str) -> None:

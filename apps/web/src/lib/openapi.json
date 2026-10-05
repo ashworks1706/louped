@@ -697,6 +697,57 @@
         }
       }
     },
+    "/api/check": {
+      "get": {
+        "summary": "Grounded",
+        "description": "What in the project's Markdown is not grounded (louped check): a file or folder in\nthe project, or every .md under experiments/ and reports/.",
+        "operationId": "grounded_api_check_get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Issue"
+                  },
+                  "title": "Response Grounded Api Check Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/trace": {
       "get": {
         "summary": "Trace",
@@ -4801,6 +4852,30 @@
         "type": "object",
         "required": ["views"],
         "title": "InspectResponse"
+      },
+      "Issue": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "title": "File"
+          },
+          "line": {
+            "type": "integer",
+            "title": "Line"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["number", "citation", "ref", "pin"],
+            "title": "Kind"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": ["file", "line", "kind", "message"],
+        "title": "Issue"
       },
       "ItemSource": {
         "properties": {

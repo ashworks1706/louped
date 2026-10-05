@@ -15,7 +15,7 @@ results.
   data; `ui_show` points the person at parts, with a note. `cohort` reads a run's conditions on
   some items with paired intervals; `save_cohort` saves them for a run.py's `--cohort`.
 - Skills in `.claude/skills/`: `new-experiment`, `read-results`, `run-elsewhere`, `write-report`,
-  `add-plugin`, `change-ui`.
+  `ground-claims`, `add-plugin`, `change-ui`.
 - The CLI does the same steps: `louped new`, `louped push`, `louped pull`, `louped --help`.
 - Never ask for a Hugging Face token in chat. If push or pull says one is missing, ask the person
   to press Connect on Runs or run `louped push` in a terminal: both ask for it and keep it out of
@@ -38,8 +38,9 @@ results.
    point.
 5. Real runs on large models go to a cluster (`run-elsewhere`); this machine runs small checks.
 6. Write the result in the README's Result (model, date, numbers) and the decision in Next, as
-   `write-report` says: every number traced to a run, no claim past what was tested. Set
-   `status: answered` when a real model's result answers the question.
+   `write-report` says: every number traced to a run, no claim past what was tested. Papers come
+   from `sources/` and are cited from pinned passages (`ground-claims`); `check` finds what is not
+   grounded. Set `status: answered` when a real model's result answers the question.
 
 ## Where things are
 
