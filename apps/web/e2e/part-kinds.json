@@ -370,6 +370,11 @@
     "rules": []
   },
   {
+    "part": "playground/save",
+    "about": "Keeps what the open tool showed as a run.",
+    "rules": ["hidden"]
+  },
+  {
     "part": "playground/tab/*",
     "about": "A tool: reply, inspect, patch, dose, speed.",
     "rules": ["hidden", "label", "order"]
@@ -405,6 +410,16 @@
     "rules": []
   },
   {
+    "part": "vectors/similar/*",
+    "about": "How alike a model's vectors are: the cosine of each pair.",
+    "rules": ["hidden", "note"]
+  },
+  {
+    "part": "curves/metric/*",
+    "about": "One metric's curve over steps.",
+    "rules": []
+  },
+  {
     "part": "circuits/graph",
     "about": "Which graph is shown.",
     "rules": []
@@ -436,7 +451,7 @@
   },
   {
     "part": "compare/section/*",
-    "about": "Metrics, paired, samples or judge.",
+    "about": "Metrics, curves, paired, samples or judge.",
     "rules": ["hidden", "note"]
   },
   {

@@ -10,6 +10,7 @@ import { useMemo } from "react";
 
 import { EmptyState } from "@/components/empty-state";
 import { Help } from "@/components/help";
+import { HistoryCharts } from "@/components/history-chart";
 import { Part, PartData, part, partId } from "@/components/parts";
 import { Delta, MetricValue, ScoreCell } from "@/components/metric";
 import { QueryState } from "@/components/query-state";
@@ -27,7 +28,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { launch, q, type RunDetail, type SampleSummary } from "@/lib/api";
-import { ago, headline, isEfficiency, lowerIsBetter, num, stderr } from "@/lib/format";
+import { ago, headline, isEfficiency, isSystem, lowerIsBetter, num, stderr } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export function CompareView() {
@@ -137,6 +138,7 @@ function Loaded({ a, b }: { a: string; b: string }) {
         <>
           <Heads a={ra.data} b={rb.data} />
           <Metrics a={ra.data} b={rb.data} />
+          <Curves a={ra.data} b={rb.data} />
           {ra.data.kind === "eval" && rb.data.kind === "eval" && (
             <>
               <Judge a={a} b={b} />
@@ -178,6 +180,21 @@ function Heads({ a, b }: { a: RunDetail; b: RunDetail }) {
         );
       })}
     </div>
+  );
+}
+
+/** Both runs' curves on each metric both logged over steps, such as two trainings' loss. */
+function Curves({ a, b }: { a: RunDetail; b: RunDetail }) {
+  const chart = <HistoryCharts history={b.history} against={a.history} />;
+  const both = Object.keys(b.history).some(
+    (k) => !isSystem(k) && b.history[k].length > 1 && (a.history[k]?.length ?? 0) > 1,
+  );
+  if (!both) return null;
+  return (
+    <Part id="compare/section/curves">
+      <h2 className="text-muted-foreground mb-3 text-sm font-medium">Curves</h2>
+      {chart}
+    </Part>
   );
 }
 

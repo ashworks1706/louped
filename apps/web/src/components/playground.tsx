@@ -21,6 +21,7 @@ import { QueryState } from "@/components/query-state";
 import { Help } from "@/components/help";
 import { arrange, Part, PartNote, part, partId, useRules } from "@/components/parts";
 import { Figure } from "@/components/run-views";
+import { SaveResult, type Result } from "@/components/save-result";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -297,6 +298,50 @@ function Loaded({
             ? lookedEdited
             : looked;
 
+  /** What the open tool showed, to keep as a run; null until it has finished a result. */
+  const keep = (): Result | null => {
+    if (tab === "reply") {
+      const sides = [
+        ["base", base, baseAgain],
+        ["intervention", edited, editedAgain],
+      ] as const;
+      const ran = sides.filter(([, r]) => r.ran && !r.pending && !r.error);
+      if (!ran.length || sides.some(([, r, a]) => r.pending || a.pending)) return null;
+      const follow = ran.some(([, , a]) => a.ran);
+      const reply: View = {
+        kind: "table",
+        title: "Replies",
+        columns: follow ? ["side", "reply", "after the follow-up"] : ["side", "reply"],
+        rows: ran.map(([side, r, a]) =>
+          follow ? [side, r.text.trim(), a.text.trim()] : [side, r.text.trim()],
+        ),
+      };
+      const settings = { interventions, adapters: live, follow: s.follow.trim(), ...gen };
+      return { prompt: s.prompt, settings, label, views: [reply] };
+    }
+    if (tab === "inspect") {
+      if (!looked.data) return null;
+      const titled = (views: View[], side: string) =>
+        views.map((v) => ({ ...v, title: `${side} · ${v.title}` }));
+      return {
+        prompt: s.prompt,
+        settings: { ...looked.variables, intervened: lookedEdited.variables ?? null },
+        label,
+        views: lookedEdited.data
+          ? [...titled(looked.data.views, "base"), ...titled(lookedEdited.data.views, label)]
+          : looked.data.views,
+      };
+    }
+    if (!shown.data || !shown.variables) return null;
+    const sent = shown.variables as Record<string, unknown>;
+    return {
+      prompt: String(sent.prompt ?? sent.clean ?? s.prompt),
+      settings: sent,
+      label: tab === "patch" ? "no intervention" : label,
+      views: shown.data.views,
+    };
+  };
+
   useEffect(() => {
     if (!vectors.length || s.vector) return;
     void set({ vector: vectors[0].name });
@@ -323,6 +368,7 @@ function Loaded({
       .filter(Boolean)
       .join(" · ") || (info.diffusion ? "no adapters" : "no intervention");
 
+  const result = keep();
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
       <aside className="flex flex-col gap-5 rounded-xl border p-4 lg:self-start">
@@ -556,13 +602,16 @@ function Loaded({
           </div>
         </form>
         <Tabs value={tab} onValueChange={(tab) => void set({ tab: tab as Tab })}>
-          <TabsList>
-            {shownTabs.map((t) => (
-              <TabsTrigger key={t} value={t} {...part(partId("playground/tab", t))}>
-                {rule(partId("playground/tab", t)).label ?? TAB_TITLES[t]}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <TabsList>
+              {shownTabs.map((t) => (
+                <TabsTrigger key={t} value={t} {...part(partId("playground/tab", t))}>
+                  {rule(partId("playground/tab", t)).label ?? TAB_TITLES[t]}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {info.switchable && <SaveResult tool={tab} result={result} />}
+          </div>
           <TabsContent value="reply" className="flex flex-col gap-4 pt-4">
             <Field label="Follow-up">
               <Input

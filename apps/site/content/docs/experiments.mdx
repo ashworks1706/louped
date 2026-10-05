@@ -76,14 +76,19 @@ What the app shows depends on what the script writes:
 | Write                                       | Shown as                                    |
 | ------------------------------------------- | ------------------------------------------- |
 | `raw/<condition>.jsonl`, an id in every row | **Items**: each item under every condition  |
-| The item's own text and answer in every row | **Items**: an item opens on what it is      |
+| A `claim` or `question` field in every row  | **Items**: an item opens on it as its title |
 | `raw/fields.json`, `{"field": "meaning"}`   | **Items**: a ? on each field                |
 | One JSONL file with a `condition` column    | **Artifacts**: line up by that column       |
 | JSONL rows with a time and a kind (traces)  | **Artifacts**: a timeline per request       |
 | `report.md`                                 | **Overview**                                |
 | Numbers with `mlflow.log_metrics`           | **Overview**, Runs, Compare                 |
+| Metrics logged over steps                   | **Overview**; two runs overlaid on Compare  |
 | A view from `louped.analysis.views`         | **Figures** (table, line, scatter, heatmap) |
 | `views.vega(title, spec)`, data inline      | **Figures**: any Vega-Lite chart            |
+
+A finding made by hand in Probe or Benchmark becomes a run too: **Save as run** keeps what the
+open tool showed (its figures, the prompt and the settings sent) under one of the experiments,
+or under `probe` or `benchmark` when it answers none yet.
 
 ## Code from a paper
 

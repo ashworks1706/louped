@@ -826,3 +826,64 @@ def test_transcripts_keep_tool_errors_and_parse_errors() -> None:
     failed = ChatMessageTool(content="", tool_call_id="c1", function="bash", error=error)
     got = _message(failed)
     assert (got.tool_call_id, got.function, got.error) == ("c1", "bash", "timeout: took too long")
+
+
+def test_a_tool_result_is_kept_as_a_run(lm) -> None:
+    import mlflow
+
+    saved = home() / "models" / "tiny-kept"
+    lm._model.save_pretrained(saved)
+    lm.tokenizer.save_pretrained(saved)
+    client = served("tiny-kept")
+    views = client.post("/api/playground/inspect", json={"prompt": "write a poem"}).json()["views"]
+    body = {"tool": "inspect", "prompt": "write a poem", "settings": {"chat": True},
+            "label": "no intervention", "views": views}  # fmt: skip
+    run = client.post("/api/playground/save", json=body).json()["run"]
+    detail = client.get(f"/api/runs/{run}").json()
+    assert detail["model"] == "tiny-kept" and detail["params"]["tool"] == "inspect"
+    assert detail["experiment"] == "probe" and detail["tags"]["louped.source"] == "playground"
+    shown = client.get(f"/api/runs/{run}/views").json()
+    assert [v["view"]["title"] for v in shown] == [v["title"] for v in views]
+    prompt = client.get(f"/api/runs/{run}/artifacts/prompt.txt")
+    assert prompt.text == "write a poem"
+    timed = client.post("/api/playground/save", json={**body, "tool": "speed"}).json()["run"]
+    assert client.get(f"/api/runs/{timed}").json()["experiment"] == "benchmark"
+    named = {**body, "experiment": "does-it-refuse"}
+    kept = client.post("/api/playground/save", json=named).json()["run"]
+    assert mlflow.get_run(kept.removeprefix("m-")).data.tags["louped.kind"] == "analysis"
+    assert client.get(f"/api/runs/{kept}").json()["experiment"] == "does-it-refuse"
+    assert client.post("/api/playground/save", json={**body, "views": []}).status_code == 422
+    bad = {**body, "experiment": "../x"}
+    assert client.post("/api/playground/save", json=bad).status_code == 422
+
+
+def test_saving_needs_a_model_and_a_server_that_writes() -> None:
+    from fastapi.testclient import TestClient
+
+    from louped.server import create_app
+
+    view = {"kind": "table", "title": "t", "columns": ["a"], "rows": [["1"]]}
+    body = {"tool": "reply", "prompt": "hi", "views": [view]}
+    writes = TestClient(create_app(launching=True), base_url="http://localhost")
+    assert writes.post("/api/playground/save", json=body).status_code == 409
+    reads = TestClient(create_app(launching=False), base_url="http://localhost")
+    assert reads.post("/api/playground/save", json=body).status_code == 403
+
+
+def test_vectors_of_a_model_say_how_alike_they_are() -> None:
+    from fastapi.testclient import TestClient
+
+    from louped.server import create_app
+    from louped.vectors import similarity
+
+    save_vector("x", torch.tensor([1.0, 0.0]), model="m", layer=0, method="t")
+    save_vector("y", torch.tensor([0.0, 2.0]), model="m", layer=1, method="t")
+    save_vector("z", torch.tensor([-3.0, 0.0]), model="m", layer=1, method="t")
+    save_vector("w", torch.tensor([1.0, 0.0, 0.0]), model="m", layer=0, method="t")
+    save_vector("o", torch.tensor([1.0, 0.0]), model="other", layer=0, method="t")
+    assert similarity(["x", "y", "z", "w"])[0] == [1.0, 0.0, -1.0, None]
+    api = TestClient(create_app(), base_url="http://localhost")
+    fig = api.get("/api/vectors/similarity?model=m").json()
+    assert fig["kind"] == "heatmap" and fig["x"] == ["w", "x", "y", "z"]
+    assert fig["labels"][1] == ["—", "1.00", "0.00", "-1.00"] and fig["z"][1][0] == 0.0
+    assert api.get("/api/vectors/similarity?model=other").status_code == 404

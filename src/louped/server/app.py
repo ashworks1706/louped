@@ -31,6 +31,7 @@ from louped.stores.types import (
     ExperimentDetail,
     FeatureDashboard,
     Graph,
+    HeatmapView,
     RunDetail,
     RunSummary,
     RunView,
@@ -222,6 +223,29 @@ def create_app(
     @app.get("/api/vectors")
     def vectors() -> list[Direction]:
         return stores.list_vectors()
+
+    @app.get("/api/vectors/similarity")
+    def vector_similarity(model: str) -> HeatmapView:
+        """How alike one model's saved directions are: the cosine of each pair, as a figure."""
+        from louped.vectors import similarity
+
+        names = sorted(v.name for v in stores.list_vectors() if v.model == model)
+        if len(names) < 2:
+            raise HTTPException(404, f"{model} has fewer than two saved vectors")
+        cos = similarity(names)
+        return HeatmapView(
+            kind="heatmap",
+            title="How alike they are",
+            x=names,
+            y=names,
+            x_label="vector",
+            y_label="vector",
+            z=[[c or 0.0 for c in row] for row in cos],
+            labels=[["—" if c is None else f"{c:.2f}" for c in row] for row in cos],
+            about="The cosine between each pair of directions: 1 the same direction, 0 unrelated, "
+            "-1 opposite. Two vectors near 1 steer the same thing; a new one near 0 to all the "
+            "others is new. — marks vectors of different sizes.",
+        )
 
     @app.get("/api/graphs")
     def graph_list() -> list[Graph]:

@@ -230,6 +230,9 @@ export const setLabel = (run: string, sample: string, label: Label | null) =>
     `/runs/${encodeURIComponent(run)}/labels/${encodeURIComponent(sample)}`,
     { label },
   );
+/** What a Probe or Benchmark tool showed, kept as a run. */
+export const saveResult = (req: Schemas["SaveRequest"]) =>
+  post<Schemas["SavedResult"]>("/playground/save", req);
 export const loadModel = (req: Schemas["LoadRequest"]) =>
   post<PlaygroundInfo>("/playground/load", req);
 export const cancelJob = (id: string) =>
@@ -311,6 +314,12 @@ export const q = {
       get<Comparison>(`/compare?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`),
   }),
   vectors: () => ({ queryKey: ["vectors"], queryFn: () => get<Direction[]>("/vectors") }),
+  /** How alike one model's vectors are, as a figure; a published dashboard has none. */
+  similarity: (model: string) => ({
+    queryKey: ["similarity", model],
+    queryFn: () => get<HeatmapView>(`/vectors/similarity?model=${encodeURIComponent(model)}`),
+    enabled: !isSnapshot(),
+  }),
   graphs: () => ({ queryKey: ["graphs"], queryFn: () => get<Graph[]>("/graphs") }),
   launchables: () => ({
     queryKey: ["launchables"],

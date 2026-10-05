@@ -265,6 +265,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/vectors/similarity": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Vector Similarity
+     * @description How alike one model's saved directions are: the cosine of each pair, as a figure.
+     */
+    get: operations["vector_similarity_api_vectors_similarity_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/graphs": {
     parameters: {
       query?: never;
@@ -492,6 +512,27 @@ export interface paths {
     put?: never;
     /** Speed */
     post: operations["speed_api_playground_speed_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/playground/save": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Save
+     * @description A tool's result as an analysis run: each figure under views/, the prompt and settings
+     *     beside them, tagged louped.source=playground.
+     */
+    post: operations["save_api_playground_save_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1978,6 +2019,42 @@ export interface components {
       /** Error */
       error: string | null;
     };
+    /**
+     * SaveRequest
+     * @description What one tool showed, kept as a run: its figures, the prompt and the settings sent.
+     */
+    SaveRequest: {
+      /**
+       * Tool
+       * @enum {string}
+       */
+      tool: "reply" | "inspect" | "patch" | "dose" | "speed";
+      /** Experiment */
+      experiment?: string | null;
+      /** Prompt */
+      prompt: string;
+      /**
+       * Settings
+       * @default {}
+       */
+      settings: {
+        [key: string]: components["schemas"]["JsonValue"];
+      };
+      /**
+       * Label
+       * @default
+       */
+      label: string;
+      /** Views */
+      views: (
+        | components["schemas"]["HeatmapView"]
+        | components["schemas"]["LineView"]
+        | components["schemas"]["ScatterView"]
+        | components["schemas"]["TableView"]
+        | components["schemas"]["TokensView"]
+        | components["schemas"]["VegaView"]
+      )[];
+    };
     /** Saved */
     Saved: {
       /** Ids */
@@ -2003,6 +2080,11 @@ export interface components {
       created: string;
       /** Name */
       name: string;
+    };
+    /** SavedResult */
+    SavedResult: {
+      /** Run */
+      run: string;
     };
     /** ScatterPoint */
     ScatterPoint: {
@@ -2878,6 +2960,37 @@ export interface operations {
       };
     };
   };
+  vector_similarity_api_vectors_similarity_get: {
+    parameters: {
+      query: {
+        model: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HeatmapView"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   graph_list_api_graphs_get: {
     parameters: {
       query?: never;
@@ -3318,6 +3431,39 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["InspectResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  save_api_playground_save_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SaveRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SavedResult"];
         };
       };
       /** @description Validation Error */

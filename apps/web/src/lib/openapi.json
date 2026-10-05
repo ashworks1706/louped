@@ -722,6 +722,46 @@
         }
       }
     },
+    "/api/vectors/similarity": {
+      "get": {
+        "summary": "Vector Similarity",
+        "description": "How alike one model's saved directions are: the cosine of each pair, as a figure.",
+        "operationId": "vector_similarity_api_vectors_similarity_get",
+        "parameters": [
+          {
+            "name": "model",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Model"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HeatmapView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/graphs": {
       "get": {
         "summary": "Graph List",
@@ -1261,6 +1301,45 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/InspectResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/playground/save": {
+      "post": {
+        "summary": "Save",
+        "description": "A tool's result as an analysis run: each figure under views/, the prompt and settings\nbeside them, tagged louped.source=playground.",
+        "operationId": "save_api_playground_save_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedResult"
                 }
               }
             }
@@ -4951,6 +5030,90 @@
         "required": ["id", "epoch", "input", "target", "scores", "error"],
         "title": "SampleSummary"
       },
+      "SaveRequest": {
+        "properties": {
+          "tool": {
+            "type": "string",
+            "enum": ["reply", "inspect", "patch", "dose", "speed"],
+            "title": "Tool"
+          },
+          "experiment": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment"
+          },
+          "prompt": {
+            "type": "string",
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Prompt"
+          },
+          "settings": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object",
+            "title": "Settings",
+            "default": {}
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Label",
+            "default": ""
+          },
+          "views": {
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/HeatmapView"
+                },
+                {
+                  "$ref": "#/components/schemas/LineView"
+                },
+                {
+                  "$ref": "#/components/schemas/ScatterView"
+                },
+                {
+                  "$ref": "#/components/schemas/TableView"
+                },
+                {
+                  "$ref": "#/components/schemas/TokensView"
+                },
+                {
+                  "$ref": "#/components/schemas/VegaView"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "kind",
+                "mapping": {
+                  "heatmap": "#/components/schemas/HeatmapView",
+                  "line": "#/components/schemas/LineView",
+                  "scatter": "#/components/schemas/ScatterView",
+                  "table": "#/components/schemas/TableView",
+                  "tokens": "#/components/schemas/TokensView",
+                  "vega": "#/components/schemas/VegaView"
+                }
+              }
+            },
+            "type": "array",
+            "maxItems": 32,
+            "minItems": 1,
+            "title": "Views"
+          }
+        },
+        "type": "object",
+        "required": ["tool", "prompt", "views"],
+        "title": "SaveRequest",
+        "description": "What one tool showed, kept as a run: its figures, the prompt and the settings sent."
+      },
       "Saved": {
         "properties": {
           "ids": {
@@ -5011,6 +5174,17 @@
         "type": "object",
         "required": ["ids", "name"],
         "title": "Saved"
+      },
+      "SavedResult": {
+        "properties": {
+          "run": {
+            "type": "string",
+            "title": "Run"
+          }
+        },
+        "type": "object",
+        "required": ["run"],
+        "title": "SavedResult"
       },
       "ScatterPoint": {
         "properties": {

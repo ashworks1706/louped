@@ -65,3 +65,16 @@ def load_vector(name: str) -> tuple[torch.Tensor, Direction]:
     with safe_open(str(path), framework="pt") as f:
         meta = Direction.model_validate_json(f.metadata()["louped"])
         return f.get_tensor("vector"), meta
+
+
+def similarity(names: list[str]) -> list[list[float | None]]:
+    """Cosine similarity between saved directions, row by row as named; None where two differ in
+    size and cannot be compared."""
+    vs = [load_vector(n)[0].flatten() for n in names]
+
+    def cos(a: torch.Tensor, b: torch.Tensor) -> float | None:
+        if a.numel() != b.numel():
+            return None
+        return float(torch.nn.functional.cosine_similarity(a, b, dim=0))
+
+    return [[cos(a, b) for b in vs] for a in vs]

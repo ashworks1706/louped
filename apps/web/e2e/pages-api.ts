@@ -32,7 +32,16 @@ const trainRun = {
   },
   artifacts: [],
 };
-const summaries = [summary, evalRun, trainRun].map((r) => ({ ...r, artifacts: undefined }));
+const trainAgain = {
+  ...trainRun,
+  id: "t-2",
+  name: "sft · lr 1e-4",
+  history: { loss: trainRun.history.loss.map((p) => ({ ...p, value: p.value * 0.8 })) },
+};
+const summaries = [summary, evalRun, trainRun, trainAgain].map((r) => ({
+  ...r,
+  artifacts: undefined,
+}));
 const vector = {
   name: "caving",
   model: "tiny",
@@ -97,6 +106,7 @@ export async function mockPages(page: Page, parts: Record<string, object> = {}) 
   await json("**/api/runs/e-1/agreement", { labelled: 0, total: 2, agreement: null, kappa: null });
   await json("**/api/runs/t-1", trainRun);
   await json("**/api/runs/t-1/views", []);
+  await json("**/api/runs/t-2", trainAgain);
   await json("**/api/runs/m-1/features", [12, 13]);
   await json("**/api/runs/m-1/features/12", feature);
   await json("**/api/playground", {
@@ -105,8 +115,26 @@ export async function mockPages(page: Page, parts: Record<string, object> = {}) 
     heads: 4,
     bank: [],
     diffusion: false,
+    switchable: true,
   });
-  await json("**/api/vectors", [vector]);
+  await json("**/api/vectors", [vector, { ...vector, name: "refusal", layer: 0 }]);
+  await json("**/api/vectors/similarity?*", {
+    kind: "heatmap",
+    title: "How alike they are",
+    x: ["caving", "refusal"],
+    y: ["caving", "refusal"],
+    z: [
+      [1, 0.12],
+      [0.12, 1],
+    ],
+    x_label: "vector",
+    y_label: "vector",
+    labels: [
+      ["1.00", "0.12"],
+      ["0.12", "1.00"],
+    ],
+    about: "The cosine between each pair of directions.",
+  });
   await json("**/api/graphs", [
     { slug: "capital", prompt: "The capital of France is", scan: null },
   ]);

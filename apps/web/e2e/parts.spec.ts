@@ -67,6 +67,7 @@ const PAGES: [string, string][] = [
   ["feature", "/behavior/feature/?run=m-1&f=12"],
   ["training", "/efficiency/training/"],
   ["compare", "/compare/?a=e-1&b=e-1"],
+  ["compare curves", "/compare/?a=t-1&b=t-2"],
   ["compare sample", "/compare/?a=e-1&b=e-1&changed=false&sample=1"],
   ["launch", "/launch/?id=script%3Ahello%2Frun.py"],
   ["job", "/job/?id=j1"],
