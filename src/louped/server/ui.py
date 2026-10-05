@@ -15,14 +15,16 @@ A file that does not check is reported, by file and block, and not used: the pag
 error over the layout below it. The theme is louped.toml's [theme]: its token values (`radius`,
 and under [theme.light] and [theme.dark] the colours of src/app/globals.css) over the defaults.
 
-Every block on a page carries its id (data-ui="run.overview/metrics"), so a person can point at
-one in the app (select mode) and their agent reads which with ui_selection.
+Inside the blocks, every part of a page (a card, a row, a field, a control) has an address, and
+a layout's "parts" change them by address (louped.server.parts). A person Shift+clicks parts to
+hand them to their agent (ui_selection); the agent points back at them with ui_show.
 """
 
 from __future__ import annotations
 
 import json
 import re
+import time
 from pathlib import Path
 from typing import Literal
 
@@ -31,7 +33,9 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from louped.core import experiments_dir
 from louped.core.project import FILE, base, config
+from louped.server import parts as parts_
 from louped.server.launch import require_json
+from louped.server.parts import KINDS, Cue, Cues, PartRule, Seen, Selection, ShowRequest
 
 Region = Literal["home", "run.tabs", "run.overview", "experiment.tabs", "experiment.design"]
 REGIONS: tuple[Region, ...] = (
@@ -77,6 +81,8 @@ class Layout(BaseModel):
 
     preset: str | None = None
     regions: dict[Region, list[Block]] = {}
+    #: Changes to the parts inside the blocks, by address (louped.server.parts).
+    parts: dict[str, PartRule] = {}
 
 
 class Kind(BaseModel):
@@ -96,11 +102,15 @@ class Page(BaseModel):
     errors: list[str]
     #: The files that would set this page: the project's, and the experiment's when there is one.
     files: list[str]
+    #: Changes to parts, by address: the experiment's keys over the project's.
+    parts: dict[str, PartRule]
 
 
 class Catalog(BaseModel):
     regions: dict[Region, list[Kind]]
     presets: dict[str, str]
+    #: Every kind of part by its address, and the rules each takes.
+    parts: list[parts_.Kind]
 
 
 class Theme(BaseModel):
@@ -125,17 +135,12 @@ class SetPreset(BaseModel):
     preset: str | None
 
 
-class Selection(BaseModel):
-    """The block a person pointed at in the app, for their agent."""
-
-    #: data-ui of the block: "<region>/<block>", with "/<key>" for one card inside it.
-    id: str = Field(max_length=300, pattern=r"^[a-z.]+(/[^\s/][^/]*)*$")
-    #: The page's path and query, such as /run/?id=m-1&tab=overview.
-    url: str = Field(max_length=2000)
-    run: str | None = Field(None, max_length=300)
-    experiment: str | None = Field(None, max_length=300)
-    #: The block's text as shown, cut short.
-    text: str = Field("", max_length=500)
+class SetPart(BaseModel):
+    experiment: str | None = None
+    #: A part's address; * for any one name.
+    part: str = Field(max_length=300)
+    #: Its rule; null removes it from the file.
+    rule: PartRule | None
 
 
 PLUGIN = Kind(block="plugin", about="A plugin's page from its panel/.", needs=["plugin"])
@@ -292,7 +297,7 @@ def check(layout: Layout, plugins: dict[str, list[str]] | None) -> list[str]:
     """What is wrong with a layout: unknown blocks and presets, missing fields, plugins and pages
     that are not there. plugins maps each plugin to its panel pages; None skips plugin checks,
     for a server whose plugins are off."""
-    errors = []
+    errors = parts_.check(layout.parts)
     if (
         layout.preset is not None
         and layout.preset != DEFAULT_PRESET
@@ -369,7 +374,10 @@ def page(experiment: str | None, plugins: dict[str, list[str]] | None) -> Page:
         blocks, source = found or (_default(region, plugins), "default")
         regions[region] = [b for b in blocks if b.block != "plugin" or plugins is not None]
         sources[region] = source
-    return Page(regions=regions, sources=sources, errors=errors,
+    merged: dict[str, PartRule] = {}
+    for layout, _ in reversed(read):  # the project's, then the experiment's over it
+        merged.update(layout.parts)
+    return Page(regions=regions, sources=sources, errors=errors, parts=merged,
                 files=[name for _, name in reversed(files)])  # fmt: skip
 
 
@@ -429,6 +437,7 @@ def router(launching: bool, mounted: dict[str, list[str]]) -> APIRouter:
     """The routes. mounted is filled by plugins.mount with what it served: each plugin's pages."""
     api = APIRouter(prefix="/api/ui")
     selected: list[Selection] = []
+    cues: list[Cue] = []
     plugins = mounted if launching else None
 
     def editing() -> None:
@@ -448,7 +457,7 @@ def router(launching: bool, mounted: dict[str, list[str]]) -> APIRouter:
 
     @api.get("/catalog")
     def catalog() -> Catalog:
-        return Catalog(regions=CATALOG, presets={k: v[0] for k, v in PRESETS.items()})
+        return Catalog(regions=CATALOG, presets={k: v[0] for k, v in PRESETS.items()}, parts=KINDS)
 
     @api.put("/layout", dependencies=[Depends(require_json)])
     def set_region(req: SetRegion) -> Page:
@@ -474,19 +483,73 @@ def router(launching: bool, mounted: dict[str, list[str]]) -> APIRouter:
         _write(path, layout)
         return page(req.experiment, plugins)
 
+    @api.put("/part", dependencies=[Depends(require_json)])
+    def set_part(req: SetPart) -> Page:
+        """Sets or removes one part's rule in the project's or an experiment's layout.json."""
+        editing()
+        path, layout = current(req.experiment)
+        if req.rule is None:
+            if layout.parts.pop(req.part, None) is None:
+                raise HTTPException(404, f"no rule for {req.part} in {path}")
+        else:
+            layout.parts[req.part] = req.rule
+        if errors := check(layout, plugins):
+            raise HTTPException(422, "; ".join(errors))
+        _write(path, layout)
+        return page(req.experiment, plugins)
+
     @api.get("/theme")
     def get_theme() -> Theme:
         return theme()
 
     @api.post("/selection", dependencies=[Depends(require_json)])
     def select(req: Selection) -> Selection:
-        """Keeps the block a person pointed at, until the next; in memory only."""
+        """Keeps what the person has picked, replacing the last; in memory only."""
         editing()
+        if sum(len(json.dumps(p.data)) for p in req.parts) > 200_000:
+            raise HTTPException(413, "the picked parts' data is over 200 kB; pick fewer")
         selected[:] = [req]
         return req
 
     @api.get("/selection")
     def selection() -> Selection | None:
         return selected[0] if selected else None
+
+    @api.post("/show", dependencies=[Depends(require_json)])
+    def show(req: ShowRequest) -> Cue:
+        """Queues something for the open app to show: a page, parts pointed at, a note."""
+        editing()
+        if bad := [p for p in req.parts if not parts_.ADDRESS.match(p)]:
+            raise HTTPException(422, f"not a part's address: {', '.join(bad)}")
+        cue = Cue(id=(cues[-1].id + 1) if cues else 1, at=time.time(), **req.model_dump())
+        cues[:] = [*cues[-19:], cue]
+        return cue
+
+    @api.get("/show")
+    def shown(after: int = 0) -> Cues:
+        """The cues after one the app has, for the app to show."""
+        return Cues(now=time.time(), cues=[c for c in cues if c.id > after])
+
+    @api.get("/show/{cue}")
+    def one_cue(cue: int) -> Cue:
+        found = next((c for c in cues if c.id == cue), None)
+        if found is None:
+            raise HTTPException(404, f"no cue {cue}")
+        return found
+
+    @api.post("/show/{cue}/seen", dependencies=[Depends(require_json)])
+    def seen(cue: int, req: Seen) -> Cue:
+        """The app showed a cue; missing names the parts it could not find on the page."""
+        editing()
+        found = one_cue(cue)
+        found.status = (
+            "superseded"
+            if req.superseded
+            else "missing"
+            if req.missing and len(req.missing) == len(found.parts)
+            else "shown"
+        )
+        found.missing = req.missing
+        return found
 
     return api

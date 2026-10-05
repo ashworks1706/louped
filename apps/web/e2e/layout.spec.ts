@@ -76,10 +76,10 @@ test("a run's page follows the layout its agent wrote, and says what it could no
   await mock(page);
   await page.goto("/run/?id=m-1");
   await expect(page.getByRole("tab")).toHaveText(["Summary", "Items", "Examples"]);
-  const overview = page.locator('[data-ui="run.overview/metric/accuracy"]');
+  const overview = page.locator('[data-part="run.overview/metric/accuracy"]');
   await expect(overview).toContainText("0.62");
-  await expect(page.locator('[data-ui="run.overview/text/0"] strong')).toHaveText("flips");
-  await expect(page.locator('[data-ui="run.overview/file/examples.md"] strong')).toHaveText(
+  await expect(page.locator('[data-part="run.overview/text/0"] strong')).toHaveText("flips");
+  await expect(page.locator('[data-part="run.overview/file/examples.md"] strong')).toHaveText(
     "right",
   );
   await expect(page.getByRole("alert").filter({ hasText: "Not used" })).toContainText(
@@ -95,39 +95,9 @@ test("a shared page shows the layout and keeps its errors to itself", async ({ p
   await page.goto("/run/?id=m-1");
   await expect(page.getByRole("tab", { name: "Summary" })).toBeVisible();
   await expect(page.getByRole("alert").filter({ hasText: "Not used" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Point your agent at a block" })).toHaveCount(0);
-});
-
-test("pointing at a card hands it to the agent and copies its reference", async ({
-  page,
-  context,
-}, info) => {
-  test.skip(info.project.name === "mobile", "the top bar's crosshair is a pointer's tool");
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-  await mock(page);
-  let sent: Record<string, unknown> | null = null;
-  await page.route("**/api/ui/selection", (r) => {
-    sent = r.request().postDataJSON() as Record<string, unknown>;
-    return r.fulfill({ json: sent });
-  });
-  await page.goto("/run/?id=m-1");
-  await page.getByRole("button", { name: "Point your agent at a block" }).click();
-  const card = page.locator('[data-ui="run.overview/metric/accuracy"]');
-  await card.hover();
-  await expect(card).toHaveAttribute("data-ui-hover", "");
-  await page.screenshot({ path: info.outputPath("layout-select.png") });
-  await card.click();
-  await expect(page.getByText("Your agent can see run.overview/metric/accuracy")).toBeVisible();
-  expect(sent).toMatchObject({
-    id: "run.overview/metric/accuracy",
-    run: "m-1",
-    url: "/run/?id=m-1",
-  });
-  const copied = await page.evaluate(() => navigator.clipboard.readText());
-  expect(copied).toContain("louped block run.overview/metric/accuracy");
-  expect(copied).toContain("run: m-1");
-  // the mode ends with the click; the next click acts again
-  await expect(page.locator("html")).not.toHaveAttribute("data-selecting");
+  // nothing to hand an agent there: Shift+click is a click
+  await page.locator('[data-part="run.overview/metric/accuracy"]').click({ modifiers: ["Shift"] });
+  await expect(page.getByRole("region", { name: "Picked parts" })).toHaveCount(0);
 });
 
 test("louped.toml's theme sets the app's tokens", async ({ page }) => {

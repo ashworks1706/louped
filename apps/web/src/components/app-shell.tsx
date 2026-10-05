@@ -9,7 +9,9 @@ import { Suspense, useCallback, useEffect, useState, useSyncExternalStore } from
 import { useCommandMenu } from "@/components/command-menu";
 import { useLive } from "@/components/home-overview";
 import { Mark } from "@/components/mark";
-import { SelectButton } from "@/components/select-mode";
+import { Cues } from "@/components/cues";
+import { arrange, part, partId, useRules } from "@/components/parts";
+import { PartPicker } from "@/components/pick-parts";
 import { ServerStatus } from "@/components/server-status";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -98,6 +100,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </aside>
         <main className="min-w-0 flex-1">{children}</main>
       </div>
+      {/* outside the top bar: its backdrop blur would hold fixed children to it */}
+      <Suspense>
+        <PartPicker />
+        <Cues />
+      </Suspense>
     </div>
   );
 }
@@ -105,11 +112,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 function TopBar({ folded, toggle }: { folded: boolean; toggle: () => void }) {
   const pathname = usePathname();
   const section = sectionOf(pathname);
+  const rule = useRules();
   return (
-    <header
-      data-ui="shell.topbar"
-      className="bg-background/80 sticky top-0 z-40 flex h-12 items-center gap-2 border-b px-3 backdrop-blur"
-    >
+    <header className="bg-background/80 sticky top-0 z-40 flex h-12 items-center gap-2 border-b px-3 backdrop-blur">
       <MobileNav />
       <Button
         variant="ghost"
@@ -118,18 +123,24 @@ function TopBar({ folded, toggle }: { folded: boolean; toggle: () => void }) {
         aria-label={folded ? "Expand sidebar" : "Collapse sidebar"}
         title={folded ? "Expand sidebar (⌘B)" : "Collapse sidebar (⌘B)"}
         className="hidden md:inline-flex"
+        {...part("shell/sidebar")}
       >
         {folded ? <PanelLeftOpen /> : <PanelLeftClose />}
       </Button>
-      <Link href="/" className="flex items-center gap-2 pr-2 text-sm font-semibold tracking-tight">
+      <Link
+        href="/"
+        className="flex items-center gap-2 pr-2 text-sm font-semibold tracking-tight"
+        {...part("shell/home")}
+      >
         <Mark className="size-5" />
         louped
       </Link>
       <nav aria-label="Sections" className="hidden items-center gap-0.5 sm:flex">
-        {SECTIONS.map((s) => (
+        {arrange(SECTIONS, (s) => partId("shell/domain", s.section), rule).map((s) => (
           <Link
             key={s.section}
             href={s.href}
+            {...part(partId("shell/domain", s.section))}
             aria-current={s.section === section ? "page" : undefined}
             className={cn(
               "flex h-8 items-center rounded-md px-3 text-sm transition-colors",
@@ -138,18 +149,21 @@ function TopBar({ folded, toggle }: { folded: boolean; toggle: () => void }) {
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            {s.title}
+            {rule(partId("shell/domain", s.section)).label ?? s.title}
           </Link>
         ))}
       </nav>
       <div className="ml-auto flex items-center gap-2">
-        <LiveJobs />
-        <SelectButton />
+        <span {...part("shell/jobs")} className="contents">
+          <LiveJobs />
+        </span>
         <SearchButton />
-        <span className="hidden lg:block">
+        <span className="hidden lg:block" {...part("shell/status")}>
           <ServerStatus />
         </span>
-        <ThemeToggle />
+        <span {...part("shell/theme")}>
+          <ThemeToggle />
+        </span>
       </div>
     </header>
   );
@@ -179,6 +193,7 @@ function SearchButton() {
       onClick={() => setOpen(true)}
       className="bg-background text-muted-foreground hover:bg-accent flex h-8 items-center gap-2 rounded-md border px-2 text-sm transition-colors sm:w-48"
       aria-label="Search"
+      {...part("shell/search")}
     >
       <Search className="size-3.5" />
       <span className="hidden sm:inline">Search</span>
@@ -193,7 +208,12 @@ function SidebarNav({ folded = false, onNavigate }: { folded?: boolean; onNaviga
   const section = sectionOf(pathname);
   const domain = DOMAINS.find((d) => d.section === section);
   const active = activeHref(pathname);
-  const items = NAV.filter((n) => n.section === section);
+  const rule = useRules();
+  const items = arrange(
+    NAV.filter((n) => n.section === section),
+    (n) => partId("shell/nav", n.href),
+    rule,
+  );
   return (
     <nav className="flex flex-col gap-0.5 p-2" aria-label="Pages">
       {!folded && (
@@ -211,7 +231,7 @@ function SidebarNav({ folded = false, onNavigate }: { folded?: boolean; onNaviga
       {items.map((item) => (
         <NavLink
           key={item.href}
-          item={item}
+          item={{ ...item, title: rule(partId("shell/nav", item.href)).label ?? item.title }}
           active={item.href === active}
           folded={folded}
           onNavigate={onNavigate}
@@ -259,6 +279,7 @@ function NavLink({
     <Link
       href={item.href}
       onClick={onNavigate}
+      {...part(partId("shell/nav", item.href))}
       aria-current={active ? "page" : undefined}
       aria-label={folded ? item.title : undefined}
       className={cn(
@@ -290,7 +311,13 @@ function MobileNav() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label="Menu" className="md:hidden">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Menu"
+          className="md:hidden"
+          {...part("shell/menu")}
+        >
           <Menu />
         </Button>
       </SheetTrigger>

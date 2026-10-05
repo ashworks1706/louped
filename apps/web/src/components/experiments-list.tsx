@@ -6,6 +6,7 @@ import Link from "next/link";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 
 import { EmptyState } from "@/components/empty-state";
+import { part, partId } from "@/components/parts";
 import { MetricValue } from "@/components/metric";
 import { QueryState } from "@/components/query-state";
 import { q, type Experiment } from "@/lib/api";
@@ -51,6 +52,7 @@ export function ExperimentsList({ axis }: { axis: Axis }) {
                   <button
                     key={f}
                     type="button"
+                    {...part(partId("experiments/filter", f))}
                     aria-pressed={status === f}
                     onClick={() => void setStatus(f === "all" ? null : f)}
                     className={cn(
@@ -146,7 +148,10 @@ function DomainGroups({ experiments }: { experiments: Experiment[] }) {
     const group = experiments.filter((e) => e.domain === domain);
     return (
       <section key={domain} className="flex flex-col gap-3">
-        <h2 className="text-muted-foreground flex items-center gap-2 text-xs font-medium">
+        <h2
+          className="text-muted-foreground flex items-center gap-2 text-xs font-medium"
+          {...part(partId("experiments/domain", domain))}
+        >
           {group[0].domain_title}
           <span className="font-mono tabular-nums">{group.length}</span>
         </h2>
@@ -190,6 +195,7 @@ function ExperimentCard({
   return (
     <Link
       href={experimentHref(e.name, e.axis)}
+      {...part(partId("experiments/row", e.name))}
       title={e.question ?? e.name}
       className="hover:bg-accent/40 focus-visible:ring-ring/50 flex min-w-0 flex-col gap-2 rounded-xl border p-4 transition-colors outline-none focus-visible:ring-[3px]"
     >

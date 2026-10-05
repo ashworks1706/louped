@@ -684,6 +684,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/ui/part": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Set Part
+     * @description Sets or removes one part's rule in the project's or an experiment's layout.json.
+     */
+    put: operations["set_part_api_ui_part_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/ui/theme": {
     parameters: {
       query?: never;
@@ -713,9 +733,70 @@ export interface paths {
     put?: never;
     /**
      * Select
-     * @description Keeps the block a person pointed at, until the next; in memory only.
+     * @description Keeps what the person has picked, replacing the last; in memory only.
      */
     post: operations["select_api_ui_selection_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/ui/show": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Shown
+     * @description The cues after one the app has, for the app to show.
+     */
+    get: operations["shown_api_ui_show_get"];
+    put?: never;
+    /**
+     * Show
+     * @description Queues something for the open app to show: a page, parts pointed at, a note.
+     */
+    post: operations["show_api_ui_show_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/ui/show/{cue}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** One Cue */
+    get: operations["one_cue_api_ui_show__cue__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/ui/show/{cue}/seen": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Seen
+     * @description The app showed a cue; missing names the parts it could not find on the page.
+     */
+    post: operations["seen_api_ui_show__cue__seen_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -810,12 +891,14 @@ export interface components {
     Catalog: {
       /** Regions */
       regions: {
-        [key: string]: components["schemas"]["Kind"][];
+        [key: string]: components["schemas"]["louped__server__ui__Kind"][];
       };
       /** Presets */
       presets: {
         [key: string]: string;
       };
+      /** Parts */
+      parts: components["schemas"]["louped__server__parts__Kind"][];
     };
     /** Comparison */
     Comparison: {
@@ -842,6 +925,46 @@ export interface components {
        * @default
        */
       token: string;
+    };
+    /** Cue */
+    Cue: {
+      /** Url */
+      url?: string | null;
+      /**
+       * Parts
+       * @default []
+       */
+      parts: string[];
+      /** Text */
+      text?: string | null;
+      /**
+       * Style
+       * @default highlight
+       * @enum {string}
+       */
+      style: "highlight" | "spotlight" | "pointer";
+      /** Id */
+      id: number;
+      /** At */
+      at: number;
+      /**
+       * Status
+       * @default pending
+       * @enum {string}
+       */
+      status: "pending" | "shown" | "missing" | "superseded";
+      /**
+       * Missing
+       * @default []
+       */
+      missing: string[];
+    };
+    /** Cues */
+    Cues: {
+      /** Now */
+      now: number;
+      /** Cues */
+      cues: components["schemas"]["Cue"][];
     };
     /**
      * Direction
@@ -1236,18 +1359,7 @@ export interface components {
       /** Log */
       log: string;
     };
-    /** Kind */
-    Kind: {
-      /** Block */
-      block: string;
-      /** About */
-      about: string;
-      /**
-       * Needs
-       * @default []
-       */
-      needs: string[];
-    };
+    JsonValue: unknown;
     /** LabelRequest */
     LabelRequest: {
       /** Label */
@@ -1415,6 +1527,10 @@ export interface components {
       errors: string[];
       /** Files */
       files: string[];
+      /** Parts */
+      parts: {
+        [key: string]: components["schemas"]["PartRule"];
+      };
     };
     /** PairedScore */
     PairedScore: {
@@ -1445,6 +1561,27 @@ export interface components {
       up: number;
       /** Down */
       down: number;
+    };
+    /**
+     * PartRule
+     * @description What a layout changes about the parts its key matches.
+     */
+    PartRule: {
+      /**
+       * Hidden
+       * @default false
+       */
+      hidden: boolean;
+      /** Label */
+      label?: string | null;
+      /** About */
+      about?: string | null;
+      /** Note */
+      note?: string | null;
+      /** Order */
+      order?: number | null;
+      /** Default */
+      default?: string | null;
     };
     /**
      * PatchRequest
@@ -1481,6 +1618,26 @@ export interface components {
        * @default true
        */
       chat: boolean;
+    };
+    /**
+     * Picked
+     * @description One part a person Shift+clicked, and the page it was on.
+     */
+    Picked: {
+      /** Id */
+      id: string;
+      /** Url */
+      url: string;
+      /** Run */
+      run?: string | null;
+      /** Experiment */
+      experiment?: string | null;
+      /**
+       * Text
+       * @default
+       */
+      text: string;
+      data?: components["schemas"]["JsonValue"];
     };
     /** PlaygroundInfo */
     PlaygroundInfo: {
@@ -1724,24 +1881,34 @@ export interface components {
       /** Explanation */
       explanation: string | null;
     };
+    /** Seen */
+    Seen: {
+      /**
+       * Missing
+       * @default []
+       */
+      missing: string[];
+      /**
+       * Superseded
+       * @default false
+       */
+      superseded: boolean;
+    };
     /**
      * Selection
-     * @description The block a person pointed at in the app, for their agent.
+     * @description What a person picked in the app, in the order they picked it, for their agent.
      */
     Selection: {
-      /** Id */
-      id: string;
-      /** Url */
-      url: string;
-      /** Run */
-      run?: string | null;
+      /** Parts */
+      parts: components["schemas"]["Picked"][];
+    };
+    /** SetPart */
+    SetPart: {
       /** Experiment */
       experiment?: string | null;
-      /**
-       * Text
-       * @default
-       */
-      text: string;
+      /** Part */
+      part: string;
+      rule: components["schemas"]["PartRule"] | null;
     };
     /** SetPreset */
     SetPreset: {
@@ -1761,6 +1928,27 @@ export interface components {
       region: "home" | "run.tabs" | "run.overview" | "experiment.tabs" | "experiment.design";
       /** Blocks */
       blocks: components["schemas"]["Block"][] | null;
+    };
+    /**
+     * ShowRequest
+     * @description What an agent shows the person in the app.
+     */
+    ShowRequest: {
+      /** Url */
+      url?: string | null;
+      /**
+       * Parts
+       * @default []
+       */
+      parts: string[];
+      /** Text */
+      text?: string | null;
+      /**
+       * Style
+       * @default highlight
+       * @enum {string}
+       */
+      style: "highlight" | "spotlight" | "pointer";
     };
     /**
      * SpeedRequest
@@ -1976,6 +2164,27 @@ export interface components {
       note?: string | null;
       /** About */
       about?: string | null;
+    };
+    /** Kind */
+    louped__server__parts__Kind: {
+      /** Part */
+      part: string;
+      /** About */
+      about: string;
+      /** Rules */
+      rules: ("hidden" | "label" | "about" | "note" | "order" | "default")[];
+    };
+    /** Kind */
+    louped__server__ui__Kind: {
+      /** Block */
+      block: string;
+      /** About */
+      about: string;
+      /**
+       * Needs
+       * @default []
+       */
+      needs: string[];
     };
   };
   responses: never;
@@ -3328,6 +3537,39 @@ export interface operations {
       };
     };
   };
+  set_part_api_ui_part_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SetPart"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Page"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   get_theme_api_ui_theme_get: {
     parameters: {
       query?: never;
@@ -3388,6 +3630,136 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Selection"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  shown_api_ui_show_get: {
+    parameters: {
+      query?: {
+        after?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Cues"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  show_api_ui_show_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ShowRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Cue"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  one_cue_api_ui_show__cue__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        cue: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Cue"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  seen_api_ui_show__cue__seen_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        cue: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Seen"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Cue"];
         };
       };
       /** @description Validation Error */

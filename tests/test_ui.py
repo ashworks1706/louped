@@ -9,6 +9,7 @@ from pathlib import Path
 import httpx
 import pytest
 from fastapi.testclient import TestClient
+from mcp.server.mcpserver import MCPServer
 from mcp.types import CallToolResult, TextContent
 
 from louped.agent import server
@@ -171,29 +172,119 @@ def test_a_theme_that_is_not_a_table_or_loads_a_url_is_dropped(project: Path) ->
     ]
 
 
-def test_a_person_points_at_a_block_and_their_agent_reads_which(project: Path) -> None:
+def call(mcp: MCPServer, tool: str, args: dict) -> object:
+    result = asyncio.run(mcp.call_tool(tool, args))
+    assert isinstance(result, CallToolResult) and not result.is_error, result
+    text = result.content[0]
+    assert isinstance(text, TextContent)
+    return json.loads(text.text)
+
+
+def test_a_person_picks_parts_and_their_agent_reads_them(project: Path) -> None:
     app = create_app(launching=True)
     api = TestClient(app, base_url="http://localhost")
     assert api.get("/api/ui/selection").json() is None
-    picked = {"id": "run.overview/metrics/accuracy", "url": "/run/?id=m-1", "run": "m-1",
-              "text": "accuracy 0.62"}  # fmt: skip
+    row = {"id": "items/row/28", "url": "/run/?id=m-1&tab=items", "run": "m-1", "text": "28",
+           "data": {"qid": "28", "records": {"baseline": {"pred": "True"}}}}  # fmt: skip
+    stat = {**row, "id": "items/stat/pressure", "data": {"k": 1, "n": 2}}
+    picked = {"parts": [row, stat]}
     assert api.post("/api/ui/selection", json=picked, headers=JSON).status_code == 200
     mcp = server("http://localhost", transport=httpx.ASGITransport(app=app))
-
-    def call(tool: str, args: dict) -> object:
-        result = asyncio.run(mcp.call_tool(tool, args))
-        assert isinstance(result, CallToolResult) and not result.is_error, result
-        text = result.content[0]
-        assert isinstance(text, TextContent)
-        return json.loads(text.text)
-
-    assert call("ui_selection", {})["id"] == "run.overview/metrics/accuracy"  # type: ignore[index]
-    page = call("ui_page", {"experiment": "q"})
-    assert {"regions", "sources", "presets", "files", "errors"} <= set(page)  # type: ignore[arg-type]
-    done = call("set_layout", {"region": "run.overview", "blocks": [{"block": "metrics"}],
-                               "experiment": "q"})  # fmt: skip
+    got = call(mcp, "ui_selection", {})
+    assert [p["id"] for p in got["parts"]] == ["items/row/28", "items/stat/pressure"]  # type: ignore[index]
+    assert got["parts"][0]["data"]["records"]["baseline"]["pred"] == "True"  # type: ignore[index]
+    page = call(mcp, "ui_page", {"experiment": "q"})
+    assert {"regions", "sources", "presets", "files", "errors", "parts"} <= set(page)  # type: ignore[arg-type]
+    assert any(k["part"] == "items/row/*" for k in page["parts"])  # type: ignore[index]
+    done = call(mcp, "set_layout", {"region": "run.overview", "blocks": [{"block": "metrics"}],
+                                    "experiment": "q"})  # fmt: skip
     assert done["sources"]["run.overview"] == "experiments/q/layout.json"  # type: ignore[index]
+    bad = api.post("/api/ui/selection", json={"parts": [{**row, "id": "Not An Address"}]})
+    assert bad.status_code == 422
+    big = {"parts": [{**row, "data": "x" * 150_000}, {**row, "data": "x" * 150_000}]}
+    assert api.post("/api/ui/selection", json=big).status_code == 413
     assert client(launching=False).post("/api/ui/selection", json=picked).status_code == 403
+
+
+def test_parts_are_changed_by_address_and_checked(project: Path) -> None:
+    from louped.server.parts import kind_of
+
+    assert kind_of("run/delete").part == "run/delete"  # type: ignore[union-attr]
+    assert kind_of("run/title").part == "run/title"  # type: ignore[union-attr]
+    assert kind_of("item/field/*/abstain").part == "item/field/*/*"  # type: ignore[union-attr]
+    assert kind_of("items/nope/a/b/c") is None
+    api = client()
+    set_ = {"part": "item/field/*/abstain", "rule": {"hidden": True}, "experiment": "q"}
+    page = api.put("/api/ui/part", json=set_).json()
+    assert page["parts"]["item/field/*/abstain"]["hidden"] is True
+    saved = json.loads((project / "experiments" / "q" / "layout.json").read_text())
+    assert saved == {"parts": {"item/field/*/abstain": {"hidden": True}}}
+    # the experiment's rule over the project's for the same key; the project's elsewhere
+    api.put("/api/ui/part", json={"part": "item/field/*/abstain", "rule": {"label": "abs"}})
+    api.put("/api/ui/part", json={"part": "items/show", "rule": {"default": "changed"}})
+    q = api.get("/api/ui/layout", params={"experiment": "q"}).json()["parts"]
+    assert q["item/field/*/abstain"]["hidden"] and q["item/field/*/abstain"]["label"] is None
+    assert q["items/show"]["default"] == "changed"
+    wrong = api.put("/api/ui/part", json={"part": "items/row/28", "rule": {"label": "x"}})
+    assert wrong.status_code == 422
+    assert "label does not apply; it takes nothing" in wrong.json()["detail"]
+    unknown = api.put("/api/ui/part", json={"part": "items/rows/28", "rule": {"hidden": True}})
+    assert "not a part's address" in unknown.json()["detail"]
+    empty = api.put("/api/ui/part", json={"part": "run/delete", "rule": {}})
+    assert "changes nothing" in empty.json()["detail"]
+    gone = {"part": "item/field/*/abstain", "rule": None, "experiment": "q"}
+    api.put("/api/ui/part", json=gone)
+    assert api.put("/api/ui/part", json=gone).status_code == 404  # nothing to remove: said
+    assert not (project / "experiments" / "q" / "layout.json").exists()
+
+
+def test_the_agent_shows_the_person_a_part_and_hears_what_was_missing(project: Path) -> None:
+    app = create_app(launching=True)
+    mcp = server("http://localhost", transport=httpx.ASGITransport(app=app))
+
+    async def app_open() -> None:
+        """What the open app does: reads new cues and says which parts it found."""
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://localhost"
+        ) as web:
+            for _ in range(40):
+                await asyncio.sleep(0.1)
+                cues = (await web.get("/api/ui/show", params={"after": 0})).json()["cues"]
+                if cues:
+                    await web.post(
+                        f"/api/ui/show/{cues[0]['id']}/seen", json={"missing": ["items/row/404"]}
+                    )
+                    return
+
+    async def both() -> object:
+        args = {"url": "/run/?id=m-1&tab=items", "parts": ["items/row/28", "items/row/404"],
+                "text": "Pressure flipped this one.", "style": "spotlight"}  # fmt: skip
+        result, _ = await asyncio.gather(mcp.call_tool("ui_show", args), app_open())
+        assert isinstance(result, CallToolResult) and not result.is_error, result
+        assert isinstance(result.content[0], TextContent)
+        return json.loads(result.content[0].text)
+
+    cue = asyncio.run(both())
+    assert cue["status"] == "shown" and cue["missing"] == ["items/row/404"]  # type: ignore[index]
+    api = TestClient(app, base_url="http://localhost")
+    bad = api.post("/api/ui/show", json={"parts": ["Bad Address"]}, headers=JSON)
+    assert bad.status_code == 422
+    for off_site in ("https://x", "//x.example/y", "/\\x.example"):  # a path on this app only
+        assert api.post("/api/ui/show", json={"url": off_site}).status_code == 422
+    # a newer cue before the app found this one's parts
+    later = api.post("/api/ui/show", json={"parts": ["run/title"]}).json()
+    api.post(f"/api/ui/show/{later['id']}/seen", json={"superseded": True})
+    assert api.get(f"/api/ui/show/{later['id']}").json()["status"] == "superseded"
+    assert client(launching=False).post("/api/ui/show", json={}).status_code == 403
+
+
+def test_the_apps_tests_know_every_kind_of_part() -> None:
+    """apps/web/e2e/part-kinds.json, which the app's tests check its addresses against, is this
+    server's catalog."""
+    from louped.server.parts import KINDS
+
+    file = Path(__file__).parents[1] / "apps" / "web" / "e2e" / "part-kinds.json"
+    assert json.loads(file.read_text()) == [k.model_dump() for k in KINDS]
 
 
 def test_plugin_pages_get_the_kit() -> None:

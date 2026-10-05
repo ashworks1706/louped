@@ -6,6 +6,8 @@ import Link from "next/link";
 import { parseAsString, useQueryState } from "nuqs";
 
 import { EmptyState } from "@/components/empty-state";
+import { Help } from "@/components/help";
+import { arrange, part, partId, PartScope, useRules } from "@/components/parts";
 import { StatusLabel } from "@/components/experiments-list";
 import { EditableText } from "@/components/markdown-editor";
 import { DeleteButton } from "@/components/delete-button";
@@ -32,6 +34,7 @@ import {
   type Launchable,
 } from "@/lib/api";
 import { ago } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { axisPath, experimentHref } from "@/lib/href";
 
 const AXIS_TITLE: Record<ExperimentDetail["axis"], string> = {
@@ -76,68 +79,93 @@ function ExperimentLoaded({ name }: { name: string }) {
     runs: runs.data ? runs.data.filter((r) => r.experiment === name) : experiment.data.runs,
   };
   return (
-    <>
+    <PartScope experiment={name}>
       <ExperimentHeader experiment={e} />
       <section className="mx-auto max-w-6xl px-6 py-6">
         <ExperimentTabs experiment={e} />
       </section>
-    </>
+    </PartScope>
   );
 }
 
 function ExperimentHeader({ experiment: e }: { experiment: ExperimentDetail }) {
   const live = e.runs.filter((r) => isLive(r.status)).length;
   const last = e.runs[0];
+  const rule = useRules();
+  const meta: { name: string; label: string; value: React.ReactNode; className?: string }[] = [
+    { name: "axis", label: "Axis", value: AXIS_TITLE[e.axis] },
+    { name: "domain", label: "Domain", value: e.domain_title },
+    {
+      name: "runs",
+      label: "Runs",
+      value: `${e.runs.length}${live > 0 ? ` · ${live} live` : ""}`,
+      className: "font-mono tabular-nums",
+    },
+    { name: "last-run", label: "Last run", value: last ? ago(last.created) : "never" },
+  ];
   return (
-    <header className="border-b" data-ui="experiment.header">
+    <header className="border-b">
       <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 py-6">
         <Link
           href={`${axisPath(e.axis)}/experiments/`}
           className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 text-xs"
+          {...part("experiment/back")}
         >
           <ArrowLeft className="size-3" /> Experiments
         </Link>
         <div className="flex flex-col items-start gap-x-6 gap-y-3 sm:flex-row">
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="font-mono text-xl font-semibold tracking-tight">{e.name}</h1>
-              <StatusLabel status={e.status} />
+              <h1
+                className="font-mono text-xl font-semibold tracking-tight"
+                {...part("experiment/title")}
+              >
+                {e.name}
+              </h1>
+              <span {...part("experiment/status")} className="inline-flex">
+                <StatusLabel status={e.status} />
+              </span>
             </div>
-            <p className="max-w-3xl text-[15px] leading-snug font-medium">
+            <p
+              className="max-w-3xl text-[15px] leading-snug font-medium"
+              {...part("experiment/question")}
+            >
               {e.question ?? "No question written yet. Add one under ## Question in its README."}
             </p>
           </div>
           <div className="flex items-start gap-2">
             <LaunchActions name={e.name} />
-            <DeleteButton
-              what="experiment"
-              name={e.name}
-              undo={`Its folder moves to .louped/trash/experiments; move it back to experiments/ to restore it. Its ${e.runs.length} runs stay.`}
-              remove={() => deleteExperiment(e.name)}
-              then={`${axisPath(e.axis)}/experiments/`}
-            />
+            <span
+              {...part("experiment/delete")}
+              className={cn(rule("experiment/delete").hidden && "hidden")}
+            >
+              <DeleteButton
+                what="experiment"
+                name={e.name}
+                undo={`Its folder moves to .louped/trash/experiments; move it back to experiments/ to restore it. Its ${e.runs.length} runs stay.`}
+                remove={() => deleteExperiment(e.name)}
+                then={`${axisPath(e.axis)}/experiments/`}
+              />
+            </span>
           </div>
         </div>
         <dl className="text-muted-foreground flex flex-wrap gap-x-6 gap-y-1 text-sm">
-          <div className="flex gap-1.5">
-            <dt>Axis</dt>
-            <dd className="text-foreground">{AXIS_TITLE[e.axis]}</dd>
-          </div>
-          <div className="flex gap-1.5">
-            <dt>Domain</dt>
-            <dd className="text-foreground">{e.domain_title}</dd>
-          </div>
-          <div className="flex gap-1.5">
-            <dt>Runs</dt>
-            <dd className="text-foreground font-mono tabular-nums">
-              {e.runs.length}
-              {live > 0 && ` · ${live} live`}
-            </dd>
-          </div>
-          <div className="flex gap-1.5">
-            <dt>Last run</dt>
-            <dd className="text-foreground">{last ? ago(last.created) : "never"}</dd>
-          </div>
+          {arrange(meta, (m) => partId("experiment/meta", m.name), rule).map((m) => {
+            const r = rule(partId("experiment/meta", m.name));
+            return (
+              <div
+                key={m.name}
+                className="flex gap-1.5"
+                {...part(partId("experiment/meta", m.name))}
+              >
+                <dt className="flex items-center gap-1">
+                  {r.label ?? m.label}
+                  {r.about && <Help>{r.about}</Help>}
+                </dt>
+                <dd className={cn("text-foreground", m.className)}>{m.value}</dd>
+              </div>
+            );
+          })}
         </dl>
       </div>
     </header>
@@ -152,7 +180,13 @@ function LaunchActions({ name }: { name: string }) {
   return (
     <div className="flex flex-wrap gap-2">
       {own.map((l, i) => (
-        <Button key={l.id} asChild size="sm" variant={i === 0 ? "default" : "outline"}>
+        <Button
+          key={l.id}
+          asChild
+          size="sm"
+          variant={i === 0 ? "default" : "outline"}
+          {...part(partId("experiment/launch", l.title.slice(name.length + 1)))}
+        >
           <Link href={`/launch/?id=${encodeURIComponent(l.id)}`}>
             <Rocket />
             <span className="font-mono">{l.title.slice(name.length + 1)}</span>
@@ -287,7 +321,7 @@ function ExperimentTabs({ experiment: e }: { experiment: ExperimentDetail }) {
             <TabsTrigger
               key={t.value}
               value={t.value}
-              data-ui={blockId("experiment.tabs", t.b, t.at)}
+              data-part={blockId("experiment.tabs", t.b, t.at)}
               aria-label={t.count !== undefined ? `${t.label} (${t.count})` : undefined}
             >
               {t.label}

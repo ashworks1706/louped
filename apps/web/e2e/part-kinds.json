@@ -1,0 +1,332 @@
+[
+  {
+    "part": "panel/close",
+    "about": "Closes a side panel.",
+    "rules": []
+  },
+  {
+    "part": "shell/nav/*",
+    "about": "A page in the sidebar, by its path.",
+    "rules": ["hidden", "label", "order"]
+  },
+  {
+    "part": "shell/domain/*",
+    "about": "A section in the top bar: workspace, behavior, efficiency.",
+    "rules": ["hidden", "label", "order"]
+  },
+  {
+    "part": "shell/*",
+    "about": "The top bar's home link, sidebar switch, jobs, search, status and theme switch.",
+    "rules": []
+  },
+  {
+    "part": "page/*/title",
+    "about": "A page's title, by its path (runs, behavior-vectors).",
+    "rules": ["label"]
+  },
+  {
+    "part": "page/*/description",
+    "about": "A page's one-line purpose.",
+    "rules": ["hidden", "label"]
+  },
+  {
+    "part": "run/title",
+    "about": "The run's name.",
+    "rules": []
+  },
+  {
+    "part": "run/back",
+    "about": "The link back to Runs.",
+    "rules": ["hidden"]
+  },
+  {
+    "part": "run/badge/*",
+    "about": "The run's kind, host or status.",
+    "rules": ["hidden"]
+  },
+  {
+    "part": "run/meta/*",
+    "about": "The run's model, experiment, created time or id.",
+    "rules": ["hidden", "label", "about", "order"]
+  },
+  {
+    "part": "run/delete",
+    "about": "Moves the run to the trash.",
+    "rules": ["hidden"]
+  },
+  {
+    "part": "run.overview/metrics/*",
+    "about": "One metric's card in the metrics block.",
+    "rules": ["hidden", "label", "about", "note", "order"]
+  },
+  {
+    "part": "run.overview/hardware/*",
+    "about": "One hardware number: gpu-energy, gpu-power, gpu-memory, ram.",
+    "rules": ["hidden", "label", "about", "note"]
+  },
+  {
+    "part": "run.overview/provenance/*",
+    "about": "One fact of how the run was made: ran-on, code, seed, packages, command and the rest.",
+    "rules": ["hidden", "label", "about", "order"]
+  },
+  {
+    "part": "items/records",
+    "about": "Which folder of per-item records to line up.",
+    "rules": ["hidden", "label", "default"]
+  },
+  {
+    "part": "items/summary",
+    "about": "The by-condition heading.",
+    "rules": ["label", "note"]
+  },
+  {
+    "part": "items/stat/*",
+    "about": "One condition's rate (or changed count) and its flips.",
+    "rules": ["hidden", "label", "about", "note", "order"]
+  },
+  {
+    "part": "items/search",
+    "about": "Searches the items.",
+    "rules": ["hidden"]
+  },
+  {
+    "part": "items/compare",
+    "about": "The field the conditions are compared on.",
+    "rules": ["hidden", "label", "default"]
+  },
+  {
+    "part": "items/against",
+    "about": "The reference condition.",
+    "rules": ["hidden", "label", "default"]
+  },
+  {
+    "part": "items/show",
+    "about": "Which items show: all, changed, changed:<c>, down:<c> (1\u21920), up:<c> (0\u21921).",
+    "rules": ["hidden", "label", "default"]
+  },
+  {
+    "part": "items/count",
+    "about": "How many items are shown.",
+    "rules": []
+  },
+  {
+    "part": "items/download",
+    "about": "Downloads the items shown.",
+    "rules": ["hidden"]
+  },
+  {
+    "part": "items/column/*",
+    "about": "A column of the items table: the key, the text or a condition.",
+    "rules": ["hidden", "label", "about", "order"]
+  },
+  {
+    "part": "items/row/*",
+    "about": "One item: its record in every condition.",
+    "rules": []
+  },
+  {
+    "part": "items/cell/*/*",
+    "about": "One item under one condition.",
+    "rules": []
+  },
+  {
+    "part": "item/title",
+    "about": "The open item's id.",
+    "rules": []
+  },
+  {
+    "part": "item/section/*",
+    "about": "The item itself (item), or one condition's record of it.",
+    "rules": ["hidden", "label"]
+  },
+  {
+    "part": "item/field/*/*",
+    "about": "One field of the item (section item) or of a condition's record.",
+    "rules": ["hidden", "label", "about", "order"]
+  },
+  {
+    "part": "records/column/*",
+    "about": "A column of a records table.",
+    "rules": ["hidden", "label", "about", "order"]
+  },
+  {
+    "part": "records/row/*",
+    "about": "One record, by its place in the file.",
+    "rules": []
+  },
+  {
+    "part": "records/filter/*",
+    "about": "A filter on a column with few values.",
+    "rules": []
+  },
+  {
+    "part": "records/*",
+    "about": "A records table's search, count and download.",
+    "rules": []
+  },
+  {
+    "part": "record/field/*",
+    "about": "One field of an open record.",
+    "rules": ["hidden", "label", "about", "order"]
+  },
+  {
+    "part": "samples/column/*",
+    "about": "A column of the samples table: #, input, target or a score.",
+    "rules": ["hidden", "label", "about", "order"]
+  },
+  {
+    "part": "samples/row/*",
+    "about": "One sample (id, or id@epoch past the first).",
+    "rules": []
+  },
+  {
+    "part": "samples/score/*",
+    "about": "Shows only the samples that failed a score.",
+    "rules": []
+  },
+  {
+    "part": "samples/*",
+    "about": "The samples' search, count and judge agreement.",
+    "rules": []
+  },
+  {
+    "part": "sample/*",
+    "about": "The open sample's title, log link and your pick.",
+    "rules": []
+  },
+  {
+    "part": "figures/figure/*",
+    "about": "One figure, by its file.",
+    "rules": ["hidden", "note"]
+  },
+  {
+    "part": "config/param/*",
+    "about": "One parameter.",
+    "rules": ["hidden", "about", "order"]
+  },
+  {
+    "part": "config/tag/*",
+    "about": "One tag.",
+    "rules": ["hidden", "about", "order"]
+  },
+  {
+    "part": "config/*",
+    "about": "The parameters' or tags' heading (params, tags).",
+    "rules": []
+  },
+  {
+    "part": "artifacts/file/*",
+    "about": "One of the run's files.",
+    "rules": []
+  },
+  {
+    "part": "artifacts/folder/*",
+    "about": "A folder of the run's files.",
+    "rules": []
+  },
+  {
+    "part": "artifacts/whole/*",
+    "about": "A folder's JSONL files read as one.",
+    "rules": []
+  },
+  {
+    "part": "artifacts/*",
+    "about": "The file filter and the open file.",
+    "rules": []
+  },
+  {
+    "part": "experiment/meta/*",
+    "about": "The experiment's axis, domain, runs or last run.",
+    "rules": ["hidden", "label", "about", "order"]
+  },
+  {
+    "part": "experiment/launch/*",
+    "about": "Opens Launch on one of the experiment's scripts.",
+    "rules": []
+  },
+  {
+    "part": "experiment/delete",
+    "about": "Moves the experiment to the trash.",
+    "rules": ["hidden"]
+  },
+  {
+    "part": "experiment/*",
+    "about": "The experiment's name, status, question and back link.",
+    "rules": []
+  },
+  {
+    "part": "experiments/row/*",
+    "about": "One experiment in a list.",
+    "rules": []
+  },
+  {
+    "part": "experiments/domain/*",
+    "about": "A domain's heading in a list.",
+    "rules": []
+  },
+  {
+    "part": "experiments/filter/*",
+    "about": "A status filter: all, active, answered, parked.",
+    "rules": []
+  },
+  {
+    "part": "runs/column/*",
+    "about": "A column of a runs table: select, run, kind, model, headline, status, created.",
+    "rules": ["hidden", "label", "about", "order"]
+  },
+  {
+    "part": "runs/row/*",
+    "about": "One run in a runs table.",
+    "rules": []
+  },
+  {
+    "part": "runs/filter/*",
+    "about": "A runs filter: search, kind, experiment, status, clear.",
+    "rules": []
+  },
+  {
+    "part": "runs/*",
+    "about": "Runs' count and Compare.",
+    "rules": []
+  },
+  {
+    "part": "runs/action/*",
+    "about": "Runs' push, pull, connect, import and launch.",
+    "rules": ["hidden"]
+  },
+  {
+    "part": "runs/heading/*",
+    "about": "The Jobs or Runs heading on Runs.",
+    "rules": []
+  },
+  {
+    "part": "runs/job/*",
+    "about": "One job in the queue.",
+    "rules": []
+  },
+  {
+    "part": "home/stat/*",
+    "about": "One of Home's numbers: live, active, answered, week.",
+    "rules": ["hidden", "label", "about", "note", "order"]
+  },
+  {
+    "part": "home/live/*/*",
+    "about": "A job or run going now.",
+    "rules": []
+  },
+  {
+    "part": "home/live/title",
+    "about": "The Running heading.",
+    "rules": []
+  },
+  {
+    "part": "home/domain/*",
+    "about": "A research domain's card.",
+    "rules": []
+  },
+  {
+    "part": "home/more/*",
+    "about": "A link to every experiment or run.",
+    "rules": ["hidden"]
+  }
+]

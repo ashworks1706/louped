@@ -194,13 +194,15 @@ test("compare queues a judge of the two runs", async ({ page }) => {
   );
   let sent: unknown;
   await page.route("**/api/launch", (r) => {
+    // the launch page then lists what it can launch: a GET, not the judge's request
+    if (r.request().method() !== "POST") return r.fulfill({ json: [] });
     sent = r.request().postDataJSON();
     return r.fulfill({ json: { id: "j9", title: "louped judge", status: "queued" } });
   });
   await page.goto("/compare/?a=a&b=b");
   await page.getByRole("button", { name: "Judge", exact: true }).click();
   await expect(page).toHaveURL(/\/launch\/\?id=judge&job=j9/);
-  expect(sent).toEqual({ id: "judge", options: { a: "a", b: "b" } });
+  await expect.poll(() => sent).toEqual({ id: "judge", options: { a: "a", b: "b" } });
 });
 
 test("a judge run takes your pick and shows the judge's agreement", async ({ page }) => {

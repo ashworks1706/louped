@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "louped",
-    "version": "0.3.0"
+    "version": "0.4.0"
   },
   "paths": {
     "/api/health": {
@@ -1671,6 +1671,45 @@
         }
       }
     },
+    "/api/ui/part": {
+      "put": {
+        "summary": "Set Part",
+        "description": "Sets or removes one part's rule in the project's or an experiment's layout.json.",
+        "operationId": "set_part_api_ui_part_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPart"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/ui/theme": {
       "get": {
         "summary": "Get Theme",
@@ -1716,7 +1755,7 @@
       },
       "post": {
         "summary": "Select",
-        "description": "Keeps the block a person pointed at, until the next; in memory only.",
+        "description": "Keeps what the person has picked, replacing the last; in memory only.",
         "operationId": "select_api_ui_selection_post",
         "requestBody": {
           "content": {
@@ -1735,6 +1774,173 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Selection"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ui/show": {
+      "post": {
+        "summary": "Show",
+        "description": "Queues something for the open app to show: a page, parts pointed at, a note.",
+        "operationId": "show_api_ui_show_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShowRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cue"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Shown",
+        "description": "The cues after one the app has, for the app to show.",
+        "operationId": "shown_api_ui_show_get",
+        "parameters": [
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "After"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cues"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ui/show/{cue}": {
+      "get": {
+        "summary": "One Cue",
+        "operationId": "one_cue_api_ui_show__cue__get",
+        "parameters": [
+          {
+            "name": "cue",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Cue"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cue"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ui/show/{cue}/seen": {
+      "post": {
+        "summary": "Seen",
+        "description": "The app showed a cue; missing names the parts it could not find on the page.",
+        "operationId": "seen_api_ui_show__cue__seen_post",
+        "parameters": [
+          {
+            "name": "cue",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Cue"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Seen"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cue"
                 }
               }
             }
@@ -1953,7 +2159,7 @@
           "regions": {
             "additionalProperties": {
               "items": {
-                "$ref": "#/components/schemas/Kind"
+                "$ref": "#/components/schemas/louped__server__ui__Kind"
               },
               "type": "array"
             },
@@ -1969,10 +2175,17 @@
             },
             "type": "object",
             "title": "Presets"
+          },
+          "parts": {
+            "items": {
+              "$ref": "#/components/schemas/louped__server__parts__Kind"
+            },
+            "type": "array",
+            "title": "Parts"
           }
         },
         "type": "object",
-        "required": ["regions", "presets"],
+        "required": ["regions", "presets", "parts"],
         "title": "Catalog"
       },
       "Comparison": {
@@ -2020,6 +2233,93 @@
         },
         "type": "object",
         "title": "Connect"
+      },
+      "Cue": {
+        "properties": {
+          "url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000,
+                "pattern": "^/([^/\\\\].*)?$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "parts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Parts",
+            "default": []
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "style": {
+            "type": "string",
+            "enum": ["highlight", "spotlight", "pointer"],
+            "title": "Style",
+            "default": "highlight"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "at": {
+            "type": "number",
+            "title": "At"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "shown", "missing", "superseded"],
+            "title": "Status",
+            "default": "pending"
+          },
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": ["id", "at"],
+        "title": "Cue"
+      },
+      "Cues": {
+        "properties": {
+          "now": {
+            "type": "number",
+            "title": "Now"
+          },
+          "cues": {
+            "items": {
+              "$ref": "#/components/schemas/Cue"
+            },
+            "type": "array",
+            "title": "Cues"
+          }
+        },
+        "type": "object",
+        "required": ["now", "cues"],
+        "title": "Cues"
       },
       "Direction": {
         "properties": {
@@ -3037,29 +3337,7 @@
         "required": ["id", "title", "argv", "log"],
         "title": "JobDetail"
       },
-      "Kind": {
-        "properties": {
-          "block": {
-            "type": "string",
-            "title": "Block"
-          },
-          "about": {
-            "type": "string",
-            "title": "About"
-          },
-          "needs": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Needs",
-            "default": []
-          }
-        },
-        "type": "object",
-        "required": ["block", "about"],
-        "title": "Kind"
-      },
+      "JsonValue": {},
       "LabelRequest": {
         "properties": {
           "label": {
@@ -3456,10 +3734,17 @@
             },
             "type": "array",
             "title": "Files"
+          },
+          "parts": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PartRule"
+            },
+            "type": "object",
+            "title": "Parts"
           }
         },
         "type": "object",
-        "required": ["regions", "sources", "errors", "files"],
+        "required": ["regions", "sources", "errors", "files", "parts"],
         "title": "Page",
         "description": "What a page shows, region by region, and where each region came from."
       },
@@ -3508,6 +3793,78 @@
         "type": "object",
         "required": ["name", "n", "mean_a", "mean_b", "diff", "low", "high", "up", "down"],
         "title": "PairedScore"
+      },
+      "PartRule": {
+        "properties": {
+          "hidden": {
+            "type": "boolean",
+            "title": "Hidden",
+            "default": false
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "about": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "About"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order"
+          },
+          "default": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PartRule",
+        "description": "What a layout changes about the parts its key matches."
       },
       "PatchRequest": {
         "properties": {
@@ -3559,6 +3916,58 @@
         "required": ["clean", "corrupt", "answer", "foil"],
         "title": "PatchRequest",
         "description": "Which layer, position or head carries the difference between two prompts of one length."
+      },
+      "Picked": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 300,
+            "pattern": "^[a-z.]+(/[^\\s/]+)*$",
+            "title": "Id"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Url"
+          },
+          "run": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run"
+          },
+          "experiment": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Text",
+            "default": ""
+          },
+          "data": {
+            "$ref": "#/components/schemas/JsonValue"
+          }
+        },
+        "type": "object",
+        "required": ["id", "url"],
+        "title": "Picked",
+        "description": "One part a person Shift+clicked, and the page it was on."
       },
       "PlaygroundInfo": {
         "properties": {
@@ -4265,36 +4674,48 @@
         "required": ["name", "value", "raw", "answer", "explanation"],
         "title": "Score"
       },
+      "Seen": {
+        "properties": {
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Missing",
+            "default": []
+          },
+          "superseded": {
+            "type": "boolean",
+            "title": "Superseded",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "Seen"
+      },
       "Selection": {
         "properties": {
-          "id": {
-            "type": "string",
-            "maxLength": 300,
-            "pattern": "^[a-z.]+(/[^\\s/][^/]*)*$",
-            "title": "Id"
-          },
-          "url": {
-            "type": "string",
-            "maxLength": 2000,
-            "title": "Url"
-          },
-          "run": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 300
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Run"
-          },
+          "parts": {
+            "items": {
+              "$ref": "#/components/schemas/Picked"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Parts"
+          }
+        },
+        "type": "object",
+        "required": ["parts"],
+        "title": "Selection",
+        "description": "What a person picked in the app, in the order they picked it, for their agent."
+      },
+      "SetPart": {
+        "properties": {
           "experiment": {
             "anyOf": [
               {
-                "type": "string",
-                "maxLength": 300
+                "type": "string"
               },
               {
                 "type": "null"
@@ -4302,17 +4723,25 @@
             ],
             "title": "Experiment"
           },
-          "text": {
+          "part": {
             "type": "string",
-            "maxLength": 500,
-            "title": "Text",
-            "default": ""
+            "maxLength": 300,
+            "title": "Part"
+          },
+          "rule": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PartRule"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
-        "required": ["id", "url"],
-        "title": "Selection",
-        "description": "The block a person pointed at in the app, for their agent."
+        "required": ["part", "rule"],
+        "title": "SetPart"
       },
       "SetPreset": {
         "properties": {
@@ -4379,6 +4808,53 @@
         "type": "object",
         "required": ["region", "blocks"],
         "title": "SetRegion"
+      },
+      "ShowRequest": {
+        "properties": {
+          "url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000,
+                "pattern": "^/([^/\\\\].*)?$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "parts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Parts",
+            "default": []
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "style": {
+            "type": "string",
+            "enum": ["highlight", "spotlight", "pointer"],
+            "title": "Style",
+            "default": "highlight"
+          }
+        },
+        "type": "object",
+        "title": "ShowRequest",
+        "description": "What an agent shows the person in the app."
       },
       "SpeedRequest": {
         "properties": {
@@ -4914,6 +5390,52 @@
         "required": ["kind", "title", "spec"],
         "title": "VegaView",
         "description": "Any chart as a Vega-Lite spec with its data inline: what the other kinds do not draw."
+      },
+      "louped__server__parts__Kind": {
+        "properties": {
+          "part": {
+            "type": "string",
+            "title": "Part"
+          },
+          "about": {
+            "type": "string",
+            "title": "About"
+          },
+          "rules": {
+            "items": {
+              "type": "string",
+              "enum": ["hidden", "label", "about", "note", "order", "default"]
+            },
+            "type": "array",
+            "title": "Rules"
+          }
+        },
+        "type": "object",
+        "required": ["part", "about", "rules"],
+        "title": "Kind"
+      },
+      "louped__server__ui__Kind": {
+        "properties": {
+          "block": {
+            "type": "string",
+            "title": "Block"
+          },
+          "about": {
+            "type": "string",
+            "title": "About"
+          },
+          "needs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Needs",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": ["block", "about"],
+        "title": "Kind"
       }
     }
   }

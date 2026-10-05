@@ -190,10 +190,14 @@ Benchmark are one playground with different tools. Every technical term has a ? 
 Home, a run's page and an experiment's page are data (server/ui.py): regions (`run.tabs`,
 `run.overview`, ...) of blocks from a fixed catalog, read from an experiment's `layout.json` over
 the project's over a preset over the default, each file checked before it is used. The person's
-agent changes them with `set_layout`; select mode in the app hands it the block the person clicked
-(every block carries `data-ui="<region>/<block>"`). A block the catalog lacks is a plugin page,
-drawn with the kit at `/kit/` (louped.css, louped.js) so it reads as the app's own. louped.toml's
-`[theme]` sets token values only. The frame (top bar, sidebar, page headers) is not a layout.
+agent changes them with `set_layout`. Inside the blocks every part (card, row, cell, field,
+column, control) has an address (server/parts.py lists the kinds), and a layout's `parts` change
+them by address: hidden, label, about, note, order, a control's default. Shift+click in the app
+picks parts, with what each stands for (an item's records, a condition's numbers), for the agent's
+`ui_selection`; the agent's `ui_show` opens a page and points at parts with a note, and hears back
+which were missing. A block the catalog lacks is a plugin page, drawn with the kit at `/kit/`
+(louped.css, louped.js) so it reads as the app's own. louped.toml's `[theme]` sets token values
+only.
 Design rules are in `apps/web/AGENTS.md`. `apps/site` is the docs site.
 
 ## Correctness traps the code must test

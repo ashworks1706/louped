@@ -14,7 +14,9 @@ export default function Page() {
       <div className="mx-auto flex max-w-6xl flex-col gap-10 px-6 py-8">
         <JobsPanel />
         <section className="flex flex-col gap-3">
-          <h2 className="text-sm font-medium">Runs</h2>
+          <h2 className="text-sm font-medium" data-part="runs/heading/runs">
+            Runs
+          </h2>
           <RunsList />
         </section>
       </div>

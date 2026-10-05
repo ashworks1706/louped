@@ -1,26 +1,61 @@
 ---
 title: Customize the app
-description: Point at any part of a page and have your agent change it, in louped's own look.
+description: Pick any part of a page for your agent, have it change any part, and let it point back, in louped's own look.
 ---
 
-Every page in the app is made of blocks: the metric cards, the report, a run's tabs, the
-experiment's README. Your agent can reorder, hide, rename or add them, and add notes and cards of
-your own. The page updates as it works, with no build or restart.
+Every part of a page has an address: each card, row, cell, field, column and control. Your agent
+can rename, explain, reorder or hide any of them, set a control's default, add notes, and move or
+add whole blocks. The page updates as it works, with no build or restart.
 
-## Point at a block
+## Pick parts with Shift+click
 
-Press the crosshair in the top bar (or **Point your agent at a block** in ⌘K) and click any part
-of a page. Your agent then sees which block you mean through `ui_selection`, so you can just say
-"show this one first" or "put the examples next to this". The click also copies a reference to
-paste into an agent without louped's tools:
+Hold Shift and click any part of a page to pick it; Shift+click it again to drop it. Pick as
+many as you like, across pages. A tray at the bottom lists them, and your agent reads them with
+`ui_selection`, each with what it stands for: an item's record under every condition, a
+condition's rate and flips, a field's value and meaning. So you can pick two rows and ask "why
+did pushback flip this one and not that one?". On a touch screen, **Pick parts** in ⌘K turns
+taps into picks. **Copy** gives the same as text, for an agent without louped's tools:
 
 ```
-louped block run.overview/metric/accuracy
-page: /run/?id=m-7f3a
+louped part items/row/28
+page: /run/?id=m-7f3a&tab=items
 run: m-7f3a
-shows: accuracy 0.62
-region: run.overview (ui_page lists its blocks; set_layout changes them)
+shows: 28 ✓ ✗
+data: {"qid":"28","compared_on":"correct","records":{"baseline":{...},"pressure":{...}}}
 ```
+
+## Your agent points back
+
+`ui_show` lets your agent open a page, scroll to parts and point at them, with a short note
+beside the first: "pressure flipped this one". It hears back which parts were not on the page.
+
+## Change any part
+
+A layout's `parts` change parts by address; `*` stands for any one name.
+
+```json title="experiments/rational-updating/layout.json"
+{
+  "parts": {
+    "items/stat/pressure": { "label": "pushback", "note": "Read this one first." },
+    "items/show": { "default": "changed" },
+    "item/field/*/abstain": { "hidden": true },
+    "item/field/item/claim": { "order": 0 },
+    "runs/column/model": { "hidden": true }
+  }
+}
+```
+
+| Rule      | What it does                                          |
+| --------- | ----------------------------------------------------- |
+| `hidden`  | Leaves the part out                                   |
+| `label`   | Its name on the page                                  |
+| `about`   | What its ? says                                       |
+| `note`    | Markdown under it                                     |
+| `order`   | Its place among its siblings (fields, columns, cards) |
+| `default` | A control's value when the page's link sets none      |
+
+Each kind of part takes the rules that mean something for it; `ui_page` lists them, and a rule
+that does not apply is refused with the reason.
 
 ## Layouts
 
@@ -84,6 +119,6 @@ The colours are `background`, `foreground`, `card`, `muted`, `muted-foreground`,
 
 ## What stays
 
-The top bar, the sidebar and each page's header are louped's own, so every project reads the same.
-Layouts, the theme and plugin blocks load only on your machine; a [published
+The look is louped's own, so every project reads the same: parts change what they say and
+whether they show, not their style. Layouts, the theme and plugin blocks load only on your machine; a [published
 dashboard](/docs/remote#publish-a-read-only-dashboard) shows your layouts without plugins.

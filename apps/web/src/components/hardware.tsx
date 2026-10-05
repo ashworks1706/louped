@@ -98,16 +98,32 @@ export function Hardware({ history }: { history: History }) {
       <StatGrid>
         {gpus.length > 0 && (
           <>
-            <Stat label="GPU energy" note={`over ${seconds.toFixed(0)} s, all GPUs`}>
+            <Stat
+              label="GPU energy"
+              part="run.overview/hardware/gpu-energy"
+              note={`over ${seconds.toFixed(0)} s, all GPUs`}
+            >
               {energy(total)}
             </Stat>
-            <Stat label="GPU power, peak" note={`mean ${(mean(power.flat()) ?? 0).toFixed(0)} W`}>
+            <Stat
+              label="GPU power, peak"
+              part="run.overview/hardware/gpu-power"
+              note={`mean ${(mean(power.flat()) ?? 0).toFixed(0)} W`}
+            >
               {`${Math.max(0, ...power.map((p) => peak(p) ?? 0)).toFixed(0)} W`}
             </Stat>
-            <Stat label="GPU memory, peak">{`${(gpuMem / 1024).toFixed(1)} GB`}</Stat>
+            <Stat
+              label="GPU memory, peak"
+              part="run.overview/hardware/gpu-memory"
+            >{`${(gpuMem / 1024).toFixed(1)} GB`}</Stat>
           </>
         )}
-        {ram != null && <Stat label="RAM, peak">{`${(ram / 1024).toFixed(1)} GB`}</Stat>}
+        {ram != null && (
+          <Stat
+            label="RAM, peak"
+            part="run.overview/hardware/ram"
+          >{`${(ram / 1024).toFixed(1)} GB`}</Stat>
+        )}
       </StatGrid>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {charts

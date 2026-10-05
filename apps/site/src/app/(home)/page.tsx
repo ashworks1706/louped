@@ -53,7 +53,7 @@ const STEPS: { title: string; text: string; code?: string; shot: Shot; alt: stri
   },
   {
     title: "Make it yours",
-    text: "Point at any card and ask your agent to change it: move it, rename it, add a note or a card of your own, drawn in louped's look. The page updates as it works.",
+    text: "Shift+click any rows, cards or fields and ask your agent about them: it gets their data, and points back at the evidence on screen. Ask it to rename, hide, reorder or add any part, in louped's look; the page updates as it works.",
     shot: [layoutLight, layoutDark],
     alt: "A run's page laid out by an agent, with the card being pointed at outlined",
   },

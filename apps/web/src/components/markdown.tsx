@@ -61,9 +61,15 @@ const components: Components = {
   ),
 };
 
-export function Markdown({ children }: { children: string }) {
+/** noImages: for text from a layout or an agent, which should not make the browser fetch from
+ * another site. */
+export function Markdown({ children, noImages }: { children: string; noImages?: boolean }) {
   return (
-    <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={components}
+      disallowedElements={noImages ? ["img"] : undefined}
+    >
       {children}
     </ReactMarkdown>
   );

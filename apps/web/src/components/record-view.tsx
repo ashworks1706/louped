@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, Download } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Help } from "@/components/help";
+import { arrange, part, partId, usePartData, useRules } from "@/components/parts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -59,31 +60,42 @@ export function RecordFields({
   row,
   changed,
   about,
+  partOf,
 }: {
   row: Row;
   changed?: Set<string>;
   /** What fields mean, from the run's fields.json: a ? beside each named one. */
   about?: Record<string, string>;
+  /** Each field's address, which the layout's part rules follow (label, about, order, hidden). */
+  partOf?: (field: string) => string;
 }) {
+  const rule = useRules();
+  const at = partOf ?? ((k: string) => partId("record/field", k));
+  const fields = arrange(Object.entries(row), ([k]) => at(k), rule);
   return (
     <dl className="flex flex-col gap-3">
-      {Object.entries(row).map(([k, v]) => (
-        <div
-          key={k}
-          className={cn(
-            "flex flex-col gap-1",
-            changed?.has(k) && "border-foreground/40 rounded-md border border-dashed p-2",
-          )}
-        >
-          <dt className="text-muted-foreground flex items-center gap-1 font-mono text-xs">
-            {k}
-            {about?.[k] && <Help label={`What ${k} means`}>{about[k]}</Help>}
-          </dt>
-          <dd className="min-w-0">
-            <FieldValue value={v} />
-          </dd>
-        </div>
-      ))}
+      {fields.map(([k, v]) => {
+        const r = rule(at(k));
+        const meaning = r.about ?? about?.[k];
+        return (
+          <div
+            key={k}
+            {...part(at(k))}
+            className={cn(
+              "flex flex-col gap-1",
+              changed?.has(k) && "border-foreground/40 rounded-md border border-dashed p-2",
+            )}
+          >
+            <dt className="text-muted-foreground flex items-center gap-1 font-mono text-xs">
+              {r.label ?? k}
+              {meaning && <Help label={`What ${k} means`}>{meaning}</Help>}
+            </dt>
+            <dd className="min-w-0">
+              <FieldValue value={v} />
+            </dd>
+          </div>
+        );
+      })}
     </dl>
   );
 }
@@ -153,12 +165,20 @@ export function RecordsTable({ rows, name }: { rows: Row[]; name: string }) {
   const [sort, setSort] = useState<{ col: string; desc: boolean } | null>(null);
   const [facets, setFacets] = useState<Record<string, string>>({});
   const [open, setOpen] = useState<number | null>(null);
+  const rule = useRules();
 
-  const columns = useMemo(() => {
+  const all = useMemo(() => {
     const seen = new Set<string>();
     for (const r of rows.slice(0, 200)) for (const k of Object.keys(r)) seen.add(k);
     return [...seen];
   }, [rows]);
+  const columns = arrange(all, (c) => partId("records/column", c), rule);
+  usePartData("records", (id) => {
+    const [, kind, which] = id.split("/");
+    if (kind === "row") return rows[Number(which)] ?? null;
+    if (kind === "column") return { file: name, column: decodeURIComponent(which) };
+    return null;
+  });
   const facetable = useMemo(
     () =>
       columns
@@ -203,9 +223,14 @@ export function RecordsTable({ rows, name }: { rows: Row[]; name: string }) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-xs"
+          {...part("records/search")}
         />
         {facetable.map(([c, values]) => (
-          <label key={c} className="flex items-center gap-1.5 text-xs">
+          <label
+            key={c}
+            className="flex items-center gap-1.5 text-xs"
+            {...part(partId("records/filter", c))}
+          >
             <span className="text-muted-foreground font-mono">{c}</span>
             <NativeSelect
               value={facets[c] ?? ""}
@@ -228,12 +253,16 @@ export function RecordsTable({ rows, name }: { rows: Row[]; name: string }) {
             </NativeSelect>
           </label>
         ))}
-        <span className="text-muted-foreground ml-auto font-mono text-xs">
+        <span
+          className="text-muted-foreground ml-auto font-mono text-xs"
+          {...part("records/count")}
+        >
           {shown.length} of {rows.length}
         </span>
         <Button
           variant="outline"
           size="sm"
+          {...part("records/download")}
           onClick={() =>
             downloadJsonl(
               shown.map(([r]) => r),
@@ -252,6 +281,7 @@ export function RecordsTable({ rows, name }: { rows: Row[]; name: string }) {
               {columns.map((c) => (
                 <TableHead
                   key={c}
+                  {...part(partId("records/column", c))}
                   className="whitespace-nowrap"
                   aria-sort={sort?.col !== c ? "none" : sort.desc ? "descending" : "ascending"}
                 >
@@ -267,7 +297,7 @@ export function RecordsTable({ rows, name }: { rows: Row[]; name: string }) {
                       )
                     }
                   >
-                    {c}
+                    {rule(partId("records/column", c)).label ?? c}
                     {sort?.col === c &&
                       (sort.desc ? (
                         <ArrowDown className="size-3" />
@@ -275,6 +305,9 @@ export function RecordsTable({ rows, name }: { rows: Row[]; name: string }) {
                         <ArrowUp className="size-3" />
                       ))}
                   </button>
+                  {rule(partId("records/column", c)).about && (
+                    <Help>{rule(partId("records/column", c)).about!}</Help>
+                  )}
                 </TableHead>
               ))}
             </TableRow>
@@ -283,6 +316,7 @@ export function RecordsTable({ rows, name }: { rows: Row[]; name: string }) {
             {shown.slice(0, 500).map(([r, i]) => (
               <TableRow
                 key={i}
+                {...part(partId("records/row", i))}
                 className="focus-visible:ring-ring/50 cursor-pointer outline-none focus-visible:ring-[3px] focus-visible:ring-inset"
                 data-state={open === i ? "selected" : undefined}
                 tabIndex={0}

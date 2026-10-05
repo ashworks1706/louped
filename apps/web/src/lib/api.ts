@@ -49,6 +49,10 @@ export type Block = Schemas["Block"];
 export type UiPage = Schemas["Page"];
 export type Theme = Schemas["Theme"];
 export type Selection = Schemas["Selection"];
+export type Picked = Schemas["Picked"];
+export type PartRule = Schemas["PartRule"];
+export type Cue = Schemas["Cue"];
+export type Cues = Schemas["Cues"];
 
 export class ApiError extends Error {
   constructor(
@@ -179,8 +183,14 @@ export async function exportJob(req: ExportRequest): Promise<{ name: string; not
   return { name, note: res.headers.get("x-louped-note") ?? "" };
 }
 
-/** Hands the person's agent the block they pointed at (ui_selection). */
-export const pointAt = (s: Selection) => post<Selection>("/ui/selection", s);
+/** Hands the person's agent the parts they picked (ui_selection). */
+export const pick = (s: Selection) => post<Selection>("/ui/selection", s);
+/** What the person's agent asked the app to show them, after the last one the app has. */
+export const cuesAfter = (after: number) => get<Cues>(`/ui/show?after=${after}`);
+/** Tells the agent the app showed a cue, and which of its parts were not on the page; or that a
+ * newer cue came first. */
+export const cueSeen = (id: number, missing: string[], superseded = false) =>
+  post<Cue>(`/ui/show/${id}/seen`, { missing, superseded });
 
 /** Pushes this louped's new runs to the project's remote. */
 export const pushRuns = () => post<Pushed>("/launch/push", {});

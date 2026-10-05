@@ -2,11 +2,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { Fragment } from "react";
 
 import { ChevronRight } from "lucide-react";
 
 import { ActiveExperiments } from "@/components/experiments-list";
 import { LayoutErrors, PluginBlock, RegionGrid, useLayout } from "@/components/layout";
+import { arrange, part, partId, useRules } from "@/components/parts";
 import { QueryState } from "@/components/query-state";
 import { RunsList } from "@/components/runs-list";
 
@@ -16,6 +18,7 @@ import { isLive, q } from "@/lib/api";
 import { ago } from "@/lib/format";
 import { jobHref, runHref } from "@/lib/href";
 import { DOMAINS, NAV } from "@/lib/nav";
+import { cn } from "@/lib/utils";
 
 const WEEK_MS = 7 * 24 * 3600 * 1000;
 
@@ -34,40 +37,75 @@ export function HomeStats() {
     null,
   );
   const n = (count: number | undefined) => (count === undefined ? "—" : count);
+  const rule = useRules();
+  const stats: { id: string; el: React.ReactNode }[] = [
+    {
+      id: "live",
+      el: (
+        <Stat
+          label="Live now"
+          href="/runs/"
+          part="home/stat/live"
+          note={
+            !runs.data
+              ? undefined
+              : live.jobs.length + live.runs.length === 0
+                ? "nothing running"
+                : `${live.jobs.length} jobs · ${live.runs.length} runs`
+          }
+        >
+          {runs.data ? live.jobs.length + live.runs.length : "—"}
+        </Stat>
+      ),
+    },
+    {
+      id: "active",
+      el: (
+        <Stat
+          label="Active questions"
+          href="/behavior/experiments/?status=active"
+          part="home/stat/active"
+          note={experiments.data ? `of ${all.length} experiments` : undefined}
+        >
+          {n(experiments.data && all.filter((e) => e.status === "active").length)}
+        </Stat>
+      ),
+    },
+    {
+      id: "answered",
+      el: (
+        <Stat
+          label="Answered"
+          href="/behavior/experiments/?status=answered"
+          part="home/stat/answered"
+          note={
+            experiments.data
+              ? `${all.filter((e) => e.status === "parked").length} parked`
+              : undefined
+          }
+        >
+          {n(experiments.data && all.filter((e) => e.status === "answered").length)}
+        </Stat>
+      ),
+    },
+    {
+      id: "week",
+      el: (
+        <Stat
+          label="Runs this week"
+          part="home/stat/week"
+          note={newest ? `newest started ${ago(newest)}` : undefined}
+        >
+          {n(runs.data && week.length)}
+        </Stat>
+      ),
+    },
+  ];
   return (
     <StatGrid>
-      <Stat
-        label="Live now"
-        href="/runs/"
-        note={
-          !runs.data
-            ? undefined
-            : live.jobs.length + live.runs.length === 0
-              ? "nothing running"
-              : `${live.jobs.length} jobs · ${live.runs.length} runs`
-        }
-      >
-        {runs.data ? live.jobs.length + live.runs.length : "—"}
-      </Stat>
-      <Stat
-        label="Active questions"
-        href="/behavior/experiments/?status=active"
-        note={experiments.data ? `of ${all.length} experiments` : undefined}
-      >
-        {n(experiments.data && all.filter((e) => e.status === "active").length)}
-      </Stat>
-      <Stat
-        label="Answered"
-        href="/behavior/experiments/?status=answered"
-        note={
-          experiments.data ? `${all.filter((e) => e.status === "parked").length} parked` : undefined
-        }
-      >
-        {n(experiments.data && all.filter((e) => e.status === "answered").length)}
-      </Stat>
-      <Stat label="Runs this week" note={newest ? `newest started ${ago(newest)}` : undefined}>
-        {n(runs.data && week.length)}
-      </Stat>
+      {arrange(stats, (s) => partId("home/stat", s.id), rule).map((s) => (
+        <Fragment key={s.id}>{s.el}</Fragment>
+      ))}
     </StatGrid>
   );
 }
@@ -90,10 +128,12 @@ export function LiveNow() {
   if (live.jobs.length + live.runs.length === 0) return null;
   return (
     <section className="flex w-full flex-col gap-3">
-      <h2 className="text-lg font-semibold tracking-tight">Running</h2>
+      <h2 className="text-lg font-semibold tracking-tight" {...part("home/live/title")}>
+        Running
+      </h2>
       <ul className="divide-y rounded-xl border">
         {live.jobs.map((j) => (
-          <li key={j.id}>
+          <li key={j.id} {...part(partId("home/live/job", j.id))}>
             <Link
               href={jobHref(j.id)}
               className="hover:bg-accent/40 flex items-center gap-3 px-4 py-3 text-sm transition-colors"
@@ -108,7 +148,7 @@ export function LiveNow() {
           </li>
         ))}
         {live.runs.map((r) => (
-          <li key={r.id}>
+          <li key={r.id} {...part(partId("home/live/run", r.id))}>
             <Link
               href={runHref(r.id)}
               className="hover:bg-accent/40 flex items-center gap-3 px-4 py-3 text-sm transition-colors"
@@ -145,6 +185,7 @@ export function DomainCards() {
         return (
           <Link
             key={d.section}
+            {...part(partId("home/domain", d.section))}
             href={overview?.href ?? "/"}
             className="hover:bg-accent/40 focus-visible:ring-ring/50 group flex flex-col gap-3 rounded-xl border p-5 transition-colors outline-none focus-visible:ring-[3px]"
           >
@@ -177,6 +218,7 @@ const MORE =
 /** Home's region: where the research stands, in the blocks the layout lists. */
 export function HomeBlocks() {
   const layout = useLayout(null);
+  const rule = useRules();
   if (!layout.data) return <QueryState query={layout}>{() => null}</QueryState>;
   return (
     <div>
@@ -200,10 +242,18 @@ export function HomeBlocks() {
                   <>
                     <ActiveExperiments />
                     <div className="flex gap-4">
-                      <Link href="/behavior/experiments/" className={MORE}>
+                      <Link
+                        href="/behavior/experiments/"
+                        className={cn(MORE, rule("home/more/behavior").hidden && "hidden")}
+                        {...part("home/more/behavior")}
+                      >
                         Behavior experiments
                       </Link>
-                      <Link href="/efficiency/experiments/" className={MORE}>
+                      <Link
+                        href="/efficiency/experiments/"
+                        className={cn(MORE, rule("home/more/efficiency").hidden && "hidden")}
+                        {...part("home/more/efficiency")}
+                      >
                         Efficiency experiments
                       </Link>
                     </div>
@@ -216,7 +266,11 @@ export function HomeBlocks() {
                 body: (
                   <>
                     <RunsList limit={8} compact />
-                    <Link href="/runs/" className={MORE}>
+                    <Link
+                      href="/runs/"
+                      className={cn(MORE, rule("home/more/runs").hidden && "hidden")}
+                      {...part("home/more/runs")}
+                    >
                       All runs
                     </Link>
                   </>
