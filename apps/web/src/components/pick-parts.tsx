@@ -31,18 +31,33 @@ const useTapping = () =>
     () => false,
   );
 
+// the server's version of the list last sent; the agent has read it once the server's read is
+// at least this
+let sent = 0;
 let syncing: ReturnType<typeof setTimeout> | undefined;
 function setPicked(next: Picked[]) {
   picked = next;
+  sent = 0;
   emit();
   // the agent reads the list as it stands; a burst of clicks sends once
   clearTimeout(syncing);
   syncing = setTimeout(() => {
-    pick({ parts: picked }).catch((err: Error) =>
-      toast.error("Your agent cannot see what you picked", { description: err.message }),
-    );
+    pick({ parts: picked })
+      .then((p) => {
+        sent = p.version;
+        emit();
+      })
+      .catch((err: Error) =>
+        toast.error("Your agent cannot see what you picked", { description: err.message }),
+      );
   }, 150);
 }
+const useSent = () =>
+  useSyncExternalStore(
+    subscribe,
+    () => sent,
+    () => 0,
+  );
 
 /** Touch screens have no Shift: this turns taps into picks until Done. */
 export function setTapping(on: boolean) {
@@ -73,12 +88,13 @@ function read(el: HTMLElement): Picked {
   };
 }
 
-/** The picked parts as text for any agent's prompt: what each is, where, and its data. */
+/** The picked parts as text for any agent's prompt, numbered as the tray numbers them: what each
+ * is, where, and its data. */
 export function reference(parts: Picked[]): string {
   return parts
-    .map((p) =>
+    .map((p, i) =>
       [
-        `louped part ${p.id}`,
+        `pick ${i + 1}: louped part ${p.id}`,
         `page: ${p.url}`,
         p.run && `run: ${p.run}`,
         p.experiment && `experiment: ${p.experiment}`,
@@ -94,12 +110,16 @@ export function reference(parts: Picked[]): string {
 const esc = (id: string) => CSS.escape(id);
 
 /** Shift+click any part (a card, a row, a field, a control) to pick it, again to drop it; the
- * agent reads the picks with ui_selection. A tray lists them, to copy for an agent without
- * louped's tools or to clear. */
+ * agent reads the picks with ui_selection, or with the person's next message through louped's
+ * prompt hook. A tray numbers them (@sel 2 names the second), says whether the agent has read
+ * them, and copies them for an agent without louped's tools. */
 export function PartPicker() {
   const canPick = useCanPick();
   const parts = usePicked();
   const tap = useTapping();
+  const version = useSent();
+  const server = useQuery({ ...q.picks(), enabled: canPick && parts.length > 0 });
+  const agentRead = version > 0 && (server.data?.read ?? 0) >= version;
   const query = useSearchParams().toString();
   const here = usePathname() + (query ? `?${query}` : "");
 
@@ -178,7 +198,7 @@ export function PartPicker() {
       >
         <span className="text-muted-foreground shrink-0">
           {parts.length
-            ? `${parts.length} picked · your agent sees ${parts.length === 1 ? "it" : "them"}`
+            ? `${parts.length} picked · ${agentRead ? "your agent has read them" : "not read by your agent yet"}`
             : "Tap parts to pick them"}
         </span>
         <ul className="flex min-w-0 gap-1 overflow-x-auto">
@@ -186,8 +206,9 @@ export function PartPicker() {
             <li
               key={`${p.url} ${p.id}`}
               className="bg-muted flex shrink-0 items-center gap-1 rounded-md py-0.5 pr-0.5 pl-2 font-mono"
-              title={`${p.id}\n${p.url}`}
+              title={`pick ${i + 1}: ${p.id}\n${p.url}`}
             >
+              <span className="text-muted-foreground">{i + 1}</span>
               {shortName(p.id)}
               <button
                 type="button"

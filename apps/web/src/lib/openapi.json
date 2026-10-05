@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "louped",
-    "version": "0.4.0"
+    "version": "0.5.0"
   },
   "paths": {
     "/api/health": {
@@ -3151,7 +3151,7 @@
                 "schema": {
                   "anyOf": [
                     {
-                      "$ref": "#/components/schemas/Selection"
+                      "$ref": "#/components/schemas/Picks"
                     },
                     {
                       "type": "null"
@@ -3184,7 +3184,46 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Selection"
+                  "$ref": "#/components/schemas/Picks"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ui/selection/read": {
+      "post": {
+        "summary": "Read",
+        "description": "The agent read the picks at req.version, so the tray can say so.",
+        "operationId": "read_api_ui_selection_read_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Read"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Picks"
                 }
               }
             }
@@ -6130,6 +6169,31 @@
         "title": "Picked",
         "description": "One part a person Shift+clicked, and the page it was on."
       },
+      "Picks": {
+        "properties": {
+          "parts": {
+            "items": {
+              "$ref": "#/components/schemas/Picked"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Parts"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "read": {
+            "type": "integer",
+            "title": "Read",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": ["parts", "version"],
+        "title": "Picks",
+        "description": "The picks as the server keeps them: each new list gets the next version, and read is the\nversion the agent last read (ui_selection, or `louped picks` from a prompt hook)."
+      },
       "Pin": {
         "properties": {
           "id": {
@@ -6435,6 +6499,19 @@
         "type": "object",
         "required": ["remote", "bundle", "runs"],
         "title": "Pushed"
+      },
+      "Read": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": ["version"],
+        "title": "Read",
+        "description": "The agent read the picks at this version."
       },
       "RemoteState": {
         "properties": {

@@ -1,9 +1,9 @@
 """`louped init`: make a folder a research project.
 
 It copies louped's templates (src/louped/templates): the project's louped.toml and AGENTS.md, the
-MCP server and skills for a coding agent (the same files the Claude Code plugin ships), and an
-example experiment. A file that exists is kept, never overwritten, so init is safe to run again
-and in a repository that already has an AGENTS.md or a .mcp.json.
+MCP server, skills and prompt hook for a coding agent (the same files the Claude Code plugin
+ships), and an example experiment. A file that exists is kept, never overwritten, so init is safe
+to run again and in a repository that already has an AGENTS.md or a .mcp.json.
 """
 
 from __future__ import annotations
@@ -23,6 +23,8 @@ def _files(example: bool) -> list[tuple[Path, str]]:
         (project / "louped.toml", "louped.toml"),
         (project / "AGENTS.md", "AGENTS.md"),
         (agent / ".mcp.json", ".mcp.json"),
+        # the plugin's hooks, as the project's Claude Code settings: picks reach the agent
+        (agent / "hooks" / "hooks.json", ".claude/settings.json"),
     ]
     out += [(f, f".claude/{f.relative_to(agent).as_posix()}")
             for f in sorted((agent / "skills").rglob("*")) if f.is_file()]  # fmt: skip

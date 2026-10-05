@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Literal
@@ -357,6 +359,19 @@ class Mcp:
 
 
 @dataclass(frozen=True)
+class Picks:
+    """What the person Shift+clicked in the app, as text for an agent, numbered as the tray
+    numbers them. With --hook, a Claude Code UserPromptSubmit hook: it adds the picks to the
+    message when they are new to the agent or the message says @sel (or @sel 2, @sel 1,3). Needs
+    the agent extra."""
+
+    hook: bool = False
+    """Read the hook's JSON on stdin and print the hook's output."""
+    url: str = "http://127.0.0.1:8000"
+    """The louped serve the app runs on."""
+
+
+@dataclass(frozen=True)
 class Examples:
     """Example runs for every page, from a tiny model trained here on the CPU: a vector, an
     analysis with every figure, a grid of evals, a fine-tune, a benchmark and a circuit. Their
@@ -392,6 +407,7 @@ Command = (
     | Annotated[Export, tyro.conf.subcommand("export")]
     | Annotated[Sources, tyro.conf.subcommand("source")]
     | Annotated[Mcp, tyro.conf.subcommand("mcp")]
+    | Annotated[Picks, tyro.conf.subcommand("picks")]
     | Annotated[Examples, tyro.conf.subcommand("examples")]
     | Annotated[Version, tyro.conf.subcommand("version")]
 )
@@ -516,6 +532,32 @@ def _plugin_command() -> bool:
         return False
     run(sys.argv[2:])
     return True
+
+
+def _picks(cmd: Picks) -> None:
+    try:
+        import httpx
+
+        from louped.picks import current, describe, for_prompt, hook_output, mark_read
+    except ModuleNotFoundError as exc:
+        if exc.name != "httpx":
+            raise
+        raise SystemExit("louped picks needs the agent extra: pip install 'louped[agent]'") from exc
+    with httpx.Client(base_url=f"{cmd.url.rstrip('/')}/api", timeout=5) as api:
+        if cmd.hook:
+            prompt = json.load(sys.stdin).get("prompt", "")
+            if out := hook_output(for_prompt(api, prompt)):
+                print(out)
+            return
+        try:
+            picks = current(api)
+        except httpx.HTTPError as e:
+            raise SystemExit(f"louped picks: no louped serve at {cmd.url}: {e}") from e
+        if not picks or not picks["parts"]:
+            print("Nothing is picked.")
+            return
+        mark_read(api, picks)
+        print(describe(picks["parts"], list(range(1, len(picks["parts"]) + 1))))
 
 
 def main() -> None:
@@ -721,6 +763,8 @@ def main() -> None:
                     "louped mcp needs the agent extra: pip install 'louped[agent]'"
                 ) from exc
             server(cmd.url).run("stdio")
+        case Picks() as cmd:
+            _picks(cmd)
         case Examples():
             from louped.examples import examples
 

@@ -98,9 +98,14 @@ test("Shift+click picks parts for the agent, with what they stand for", async ({
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await mock(page);
   const sent: { parts: { id: string; data: unknown; run: string | null }[] }[] = [];
+  // the server's copy: each list sent is the next version; read is the agent's last read
+  const server = { parts: [] as unknown[], version: 0, read: 0 };
   await page.route("**/api/ui/selection", (r) => {
-    sent.push(r.request().postDataJSON());
-    return r.fulfill({ json: sent.at(-1) });
+    if (r.request().method() === "POST") {
+      sent.push(r.request().postDataJSON());
+      Object.assign(server, { parts: sent.at(-1)!.parts, version: server.version + 1 });
+    }
+    return r.fulfill({ json: server });
   });
   await page.goto("/run/?id=m-1&tab=items");
   const row = page.locator('[data-part="items/row/28"]');
@@ -114,7 +119,8 @@ test("Shift+click picks parts for the agent, with what they stand for", async ({
   await stat.click({ modifiers: ["Shift"] });
   await expect(page).not.toHaveURL(/item=28/); // a pick opens nothing
   const tray = page.getByRole("region", { name: "Picked parts" });
-  await expect(tray).toContainText("2 picked");
+  await expect(tray).toContainText("2 picked · not read by your agent yet");
+  await expect(tray.getByRole("listitem")).toHaveText([/^1\s*row \/ 28/, /^2\s*stat \/ pressure/]);
   await expect
     .poll(() => sent.at(-1)?.parts.map((p) => p.id))
     .toEqual(["items/row/28", "items/stat/pressure"]);
@@ -126,6 +132,8 @@ test("Shift+click picks parts for the agent, with what they stand for", async ({
     records: { baseline: { pred: "True" }, pressure: { pred: "False" } },
   });
   expect(rate.data).toMatchObject({ condition: "pressure", k: 1, n: 2, down: "1/2" });
+  server.read = server.version; // the agent reads them (ui_selection, or the prompt hook)
+  await expect(tray).toContainText("2 picked · your agent has read them");
   await expect(row).toHaveCSS("outline-style", "solid");
   await page.screenshot({ path: info.outputPath("picked.png") });
 

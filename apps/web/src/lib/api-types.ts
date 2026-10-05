@@ -1327,6 +1327,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/ui/selection/read": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Read
+     * @description The agent read the picks at req.version, so the tray can say so.
+     */
+    post: operations["read_api_ui_selection_read_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/ui/show": {
     parameters: {
       query?: never;
@@ -2533,6 +2553,22 @@ export interface components {
       data?: components["schemas"]["JsonValue"];
     };
     /**
+     * Picks
+     * @description The picks as the server keeps them: each new list gets the next version, and read is the
+     *     version the agent last read (ui_selection, or `louped picks` from a prompt hook).
+     */
+    Picks: {
+      /** Parts */
+      parts: components["schemas"]["Picked"][];
+      /** Version */
+      version: number;
+      /**
+       * Read
+       * @default 0
+       */
+      read: number;
+    };
+    /**
      * Pin
      * @description A passage of a source someone marked: the quote as it stands on its page.
      */
@@ -2676,6 +2712,14 @@ export interface components {
       bundle: string | null;
       /** Runs */
       runs: string[];
+    };
+    /**
+     * Read
+     * @description The agent read the picks at this version.
+     */
+    Read: {
+      /** Version */
+      version: number;
     };
     /** RemoteState */
     RemoteState: {
@@ -5724,7 +5768,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Selection"] | null;
+          "application/json": components["schemas"]["Picks"] | null;
         };
       };
     };
@@ -5748,7 +5792,40 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Selection"];
+          "application/json": components["schemas"]["Picks"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  read_api_ui_selection_read_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Read"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Picks"];
         };
       };
       /** @description Validation Error */

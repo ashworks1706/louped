@@ -38,7 +38,7 @@ projects; each project is its own folder and repository. `louped init` makes one
 my-research/
   louped.toml          marks the root (commands find it from any subfolder) and lists its domains
   experiments/        the questions, written by the person and their agent; committed
-  AGENTS.md, .mcp.json, .claude/skills/
+  AGENTS.md, .mcp.json, .claude/skills/, .claude/settings.json
                       the harness for the person's own coding agent
   .louped/             what louped writes: runs, logs, jobs, vendored harnesses; gitignored
 ```
@@ -146,8 +146,9 @@ capability, so an install carries only what it uses. A package imports only pack
 ```
 experiments                              leaf, in a project; nothing imports it
 cli
-server | agent | init                    FastAPI over the stores; Probe and Benchmark; jobs; the
-                                         MCP server, an HTTP client of the API; louped init
+server | agent | init | picks           FastAPI over the stores; Probe and Benchmark; jobs; the
+                                         MCP server, an HTTP client of the API; louped init; the
+                                         prompt hook that hands the agent the person's picks
 check                                    what in the project's write-ups is not grounded
 reports                                  reports/: decks, documents, exported figures
 train | sweep | grid | sync | features | circuits | judge | bench | derive | sources | notebooks
@@ -243,7 +244,8 @@ every GET answer its pages ask for, for any static host.
 
 `louped mcp` is a stdio MCP server for coding agents. It imports nothing from the server. It calls
 the same HTTP API the UI does. Thus an agent's jobs share the queue and the `--expose` guard, and
-show on the Runs page.
+show on the Runs page. `louped picks --hook`, a Claude Code prompt hook, reads the same API: it adds
+the parts the person Shift+clicked to their next message, and marks them read for the app's tray.
 
 Pages: a top bar of sections is over a sidebar of the section's pages. The sidebar folds to icons.
 

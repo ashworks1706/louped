@@ -16,23 +16,44 @@ The page updates as it works, with no build or restart.
 ## Pick parts with Shift+click
 
 Hold Shift and click any part of a page to pick it. Shift+click it again to drop it. Pick as many
-as you like, across pages. A tray at the bottom lists them. Your agent reads them with
-`ui_selection`, each with what it stands for:
+as you like, across pages. A tray at the bottom lists them, numbered. Each pick carries what it
+stands for:
 
 - an item's record under every condition
 - a condition's rate and flips
 - a field's value and meaning
 
 Thus you can pick two rows and ask "why did pushback flip this one and not that one?". On a touch
-screen, **Pick parts** in ⌘K turns taps into picks. **Copy** gives the same as text, for an agent
-without louped's tools:
+screen, **Pick parts** in ⌘K turns taps into picks.
+
+### How your agent gets them
+
+- **Claude Code:** `louped init` (or the plugin) adds a prompt hook. When you send a message, the
+  hook adds the picks the agent has not read yet. You do not need to say anything.
+- **`@sel` in a message** adds every pick again. `@sel 2` adds only pick 2, and `@sel 1,3` adds
+  picks 1 and 3.
+- **Any agent with louped's tools** reads them with `ui_selection`. It does this when you say
+  "this row" or "these".
+- **Any other agent:** **Copy** in the tray, or `louped picks`, gives the same as text:
 
 ```
-louped part items/row/28
+pick 1: louped part items/row/28
 page: /run/?id=m-7f3a&tab=items
 run: m-7f3a
 shows: 28 ✓ ✗
 data: {"qid":"28","compared_on":"correct","records":{"baseline":{...},"pressure":{...}}}
+```
+
+The tray says **not read by your agent yet** until the agent reads the picks, then **your agent
+has read them**. If the project's `.claude/settings.json` existed before `louped init`, init keeps
+it. Add the hook to it yourself:
+
+```json title=".claude/settings.json"
+{
+  "hooks": {
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "louped picks --hook" }] }]
+  }
+}
 ```
 
 ## Items you pick are a cohort
