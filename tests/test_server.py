@@ -125,7 +125,7 @@ def test_the_ui_launches_an_experiment_as_a_job_and_reads_its_log(tmp_path) -> N
     opts = {o["flag"]: o for o in client.get("/api/launch/options?id=script:hello/run.py").json()}
     assert opts["--name"] == {"flag": "--name", "kind": "text", "default": "world",
                               "help": "Who to greet.", "choices": [],
-                              "required": False}  # fmt: skip
+                              "required": False, "suggest": None}  # fmt: skip
     assert opts["--loud"]["kind"] == "bool" and opts["--times"]["kind"] == "list"
 
     body = {"id": "script:hello/run.py", "options": {"--name": "louped", "--loud": True,

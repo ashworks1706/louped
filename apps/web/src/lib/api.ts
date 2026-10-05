@@ -36,6 +36,8 @@ type InspectResponse = Schemas["InspectResponse"];
 export type FeatureDashboard = Schemas["FeatureDashboard"];
 export type Launchable = Schemas["Launchable"];
 export type LaunchOption = Schemas["Option"];
+export type Judge = Schemas["Judge"];
+export type EvalTask = Schemas["EvalTask"];
 export type LaunchRequest = Schemas["LaunchRequest"];
 export type Job = Schemas["Job"];
 export type Target = Schemas["Target"];
@@ -375,6 +377,16 @@ export const q = {
       isSnapshot()
         ? Promise.resolve([] as RunView[])
         : get<RunView[]>(`/experiments/${encodeURIComponent(experiment)}/views`),
+  }),
+  /** louped's judge and the project's judges/<name>.py; a published dashboard judges nothing. */
+  judges: () => ({
+    queryKey: ["judges"],
+    queryFn: () => (isSnapshot() ? Promise.resolve([] as Judge[]) : get<Judge[]>("/judges")),
+  }),
+  /** Every Inspect task Launch's eval runs: the project's, then inspect_evals'. */
+  evalTasks: () => ({
+    queryKey: ["eval-tasks"],
+    queryFn: () => get<EvalTask[]>("/evals"),
   }),
   experiment: (name: string) => ({
     queryKey: ["experiment", name],

@@ -446,7 +446,7 @@
   },
   {
     "part": "compare/pick/*",
-    "about": "The baseline (a), the changed run (b) and the swap.",
+    "about": "Baseline (a), changed run (b), the swap and the judge.",
     "rules": []
   },
   {
@@ -498,6 +498,16 @@
     "part": "launch/option/*",
     "about": "One of a script's options, by flag.",
     "rules": ["hidden", "label", "about", "note"]
+  },
+  {
+    "part": "launch/browse/*",
+    "about": "Opens the list of tasks an option can take, by flag.",
+    "rules": ["hidden", "label"]
+  },
+  {
+    "part": "launch/eval/*",
+    "about": "One Inspect task in that list, by task.",
+    "rules": ["hidden"]
   },
   {
     "part": "launch/config",

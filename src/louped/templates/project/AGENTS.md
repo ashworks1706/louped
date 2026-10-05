@@ -49,4 +49,5 @@ results.
 | `layout.json`     | what the app's pages show (`change-ui`); committed     |
 | `experiments/`    | the questions; committed                              |
 | `plugins/`        | the project's own pages, routes and tools; committed  |
+| `judges/`         | judges that compare two eval runs (`new_judge`); committed |
 | `.louped/`         | runs, eval logs, jobs, caches; gitignored, rebuildable |

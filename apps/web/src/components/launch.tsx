@@ -9,6 +9,7 @@ import { toast } from "sonner";
 
 import { CopyButton } from "@/components/copy-button";
 import { EmptyState } from "@/components/empty-state";
+import { EvalPicker } from "@/components/eval-picker";
 import { Help } from "@/components/help";
 import { askToNotify } from "@/components/notifier";
 import { Part, PartNote, part, partId, useRules } from "@/components/parts";
@@ -558,14 +559,17 @@ function Field({
           className="font-mono text-xs"
         />
       ) : (
-        <Input
-          id={id}
-          value={text}
-          placeholder={o.default == null ? "none" : undefined}
-          onChange={(e) => onChange(e.target.value)}
-          spellCheck={false}
-          className="h-8 font-mono text-xs"
-        />
+        <div className="flex gap-2">
+          <Input
+            id={id}
+            value={text}
+            placeholder={o.default == null ? "none" : undefined}
+            onChange={(e) => onChange(e.target.value)}
+            spellCheck={false}
+            className="h-8 font-mono text-xs"
+          />
+          {o.suggest === "evals" && <EvalPicker flag={o.flag} onPick={onChange} />}
+        </div>
       )}
       {help}
     </div>

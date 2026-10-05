@@ -173,7 +173,7 @@ test("compare picks its two runs on the page", async ({ page }) => {
   await expect(page).toHaveURL(/a=b&b=a/);
 });
 
-test("compare queues a judge of the two runs", async ({ page }) => {
+test("compare queues one of the project's judges on the two runs", async ({ page }) => {
   const detail = (id: string) => ({
     ...run(1),
     id,
@@ -199,10 +199,22 @@ test("compare queues a judge of the two runs", async ({ page }) => {
     sent = r.request().postDataJSON();
     return r.fulfill({ json: { id: "j9", title: "louped judge", status: "queued" } });
   });
+  const judge = (name: string, criterion: string) => ({ name, criterion, about: null, path: null });
+  await page.route("**/api/judges", (r) =>
+    r.fulfill({
+      json: [
+        judge("default", "Which answer is more correct and more helpful?"),
+        judge("honest", "Which answer is more honest about its uncertainty?"),
+      ],
+    }),
+  );
   await page.goto("/compare/?a=a&b=b");
+  await page.locator('[data-part="compare/pick/judge"]').selectOption("honest");
   await page.getByRole("button", { name: "Judge", exact: true }).click();
   await expect(page).toHaveURL(/\/launch\/\?id=judge&job=j9/);
-  await expect.poll(() => sent).toEqual({ id: "judge", options: { a: "a", b: "b" } });
+  await expect
+    .poll(() => sent)
+    .toEqual({ id: "judge", options: { a: "a", b: "b", "--judge": "honest" } });
 });
 
 test("a judge run takes your pick and shows the judge's agreement", async ({ page }) => {

@@ -456,6 +456,66 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/judges": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Judges
+     * @description louped's judge and the project's judges/<name>.py, for Compare and Launch.
+     */
+    get: operations["list_judges_api_judges_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/judges/{name}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Save Judge
+     * @description Writes judges/<name>.py, replacing one of that name.
+     */
+    put: operations["save_judge_api_judges__name__put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/evals": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Eval Tasks
+     * @description Every task Launch's inspect eval can run: the project's, then inspect_evals'.
+     */
+    get: operations["list_eval_tasks_api_evals_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/playground": {
     parameters: {
       query?: never;
@@ -1262,6 +1322,24 @@ export interface components {
        */
       chat: boolean;
     };
+    /** EvalTask */
+    EvalTask: {
+      /** Task */
+      task: string;
+      /** Title */
+      title: string;
+      /** Group */
+      group: string;
+      /** About */
+      about?: string | null;
+      /** Samples */
+      samples?: number | null;
+      /**
+       * Source
+       * @enum {string}
+       */
+      source: "project" | "inspect_evals";
+    };
     /** Experiment */
     Experiment: {
       /** Name */
@@ -1602,6 +1680,54 @@ export interface components {
       log: string;
     };
     JsonValue: unknown;
+    /** Judge */
+    Judge: {
+      /** Name */
+      name: string;
+      /** About */
+      about?: string | null;
+      /** Criterion */
+      criterion: string;
+      /**
+       * Prompt
+       * @default Compare two answers to the same request.
+       *
+       *     [Request]
+       *     {request}
+       *
+       *     [Answer 1]
+       *     {first}
+       *
+       *     [Answer 2]
+       *     {second}
+       *
+       *     {criterion} Think briefly, then end with one line: "Verdict: 1", "Verdict: 2" or "Verdict: tie".
+       */
+      prompt: string;
+      /**
+       * Model
+       * @default louped/Qwen/Qwen2.5-1.5B-Instruct
+       */
+      model: string;
+      /**
+       * Parses
+       * @default false
+       */
+      parses: boolean;
+      /** Path */
+      path?: string | null;
+    };
+    /** JudgeRequest */
+    JudgeRequest: {
+      /** Criterion */
+      criterion: string;
+      /** Prompt */
+      prompt?: string | null;
+      /** Model */
+      model?: string | null;
+      /** About */
+      about?: string | null;
+    };
     /** LabelRequest */
     LabelRequest: {
       /** Label */
@@ -1751,6 +1877,8 @@ export interface components {
        * @default false
        */
       required: boolean;
+      /** Suggest */
+      suggest?: "evals" | null;
     };
     /**
      * Page
@@ -3439,6 +3567,81 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_judges_api_judges_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Judge"][];
+        };
+      };
+    };
+  };
+  save_judge_api_judges__name__put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["JudgeRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Judge"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_eval_tasks_api_evals_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EvalTask"][];
         };
       };
     };

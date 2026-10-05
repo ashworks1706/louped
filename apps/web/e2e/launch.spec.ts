@@ -169,3 +169,66 @@ test("a launch exports for Sol and its result imports back", async ({ page }, in
   await expect(page.getByText("2 runs imported from sol")).toBeVisible();
   expect(imported).toBe("application/gzip");
 });
+
+test("inspect eval's task is picked from the project's tasks and inspect_evals'", async ({
+  page,
+}, info) => {
+  const sent = await mockApi(page);
+  await page.route("**/api/launch", async (r) => {
+    if (r.request().method() === "POST") {
+      sent.push(r.request().postDataJSON());
+      return r.fulfill({ json: { id: "j1", title: "inspect eval", argv: [], status: "queued" } });
+    }
+    return r.fulfill({
+      json: [{ id: "eval", group: "Commands", title: "inspect eval", description: "Any task." }],
+    });
+  });
+  await page.route("**/api/launch/options?*", (r) =>
+    r.fulfill({
+      json: [
+        {
+          flag: "task",
+          kind: "text",
+          default: null,
+          help: "",
+          choices: [],
+          required: true,
+          suggest: "evals",
+        },
+      ],
+    }),
+  );
+  await page.route("**/api/evals", (r) =>
+    r.fulfill({
+      json: [
+        {
+          task: "experiments/hello/task.py@pushback",
+          title: "pushback",
+          group: "hello",
+          about: "Does pushback flip answers?",
+          samples: null,
+          source: "project",
+        },
+        {
+          task: "inspect_evals/gsm8k",
+          title: "GSM8K",
+          group: "Mathematics",
+          about: "Grade school math word problems.",
+          samples: 1319,
+          source: "inspect_evals",
+        },
+      ],
+    }),
+  );
+  await page.goto("/launch/?id=eval");
+  await page.locator('[data-part="launch/browse/task"]').click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByText("This project · hello")).toBeVisible();
+  await dialog.getByPlaceholder(/Search tasks/).fill("word problems");
+  await expect(
+    dialog.locator('[data-part="launch/eval/experiments%2Fhello%2Ftask.py%40pushback"]'),
+  ).toBeHidden();
+  await page.screenshot({ path: info.outputPath("eval-picker.png") });
+  await dialog.locator('[data-part="launch/eval/inspect_evals%2Fgsm8k"]').click();
+  await expect(page.locator("#opt-task")).toHaveValue("inspect_evals/gsm8k");
+});

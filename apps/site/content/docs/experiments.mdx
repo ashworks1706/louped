@@ -96,6 +96,27 @@ A run's files can grow after it ends. `louped derive <run> <script>` runs the sc
 records become columns in **Items**, a figure lands on **Figures**. The script is logged beside
 them. Your agent does this when you ask for a column or chart the run lacks.
 
+## Evals and judges
+
+An eval is an Inspect task: a `@task` function in an experiment's `task.py`, or any of
+inspect_evals' benchmarks. **Browse** beside the task on Launch's `inspect eval` lists both,
+searchable by what they measure.
+
+A judge compares two eval runs' answers sample by sample, each pair in both orders, and logs B's
+win rate as a run. louped has one (`default`); a project adds its own as `judges/<name>.py`:
+
+```python title="judges/honest.py"
+"""Which answer admits what it does not know?"""
+
+CRITERION = "Which answer is more honest about its uncertainty?"
+MODEL = "louped/Qwen/Qwen2.5-7B-Instruct"  # optional
+# PROMPT = "...{request}...{first}...{second}...{criterion}"  (optional)
+# def verdict(reply): return "1", "2", "tie" or None          (optional)
+```
+
+Compare's **Judge** and Launch's `louped judge` offer every judge by name. Your agent writes one
+with `new_judge` when you ask for a new criterion.
+
 ## Code from a paper
 
 If a paper's code needs its own package versions, run it in its own environment. Clone it at a

@@ -6,29 +6,29 @@ description: Every louped command.
 Every command takes `--help`, and most are also forms on the app's Launch page. Commands find the
 project by looking for `louped.toml` in the current folder and its parents.
 
-| Command                          | What it does                                                |
-| -------------------------------- | ----------------------------------------------------------- |
-| `louped init [dir]`              | Makes a project                                             |
-| `louped serve`                   | Starts the app on http://127.0.0.1:8000                     |
-| `louped view <folder>`           | Opens existing results, read-only                           |
-| `louped new <name> --domain <d>` | Starts an experiment                                        |
-| `louped mcp`                     | The MCP server for your coding agent                        |
-| `louped import <file>`           | Adds results from a cluster job                             |
-| `louped push` / `louped pull`    | Shares runs through the project's remote; sets one up first |
-| `louped publish <dir>`           | Writes a read-only dashboard as static files                |
-| `louped grid <yaml>`             | Compares conditions against a baseline                      |
-| `louped train <recipe> <yaml>`   | Fine-tunes: `sft`, `dpo`, `grpo`, `classify`, `reft`        |
-| `louped sweep`                   | Steers at every layer and strength                          |
-| `louped bench <model>`           | Measures speed and memory per weight format                 |
-| `louped endpoint-bench <url>...` | Measures speed of OpenAI-compatible servers                 |
-| `louped judge <a> <b>`           | A local model picks the better answer between two eval runs |
-| `louped features`                | Builds SAE feature dashboards                               |
-| `louped derive <run> <script>`   | Adds columns or a figure to a run from its files            |
-| `louped circuit`                 | Builds an attribution graph                                 |
-| `louped data ...`                | Builds training sets from logged model calls                |
-| `louped examples`                | Fills every page with example runs from a tiny model        |
-| `louped version`                 | Prints the version                                          |
-| `louped <plugin>`                | Runs a project plugin's command                             |
+| Command                          | What it does                                                                      |
+| -------------------------------- | --------------------------------------------------------------------------------- |
+| `louped init [dir]`              | Makes a project                                                                   |
+| `louped serve`                   | Starts the app on http://127.0.0.1:8000                                           |
+| `louped view <folder>`           | Opens existing results, read-only                                                 |
+| `louped new <name> --domain <d>` | Starts an experiment                                                              |
+| `louped mcp`                     | The MCP server for your coding agent                                              |
+| `louped import <file>`           | Adds results from a cluster job                                                   |
+| `louped push` / `louped pull`    | Shares runs through the project's remote; sets one up first                       |
+| `louped publish <dir>`           | Writes a read-only dashboard as static files                                      |
+| `louped grid <yaml>`             | Compares conditions against a baseline                                            |
+| `louped train <recipe> <yaml>`   | Fine-tunes: `sft`, `dpo`, `grpo`, `classify`, `reft`                              |
+| `louped sweep`                   | Steers at every layer and strength                                                |
+| `louped bench <model>`           | Measures speed and memory per weight format                                       |
+| `louped endpoint-bench <url>...` | Measures speed of OpenAI-compatible servers                                       |
+| `louped judge <a> <b>`           | A judge (`--judge`, from `judges/`) picks the better answer between two eval runs |
+| `louped features`                | Builds SAE feature dashboards                                                     |
+| `louped derive <run> <script>`   | Adds columns or a figure to a run from its files                                  |
+| `louped circuit`                 | Builds an attribution graph                                                       |
+| `louped data ...`                | Builds training sets from logged model calls                                      |
+| `louped examples`                | Fills every page with example runs from a tiny model                              |
+| `louped version`                 | Prints the version                                                                |
+| `louped <plugin>`                | Runs a project plugin's command                                                   |
 
 ## Environment variables
 
