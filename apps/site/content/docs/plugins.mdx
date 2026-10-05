@@ -59,7 +59,8 @@ A tab reads the id from its URL and fetches what it shows:
 <p id="out"></p>
 <script>
   const run = new URLSearchParams(location.search).get("run");
-  fetch(`/api/runs/${run}`).then((r) => r.json())
+  fetch(`/api/runs/${run}`)
+    .then((r) => r.json())
     .then((r) => (out.textContent = `${Object.keys(r.metrics).length} metrics`));
 </script>
 ```

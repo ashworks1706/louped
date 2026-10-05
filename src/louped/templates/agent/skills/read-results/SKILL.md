@@ -6,7 +6,8 @@ description: Read a louped run's results and report them honestly. Use after a r
 1. Find the run: `runs` (filter by experiment), then `run <id>` for its metrics, parameters and
    files.
 2. Read the files the run wrote: `report.md` first, then per-item records. For an eval, `samples`
-   and `sample` give each transcript and score.
+   and `sample` give each transcript and score. Files named in the run's `louped.edited` tag were
+   changed by the person after the run: say so when you quote them.
 3. Before any number, say what it rests on: the denominator, which items, which model revision.
    A rate on fewer than ~30 items is a pilot; say so.
 4. Compare two runs only with `compare <a> <b>`: report the difference with its paired interval
