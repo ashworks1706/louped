@@ -7,6 +7,7 @@ records, and why.
 
 from __future__ import annotations
 
+import os
 import re
 from datetime import UTC, datetime
 from pathlib import Path
@@ -43,13 +44,30 @@ class Saved(Cohort):
     name: str
 
 
+def _inside(root: Path, *parts: str) -> Path:
+    """root/parts, refused when it would lead out of root (a name with .. or a /)."""
+    base = os.path.realpath(root)
+    path = os.path.realpath(os.path.join(base, *parts))
+    if not path.startswith(base + os.sep):
+        raise ValueError(f"{'/'.join(parts)!r} is not a name under {root}")
+    return Path(path)
+
+
+def _folder(experiment: str) -> Path:
+    folder = _inside(experiments_dir(), experiment)
+    if (
+        folder.parent != Path(os.path.realpath(experiments_dir()))
+        or not (folder / "README.md").is_file()
+    ):
+        raise FileNotFoundError(f"no experiment {experiment!r} under {experiments_dir()}")
+    return folder
+
+
 def _path(experiment: str, name: str) -> Path:
     if not NAME.match(name):
         raise ValueError(f"{name!r} is not a cohort name: lowercase letters, digits and -")
-    folder = experiments_dir() / experiment
-    if not (folder / "README.md").is_file():
-        raise FileNotFoundError(f"no experiment {experiment!r} under {experiments_dir()}")
-    return folder / "cohorts" / f"{name}.json"
+    folder = _folder(experiment)
+    return _inside(folder, "cohorts", f"{name}.json")
 
 
 def read(experiment: str, name: str) -> Saved:
@@ -66,7 +84,7 @@ def read(experiment: str, name: str) -> Saved:
 
 def listed(experiment: str) -> list[Saved]:
     """An experiment's saved cohorts, by name."""
-    folder = experiments_dir() / experiment / "cohorts"
+    folder = _folder(experiment) / "cohorts"
     if not folder.is_dir():
         return []
     files = sorted(folder.glob("*.json"))

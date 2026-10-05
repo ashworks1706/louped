@@ -7,6 +7,8 @@ import mlflow
 import pytest
 from fastapi.testclient import TestClient
 
+from louped.core import cohorts
+from louped.core.cohorts import Cohort
 from louped.server import create_app
 from louped.tracking import cohort_ids, start_run
 
@@ -85,6 +87,9 @@ def test_a_cohort_is_saved_in_the_experiment_and_read_by_a_run(run: str, tmp_pat
     bad = api.get("/api/experiments/q/cohorts")
     assert bad.status_code == 422 and "hand.json is not a cohort" in bad.json()["detail"]
     assert api.get("/api/experiments/nope/cohorts").status_code == 404
+    for out in ("..", "../q", "q/../../x"):  # never a path outside experiments/
+        with pytest.raises((ValueError, FileNotFoundError)):
+            cohorts.save(out, "x", Cohort(ids=["1"], run=None, folder="", key=None, note=""))
 
 
 def test_a_cohort_reads_ids_as_the_app_does_and_says_why_it_cannot_pair(tmp_path: Path) -> None:
