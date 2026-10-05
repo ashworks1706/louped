@@ -40,6 +40,9 @@ from louped.core import documents
 from louped.core.paths import NAME, experiments_dir, home, inside
 
 Kind = Literal["pdf", "pptx", "docx", "ipynb", "md", "txt"]
+#: The version of the readers in louped.core.documents the search index was built with: bump
+#: it when they read a file differently, and every source is read again.
+READER = 1
 KINDS: dict[str, Kind] = {".pdf": "pdf", ".pptx": "pptx", ".docx": "docx", ".ipynb": "ipynb",
                           ".md": "md", ".markdown": "md", ".txt": "txt"}  # fmt: skip
 #: The largest file a URL may bring in.
@@ -275,6 +278,9 @@ def _index() -> sqlite3.Connection:
     removed one dropped."""
     home().mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(home() / "sources.db")
+    if db.execute("PRAGMA user_version").fetchone()[0] != READER:  # read again by new readers
+        db.executescript(f"DROP TABLE IF EXISTS files; DROP TABLE IF EXISTS pages; "
+                         f"PRAGMA user_version = {READER};")  # fmt: skip
     db.execute("CREATE TABLE IF NOT EXISTS files (key TEXT PRIMARY KEY, sha256 TEXT)")
     db.execute("CREATE VIRTUAL TABLE IF NOT EXISTS pages USING fts5(key UNINDEXED, "
                "page UNINDEXED, text, tokenize='porter unicode61')")  # fmt: skip

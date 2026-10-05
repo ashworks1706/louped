@@ -260,7 +260,8 @@ export interface paths {
     };
     /**
      * Report List
-     * @description Every file in reports/ the app shows.
+     * @description Every file in reports/ the app shows; 400 naming an exported figure's broken refs
+     *     file.
      */
     get: operations["report_list_api_reports_get"];
     put?: never;
@@ -280,7 +281,7 @@ export interface paths {
     };
     /**
      * Report File
-     * @description A file in reports/ as it is.
+     * @description A file in reports/ as it is; with download, as a file to save.
      */
     get: operations["report_file_api_reports_file_get"];
     put?: never;
@@ -1876,6 +1877,11 @@ export interface components {
       format: "svg" | "png" | "pdf";
       /** Name */
       name?: string | null;
+      /**
+       * Replace
+       * @default false
+       */
+      replace: boolean;
     };
     /** GenerateRequest */
     GenerateRequest: {
@@ -2084,7 +2090,7 @@ export interface components {
        * Kind
        * @enum {string}
        */
-      kind: "number" | "citation" | "ref" | "pin";
+      kind: "number" | "citation" | "ref" | "pin" | "file";
       /** Message */
       message: string;
     };
@@ -3831,6 +3837,7 @@ export interface operations {
     parameters: {
       query: {
         path: string;
+        download?: boolean;
       };
       header?: never;
       path?: never;

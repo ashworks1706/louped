@@ -28,7 +28,9 @@ test("a PDF report turns its pages and a figure shows as it is", async ({ page }
   await page.getByRole("button", { name: "Next page" }).click();
   await expect(page.locator(".pdf-page .textLayer span", { hasText: "Page two" })).toBeVisible();
   await page.goto("/report/?path=figures%2Fbars.svg");
-  await expect(page.getByRole("img", { name: "figures/bars.svg" })).toBeVisible();
+  await expect(
+    page.getByRole("img", { name: "Figure exported from run:m-1/views/bars.json" }),
+  ).toBeVisible();
   await expect(page.locator('[data-part="report/header"]')).toContainText(
     "Exported from run:m-1/views/bars.json",
   );
@@ -72,9 +74,15 @@ test("a figure exports to reports/ from a run's Figures tab", async ({ page }) =
   await page.route("**/api/runs/m-1/views", (r) =>
     r.fulfill({ json: [{ path: "views/bars.json", view: chart }] }),
   );
-  const sent: unknown[] = [];
+  const sent: { replace: boolean }[] = [];
   await page.route("**/api/reports/figures", (r) => {
-    sent.push(r.request().postDataJSON());
+    const body = r.request().postDataJSON() as { replace: boolean };
+    sent.push(body);
+    if (!body.replace)
+      return r.fulfill({
+        status: 409,
+        json: { detail: "reports/figures/m-1-bars.png exists: replace it, or give a name" },
+      });
     return r.fulfill({
       json: {
         path: "figures/m-1-bars.png",
@@ -86,7 +94,19 @@ test("a figure exports to reports/ from a run's Figures tab", async ({ page }) =
     });
   });
   await page.goto("/run/?id=m-1&tab=figures");
-  await page.getByRole("combobox", { name: "Export figure" }).selectOption("png");
-  await expect.poll(() => sent).toEqual([{ ref: "run:m-1/views/bars.json", format: "png" }]);
+  await page
+    .getByRole("group", { name: "Export figure" })
+    .getByRole("button", { name: "PNG" })
+    .click();
+  // a file of the same name is replaced only when asked
+  await expect(page.getByText("m-1-bars.png exists")).toBeVisible();
+  await page.getByRole("button", { name: "Replace" }).click();
+  const ref = "run:m-1/views/bars.json";
+  await expect
+    .poll(() => sent)
+    .toEqual([
+      { ref, format: "png", replace: false },
+      { ref, format: "png", replace: true },
+    ]);
   await expect(page.getByText("Exported to reports/figures/m-1-bars.png")).toBeVisible();
 });

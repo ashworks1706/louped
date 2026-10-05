@@ -6,10 +6,12 @@ import Link from "next/link";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { useState } from "react";
 
+import { Help } from "@/components/help";
 import { Markdown } from "@/components/markdown";
 import { Part, part, partId } from "@/components/parts";
 import { PdfPage } from "@/components/pdf-page";
 import { QueryState } from "@/components/query-state";
+import { RefLink } from "@/components/reports-view";
 import { Button } from "@/components/ui/button";
 import { q, reportFile, type Report } from "@/lib/api";
 
@@ -49,15 +51,18 @@ function Viewer({ report: r }: { report: Report }) {
           <p className="text-muted-foreground text-sm">
             {r.ref ? (
               <>
-                Exported from <span className="font-mono">{r.ref}</span>, with its trace beside it.
+                Exported from{" "}
+                <span className="font-mono break-all">
+                  <RefLink refText={r.ref} />
+                </span>
+                , with its trace beside it.
               </>
             ) : (
               "What this file says, as it will be read."
             )}
           </p>
           <a
-            href={reportFile(r.path)}
-            download
+            href={reportFile(r.path, true)}
             className="text-muted-foreground flex w-fit items-center gap-1 text-xs hover:underline"
           >
             <Download className="size-3" /> Download
@@ -68,13 +73,22 @@ function Viewer({ report: r }: { report: Report }) {
         {r.kind === "md" && <MarkdownReport report={r} />}
         {r.kind === "pdf" && <Pages file={reportFile(r.path)} />}
         {(r.kind === "svg" || r.kind === "png") && (
-          // eslint-disable-next-line @next/next/no-img-element -- a file from the API, as it is
-          <img
-            src={reportFile(r.path)}
-            alt={r.path}
-            className="max-w-full rounded-xl border bg-white p-4"
-            {...part("report/figure")}
-          />
+          <figure className="rounded-xl border" {...part("report/figure")}>
+            <figcaption className="flex items-center gap-1.5 border-b px-4 py-3 text-sm font-medium">
+              {r.path.split("/").pop()}
+              <Help label="How to read this figure">
+                {r.ref
+                  ? "A figure exported from a run, as a deck or document shows it. Its run's Figures tab shows it live, with each mark's item."
+                  : "An image in reports/, as a deck or document shows it."}
+              </Help>
+            </figcaption>
+            {/* eslint-disable-next-line @next/next/no-img-element -- a file from the API, as it is */}
+            <img
+              src={reportFile(r.path)}
+              alt={r.ref ? `Figure exported from ${r.ref}` : r.path}
+              className="max-w-full rounded-b-xl bg-white p-4"
+            />
+          </figure>
         )}
         {(r.kind === "pptx" || r.kind === "docx") && <Office report={r} />}
       </div>
@@ -83,7 +97,7 @@ function Viewer({ report: r }: { report: Report }) {
 }
 
 function MarkdownReport({ report: r }: { report: Report }) {
-  const text = useQuery(q.reportOutline(r.path));
+  const text = useQuery(q.reportOutline(r.path, r.modified));
   return (
     <QueryState query={text}>
       {([body]) => (
@@ -149,7 +163,7 @@ function Office({ report: r }: { report: Report }) {
 }
 
 function Outline({ report: r }: { report: Report }) {
-  const outline = useQuery(q.reportOutline(r.path));
+  const outline = useQuery(q.reportOutline(r.path, r.modified));
   const unit = r.kind === "pptx" ? "Slide" : "Paragraph";
   return (
     <QueryState query={outline}>

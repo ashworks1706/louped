@@ -7,9 +7,9 @@ import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { useEffect, useRef, useState } from "react";
 
 import { CopyButton } from "@/components/copy-button";
-import { PdfPage } from "@/components/pdf-page";
 import { DeleteButton } from "@/components/delete-button";
 import { Part, part, partId } from "@/components/parts";
+import { PdfPage } from "@/components/pdf-page";
 import { QueryState } from "@/components/query-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

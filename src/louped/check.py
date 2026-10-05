@@ -12,7 +12,6 @@ its speaker notes; in a Word document, the paragraph (a table: with the paragrap
 
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
 from typing import Literal
@@ -47,7 +46,7 @@ class Issue(BaseModel):
     file: str
     #: The line; in a deck, the slide; in a Word document, the paragraph.
     line: int
-    kind: Literal["number", "citation", "ref", "pin"]
+    kind: Literal["number", "citation", "ref", "pin", "file"]
     message: str
 
     def where(self) -> str:
@@ -64,7 +63,7 @@ def check(paths: list[Path] | None = None) -> list[Issue]:
     files: list[Path] = []
     for path in paths or [project / f for f in FOLDERS]:
         if path.is_dir():
-            files += sorted(f for f in path.rglob("*") if f.suffix.lower() in CHECKED)
+            files += sorted(f for f in path.rglob("*") if _checked(f))
             files += sorted(path.rglob(f"*{reports.REFS}"))
         elif path.is_file():
             files.append(path)
@@ -78,15 +77,28 @@ def check(paths: list[Path] | None = None) -> list[Issue]:
     pinned = {(p.key, p.page) for p in sources.pins()}
     for f in files:
         name = f.resolve().relative_to(project.resolve()).as_posix()
-        if f.name.endswith(reports.REFS):
-            ref = json.loads(f.read_text(encoding="utf-8"))["ref"]
-            if why := _unresolved(ref):
-                why = f"exported from {ref}, which does not resolve: {why}"
-                issues.append(Issue(file=name, line=1, kind="ref", message=why))
+        try:
+            if f.name.endswith(reports.REFS):
+                ref = reports.sidecar_ref(f)
+                if why := _unresolved(ref):
+                    why = f"exported from {ref}, which does not resolve: {why}"
+                    issues.append(Issue(file=name, line=1, kind="ref", message=why))
+                continue
+            units = _file_units(f)
+        except (
+            Exception
+        ) as exc:  # a file louped cannot read is an issue in it, not the end of the check
+            issues.append(Issue(file=name, line=1, kind="file", message=f"cannot be read: {exc}"))
             continue
-        for unit in _file_units(f):
+        for unit in units:
             issues += _check_unit(name, unit, found, pinned)
     return issues + _stale_pins(found)
+
+
+def _checked(f: Path) -> bool:
+    """A Markdown file, deck or Word document, and not the lock file Office keeps beside an open
+    one (~$deck.pptx)."""
+    return f.suffix.lower() in CHECKED and not f.name.startswith("~$")
 
 
 def _file_units(f: Path) -> list[list[tuple[int, str]]]:

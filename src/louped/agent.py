@@ -206,22 +206,28 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
 
     @mcp.tool(annotations=WRITE)
     async def export_figure(
-        ref: str, format: Literal["svg", "png", "pdf"] = "svg", name: str | None = None
+        ref: str,
+        format: Literal["svg", "png", "pdf"] = "svg",
+        name: str | None = None,
+        replace: bool = False,
     ) -> dict[str, Any]:
         """Export a vega or plotly figure (run:<id>/views/<name>.json or
         experiment:<name>/views/<name>.json) to reports/figures/<name>.<format>, for a deck or a
         document. A sidecar <file>.refs.json keeps its ref and trace. Put the ref in the slide's
-        speaker notes or beside the figure in a document."""
-        return await post("/reports/figures", {"ref": ref, "format": format, "name": name})
+        speaker notes or beside the figure in a document. An existing file is
+        kept unless replace is set."""
+        body = {"ref": ref, "format": format, "name": name, "replace": replace}
+        return await post("/reports/figures", body)
 
     @mcp.tool(annotations=READ)
     async def check(path: str | None = None) -> list[dict[str, Any]]:
-        """What in the project's Markdown is not grounded, file and line: a result number (0.92,
+        """What in the project's Markdown, decks and Word documents is not grounded, file and
+        line (slide, paragraph): a result number (0.92,
         78%, 12/40) with no ref or citation in its paragraph, list item or table; a citation
         naming no source, no page or a page with nothing pinned; a ref that does not resolve; a
         pin whose words are no longer on its page. path is a file or folder in the project; every
-        .md under experiments/ and reports/ when empty. Run it before handing over a write-up and
-        fix each issue, or tell the user which you could not source."""
+        .md, .pptx and .docx under experiments/ and reports/ when empty. Run it before handing
+        over a write-up and fix each issue, or tell the user which you could not source."""
         return await get("/check", path=path)
 
     @mcp.tool(annotations=WRITE)

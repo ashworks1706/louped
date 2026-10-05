@@ -14,6 +14,7 @@ import os
 import re
 import shutil
 import subprocess
+import threading
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
@@ -49,6 +50,10 @@ class MissingTool(RuntimeError):
     """A program louped calls but does not install, such as LibreOffice."""
 
 
+#: One LibreOffice conversion at a time: they share a profile, which LibreOffice locks.
+_DRAWING = threading.Lock()
+
+
 def reports_dir() -> Path:
     """reports/ at the project's root, beside experiments/ and sources/."""
     return experiments_dir().parent / "reports"
@@ -59,15 +64,20 @@ def list_reports() -> list[Report]:
     root = reports_dir()
     if not root.is_dir():
         return []
-    files = sorted(f for f in root.rglob("*") if f.is_file() and f.suffix.lower() in KINDS)
-    return [_report(root, f) for f in files]
+    return [_report(root, f) for f in sorted(root.rglob("*")) if f.is_file() and shown(f)]
+
+
+def shown(file: Path) -> bool:
+    """Whether louped shows a file: one of its kinds, and not the lock file Office keeps beside
+    an open one (~$deck.pptx)."""
+    return file.suffix.lower() in KINDS and not file.name.startswith("~$")
 
 
 def report_file(path: str) -> Path:
     """A file in reports/ by its path there; ValueError for a path out of it or a kind louped
     does not show, FileNotFoundError when there is none."""
     file = inside(reports_dir(), *path.split("/"))
-    if file.suffix.lower() not in KINDS:
+    if not shown(file):
         raise ValueError(f"{path}: louped shows {', '.join(sorted(KINDS))} files")
     if not file.is_file():
         raise FileNotFoundError(f"no report {path}")
@@ -106,20 +116,27 @@ def preview_pdf(path: str) -> Path:
         return pdf
     out.mkdir(parents=True, exist_ok=True)
     profile = (home() / "previews" / "profile").as_uri()  # its own, beside a running LibreOffice
-    done = subprocess.run(
-        [office, f"-env:UserInstallation={profile}", "--headless", "--convert-to", "pdf",
-         "--outdir", str(out), str(file)],
-        capture_output=True, text=True, timeout=180, check=False,
-    )  # fmt: skip
+    convert = [office, f"-env:UserInstallation={profile}", "--headless", "--convert-to", "pdf",
+               "--outdir", str(out), str(file)]  # fmt: skip
+    with _DRAWING:
+        try:
+            done = subprocess.run(convert, capture_output=True, text=True, timeout=180, check=False)
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError(
+                f"LibreOffice took over {exc.timeout:.0f}s to convert {path}"
+            ) from exc
     if done.returncode != 0 or not pdf.is_file():
         raise RuntimeError(f"LibreOffice could not convert {path}: {done.stderr.strip()}")
     return pdf
 
 
-def export_figure(ref: str, fmt: Format = "svg", name: str | None = None) -> Report:
+def export_figure(
+    ref: str, fmt: Format = "svg", name: str | None = None, replace: bool = False
+) -> Report:
     """Export a run's or experiment's figure to reports/figures/<name>.<fmt>, with a sidecar
     holding its ref and trace. Vega-Lite figures export through vl-convert; Plotly figures
-    through Kaleido, which needs Chrome. The kinds the app draws itself do not export."""
+    through Kaleido, which needs Chrome. The kinds the app draws itself do not export.
+    FileExistsError when the file is there and replace is not set: a deck may show it."""
     view = read_view(ref)
     if isinstance(view, VegaView):
         data = _vega(view, fmt)
@@ -133,6 +150,8 @@ def export_figure(ref: str, fmt: Format = "svg", name: str | None = None) -> Rep
     if not re.fullmatch(r"[A-Za-z0-9][\w.-]{0,99}", name):
         raise ValueError(f"{name!r} is not a file name: letters, digits, '.', '_' and '-'")
     target = inside(reports_dir(), FIGURES, f"{name}.{fmt}")
+    if target.exists() and not replace:
+        raise FileExistsError(f"reports/{FIGURES}/{target.name} exists: replace it, or give a name")
     target.parent.mkdir(parents=True, exist_ok=True)
     meta = {"ref": ref, "exported": datetime.now(UTC).isoformat(),
             "trace": trace(ref).model_dump(mode="json")}  # fmt: skip
@@ -152,17 +171,33 @@ def _vega(view: VegaView, fmt: Format) -> bytes:
 
 def _plotly(view: PlotlyView, fmt: Format) -> bytes:
     import plotly.io as pio
+    from kaleido.errors import ChromeNotFoundError
 
     figure = {"data": view.data, "layout": {"title": {"text": view.title}, **view.layout}}
     try:
         return pio.to_image(figure, format=fmt)
-    except RuntimeError as exc:  # Kaleido draws in Chrome, and says so when it finds none
-        raise MissingTool(f"Plotly could not export this figure: {exc}") from exc
+    except RuntimeError as exc:  # Plotly raises its own error in place of Kaleido's
+        if isinstance(exc.__context__, ChromeNotFoundError):
+            raise MissingTool("Plotly exports figures through Chrome, which is not installed: "
+                              "install Chrome, or run plotly_get_chrome") from exc  # fmt: skip
+        raise
+
+
+def sidecar_ref(sidecar: Path) -> str:
+    """The ref an exported figure's sidecar holds; ValueError naming the file when it holds
+    none."""
+    try:
+        ref = json.loads(sidecar.read_text(encoding="utf-8"))["ref"]
+    except (ValueError, KeyError, TypeError) as exc:
+        raise ValueError(f"{sidecar.name} is not a figure's refs file: {exc}") from exc
+    if not isinstance(ref, str):
+        raise ValueError(f"{sidecar.name} is not a figure's refs file: its ref is not text")
+    return ref
 
 
 def _report(root: Path, file: Path) -> Report:
     sidecar = _sidecar(file)
-    ref = json.loads(sidecar.read_text())["ref"] if sidecar.is_file() else None
+    ref = sidecar_ref(sidecar) if sidecar.is_file() else None
     stat = file.stat()
     return Report(path=file.relative_to(root).as_posix(), kind=KINDS[file.suffix.lower()],
                   size=stat.st_size, modified=datetime.fromtimestamp(stat.st_mtime, UTC),

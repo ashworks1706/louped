@@ -269,6 +269,8 @@ class Export:
     format: Literal["svg", "png", "pdf"] = "svg"
     name: str | None = None
     """The file's name; from the ref when empty."""
+    replace: bool = False
+    """Write over a file of the same name."""
 
 
 @dataclass(frozen=True)
@@ -633,8 +635,12 @@ def main() -> None:
             from louped.stores.runs import NotFound
 
             try:
-                print(export_figure(cmd.ref, cmd.format, cmd.name).model_dump_json(indent=2))
-            except (ValueError, RuntimeError, NotFound) as exc:
+                print(
+                    export_figure(cmd.ref, cmd.format, cmd.name, cmd.replace).model_dump_json(
+                        indent=2
+                    )
+                )
+            except (ValueError, RuntimeError, NotFound, FileExistsError) as exc:
                 raise SystemExit(str(exc)) from exc
         case Check() as cmd:
             import json

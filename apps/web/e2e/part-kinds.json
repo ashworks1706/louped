@@ -210,6 +210,11 @@
     "rules": ["hidden", "note"]
   },
   {
+    "part": "figures/export/*",
+    "about": "Exports one figure to reports/ as SVG, PNG or PDF.",
+    "rules": []
+  },
+  {
     "part": "config/param/*",
     "about": "One parameter.",
     "rules": ["hidden", "about", "order"]

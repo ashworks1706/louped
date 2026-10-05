@@ -1,5 +1,7 @@
 """reports/: decks, documents and exported figures, shown, previewed and checked."""
 
+import functools
+import glob
 import json
 import shutil
 import subprocess
@@ -24,8 +26,12 @@ BARS = {"kind": "vega", "title": "Caving by condition",
         "spec": {"mark": "bar", "data": {"values": [{"c": "pressure", "v": 0.9}]},
                  "encoding": {"x": {"field": "c", "type": "nominal"},
                               "y": {"field": "v", "type": "quantitative"}}}}  # fmt: skip
-#: A Chrome for Kaleido, where the tests run in one; Plotly export is checked only there.
-CHROME = Path("/opt/pw-browsers/chromium-1194/chrome-linux/chrome")
+#: A Chrome for Kaleido: one on PATH, or the Playwright one the web tests use.
+CHROME = (
+    shutil.which("google-chrome")
+    or shutil.which("chromium")
+    or next(iter(sorted(glob.glob("/opt/pw-browsers/chromium-*/chrome-linux/chrome"))), None)
+)
 
 
 def deck(path: Path, run: str) -> None:
@@ -73,6 +79,12 @@ def test_decks_and_documents_are_listed_outlined_and_checked(
         outline("../experiments/x.md")
     got = [(i.where(), i.message.split(" has")[0]) for i in check()]
     assert got == [("reports/lab.pptx slide 2", "78%"), ("reports/memo.docx paragraph 3", "0.5")]
+    # Office's lock file beside an open deck is not a report; a broken deck is an issue in it
+    (root / "~$lab.pptx").write_bytes(b"lock")
+    (root / "broken.docx").write_bytes(b"not a zip")
+    assert "~$lab.pptx" not in [r.path for r in list_reports()]
+    [broken] = [i for i in check() if i.kind == "file"]
+    assert broken.file == "reports/broken.docx" and broken.message.startswith("cannot be read")
 
 
 def test_a_vega_figure_exports_with_its_ref_and_trace(
@@ -97,44 +109,82 @@ def test_a_vega_figure_exports_with_its_ref_and_trace(
         export_figure(f"run:{run_id}")
     with pytest.raises(ValueError, match="not a file name"):
         export_figure(ref, name="../x")
+    with pytest.raises(FileExistsError, match="exists"):
+        export_figure(ref, "svg", name="bars")
+    assert export_figure(ref, "svg", name="bars", replace=True).path == "figures/bars.svg"
     assert check() == []
     # an exported figure whose run is gone no longer checks
     sidecar["ref"] = "run:m-gone/views/bars.json"
     sidecar_file.write_text(json.dumps(sidecar))
     [gone] = check()
     assert gone.file == "reports/figures/bars.svg.refs.json" and "does not resolve" in gone.message
+    # a refs file that holds no ref is named, by the listing and by the check
+    sidecar_file.write_text("{")
+    with pytest.raises(ValueError, match=r"bars\.svg\.refs\.json is not a figure's refs file"):
+        list_reports()
+    [broken] = check()
+    assert broken.kind == "file" and "refs file" in broken.message
 
 
-@pytest.mark.skipif(not CHROME.is_file(), reason="Kaleido needs Chrome")
-def test_a_plotly_figure_exports_through_kaleido(
+def test_a_plotly_figure_exports_through_kaleido_in_chrome(
     run_id: str,  # noqa: F811
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("BROWSER_PATH", str(CHROME))
     add_view(run_id, "cloud", PlotlyView.model_validate(CLOUD))
-    made = export_figure(f"run:{run_id}/views/cloud.json", "png")
+    ref = f"run:{run_id}/views/cloud.json"
+    monkeypatch.delenv("BROWSER_PATH", raising=False)
+    monkeypatch.setenv("PATH", str(tmp_path))  # no Chrome on it
+    with pytest.raises(MissingTool, match="through Chrome"):
+        export_figure(ref, "png")
+    if CHROME is None:
+        pytest.skip("no Chrome to export through")
+    monkeypatch.setenv("BROWSER_PATH", CHROME)
+    made = export_figure(ref, "png")
     assert made.path == f"figures/{run_id}-cloud.png"
     assert (tmp_path / "reports" / made.path).read_bytes().startswith(b"\x89PNG")
 
 
-def converts(folder: Path) -> bool:
+@functools.cache
+def converts() -> bool:
     """Whether a LibreOffice here can make a PDF: some installs carry only its core."""
     office = shutil.which("soffice")
     if office is None:
         return False
-    (folder / "t.txt").write_text("x")
-    convert = [office, "--headless", "--convert-to", "pdf", "--outdir", str(folder)]
-    subprocess.run([*convert, str(folder / "t.txt")], capture_output=True, timeout=120, check=False)
-    return (folder / "t.pdf").is_file()
+    with tempfile.TemporaryDirectory() as folder:
+        (Path(folder) / "t.txt").write_text("x")
+        convert = [office, "--headless", "--convert-to", "pdf", "--outdir", folder]
+        subprocess.run([*convert, f"{folder}/t.txt"], capture_output=True, timeout=120, check=False)
+        return (Path(folder) / "t.pdf").is_file()
 
 
-@pytest.mark.skipif(not converts(Path(tempfile.mkdtemp())), reason="no LibreOffice that converts")
+def test_a_conversion_that_hangs_is_an_error(
+    run_id: str,  # noqa: F811
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    (tmp_path / "reports").mkdir()
+    deck(tmp_path / "reports" / "lab.pptx", run_id)
+    (tmp_path / "bin").mkdir()
+    (tmp_path / "bin" / "soffice").write_text("#!/bin/sh\nsleep 1\n")
+    (tmp_path / "bin" / "soffice").chmod(0o755)
+    monkeypatch.setenv("PATH", str(tmp_path / "bin"))
+
+    def hangs(cmd: list[str], **kwargs: object) -> None:
+        raise subprocess.TimeoutExpired(cmd, 180)
+
+    monkeypatch.setattr(subprocess, "run", hangs)
+    with pytest.raises(RuntimeError, match="took over 180s"):
+        preview_pdf("lab.pptx")
+
+
 def test_a_deck_previews_as_a_pdf_through_libreoffice(
     run_id: str,  # noqa: F811
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    if not converts():
+        pytest.skip("no LibreOffice that converts")
     (tmp_path / "reports").mkdir()
     deck(tmp_path / "reports" / "lab.pptx", run_id)
     pdf = preview_pdf("lab.pptx")
@@ -165,5 +215,7 @@ def test_reports_through_the_api_and_mcp(
     assert missing.status_code == 501 and "LibreOffice" in missing.json()["detail"]
     nope = api.post("/api/reports/figures", json={"ref": f"run:{run_id}/views/none.json"})
     assert nope.status_code == 404
+    again = api.post("/api/reports/figures", json={"ref": f"run:{run_id}/views/bars.json"})
+    assert again.status_code == 409
     readonly = TestClient(create_app(launching=False), base_url="http://localhost")
     assert readonly.post("/api/reports/figures", json={"ref": "x"}).status_code == 403

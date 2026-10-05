@@ -15,6 +15,12 @@ export const sourceHref = (key: string, page?: number) =>
 
 export const reportHref = (path: string) => `/report/?path=${encodeURIComponent(path)}`;
 
+/** The run page a run:<id>/… ref is on, at its figures; null for any other ref. */
+export function refRunHref(ref: string) {
+  const run = /^run:([^/#]+)/.exec(ref)?.[1];
+  return run ? runHref(run, "figures") : null;
+}
+
 export const jobHref = (id: string) => `/job/?id=${encodeURIComponent(id)}`;
 
 /** The pages a domain's experiments live under; the checks file under behavior's. */

@@ -247,8 +247,8 @@ export const addSource = (body: Schemas["SourceRequest"]) => post<Source>("/sour
 export const addPin = (body: Schemas["PinRequest"]) => post<Pin>("/pins", body);
 export const deletePin = (id: string) => del(`/pins/${encodeURIComponent(id)}`);
 /** A file in reports/ as it is. */
-export const reportFile = (path: string) =>
-  `${API}/api/reports/file?path=${encodeURIComponent(path)}`;
+export const reportFile = (path: string, download = false) =>
+  `${API}/api/reports/file?path=${encodeURIComponent(path)}${download ? "&download=true" : ""}`;
 /** A figure exported to reports/figures/, with its ref and trace beside it. */
 export const exportFigure = (body: Schemas["FigureRequest"]) =>
   post<Report>("/reports/figures", body);
@@ -335,8 +335,8 @@ export const q = {
     queryKey: ["reports"],
     queryFn: () => get<Report[]>("/reports"),
   }),
-  reportOutline: (path: string) => ({
-    queryKey: ["report-outline", path],
+  reportOutline: (path: string, modified: string) => ({
+    queryKey: ["report-outline", path, modified],
     queryFn: () => get<string[]>(`/reports/outline?path=${encodeURIComponent(path)}`),
   }),
   /** A deck or document drawn as a PDF by LibreOffice: its bytes, or why it cannot be. */

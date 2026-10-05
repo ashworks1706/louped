@@ -700,7 +700,7 @@
     "/api/reports": {
       "get": {
         "summary": "Report List",
-        "description": "Every file in reports/ the app shows.",
+        "description": "Every file in reports/ the app shows; 400 naming an exported figure's broken refs\nfile.",
         "operationId": "report_list_api_reports_get",
         "responses": {
           "200": {
@@ -723,7 +723,7 @@
     "/api/reports/file": {
       "get": {
         "summary": "Report File",
-        "description": "A file in reports/ as it is.",
+        "description": "A file in reports/ as it is; with download, as a file to save.",
         "operationId": "report_file_api_reports_file_get",
         "parameters": [
           {
@@ -733,6 +733,16 @@
             "schema": {
               "type": "string",
               "title": "Path"
+            }
+          },
+          {
+            "name": "download",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Download"
             }
           }
         ],
@@ -4598,6 +4608,11 @@
               }
             ],
             "title": "Name"
+          },
+          "replace": {
+            "type": "boolean",
+            "title": "Replace",
+            "default": false
           }
         },
         "type": "object",
@@ -5075,7 +5090,7 @@
           },
           "kind": {
             "type": "string",
-            "enum": ["number", "citation", "ref", "pin"],
+            "enum": ["number", "citation", "ref", "pin", "file"],
             "title": "Kind"
           },
           "message": {

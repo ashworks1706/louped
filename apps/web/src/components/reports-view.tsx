@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { q } from "@/lib/api";
-import { reportHref } from "@/lib/href";
+import { refRunHref, reportHref } from "@/lib/href";
 
 /** The files in reports/: write-ups, decks, documents, PDFs and exported figures. */
 export function ReportsView() {
@@ -51,7 +51,7 @@ export function ReportsView() {
                 <TableBody>
                   {all.map((r) => (
                     <TableRow key={r.path} {...part(partId("reports/report", r.path))}>
-                      <TableCell className="max-w-md">
+                      <TableCell className="max-w-md break-all">
                         <Link
                           href={reportHref(r.path)}
                           className="font-mono text-xs underline-offset-4 hover:underline"
@@ -66,8 +66,11 @@ export function ReportsView() {
                       <TableCell className="text-muted-foreground font-mono text-xs">
                         {r.modified.slice(0, 16).replace("T", " ")}
                       </TableCell>
-                      <TableCell className="text-muted-foreground max-w-64 truncate font-mono text-xs">
-                        {r.ref ?? ""}
+                      <TableCell
+                        className="text-muted-foreground max-w-64 truncate font-mono text-xs"
+                        title={r.ref ?? undefined}
+                      >
+                        {r.ref && <RefLink refText={r.ref} />}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -78,6 +81,18 @@ export function ReportsView() {
         )
       }
     </QueryState>
+  );
+}
+
+/** A ref, linked to its run's figures when it is on a run. */
+export function RefLink({ refText }: { refText: string }) {
+  const href = refRunHref(refText);
+  return href ? (
+    <Link href={href} className="underline-offset-4 hover:underline">
+      {refText}
+    </Link>
+  ) : (
+    <>{refText}</>
   );
 }
 

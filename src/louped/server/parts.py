@@ -125,6 +125,8 @@ KINDS: list[Kind] = [
     _k(part="sample/*", about="The open sample's title, log link and your pick.", rules=PICK),
     # figures, config, files
     _k(part="figures/figure/*", about="One figure, by its file.", rules=["hidden", "note"]),
+    _k(part="figures/export/*", about="Exports one figure to reports/ as SVG, PNG or PDF.",
+       rules=PICK),
     _k(part="config/param/*", about="One parameter.", rules=["hidden", "about", "order"]),
     _k(part="config/tag/*", about="One tag.", rules=["hidden", "about", "order"]),
     _k(part="config/*", about="The parameters' or tags' heading (params, tags).", rules=PICK),
