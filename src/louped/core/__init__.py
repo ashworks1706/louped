@@ -1,5 +1,6 @@
 """What every other package shares: run metadata, paths and the direction header."""
 
+from louped.core import cohorts
 from louped.core.direction import Direction
 from louped.core.fields import named_fields
 from louped.core.meta import RunMeta, capture
@@ -22,6 +23,7 @@ __all__ = [
     "adapters_dir",
     "artifacts_dir",
     "capture",
+    "cohorts",
     "experiments_dir",
     "graphs_dir",
     "home",

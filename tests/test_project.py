@@ -119,6 +119,19 @@ def test_the_example_runs_offline_and_lines_up_on_the_run_page(project: Path, mo
         assert f"sure it's {options[gold]}." not in r["second_turn"]
     assert "baseline/accuracy" in detail.metrics
 
+    # again on a cohort: the items saved from this run, and the run says so
+    from louped.core import cohorts
+
+    cohorts.save(
+        EXAMPLE, "two", cohorts.Cohort(ids=["3", "7"], run=run.id, folder="raw", key="qid", note="")
+    )
+    monkeypatch.setattr(sys, "argv", [str(script), "--tiny", "--cohort", "two"])
+    runpy.run_path(str(script), run_name="__main__")
+    again = next(r for r in stores.list_runs() if r.id != run.id)
+    text = read_artifact(again.id, "raw/pressure.jsonl").decode()
+    assert [json.loads(line)["qid"] for line in text.splitlines()] == [3, 7]
+    assert stores.get_run(again.id).tags["louped.cohort"] == "two"
+
 
 def test_view_shows_a_folder_of_files_as_one_run(tmp_path: Path, monkeypatch) -> None:
     from louped.server.view import prepare

@@ -16,6 +16,7 @@ from louped.stores.experiments import (
     write_readme,
 )
 from louped.stores.graphs import list_graphs
+from louped.stores.items import CohortStats, cohort
 from louped.stores.labels import agreement, get_labels, set_label
 from louped.stores.runs import (
     NotFound,
@@ -33,8 +34,10 @@ from louped.stores.vectors import list_vectors
 
 __all__ = [
     "BadExperiment",
+    "CohortStats",
     "NotFound",
     "agreement",
+    "cohort",
     "compare",
     "delete_experiment",
     "delete_run",

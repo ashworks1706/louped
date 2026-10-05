@@ -12,7 +12,8 @@ results.
   `import_result`, `push`, `pull` to act. Work started through it shows in the app. Start `louped serve` first.
   `ui_page`, `set_part`, `set_layout` and `set_preset` change what the app's pages show; the
   person Shift+clicks any part of a page and `ui_selection` gives you those parts with their
-  data; `ui_show` points the person at parts, with a note.
+  data; `ui_show` points the person at parts, with a note. `cohort` reads a run's conditions on
+  some items with paired intervals; `save_cohort` saves them for a run.py's `--cohort`.
 - Skills in `.claude/skills/`: `new-experiment`, `read-results`, `run-elsewhere`, `write-report`,
   `add-plugin`, `change-ui`.
 - The CLI does the same steps: `louped new`, `louped push`, `louped pull`, `louped --help`.

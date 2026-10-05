@@ -322,6 +322,56 @@
         }
       }
     },
+    "/api/runs/{run_id}/cohort": {
+      "post": {
+        "summary": "Run Cohort",
+        "description": "Each condition of a run's per-item records on some of its items, and each one's\npaired difference from the reference with a 95% interval.",
+        "operationId": "run_cohort_api_runs__run_id__cohort_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CohortQuery"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CohortStats"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/runs/{run_id}/views": {
       "get": {
         "summary": "Views",
@@ -862,6 +912,108 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ExperimentDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/experiments/{name}/cohorts": {
+      "get": {
+        "summary": "Cohort List",
+        "operationId": "cohort_list_api_experiments__name__cohorts_get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Saved"
+                  },
+                  "title": "Response Cohort List Api Experiments  Name  Cohorts Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/experiments/{name}/cohorts/{cohort}": {
+      "put": {
+        "summary": "Save Cohort",
+        "description": "Writes experiments/<name>/cohorts/<cohort>.json, replacing one of that name.",
+        "operationId": "save_cohort_api_experiments__name__cohorts__cohort__put",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "cohort",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cohort"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Cohort"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Saved"
                 }
               }
             }
@@ -2188,6 +2340,182 @@
         "required": ["regions", "presets", "parts"],
         "title": "Catalog"
       },
+      "Cohort": {
+        "properties": {
+          "ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 100000,
+            "minItems": 1,
+            "title": "Ids"
+          },
+          "run": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run"
+          },
+          "folder": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Folder",
+            "default": ""
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Note",
+            "default": ""
+          },
+          "created": {
+            "type": "string",
+            "title": "Created",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": ["ids"],
+        "title": "Cohort",
+        "description": "Items by id, and where they were picked."
+      },
+      "CohortQuery": {
+        "properties": {
+          "ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 100000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ids"
+          },
+          "folder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folder"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          }
+        },
+        "type": "object",
+        "title": "CohortQuery",
+        "description": "Which items to read each condition on (every item when ids is null), from which folder of\nthe run's records, on which field, against which condition; the Items tab's defaults when\nunset."
+      },
+      "CohortStats": {
+        "properties": {
+          "run": {
+            "type": "string",
+            "title": "Run"
+          },
+          "folder": {
+            "type": "string",
+            "title": "Folder"
+          },
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "reference": {
+            "type": "string",
+            "title": "Reference"
+          },
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing"
+          },
+          "n": {
+            "type": "integer",
+            "title": "N"
+          },
+          "conditions": {
+            "items": {
+              "$ref": "#/components/schemas/Condition"
+            },
+            "type": "array",
+            "title": "Conditions"
+          },
+          "paired": {
+            "items": {
+              "$ref": "#/components/schemas/PairedScore"
+            },
+            "type": "array",
+            "title": "Paired"
+          },
+          "unpaired": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unpaired"
+          }
+        },
+        "type": "object",
+        "required": ["run", "folder", "key", "field", "reference", "missing", "n", "conditions"],
+        "title": "CohortStats"
+      },
       "Comparison": {
         "properties": {
           "a": {
@@ -2217,6 +2545,75 @@
         "type": "object",
         "required": ["a", "b", "only_a", "only_b", "scores"],
         "title": "Comparison"
+      },
+      "Condition": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "n": {
+            "type": "integer",
+            "title": "N"
+          },
+          "mean": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean"
+          },
+          "k": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "K"
+          },
+          "interval95": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval95"
+          },
+          "changed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changed"
+          }
+        },
+        "type": "object",
+        "required": ["name", "n", "mean"],
+        "title": "Condition"
       },
       "Connect": {
         "properties": {
@@ -4553,6 +4950,67 @@
         "type": "object",
         "required": ["id", "epoch", "input", "target", "scores", "error"],
         "title": "SampleSummary"
+      },
+      "Saved": {
+        "properties": {
+          "ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 100000,
+            "minItems": 1,
+            "title": "Ids"
+          },
+          "run": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run"
+          },
+          "folder": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Folder",
+            "default": ""
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Note",
+            "default": ""
+          },
+          "created": {
+            "type": "string",
+            "title": "Created",
+            "default": ""
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": ["ids", "name"],
+        "title": "Saved"
       },
       "ScatterPoint": {
         "properties": {

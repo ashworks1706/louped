@@ -24,6 +24,24 @@ shows: 28 ✓ ✗
 data: {"qid":"28","compared_on":"correct","records":{"baseline":{...},"pressure":{...}}}
 ```
 
+## Items you pick are a cohort
+
+Pick rows on a run's Items tab and the tray offers **Only these**: every condition read on just
+those items, each with its paired difference from the reference and 95% interval. **Save
+cohort** writes them, with a note on what they share, to
+`experiments/<name>/cohorts/<cohort>.json`; commit it with the experiment. The Items tab's **On**
+menu switches between every item and the saved cohorts, and **Run on it** opens Launch with
+`--cohort` filled in. A run.py takes it with one option:
+
+```python
+cohort: str | None = None
+"""Only these items: a cohort saved from the Items tab."""
+...
+only = set(cohort_ids(EXPERIMENT, args.cohort)) if args.cohort else None  # louped.tracking
+```
+
+The run is tagged with the cohort, and its page says so.
+
 ## Your agent points back
 
 `ui_show` lets your agent open a page, scroll to parts and point at them, with a short note

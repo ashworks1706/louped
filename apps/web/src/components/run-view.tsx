@@ -17,7 +17,7 @@ import { Hardware, hasHardware } from "@/components/hardware";
 import { HistoryCharts } from "@/components/history-chart";
 import { MetricValue } from "@/components/metric";
 import { QueryState } from "@/components/query-state";
-import { HostBadge, KindBadge, StatusDot } from "@/components/run-badges";
+import { CohortBadge, HostBadge, KindBadge, StatusDot } from "@/components/run-badges";
 import { Figure, RunViews } from "@/components/run-views";
 import { StatGrid } from "@/components/stat-grid";
 import { SamplesTable } from "@/components/samples-table";
@@ -123,6 +123,7 @@ function RunHeader({ run }: { run: RunDetail }) {
           </h1>
           {badge("kind", <KindBadge kind={run.kind} />)}
           {badge("host", <HostBadge host={run.host} />)}
+          {run.tags["louped.cohort"] && badge("cohort", <CohortBadge tags={run.tags} />)}
           {badge(
             "status",
             <StatusDot status={run.status} samples={run.samples} total={run.total} />,

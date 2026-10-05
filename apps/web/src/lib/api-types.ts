@@ -108,6 +108,27 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/runs/{run_id}/cohort": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Run Cohort
+     * @description Each condition of a run's per-item records on some of its items, and each one's
+     *     paired difference from the reference with a 95% interval.
+     */
+    post: operations["run_cohort_api_runs__run_id__cohort_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/runs/{run_id}/views": {
     parameters: {
       query?: never;
@@ -312,6 +333,43 @@ export interface paths {
      * @description Moves its folder to <home>/trash/experiments; says where.
      */
     delete: operations["delete_experiment_api_experiments__name__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/experiments/{name}/cohorts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Cohort List */
+    get: operations["cohort_list_api_experiments__name__cohorts_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/experiments/{name}/cohorts/{cohort}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Save Cohort
+     * @description Writes experiments/<name>/cohorts/<cohort>.json, replacing one of that name.
+     */
+    put: operations["save_cohort_api_experiments__name__cohorts__cohort__put"];
+    post?: never;
+    delete?: never;
     options?: never;
     head?: never;
     patch?: never;
@@ -900,6 +958,72 @@ export interface components {
       /** Parts */
       parts: components["schemas"]["louped__server__parts__Kind"][];
     };
+    /**
+     * Cohort
+     * @description Items by id, and where they were picked.
+     */
+    Cohort: {
+      /** Ids */
+      ids: string[];
+      /** Run */
+      run?: string | null;
+      /**
+       * Folder
+       * @default
+       */
+      folder: string;
+      /** Key */
+      key?: string | null;
+      /**
+       * Note
+       * @default
+       */
+      note: string;
+      /**
+       * Created
+       * @default
+       */
+      created: string;
+    };
+    /**
+     * CohortQuery
+     * @description Which items to read each condition on (every item when ids is null), from which folder of
+     *     the run's records, on which field, against which condition; the Items tab's defaults when
+     *     unset.
+     */
+    CohortQuery: {
+      /** Ids */
+      ids?: string[] | null;
+      /** Folder */
+      folder?: string | null;
+      /** Field */
+      field?: string | null;
+      /** Reference */
+      reference?: string | null;
+    };
+    /** CohortStats */
+    CohortStats: {
+      /** Run */
+      run: string;
+      /** Folder */
+      folder: string;
+      /** Key */
+      key: string;
+      /** Field */
+      field: string;
+      /** Reference */
+      reference: string;
+      /** Missing */
+      missing: string[];
+      /** N */
+      n: number;
+      /** Conditions */
+      conditions: components["schemas"]["Condition"][];
+      /** Paired */
+      paired?: components["schemas"]["PairedScore"][];
+      /** Unpaired */
+      unpaired?: string | null;
+    };
     /** Comparison */
     Comparison: {
       /** A */
@@ -912,6 +1036,21 @@ export interface components {
       only_b: number;
       /** Scores */
       scores: components["schemas"]["PairedScore"][];
+    };
+    /** Condition */
+    Condition: {
+      /** Name */
+      name: string;
+      /** N */
+      n: number;
+      /** Mean */
+      mean: number | null;
+      /** K */
+      k?: number | null;
+      /** Interval95 */
+      interval95?: [number, number] | null;
+      /** Changed */
+      changed?: number | null;
     };
     /** Connect */
     Connect: {
@@ -1839,6 +1978,32 @@ export interface components {
       /** Error */
       error: string | null;
     };
+    /** Saved */
+    Saved: {
+      /** Ids */
+      ids: string[];
+      /** Run */
+      run?: string | null;
+      /**
+       * Folder
+       * @default
+       */
+      folder: string;
+      /** Key */
+      key?: string | null;
+      /**
+       * Note
+       * @default
+       */
+      note: string;
+      /**
+       * Created
+       * @default
+       */
+      created: string;
+      /** Name */
+      name: string;
+    };
     /** ScatterPoint */
     ScatterPoint: {
       /** Label */
@@ -2430,6 +2595,41 @@ export interface operations {
       };
     };
   };
+  run_cohort_api_runs__run_id__cohort_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CohortQuery"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CohortStats"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   views_api_runs__run_id__views_get: {
     parameters: {
       query?: never;
@@ -2833,6 +3033,73 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Text"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  cohort_list_api_experiments__name__cohorts_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Saved"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  save_cohort_api_experiments__name__cohorts__cohort__put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+        cohort: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Cohort"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Saved"];
         };
       };
       /** @description Validation Error */
