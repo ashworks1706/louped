@@ -1,6 +1,8 @@
 import Link from "next/link";
 
 import { AxisExperiments } from "@/components/experiments-list";
+import { Part } from "@/components/parts";
+import { part, partId } from "@/lib/parts";
 import { RunsList } from "@/components/runs-list";
 import { NAV, type Section } from "@/lib/nav";
 
@@ -12,13 +14,14 @@ export function DomainOverview({ section }: { section: Exclude<Section, "workspa
   const tools = NAV.filter((n) => n.section === section).slice(2);
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-10 px-6 py-8">
-      <section className="flex flex-col gap-3">
+      <Part as="section" id="domain/section/tools" className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold tracking-tight">Tools</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {tools.map((t) => (
             <Link
               key={t.href}
               href={t.href}
+              {...part(partId("domain/tool", t.href.split("/").filter(Boolean).at(-1)!))}
               className="hover:bg-accent/40 focus-visible:ring-ring/50 flex flex-col gap-2 rounded-xl border p-4 transition-colors outline-none focus-visible:ring-[3px]"
             >
               <span className="flex items-center gap-2 text-sm font-medium">
@@ -29,12 +32,12 @@ export function DomainOverview({ section }: { section: Exclude<Section, "workspa
             </Link>
           ))}
         </div>
-      </section>
-      <section className="flex flex-col gap-3">
+      </Part>
+      <Part as="section" id="domain/section/questions" className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold tracking-tight">Questions</h2>
         <AxisExperiments axis={section} />
-      </section>
-      <section className="flex flex-col items-start gap-3">
+      </Part>
+      <Part as="section" id="domain/section/runs" className="flex flex-col items-start gap-3">
         <h2 className="text-lg font-semibold tracking-tight">Latest runs</h2>
         <div className="w-full">
           <RunsList axis={section} limit={8} compact />
@@ -42,7 +45,7 @@ export function DomainOverview({ section }: { section: Exclude<Section, "workspa
         <Link href="/runs/" className={MORE}>
           All runs
         </Link>
-      </section>
+      </Part>
     </div>
   );
 }

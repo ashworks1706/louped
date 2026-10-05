@@ -49,7 +49,9 @@ beside the first: "pressure flipped this one". It hears back which parts were no
 
 ## Change any part
 
-A layout's `parts` change parts by address; `*` stands for any one name.
+A layout's `parts` change parts by address; `*` stands for any one name. Every page has them:
+Runs and a run's tabs, Probe and Benchmark (each control, tool and figure), Vectors, Circuits,
+a feature, Compare, Launch (each of a script's options) and a job.
 
 ```json title="experiments/rational-updating/layout.json"
 {
@@ -57,8 +59,10 @@ A layout's `parts` change parts by address; `*` stands for any one name.
     "items/stat/pressure": { "label": "pushback", "note": "Read this one first." },
     "items/show": { "default": "changed" },
     "item/field/*/abstain": { "hidden": true },
-    "item/field/item/claim": { "order": 0 },
-    "runs/column/model": { "hidden": true }
+    "item/field/item/gold": { "order": 0 },
+    "runs/column/model": { "hidden": true },
+    "playground/tab/dose": { "order": 0 },
+    "launch/option/--cohort": { "note": "Leave empty for every item." }
   }
 }
 ```

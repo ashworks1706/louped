@@ -105,7 +105,7 @@ KINDS: list[Kind] = [
        "condition.", rules=LIST),
     _k(part="items/row/*", about="One item: its record in every condition.", rules=PICK),
     _k(part="items/cell/*/*", about="One item under one condition.", rules=PICK),
-    _k(part="item/title", about="The open item's id.", rules=PICK),
+    _k(part="item/title", about="The open item's claim or question, under its id.", rules=PICK),
     _k(part="item/section/*", about="The item itself (item), or one condition's record of it.",
        rules=NAME),
     _k(part="item/field/*/*", about="One field of the item (section item) or of a condition's "
@@ -162,6 +162,67 @@ KINDS: list[Kind] = [
     _k(part="home/live/title", about="The Running heading.", rules=PICK),
     _k(part="home/domain/*", about="A research domain's card.", rules=PICK),
     _k(part="home/more/*", about="A link to every experiment or run.", rules=["hidden"]),
+    # any page
+    _k(part="empty/*", about="What a page or panel shows before it has data, by its title "
+       "(no-runs-yet), and what fills it.", rules=["note"]),
+    # a domain's front page
+    _k(part="domain/section/*", about="Tools, questions or runs on a domain's front page.",
+       rules=["hidden", "note"]),
+    _k(part="domain/tool/*", about="A tool's card, by its page (probe, vectors, benchmark).",
+       rules=PICK),
+    # Probe and Benchmark
+    _k(part="playground/load", about="Loading a model, before one is loaded.", rules=["note"]),
+    _k(part="playground/field/*", about="One control: model, adapters, intervention, vector, "
+       "strength, layer, heads, tokens, method, follow-up, answer, foil, points and the rest.",
+       rules=["hidden", "label", "about", "note"]),
+    _k(part="playground/prompt", about="The prompt and Run.", rules=PICK),
+    _k(part="playground/tab/*", about="A tool: reply, inspect, patch, dose, speed.",
+       rules=["hidden", "label", "order"]),
+    _k(part="playground/side/*", about="Which stream Inspect reads: base or intervention.",
+       rules=PICK),
+    _k(part="playground/reply/*", about="The base or intervened reply.", rules=PICK),
+    _k(part="playground/figure/*", about="A figure a tool drew, by its title (logit-lens).",
+       rules=["hidden", "note", "order"]),
+    # saved vectors
+    _k(part="vectors/model/*", about="A model's heading over its vectors.", rules=PICK),
+    _k(part="vectors/column/*", about="A column of the vectors table.", rules=PICK),
+    _k(part="vectors/row/*", about="One saved vector, by name.", rules=PICK),
+    # attribution graphs
+    _k(part="circuits/graph", about="Which graph is shown.", rules=PICK),
+    _k(part="circuits/viewer", about="circuit-tracer's viewer of the graph.", rules=PICK),
+    # an SAE feature
+    _k(part="feature/figure/*", about="Promotes, suppresses, histogram or examples.",
+       rules=["hidden", "note"]),
+    _k(part="feature/*", about="The feature's title, back link, stepper and numbers.",
+       rules=PICK),
+    # Compare
+    _k(part="compare/pick/*", about="The baseline (a), the changed run (b) and the swap.",
+       rules=PICK),
+    _k(part="compare/run/*", about="Run A or B's card.", rules=PICK),
+    _k(part="compare/section/*", about="Metrics, paired, samples or judge.",
+       rules=["hidden", "note"]),
+    _k(part="compare/metric/*", about="One metric of both runs.", rules=PICK),
+    _k(part="compare/score/*", about="One score's paired difference and interval.", rules=PICK),
+    _k(part="compare/sample/*", about="One sample in both runs.", rules=PICK),
+    _k(part="compare/open/title", about="The open sample's title.", rules=PICK),
+    _k(part="compare/open/side/*", about="The open sample in run A or B.", rules=PICK),
+    # Launch
+    _k(part="launch/group/*", about="A group of things to launch.", rules=PICK),
+    _k(part="launch/item/*", about="One thing to launch, by id (script:hello/run.py).",
+       rules=PICK),
+    _k(part="launch/option/*", about="One of a script's options, by flag.",
+       rules=["hidden", "label", "about", "note"]),
+    _k(part="launch/config", about="The training or grid config, edited in place.",
+       rules=["note"]),
+    _k(part="launch/where", about="Where it runs: here, Sol, a Slurm cluster or a VM.",
+       rules=["note"]),
+    _k(part="launch/*", about="The picker, title, command and Launch button.", rules=PICK),
+    # a job
+    _k(part="job/log", about="The job's log.", rules=["note"]),
+    _k(part="job/wrote", about="The runs the job wrote.", rules=["note"]),
+    _k(part="job/run/*", about="One run the job wrote.", rules=PICK),
+    _k(part="job/*", about="The job's title, back link, actions, facts and command.",
+       rules=PICK),
 ]  # fmt: skip
 
 #: A part's address: lowercase area and kind, then names with no whitespace or slash.

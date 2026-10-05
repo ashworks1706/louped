@@ -11,6 +11,7 @@ import { CopyButton } from "@/components/copy-button";
 import { EmptyState } from "@/components/empty-state";
 import { Help } from "@/components/help";
 import { askToNotify } from "@/components/notifier";
+import { Part, PartNote, part, partId, useRules } from "@/components/parts";
 import { QueryState } from "@/components/query-state";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -78,7 +79,7 @@ function Picker({ items }: { items: Launchable[] }) {
   }
   return (
     <div className="grid gap-6 md:grid-cols-[16rem_1fr]">
-      <div className="flex flex-col gap-1.5 md:hidden">
+      <div className="flex flex-col gap-1.5 md:hidden" {...part("launch/pick")}>
         <label htmlFor="launchable" className="text-muted-foreground text-xs">
           What to launch
         </label>
@@ -106,7 +107,7 @@ function Picker({ items }: { items: Launchable[] }) {
         className="hidden flex-col gap-4 md:sticky md:top-6 md:flex md:max-h-[calc(100dvh-3rem)] md:self-start md:overflow-y-auto"
       >
         {groups.map((g) => (
-          <div key={g} className="flex flex-col gap-0.5">
+          <div key={g} className="flex flex-col gap-0.5" {...part(partId("launch/group", g))}>
             <h2 className="text-muted-foreground px-2 pb-1 text-xs font-medium">{g}</h2>
             {items
               .filter((i) => i.group === g)
@@ -114,6 +115,7 @@ function Picker({ items }: { items: Launchable[] }) {
                 <button
                   key={i.id}
                   type="button"
+                  {...part(partId("launch/item", i.id))}
                   onClick={() => void set({ id: i.id })}
                   aria-current={i.id === picked?.id ? "true" : undefined}
                   title={i.title}
@@ -236,7 +238,7 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
 
   return (
     <section className="flex min-w-0 flex-col gap-5">
-      <header className="flex flex-col gap-1">
+      <header className="flex flex-col gap-1" {...part("launch/title")}>
         <h2 className="font-mono text-sm font-medium">{item.title}</h2>
         {item.description && (
           <p className="text-muted-foreground max-w-2xl text-sm">{item.description}</p>
@@ -244,7 +246,7 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
       </header>
 
       {item.config != null && (
-        <div className="flex flex-col gap-2">
+        <Part id="launch/config" className="flex flex-col gap-2">
           <div className="flex items-center gap-3">
             {item.recipe != null && (
               <>
@@ -274,7 +276,7 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
             spellCheck={false}
             className="max-h-[32rem] font-mono text-xs leading-5"
           />
-        </div>
+        </Part>
       )}
 
       {cohort && options.isSuccess && !takesCohort && (
@@ -300,7 +302,10 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
         }
       </QueryState>
 
-      <div className="bg-muted/50 flex items-start gap-2 rounded-lg border py-1 pr-1 pl-3">
+      <div
+        className="bg-muted/50 flex items-start gap-2 rounded-lg border py-1 pr-1 pl-3"
+        {...part("launch/command")}
+      >
         <code className="flex-1 py-1.5 font-mono text-[13px] [overflow-wrap:anywhere]">
           <span className="text-muted-foreground select-none">$ </span>
           {command}
@@ -308,7 +313,7 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
         <CopyButton text={command} />
       </div>
       <Where place={place} setPlace={setPlace} target={target} setTarget={setTarget} />
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3" {...part("launch/submit")}>
         <Button
           onClick={submit}
           disabled={!options.isSuccess || go.isPending || out.isPending || missing.length > 0}
@@ -349,7 +354,7 @@ function Where({
   const slurm = place === "sol" || place === "slurm";
   const small = "h-8 font-mono text-xs";
   return (
-    <div className="flex flex-col gap-3">
+    <Part id="launch/where" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <label htmlFor="place" className="text-muted-foreground text-xs">
           Run on
@@ -454,7 +459,7 @@ function Where({
           )}
         </div>
       )}
-    </div>
+    </Part>
   );
 }
 
@@ -496,15 +501,24 @@ function Field({
   onChange: (v: Value) => void;
 }) {
   const id = `opt-${o.flag}`;
+  const address = partId("launch/option", o.flag);
+  const rule = useRules()(address);
+  if (rule.hidden) return null;
   const label = (
     <label htmlFor={id} className="font-mono text-xs">
-      {o.flag}
+      {rule.label ?? o.flag}
     </label>
   );
-  const help = o.help && <p className="text-muted-foreground text-xs">{o.help}</p>;
+  const about = rule.about ?? o.help;
+  const help = (
+    <>
+      {about && <p className="text-muted-foreground text-xs">{about}</p>}
+      <PartNote rule={rule} />
+    </>
+  );
   if (o.kind === "bool") {
     return (
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-2" {...part(address)}>
         <Checkbox
           id={id}
           checked={typeof value === "boolean" ? value : o.default === "True"}
@@ -520,7 +534,7 @@ function Field({
   }
   const text = typeof value === "string" ? value : (o.default ?? "");
   return (
-    <div className="flex min-w-0 flex-col gap-1.5">
+    <div className="flex min-w-0 flex-col gap-1.5" {...part(address)}>
       {label}
       {o.kind === "choice" ? (
         <NativeSelect

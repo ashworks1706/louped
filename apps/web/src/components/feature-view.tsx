@@ -7,6 +7,7 @@ import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { EmptyState } from "@/components/empty-state";
+import { Part, part, partId } from "@/components/parts";
 import { QueryState } from "@/components/query-state";
 import { Figure } from "@/components/run-views";
 import { Button } from "@/components/ui/button";
@@ -47,14 +48,17 @@ function Loaded({ run, feature }: { run: string; feature: number }) {
           <header className="border-b">
             <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 py-6">
               <Link
+                {...part("feature/back")}
                 href={runHref(run, "figures")}
                 className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 text-xs"
               >
                 <ArrowLeft className="size-3" /> All features of this run
               </Link>
               <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-2xl font-semibold tracking-tight">Feature #{d.feature}</h1>
-                <div className="ml-auto flex items-center gap-1">
+                <h1 className="text-2xl font-semibold tracking-tight" {...part("feature/title")}>
+                  Feature #{d.feature}
+                </h1>
+                <div className="ml-auto flex items-center gap-1" {...part("feature/step")}>
                   <Step to={at > 0 ? href(list[at - 1]) : null} label="Previous feature">
                     <ChevronLeft />
                   </Step>
@@ -69,7 +73,10 @@ function Loaded({ run, feature }: { run: string; feature: number }) {
                   </Step>
                 </div>
               </div>
-              <dl className="text-muted-foreground flex flex-wrap gap-x-6 gap-y-1 text-sm">
+              <dl
+                className="text-muted-foreground flex flex-wrap gap-x-6 gap-y-1 text-sm"
+                {...part("feature/stats")}
+              >
                 <Stat label="Hook" value={d.hook} mono />
                 {d.model && <Stat label="Model" value={d.model} mono />}
                 {d.sae && (
@@ -92,11 +99,19 @@ function Loaded({ run, feature }: { run: string; feature: number }) {
           </header>
           <section className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-6">
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)]">
-              <Logits title="Promotes" rows={d.promoted} />
-              <Logits title="Suppresses" rows={d.suppressed} />
-              <Histogram dash={d} />
+              <Part id="feature/figure/promotes">
+                <Logits title="Promotes" rows={d.promoted} />
+              </Part>
+              <Part id="feature/figure/suppresses">
+                <Logits title="Suppresses" rows={d.suppressed} />
+              </Part>
+              <Part id="feature/figure/histogram">
+                <Histogram dash={d} />
+              </Part>
             </div>
-            <Figure view={d.examples} />
+            <Part id={partId("feature/figure", "examples")}>
+              <Figure view={d.examples} />
+            </Part>
           </section>
         </>
       )}

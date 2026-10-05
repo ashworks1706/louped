@@ -141,7 +141,7 @@
   },
   {
     "part": "item/title",
-    "about": "The open item's id.",
+    "about": "The open item's claim or question, under its id.",
     "rules": []
   },
   {
@@ -338,5 +338,180 @@
     "part": "home/more/*",
     "about": "A link to every experiment or run.",
     "rules": ["hidden"]
+  },
+  {
+    "part": "empty/*",
+    "about": "What a page or panel shows before it has data, by its title (no-runs-yet), and what fills it.",
+    "rules": ["note"]
+  },
+  {
+    "part": "domain/section/*",
+    "about": "Tools, questions or runs on a domain's front page.",
+    "rules": ["hidden", "note"]
+  },
+  {
+    "part": "domain/tool/*",
+    "about": "A tool's card, by its page (probe, vectors, benchmark).",
+    "rules": []
+  },
+  {
+    "part": "playground/load",
+    "about": "Loading a model, before one is loaded.",
+    "rules": ["note"]
+  },
+  {
+    "part": "playground/field/*",
+    "about": "One control: model, adapters, intervention, vector, strength, layer, heads, tokens, method, follow-up, answer, foil, points and the rest.",
+    "rules": ["hidden", "label", "about", "note"]
+  },
+  {
+    "part": "playground/prompt",
+    "about": "The prompt and Run.",
+    "rules": []
+  },
+  {
+    "part": "playground/tab/*",
+    "about": "A tool: reply, inspect, patch, dose, speed.",
+    "rules": ["hidden", "label", "order"]
+  },
+  {
+    "part": "playground/side/*",
+    "about": "Which stream Inspect reads: base or intervention.",
+    "rules": []
+  },
+  {
+    "part": "playground/reply/*",
+    "about": "The base or intervened reply.",
+    "rules": []
+  },
+  {
+    "part": "playground/figure/*",
+    "about": "A figure a tool drew, by its title (logit-lens).",
+    "rules": ["hidden", "note", "order"]
+  },
+  {
+    "part": "vectors/model/*",
+    "about": "A model's heading over its vectors.",
+    "rules": []
+  },
+  {
+    "part": "vectors/column/*",
+    "about": "A column of the vectors table.",
+    "rules": []
+  },
+  {
+    "part": "vectors/row/*",
+    "about": "One saved vector, by name.",
+    "rules": []
+  },
+  {
+    "part": "circuits/graph",
+    "about": "Which graph is shown.",
+    "rules": []
+  },
+  {
+    "part": "circuits/viewer",
+    "about": "circuit-tracer's viewer of the graph.",
+    "rules": []
+  },
+  {
+    "part": "feature/figure/*",
+    "about": "Promotes, suppresses, histogram or examples.",
+    "rules": ["hidden", "note"]
+  },
+  {
+    "part": "feature/*",
+    "about": "The feature's title, back link, stepper and numbers.",
+    "rules": []
+  },
+  {
+    "part": "compare/pick/*",
+    "about": "The baseline (a), the changed run (b) and the swap.",
+    "rules": []
+  },
+  {
+    "part": "compare/run/*",
+    "about": "Run A or B's card.",
+    "rules": []
+  },
+  {
+    "part": "compare/section/*",
+    "about": "Metrics, paired, samples or judge.",
+    "rules": ["hidden", "note"]
+  },
+  {
+    "part": "compare/metric/*",
+    "about": "One metric of both runs.",
+    "rules": []
+  },
+  {
+    "part": "compare/score/*",
+    "about": "One score's paired difference and interval.",
+    "rules": []
+  },
+  {
+    "part": "compare/sample/*",
+    "about": "One sample in both runs.",
+    "rules": []
+  },
+  {
+    "part": "compare/open/title",
+    "about": "The open sample's title.",
+    "rules": []
+  },
+  {
+    "part": "compare/open/side/*",
+    "about": "The open sample in run A or B.",
+    "rules": []
+  },
+  {
+    "part": "launch/group/*",
+    "about": "A group of things to launch.",
+    "rules": []
+  },
+  {
+    "part": "launch/item/*",
+    "about": "One thing to launch, by id (script:hello/run.py).",
+    "rules": []
+  },
+  {
+    "part": "launch/option/*",
+    "about": "One of a script's options, by flag.",
+    "rules": ["hidden", "label", "about", "note"]
+  },
+  {
+    "part": "launch/config",
+    "about": "The training or grid config, edited in place.",
+    "rules": ["note"]
+  },
+  {
+    "part": "launch/where",
+    "about": "Where it runs: here, Sol, a Slurm cluster or a VM.",
+    "rules": ["note"]
+  },
+  {
+    "part": "launch/*",
+    "about": "The picker, title, command and Launch button.",
+    "rules": []
+  },
+  {
+    "part": "job/log",
+    "about": "The job's log.",
+    "rules": ["note"]
+  },
+  {
+    "part": "job/wrote",
+    "about": "The runs the job wrote.",
+    "rules": ["note"]
+  },
+  {
+    "part": "job/run/*",
+    "about": "One run the job wrote.",
+    "rules": []
+  },
+  {
+    "part": "job/*",
+    "about": "The job's title, back link, actions, facts and command.",
+    "rules": []
   }
 ]

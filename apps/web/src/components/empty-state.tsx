@@ -2,6 +2,8 @@ import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 
 import { CopyButton } from "@/components/copy-button";
+import { Part } from "@/components/parts";
+import { partId, slug } from "@/lib/parts";
 import { Button } from "@/components/ui/button";
 
 /** What a page shows before it has data: what will be here, and what fills it. That is a link
@@ -20,7 +22,10 @@ export function EmptyState({
   { action: { href: string; label: string } } | { command: string } | { children: React.ReactNode }
 )) {
   return (
-    <div className="flex flex-col items-center rounded-xl border border-dashed px-6 py-16 text-center">
+    <Part
+      id={partId("empty", slug(title))}
+      className="flex flex-col items-center rounded-xl border border-dashed px-6 py-16 text-center"
+    >
       <div className="bg-muted grid size-10 place-items-center rounded-lg border">
         <Icon className="text-muted-foreground size-5" />
       </div>
@@ -41,6 +46,6 @@ export function EmptyState({
           <CopyButton text={fill.command} />
         </div>
       )}
-    </div>
+    </Part>
   );
 }
