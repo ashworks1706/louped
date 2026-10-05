@@ -62,6 +62,7 @@ export type UiPage = Schemas["Page"];
 export type Theme = Schemas["Theme"];
 export type Selection = Schemas["Selection"];
 export type Picked = Schemas["Picked"];
+export type Picks = Schemas["Picks"];
 export type PartRule = Schemas["PartRule"];
 export type Cue = Schemas["Cue"];
 export type Cues = Schemas["Cues"];
@@ -210,7 +211,7 @@ export async function exportJob(req: ExportRequest): Promise<{ name: string; not
 }
 
 /** Hands the person's agent the parts they picked (ui_selection). */
-export const pick = (s: Selection) => post<Selection>("/ui/selection", s);
+export const pick = (s: Selection) => post<Picks>("/ui/selection", s);
 /** What the person's agent asked the app to show them, after the last one the app has. */
 export const cuesAfter = (after: number) => get<Cues>(`/ui/show?after=${after}`);
 /** Tells the agent the app showed a cue, and which of its parts were not on the page; or that a
@@ -278,6 +279,12 @@ const every = (live: boolean | undefined): number | false => (live ? LIVE_MS : f
 /** Query keys and fetchers, one per endpoint, so pages never build URLs by hand. Queries over a
  * live run poll until it ends. */
 export const q = {
+  /** The picks as the server keeps them: read says which version the agent last read. */
+  picks: () => ({
+    queryKey: ["picks"],
+    queryFn: () => get<Picks | null>("/ui/selection"),
+    refetchInterval: 2000,
+  }),
   health: () => ({ queryKey: ["health"], queryFn: () => get<Health>("/health"), retry: false }),
   /** The project's plugins: none in a published dashboard, which has no answer for them. */
   plugins: () => ({

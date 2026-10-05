@@ -49,8 +49,10 @@ Report a difference only with its paired interval from compare (or cohort, for a
 and name the run ids you used. Items the person picks can be saved as a cohort and run again.
 Jobs run one at a time on this machine's GPU, so do not queue more than the question needs.
 The app's pages are data: ui_page shows them and every kind of part on them; ui_selection says
-which parts the person Shift+clicked, with their data; set_layout, set_preset and set_part change
-them; ui_show opens a page and points the person at parts, with a note."""
+which parts the person Shift+clicked, with their data. Call it when they refer to something on
+screen ("this row", "these", @sel 2); in Claude Code, new picks also arrive with their message.
+set_layout, set_preset and set_part change the pages; ui_show opens a page and points the person
+at parts, with a note."""
 
 READ = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False)
@@ -497,11 +499,15 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
 
     @mcp.tool(annotations=READ)
     async def ui_selection() -> dict[str, Any] | None:
-        """What the person picked in the app with Shift+click: the page, its run or experiment,
-        and each part's address, text and data (an item's record under every condition, a
-        condition's numbers, a field's value). None when they have picked nothing since the
-        server started; parts is empty once they clear it."""
-        return await get("/ui/selection")
+        """What the person picked in the app with Shift+click, in the tray's order (pick 1
+        first): the page, its run or experiment, and each part's address, text and data (an
+        item's record under every condition, a condition's numbers, a field's value). None when
+        they have picked nothing since the server started; parts is empty once they clear it.
+        The tray then says you have read them."""
+        picks = await get("/ui/selection")
+        if picks and picks["parts"]:
+            await post("/ui/selection/read", {"version": picks["version"]})
+        return picks
 
     @mcp.tool(annotations=WRITE)
     async def set_layout(

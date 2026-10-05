@@ -13,7 +13,9 @@ results.
   - To act: `new_experiment`, `launch`, `job`, `export_job`, `import_result`, `push`, `pull`.
   - `ui_page`, `set_part`, `set_layout` and `set_preset` change what the app's pages show.
   - The person Shift+clicks any part of a page. `ui_selection` gives you those parts with their
-    data.
+    data, numbered as the app's tray numbers them. Call it when they say "this", "these" or
+    `@sel 2`. In Claude Code, new picks also come with their message (the hook in
+    `.claude/settings.json`).
   - `ui_show` points the person at parts, with a note.
   - `cohort` reads a run's conditions on a set of items, with paired intervals. `save_cohort` saves
     them for a run.py's `--cohort`.

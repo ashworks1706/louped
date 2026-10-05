@@ -5,7 +5,9 @@ description: Change what louped's pages show (reorder, hide, rename or explain a
 
 1. Find what the person means:
    - For "this", "these", "that card", "here": call `ui_selection`. It lists the parts the person
-     Shift+clicked, in order. Each part comes with:
+     Shift+clicked, in order: pick 1 first, as the app's tray numbers them (`@sel 2` means pick 2).
+     In Claude Code, new picks may already be in the message, from louped's prompt hook. Each part
+     comes with:
      - its address (`items/row/28`, `items/stat/pressure`, `item/field/evidence/second_turn`,
        `run.overview/metric/accuracy`)
      - its page, run or experiment
@@ -13,7 +15,8 @@ description: Change what louped's pages show (reorder, hide, rename or explain a
      - its `data`: an item's record under every condition, a condition's rate and flips, a
        field's value and meaning
    - Answer from that data first; it is what they see.
-   - A reference the person pasted (`louped part items/row/28 ...`) gives the same information.
+   - A reference the person pasted (`pick 1: louped part items/row/28 ...`) gives the same
+     information.
 2. Read the page with `ui_page` (with `experiment` for an experiment's page or its runs' pages).
    It gives:
    - each region's blocks and where they come from

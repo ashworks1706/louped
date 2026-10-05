@@ -191,7 +191,7 @@ name = "Layers"
 type = "layers"
 layers = [
     "louped.cli",
-    "louped.server | louped.agent | louped.init",
+    "louped.server | louped.agent | louped.init | louped.picks",
     "louped.examples",
     "louped.check",
     "louped.reports",

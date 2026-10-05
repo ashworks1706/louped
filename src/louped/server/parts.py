@@ -317,6 +317,20 @@ class Selection(BaseModel):
     parts: list[Picked] = Field(max_length=100)
 
 
+class Picks(Selection):
+    """The picks as the server keeps them: each new list gets the next version, and read is the
+    version the agent last read (ui_selection, or `louped picks` from a prompt hook)."""
+
+    version: int
+    read: int = 0
+
+
+class Read(BaseModel):
+    """The agent read the picks at this version."""
+
+    version: int = Field(ge=1)
+
+
 class ShowRequest(BaseModel):
     """What an agent shows the person in the app."""
 

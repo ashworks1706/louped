@@ -3,8 +3,10 @@ they are used; the theme from louped.toml; the block a person points at, for the
 the kit plugin pages draw with."""
 
 import asyncio
+import io
 import json
 from pathlib import Path
+from typing import cast
 
 import httpx
 import pytest
@@ -299,3 +301,58 @@ def test_the_apps_tests_use_the_servers_default(project: Path) -> None:
 
     file = Path(__file__).parents[1] / "apps" / "web" / "e2e" / "default-layout.json"
     assert json.loads(file.read_text()) == page(None, None).model_dump(exclude_none=True)
+
+
+def test_picks_reach_the_agent_with_its_next_message(project: Path, monkeypatch, capsys) -> None:
+    from louped import cli
+    from louped.picks import asked, for_prompt
+
+    assert (asked("why?"), asked("@sel why?"), asked("@sel 2 vs @sel 1,3")) == (None, [], [1, 2, 3])
+    assert asked("mail@self.org") is None and asked("@selection") is None
+    app = create_app(launching=True)
+    api = cast(httpx.Client, TestClient(app, base_url="http://localhost/api"))  # one, in effect
+    assert for_prompt(api, "hi") is None  # nothing picked: nothing added
+    assert (
+        for_prompt(api, "@sel") == "The message says @sel, but nothing is picked in louped's app."
+    )
+    row = {"id": "items/row/28", "url": "/run/?id=m-1&tab=items", "run": "m-1", "text": "28",
+           "data": {"qid": "28"}}  # fmt: skip
+    stat = {**row, "id": "items/stat/pressure", "text": "31%", "data": {"k": 5, "n": 16}}
+    got = api.post("/ui/selection", json={"parts": [row, stat]}, headers=JSON).json()
+    assert (got["version"], got["read"]) == (1, 0)
+
+    # new picks arrive with the next message, once; @sel asks again, all or by number
+    first = for_prompt(api, "why did this flip?")
+    assert first and "pick 1: louped part items/row/28" in first and "pick 2:" in first
+    assert '"qid": "28"' in first and "run: m-1" in first
+    assert api.get("/ui/selection").json()["read"] == 1  # the tray now says the agent read them
+    assert for_prompt(api, "and now?") is None
+    second = for_prompt(api, "compare @sel 2")
+    assert (
+        second and "pick 2: louped part items/stat/pressure" in second and "pick 1:" not in second
+    )
+    assert (
+        for_prompt(api, "@sel 3") == "The message asks for pick 3, but the tray holds picks 1 to 2."
+    )
+    assert api.post("/ui/selection/read", json={"version": 9}, headers=JSON).status_code == 404
+
+    # as Claude Code calls it: the prompt on stdin, the context on stdout
+    monkeypatch.setattr(httpx, "Client", lambda **kw: TestClient(app, base_url=kw["base_url"]))
+    api.post("/ui/selection", json={"parts": [row]}, headers=JSON)
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"prompt": "look"})))
+    cli._picks(cli.Picks(hook=True))
+    out = json.loads(capsys.readouterr().out)["hookSpecificOutput"]
+    assert out["hookEventName"] == "UserPromptSubmit" and "items/row/28" in out["additionalContext"]
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"prompt": "look again"})))
+    cli._picks(cli.Picks(hook=True))
+    assert capsys.readouterr().out == ""  # already read: nothing added
+
+
+def test_picks_without_the_app(monkeypatch) -> None:
+    from louped.picks import for_prompt
+
+    down = httpx.Client(transport=httpx.MockTransport(lambda r: (_ for _ in ()).throw(
+        httpx.ConnectError("refused"))), base_url="http://localhost/api")  # fmt: skip
+    assert for_prompt(down, "hi") is None
+    said = for_prompt(down, "@sel")
+    assert said and said.startswith("The message says @sel, but louped's app at")

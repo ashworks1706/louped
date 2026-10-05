@@ -87,6 +87,8 @@ def test_init_writes_the_project_and_keeps_what_exists(tmp_path: Path) -> None:
         "run-elsewhere",
         "write-report",
     ]
+    hook = json.loads((folder / ".claude/settings.json").read_text())["hooks"]["UserPromptSubmit"]
+    assert hook[0]["hooks"][0]["command"] == "louped picks --hook"
     assert not (folder / "experiments" / EXAMPLE).exists()
     again = init(folder, example=False)
     assert "wrote" not in again and (folder / ".gitignore").read_text().count(".louped/") == 1
@@ -101,6 +103,7 @@ def test_the_plugin_ships_what_init_copies() -> None:
     assert (source / ".mcp.json").is_file() and (
         source / "skills/new-experiment/SKILL.md"
     ).is_file()
+    assert (source / "hooks/hooks.json").is_file()  # Claude Code loads a plugin's hooks from here
 
 
 def test_the_example_runs_offline_and_lines_up_on_the_run_page(project: Path, monkeypatch) -> None:

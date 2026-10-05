@@ -35,7 +35,17 @@ from louped.core import experiments_dir
 from louped.core.project import FILE, base, config
 from louped.server import parts as parts_
 from louped.server.launch import editing_guard, require_json
-from louped.server.parts import KINDS, Cue, Cues, PartRule, Seen, Selection, ShowRequest
+from louped.server.parts import (
+    KINDS,
+    Cue,
+    Cues,
+    PartRule,
+    Picks,
+    Read,
+    Seen,
+    Selection,
+    ShowRequest,
+)
 
 Region = Literal["home", "run.tabs", "run.overview", "experiment.tabs", "experiment.design"]
 REGIONS: tuple[Region, ...] = (
@@ -456,7 +466,7 @@ def _write(path: Path, layout: Layout) -> None:
 def router(launching: bool, mounted: dict[str, list[str]]) -> APIRouter:
     """The routes. mounted is filled by plugins.mount with what it served: each plugin's pages."""
     api = APIRouter(prefix="/api/ui")
-    selected: list[Selection] = []
+    selected: list[Picks] = []
     cues: list[Cue] = []
     plugins = mounted if launching else None
 
@@ -521,17 +531,27 @@ def router(launching: bool, mounted: dict[str, list[str]]) -> APIRouter:
         return theme()
 
     @api.post("/selection", dependencies=[Depends(require_json)])
-    def select(req: Selection) -> Selection:
+    def select(req: Selection) -> Picks:
         """Keeps what the person has picked, replacing the last; in memory only."""
         editing()
         if sum(len(json.dumps(p.data)) for p in req.parts) > 200_000:
             raise HTTPException(413, "the picked parts' data is over 200 kB; pick fewer")
-        selected[:] = [req]
-        return req
+        version = selected[0].version + 1 if selected else 1
+        selected[:] = [Picks(parts=req.parts, version=version)]
+        return selected[0]
 
     @api.get("/selection")
-    def selection() -> Selection | None:
+    def selection() -> Picks | None:
         return selected[0] if selected else None
+
+    @api.post("/selection/read", dependencies=[Depends(require_json)])
+    def read(req: Read) -> Picks:
+        """The agent read the picks at req.version, so the tray can say so."""
+        editing()
+        if not selected or req.version > selected[0].version:
+            raise HTTPException(404, f"no picks at version {req.version}")
+        selected[0].read = max(selected[0].read, req.version)
+        return selected[0]
 
     @api.post("/show", dependencies=[Depends(require_json)])
     def show(req: ShowRequest) -> Cue:
