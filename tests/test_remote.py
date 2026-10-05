@@ -9,10 +9,12 @@ import sys
 import tarfile
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from louped import stores
 from louped.server import create_app
+from louped.server import remote as remote_module
 
 SCRIPT = '''"""Writes one MLflow run and one eval, as an experiment would."""
 from dataclasses import dataclass
@@ -184,3 +186,98 @@ def test_import_refuses_what_is_not_a_result_and_an_exposed_server(tmp_path: Pat
     exposed = TestClient(create_app(), base_url="http://localhost")
     refused = exposed.post("/api/launch/import-path", json={"path": str(tmp_path)})
     assert refused.status_code == 403
+
+
+def git(where: Path, *args: str) -> None:
+    subprocess.run(["git", "-C", str(where), "-c", "user.name=t", "-c", "user.email=t@t", *args],
+                   check=True, capture_output=True)  # fmt: skip
+
+
+def test_a_pushed_project_exports_as_one_file_whose_job_pushes_its_result(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = tmp_path / "project"
+    monkeypatch.setenv("LOUPED_EXPERIMENTS", str(project / "experiments"))
+    experiment(project)
+    remote = tmp_path / "runs"
+    (project / "louped.toml").write_text(f'remote = "{remote}"\n')
+    (project / ".gitignore").write_text(".louped/\n")
+    git(tmp_path, "init", "-q", "--bare", "origin.git")
+    git(project, "init", "-q", "-b", "main")
+    git(project, "add", ".")
+    git(project, "commit", "-q", "-m", "x")
+    monkeypatch.chdir(project)
+    monkeypatch.setattr(remote_module, "_checkout", lambda: None)  # louped as a release
+    api = client()
+    body = {"id": "script:hello/run.py", "options": {"--name": "sol"},
+            "target": {"provider": "shell"}}  # fmt: skip
+    # a folder here is no remote for the cluster: the job packs its result and the note says why
+    got = api.post("/api/launch/export", json=body)
+    assert "cannot reach" in got.headers["x-louped-note"]
+    # the "cluster" in this test is this machine, so its folder stands in for a bucket
+    monkeypatch.setattr(remote_module.sync, "is_local", lambda url: False)
+
+    got = api.post("/api/launch/export", json={"id": "script:hello/run.py",
+                                               "options": {"--name": "sol"},
+                                               "target": {"provider": "shell"}})  # fmt: skip
+    assert got.status_code == 200 and "not pushed" in got.headers["x-louped-note"]
+    git(project, "remote", "add", "origin", str(tmp_path / "origin.git"))
+    git(project, "push", "-q", "origin", "main")
+    (project / "experiments/hello/notes.txt").write_text("draft")
+    got = api.post("/api/launch/export", json={"id": "script:hello/run.py",
+                                               "options": {"--name": "sol"},
+                                               "target": {"provider": "shell"}})  # fmt: skip
+    assert "notes.txt is not committed" in got.headers["x-louped-note"]
+    (project / "experiments/hello/notes.txt").unlink()
+
+    name, data = export(api, {"provider": "shell"})
+    assert name.endswith(".sh")
+    job = name.removeprefix("louped-").removesuffix(".sh")
+    script = data.decode()
+    assert "git clone --quiet" in script and "louped push --result out/result.json" in script
+    assert "sync]==" in script  # the job installs what pushing needs
+
+    far = tmp_path / "far"
+    (far / f"louped-{job}/.venv/bin").mkdir(parents=True)
+    (far / name).write_bytes(data)
+    activate = f'export PATH="{Path(sys.executable).parent}:$PATH"\n'
+    (far / f"louped-{job}/.venv/bin/activate").write_text(activate)
+    stub = tmp_path / "bin"
+    stub.mkdir()
+    (stub / "uv").write_text("#!/bin/sh\nexit 0\n")
+    (stub / "uv").chmod(0o755)
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("LOUPED_", "INSPECT_"))}
+    env |= {"PATH": f"{stub}:{env['PATH']}", "HOME": str(tmp_path)}
+    env.pop("VIRTUAL_ENV", None)
+    env.pop("MLFLOW_TRACKING_URI", None)
+    ran = subprocess.run(["bash", name], cwd=far, env=env, capture_output=True, text=True)
+    assert ran.returncode == 0, ran.stdout + ran.stderr
+    assert "Results pushed to" in ran.stdout
+    assert not list((far / f"louped-{job}").glob("*.tar.gz"))
+
+    pulled = api.post("/api/launch/pull", json={})
+    assert pulled.status_code == 200, pulled.text
+    [done] = pulled.json()
+    assert done["job"] == job and done["host"] == "vm" and len(done["runs"]) == 2
+    detail = api.get(f"/api/launch/jobs/{job}").json()
+    assert detail["status"] == "succeeded" and "ran sol" in detail["log"]
+    assert api.post("/api/launch/pull", json={}).json() == []
+
+
+def test_a_git_url_with_credentials_never_goes_into_job_sh(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    experiment(project)
+    git(tmp_path, "init", "-q", "--bare", "origin.git")
+    git(project, "init", "-q", "-b", "main")
+    git(project, "add", ".")
+    git(project, "commit", "-q", "-m", "x")
+    git(project, "remote", "add", "origin", str(tmp_path / "origin.git"))
+    git(project, "push", "-q", "origin", "main")
+    assert isinstance(remote_module._clone([project / "experiments"]), remote_module.Clone)
+    git(project, "remote", "set-url", "origin", "https://me:ghp_secret@github.com/me/p.git")
+    assert "credentials" in str(remote_module._clone([project / "experiments"]))
+    (project / "experiments/hello/a b.txt").write_text("x")
+    git(project, "mv", "experiments/hello/run.py", "experiments/hello/main.py")
+    assert str(remote_module._clone([project / "experiments"])).startswith(
+        "experiments/hello/main.py is not committed (and 1 more)"
+    )

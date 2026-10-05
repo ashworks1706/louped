@@ -37,6 +37,7 @@ from louped.stores.types import (
     SampleDetail,
     SampleSummary,
 )
+from louped.sync import configured
 
 #: Where the UI's dev server runs; allowed to call the API during development only.
 DEV_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
@@ -57,6 +58,8 @@ class Health(BaseModel):
     home: str
     #: Whether this server runs jobs; the UI only watches jobs when it does.
     launching: bool = False
+    #: Where runs are pushed and pulled; null when none is set or launching is off.
+    remote: str | None = None
 
 
 def find_ui(given: Path | None = None) -> Path | None:
@@ -105,7 +108,8 @@ def create_app(
 
     @app.get("/api/health")
     def health() -> Health:
-        return Health(status="ok", version=__version__, home=str(home()), launching=launching)
+        return Health(status="ok", version=__version__, home=str(home()), launching=launching,
+                      remote=configured() if launching else None)  # fmt: skip
 
     @app.get("/api/runs")
     def runs() -> list[RunSummary]:

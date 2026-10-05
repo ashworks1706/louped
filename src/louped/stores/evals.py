@@ -45,7 +45,7 @@ def _done(path: str, mtime: float) -> int:
         return 0
 
 
-def _logs() -> list[tuple[Path, EvalLog]]:
+def eval_logs() -> list[tuple[Path, EvalLog]]:
     root = logs_dir()
     if not root.is_dir():
         return []
@@ -123,12 +123,12 @@ def _summary(path: Path, log: EvalLog) -> RunSummary:
 
 
 def list_runs() -> list[RunSummary]:
-    return [_summary(path, log) for path, log in _logs()]
+    return [_summary(path, log) for path, log in eval_logs()]
 
 
 def _find(run_id: str) -> tuple[Path, EvalLog] | None:
     eval_id = run_id.removeprefix(PREFIX)
-    return next(((p, log) for p, log in _logs() if log.eval.eval_id == eval_id), None)
+    return next(((p, log) for p, log in eval_logs() if log.eval.eval_id == eval_id), None)
 
 
 def log_of(run_id: str) -> tuple[Path, EvalLog] | None:

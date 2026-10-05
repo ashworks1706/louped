@@ -217,12 +217,13 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         options: dict[str, str | bool | list[str]] | None = None,
         out_dir: str = ".",
     ) -> dict[str, Any]:
-        """Package a launch to run on another machine, without running it here: a folder with
-        job.sh for Sol, a Slurm cluster or a VM. id and options are as for launch; target holds
-        provider (sol, slurm or shell), gpu, gpus, hours, cpus, partition, qos and constraint, the
-        server filling in the rest. Saves louped-<job>.tar.gz under out_dir and returns its path;
-        the person copies it to the machine, runs `sbatch job.sh` (bash on a VM), and brings back
-        louped-result-<job>.tar.gz for import_result."""
+        """Package a launch to run on another machine, without running it here: job.sh for Sol, a
+        Slurm cluster or a VM. id and options are as for launch; target holds provider (sol, slurm
+        or shell), gpu, gpus, hours, cpus, partition, qos and constraint, the server filling in the
+        rest. Saves it under out_dir and returns its path and a note: one file, louped-<job>.sh,
+        when the project is a pushed git commit, else louped-<job>.tar.gz with job.sh inside. The
+        person runs it there (`sbatch`, bash on a VM). With a remote set, its results come back
+        with pull; else they bring back louped-result-<job>.tar.gz for import_result."""
         body = {"id": id, "options": options or {}, "target": target}
         try:
             response = await api.post("/launch/export", json=body)
@@ -235,13 +236,26 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         path = Path(out_dir).expanduser().resolve() / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(response.content)
-        return {"path": str(path), "bytes": len(response.content)}
+        return {"path": str(path), "bytes": len(response.content),
+                "note": response.headers.get("x-louped-note", "")}  # fmt: skip
 
     @mcp.tool(annotations=WRITE)
     async def import_result(path: str) -> dict[str, Any]:
         """Add a louped-result-<job>.tar.gz (or its unpacked folder) from another machine to this
         louped: its runs join Runs marked with where they ran; importing twice adds nothing."""
         return await post("/launch/import-path", {"path": path})
+
+    @mcp.tool(annotations=WRITE)
+    async def push() -> dict[str, Any]:
+        """Push the runs this louped made and has not pushed to the project's remote, as one new
+        bundle there, so others (or another machine) can pull them."""
+        return await post("/launch/push", {})
+
+    @mcp.tool(annotations=WRITE)
+    async def pull() -> list[dict[str, Any]]:
+        """Add the runs pushed to the project's remote that this louped has not pulled, including
+        the results of jobs exported from here; returns what each bundle added."""
+        return await post("/launch/pull", {})
 
     async def _wait(job_id: str, seconds: int) -> dict[str, Any]:
         for _ in range(seconds * 2):

@@ -117,7 +117,7 @@ experiments                              leaf, in a project; nothing imports it
 cli
 server | agent | init                    FastAPI over the stores; Playground; launching jobs; the
                                          MCP server, an HTTP client of the API; louped init
-train | sweep | grid | features | circuits | judge | bench
+train | sweep | grid | sync | features | circuits | judge | bench
                                          training recipes and sweeps; steering sweeps; condition
                                          grids; SAE dashboards; attribution graphs; pairwise judging;
                                          serving cost
@@ -159,8 +159,16 @@ time to first token, decode throughput and peak memory, base and changed), launc
 loading a model into the Playground. A job is an existing command (an experiment script,
 `louped train`, `louped grid`, `louped new`, `louped features`, `inspect eval`) in a subprocess, one at
 a time, its output under `<home>/jobs`; or exported (server/remote.py) as a bundle whose job.sh
-runs it on Sol, a Slurm cluster or a VM, and whose result archive is imported back into the stores; each form is read from the command's own argument parser. Launching and loading run code on this machine, so both are on only for a loopback server,
+runs it on Sol, a Slurm cluster or a VM (one file that clones the project when it is a pushed git
+commit), and whose results come back through the remote or as an archive imported into the stores;
+each form is read from the command's own argument parser. Launching and loading run code on this machine, so both are on only for a loopback server,
 never with `--expose`.
+
+Runs move between machines as bundles (`louped.sync`): a folder laid out as a louped home (Inspect
+logs, an MLflow store with its artifacts, result.json). `louped push` writes one per push into the
+remote, any fsspec URL (`remote` in louped.toml); `louped pull` and `louped import` add a bundle's
+runs to the stores, skipping runs already there. `louped publish` (server/publish.py) writes the UI
+with every GET answer its pages ask for as static files, for any static host.
 
 `louped mcp` is a stdio MCP server for coding agents. It imports nothing from the server: it calls
 the same HTTP API the UI does, so an agent's jobs share the queue and the `--expose` guard, and show

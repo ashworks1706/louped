@@ -519,6 +519,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/launch/push": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Push */
+    post: operations["push_api_launch_push_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/launch/pull": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Pull */
+    post: operations["pull_api_launch_pull_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/launch/import-path": {
     parameters: {
       query?: never;
@@ -822,6 +856,8 @@ export interface components {
        * @default false
        */
       launching: boolean;
+      /** Remote */
+      remote?: string | null;
     };
     /** HeatmapView */
     HeatmapView: {
@@ -937,6 +973,7 @@ export interface components {
         | components["schemas"]["ScatterView"]
         | components["schemas"]["TableView"]
         | components["schemas"]["TokensView"]
+        | components["schemas"]["VegaView"]
       )[];
     };
     /** Job */
@@ -1233,6 +1270,15 @@ export interface components {
        */
       switchable: boolean;
     };
+    /** Pushed */
+    Pushed: {
+      /** Remote */
+      remote: string;
+      /** Bundle */
+      bundle: string | null;
+      /** Runs */
+      runs: string[];
+    };
     /** RunDetail */
     RunDetail: {
       /** Id */
@@ -1326,7 +1372,8 @@ export interface components {
         | components["schemas"]["LineView"]
         | components["schemas"]["ScatterView"]
         | components["schemas"]["TableView"]
-        | components["schemas"]["TokensView"];
+        | components["schemas"]["TokensView"]
+        | components["schemas"]["VegaView"];
     };
     /** SampleDetail */
     SampleDetail: {
@@ -1575,6 +1622,27 @@ export interface components {
       input?: unknown;
       /** Context */
       ctx?: Record<string, never>;
+    };
+    /**
+     * VegaView
+     * @description Any chart as a Vega-Lite spec with its data inline: what the other kinds do not draw.
+     */
+    VegaView: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      kind: "vega";
+      /** Title */
+      title: string;
+      /** Spec */
+      spec: {
+        [key: string]: unknown;
+      };
+      /** Note */
+      note?: string | null;
+      /** About */
+      about?: string | null;
     };
   };
   responses: never;
@@ -2474,6 +2542,46 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Imported"];
+        };
+      };
+    };
+  };
+  push_api_launch_push_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Pushed"];
+        };
+      };
+    };
+  };
+  pull_api_launch_pull_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Imported"][];
         };
       };
     };

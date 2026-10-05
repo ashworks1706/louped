@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "louped",
-    "version": "0.0.0"
+    "version": "0.1.3"
   },
   "paths": {
     "/api/health": {
@@ -1127,6 +1127,46 @@
         }
       }
     },
+    "/api/launch/push": {
+      "post": {
+        "summary": "Push",
+        "operationId": "push_api_launch_push_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pushed"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/launch/pull": {
+      "post": {
+        "summary": "Pull",
+        "operationId": "pull_api_launch_pull_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Imported"
+                  },
+                  "type": "array",
+                  "title": "Response Pull Api Launch Pull Post"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/launch/import-path": {
       "post": {
         "summary": "Import Path",
@@ -1866,6 +1906,17 @@
             "type": "boolean",
             "title": "Launching",
             "default": false
+          },
+          "remote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remote"
           }
         },
         "type": "object",
@@ -2141,6 +2192,9 @@
                 },
                 {
                   "$ref": "#/components/schemas/TokensView"
+                },
+                {
+                  "$ref": "#/components/schemas/VegaView"
                 }
               ],
               "discriminator": {
@@ -2150,7 +2204,8 @@
                   "line": "#/components/schemas/LineView",
                   "scatter": "#/components/schemas/ScatterView",
                   "table": "#/components/schemas/TableView",
-                  "tokens": "#/components/schemas/TokensView"
+                  "tokens": "#/components/schemas/TokensView",
+                  "vega": "#/components/schemas/VegaView"
                 }
               }
             },
@@ -2815,6 +2870,35 @@
         "required": ["model", "layers"],
         "title": "PlaygroundInfo"
       },
+      "Pushed": {
+        "properties": {
+          "remote": {
+            "type": "string",
+            "title": "Remote"
+          },
+          "bundle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bundle"
+          },
+          "runs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Runs"
+          }
+        },
+        "type": "object",
+        "required": ["remote", "bundle", "runs"],
+        "title": "Pushed"
+      },
       "RunDetail": {
         "properties": {
           "id": {
@@ -3119,6 +3203,9 @@
               },
               {
                 "$ref": "#/components/schemas/TokensView"
+              },
+              {
+                "$ref": "#/components/schemas/VegaView"
               }
             ],
             "title": "View",
@@ -3129,7 +3216,8 @@
                 "line": "#/components/schemas/LineView",
                 "scatter": "#/components/schemas/ScatterView",
                 "table": "#/components/schemas/TableView",
-                "tokens": "#/components/schemas/TokensView"
+                "tokens": "#/components/schemas/TokensView",
+                "vega": "#/components/schemas/VegaView"
               }
             }
           }
@@ -3807,6 +3895,50 @@
         "type": "object",
         "required": ["loc", "msg", "type"],
         "title": "ValidationError"
+      },
+      "VegaView": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "vega",
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "spec": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Spec"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "about": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "About"
+          }
+        },
+        "type": "object",
+        "required": ["kind", "title", "spec"],
+        "title": "VegaView",
+        "description": "Any chart as a Vega-Lite spec with its data inline: what the other kinds do not draw."
       }
     }
   }

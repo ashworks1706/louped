@@ -14,4 +14,5 @@ description: Read a louped run's results and report them honestly. Use after a r
 5. Read examples, not only rates: name at least one item where the behaviour happened and one
    where it did not, from the records, and check the scoring on them.
 6. Separate what the result shows from what it suggests. Do not call a pilot result a finding or
-   infer intent from an answer. Point the user to the run page (Items tab) for the rest.
+   infer intent from an answer. Point the user to the run page (Items tab) for the rest, and write
+   any report with `write-report`.

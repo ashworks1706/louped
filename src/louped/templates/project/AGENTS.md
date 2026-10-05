@@ -9,8 +9,8 @@ results.
 
 - `louped mcp`, registered in `.mcp.json`, drives the running app: `experiments`, `runs`, `run`,
   `samples`, `figures`, `compare` to read; `new_experiment`, `launch`, `job`, `export_job`,
-  `import_result` to act. Work started through it shows in the app. Start `louped serve` first.
-- Skills in `.claude/skills/`: `new-experiment`, `read-results`, `run-elsewhere`.
+  `import_result`, `push`, `pull` to act. Work started through it shows in the app. Start `louped serve` first.
+- Skills in `.claude/skills/`: `new-experiment`, `read-results`, `run-elsewhere`, `write-report`.
 - The CLI does the same steps: `louped new`, `louped import`, `louped --help`.
 
 ## The method
@@ -29,7 +29,8 @@ results.
 4. Pin what moves numbers: the model's revision, the seed, greedy decoding unless sampling is the
    point.
 5. Real runs on large models go to a cluster (`run-elsewhere`); this machine runs small checks.
-6. Write the result in the README's Result (model, date, numbers) and the decision in Next; set
+6. Write the result in the README's Result (model, date, numbers) and the decision in Next, as
+   `write-report` says: every number traced to a run, no claim past what was tested. Set
    `status: answered` when a real model's result answers the question.
 
 ## Where things are

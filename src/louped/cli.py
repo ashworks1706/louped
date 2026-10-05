@@ -4,13 +4,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import TYPE_CHECKING, Annotated, Literal
 
 import tyro
 
 from louped import __version__
 from louped.data.cli import Command as DataCommand
 from louped.train.cli import Command as TrainCommand
+
+if TYPE_CHECKING:
+    from louped.server.remote import Imported
 
 
 @dataclass(frozen=True)
@@ -155,6 +158,38 @@ class Import:
 
 
 @dataclass(frozen=True)
+class Push:
+    """Push the runs this louped made and has not pushed to the remote, as one new bundle: `remote`
+    in louped.toml, or LOUPED_REMOTE. Needs the sync extra."""
+
+    remote: str | None = None
+    """A remote other than the configured one: any fsspec URL, such as hf://buckets/<user>/<name>."""
+    result: Path | None = None
+    """An exported job's out/result.json: the bundle carries its job, host, exit code and log."""
+
+
+@dataclass(frozen=True)
+class Pull:
+    """Add the runs in the remote's bundles this louped has not pulled. A job exported from here
+    and pushed from the cluster takes its result. Needs the sync extra."""
+
+    remote: str | None = None
+    """A remote other than the configured one."""
+
+
+@dataclass(frozen=True)
+class Publish:
+    """Write this project's dashboard as static, read-only files to put on any static host at a
+    domain's root: an HF static Space, Vercel, or a GitHub Pages user site. Needs the server
+    extra."""
+
+    out: tyro.conf.Positional[Path]
+    """An empty or new folder."""
+    web_dir: Path | None = None
+    """The UI's static export; found as for serve."""
+
+
+@dataclass(frozen=True)
 class Bench:
     """What serving a model costs on this machine, per weight format: throughput and latency as
     requests arrive together, and prefill time and memory as the prompt grows. One run with its
@@ -252,6 +287,9 @@ Command = (
     | Annotated[Features, tyro.conf.subcommand("features")]
     | Annotated[Circuit, tyro.conf.subcommand("circuit")]
     | Annotated[Import, tyro.conf.subcommand("import")]
+    | Annotated[Push, tyro.conf.subcommand("push")]
+    | Annotated[Pull, tyro.conf.subcommand("pull")]
+    | Annotated[Publish, tyro.conf.subcommand("publish")]
     | Annotated[Bench, tyro.conf.subcommand("bench")]
     | Annotated[EndpointBench, tyro.conf.subcommand("endpoint-bench")]
     | Annotated[Judge, tyro.conf.subcommand("judge")]
@@ -304,6 +342,11 @@ def view(cmd: View) -> None:
         raise SystemExit(str(exc)) from exc
     uvicorn.run(create_app(find_ui(cmd.web_dir), None, launching=False), host=cmd.host,
                 port=cmd.port)  # fmt: skip
+
+
+def _imported(done: Imported) -> str:
+    again = f", {len(done.skipped)} already here" if done.skipped else ""
+    return f"{len(done.runs)} runs from {done.host} (exit {done.exit_code}){again}"
 
 
 def main() -> None:
@@ -368,8 +411,39 @@ def main() -> None:
                 done = import_result(cmd.path, Jobs(work=False))
             except ValueError as exc:
                 raise SystemExit(str(exc)) from exc
-            print(f"{len(done.runs)} runs from {done.host} (exit {done.exit_code})"
-                  + (f", {len(done.skipped)} already here" if done.skipped else ""))  # fmt: skip
+            print(_imported(done))
+        case Push() as cmd:
+            from louped.sync import push
+
+            try:
+                pushed = push(cmd.remote, cmd.result)
+            except ValueError as exc:
+                raise SystemExit(str(exc)) from exc
+            print(f"{len(pushed.runs)} runs to {pushed.remote}/{pushed.bundle}" if pushed.bundle
+                  else "nothing new to push")  # fmt: skip
+        case Pull() as cmd:
+            from louped.server.launch import Jobs
+            from louped.server.remote import pull_results
+
+            try:
+                pulled = pull_results(Jobs(work=False), cmd.remote)
+            except ValueError as exc:
+                raise SystemExit(str(exc)) from exc
+            for done in pulled:
+                print(_imported(done))
+            if not pulled:
+                print("nothing new to pull")
+        case Publish() as cmd:
+            from louped.server.app import find_ui
+            from louped.server.publish import describe, publish
+
+            web = find_ui(cmd.web_dir)
+            if web is None:
+                raise SystemExit("louped publish needs the built UI: pass --web-dir")
+            try:
+                print(describe(publish(cmd.out, web)))
+            except ValueError as exc:
+                raise SystemExit(str(exc)) from exc
         case Bench() as cmd:
             from louped.bench import bench
             from louped.models.load import Quant

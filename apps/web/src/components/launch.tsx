@@ -193,11 +193,9 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
   const out = useMutation({
     mutationFn: exportJob,
     meta: { action: "Export" },
-    onSuccess: (name) => {
+    onSuccess: ({ name, note }) => {
       void client.invalidateQueries({ queryKey: ["jobs"] });
-      toast(`${name} downloaded`, {
-        description: "Run job.sh there, then import the result it writes on Runs.",
-      });
+      toast(`${name} downloaded`, { description: note });
     },
   });
   const go = useMutation({
@@ -357,9 +355,10 @@ function Where({
         </NativeSelect>
         {place !== "here" && (
           <Help label="How does running elsewhere work?">
-            Export downloads a folder with job.sh. Copy it there and run it (sbatch job.sh on a
-            cluster, bash job.sh on a VM). It installs louped with uv, runs this command, and packs
-            louped-result-….tar.gz. Import that file from Runs and its runs show up there.
+            Export downloads job.sh: one file when the project is a pushed git commit, else a folder
+            with what it needs. Run it there (sbatch on a cluster, bash on a VM). It installs louped
+            with uv and runs this command. With a remote set, it pushes the results and Pull on Runs
+            brings them here; else import the louped-result-….tar.gz it packs.
           </Help>
         )}
       </div>

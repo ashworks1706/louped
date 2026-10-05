@@ -31,6 +31,13 @@ Documentation = "https://louped.vercel.app/docs"
 server = [
     "fastapi>=0.115",
     "uvicorn>=0.32",
+    "louped[evals,tracking,sync]",
+]
+# Runs pushed to and pulled from a remote: any fsspec URL, Hugging Face Storage Buckets through
+# huggingface_hub's hf://; S3 or R2 also needs s3fs.
+sync = [
+    "fsspec>=2024.6",
+    "huggingface-hub>=1.33",
     "louped[evals,tracking]",
 ]
 evals = [
@@ -161,7 +168,7 @@ layers = [
     "louped.cli",
     "louped.server | louped.agent | louped.init",
     "louped.examples",
-    "louped.train | louped.sweep | louped.grid | louped.features | louped.circuits | louped.judge | louped.bench | louped.endpoint_bench",
+    "louped.train | louped.sweep | louped.grid | louped.sync | louped.features | louped.circuits | louped.judge | louped.bench | louped.endpoint_bench",
     "louped.stores | louped.tracking | louped.analysis | louped.inspect_ext",
     "louped.interventions",
     "louped.vectors",

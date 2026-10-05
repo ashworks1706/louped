@@ -1,7 +1,16 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Rocket, Sparkles, Square, Terminal, Upload } from "lucide-react";
+import {
+  ArrowLeft,
+  CloudDownload,
+  CloudUpload,
+  Rocket,
+  Sparkles,
+  Square,
+  Terminal,
+  Upload,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
@@ -15,7 +24,16 @@ import { askToNotify } from "@/components/notifier";
 import { QueryState } from "@/components/query-state";
 import { KindBadge, StatusDot } from "@/components/run-badges";
 import { Button } from "@/components/ui/button";
-import { cancelJob, importResult, isLive, launch, q, type Job } from "@/lib/api";
+import {
+  cancelJob,
+  importResult,
+  isLive,
+  launch,
+  pullRuns,
+  pushRuns,
+  q,
+  type Job,
+} from "@/lib/api";
 import { ago } from "@/lib/format";
 import { jobHref, runHref } from "@/lib/href";
 import { cn } from "@/lib/utils";
@@ -102,7 +120,8 @@ export function JobsPanel() {
             each one writes appear in the table below as they are written.
           </Help>
         </h2>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Sync />
           <ImportResult />
           <Button asChild variant="outline" size="sm">
             <Link href="/launch/">
@@ -339,6 +358,58 @@ function RunLinks({ log }: { log: string }) {
         })}
       </div>
     </section>
+  );
+}
+
+/** Push and Pull with the project's remote, when it has one. */
+function Sync() {
+  const client = useQueryClient();
+  const health = useQuery(q.health());
+  const remote = health.data?.remote;
+  const push = useMutation({
+    mutationFn: pushRuns,
+    meta: { action: "Push" },
+    onSuccess: (done) =>
+      toast(done.bundle ? `${done.runs.length} runs pushed` : "Nothing new to push", {
+        description: <span className="font-mono">{done.remote}</span>,
+      }),
+  });
+  const pull = useMutation({
+    mutationFn: pullRuns,
+    meta: { action: "Pull" },
+    onSuccess: (found) => {
+      void client.invalidateQueries({ queryKey: ["jobs"] });
+      void client.invalidateQueries({ queryKey: ["runs"] });
+      const runs = found.reduce((n, d) => n + d.runs.length, 0);
+      toast(found.length ? `${runs} runs pulled` : "Nothing new to pull", {
+        description: found.length
+          ? `From ${[...new Set(found.map((d) => d.host))].join(", ")}`
+          : remote,
+      });
+    },
+  });
+  if (!remote) return null;
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => pull.mutate()}
+        disabled={pull.isPending}
+        title={`Add the runs pushed to ${remote}`}
+      >
+        <CloudDownload /> Pull
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => push.mutate()}
+        disabled={push.isPending}
+        title={`Push this louped's new runs to ${remote}`}
+      >
+        <CloudUpload /> Push
+      </Button>
+    </>
   );
 }
 

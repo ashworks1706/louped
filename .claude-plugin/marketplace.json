@@ -8,7 +8,7 @@
     {
       "name": "louped",
       "source": "./src/louped/templates/agent",
-      "description": "Drive louped research projects from Claude Code: the louped MCP server and the new-experiment, read-results and run-elsewhere skills. Needs louped installed (pip install 'louped[agent]')."
+      "description": "Drive louped research projects from Claude Code: the louped MCP server and the new-experiment, read-results, run-elsewhere and write-report skills. Needs louped installed (pip install 'louped[agent]')."
     }
   ]
 }

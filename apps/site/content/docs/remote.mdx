@@ -1,29 +1,74 @@
 ---
-title: Run on a cluster
-description: Send a job to a Slurm cluster or another machine and bring its results back.
+title: Share and run elsewhere
+description: Keep runs in a remote everyone can pull from, send jobs to a cluster, and publish a read-only dashboard.
 ---
 
+## A remote for runs
+
+Runs live in `.louped/`, which git ignores. To share them, or to keep them beside the code, set a
+remote in `louped.toml`:
+
+```toml
+remote = "hf://buckets/<user>/<name>"   # a Hugging Face Storage Bucket
+# remote = "runs"                        # or a folder, such as one in the repository
+# remote = "s3://<bucket>/runs"          # or S3-compatible storage such as Cloudflare R2 (pip install s3fs)
+```
+
+`LOUPED_REMOTE` overrides it. Then:
+
+```sh
+louped push   # this louped's new runs, as one new bundle in the remote
+louped pull   # every bundle this louped has not pulled
+```
+
+**Runs** has the same **Push** and **Pull** buttons. Each push writes a new folder and rewrites
+nothing, so two people or machines never conflict. A bundle holds Inspect logs, an MLflow store
+with its artifacts, and `result.json` saying where it ran. Model weights stay out. An `hf://`
+remote needs `hf auth login` or `HF_TOKEN`.
+
+## Run on a cluster
+
 1. In the app, open **Launch**, set the options, choose **Run on** (ASU Sol, a Slurm cluster or
-   another machine) and press **Export**. You get `louped-<id>.tar.gz`.
-2. Copy it to the cluster, unpack it and submit it:
+   another machine) and press **Export**.
+2. Copy what downloads to the cluster and submit it:
 
    ```sh
-   tar -xzf louped-<id>.tar.gz && cd louped-<id>
-   sbatch job.sh        # or: bash job.sh on a plain machine
+   sbatch louped-<id>.sh     # or: bash louped-<id>.sh on a plain machine
    ```
 
-3. When it finishes, copy `louped-result-<id>.tar.gz` back and open **Runs → Import result**, or run
-   `louped import louped-result-<id>.tar.gz`.
+   When the project is a pushed git commit, the export is this one file: the job clones the
+   project at that commit. Otherwise it is `louped-<id>.tar.gz`, and the app says why. Unpack it
+   and run its `job.sh` instead.
 
-The imported runs show like local ones, marked with where they ran.
+3. With a remote set, the job pushes its results itself. Press **Pull** on **Runs**, or run
+   `louped pull`. Without one, copy `louped-result-<id>.tar.gz` back and open
+   **Runs → Import result** (or run `louped import louped-result-<id>.tar.gz`).
 
-## Tips
+Pulled and imported runs show like local ones, marked with where they ran.
 
-- **Gated models** (such as Llama): run `hf auth login` on the cluster with the same `HF_HOME` the
-  job uses (`/scratch/$USER/huggingface` on Sol).
-- **First run**: run the job's `uv sync` line once on a login node. The job then reuses the
+### Tips
+
+- **Gated models** (such as Llama) and `hf://` remotes: run `hf auth login` on the cluster, or
+  export `HF_TOKEN` before `sbatch`.
+- **Private repositories**: the cluster needs access to clone it, such as an SSH key on GitHub.
+- **First run**: run the job's install line once on a login node. The job then reuses the
   downloaded packages, which avoids timeouts and compute nodes without internet.
 - **Smaller installs**: list the extras your experiment needs in its README (`extras: tracking`).
   The job installs only those.
 - **Sol**: jobs use the `public` partition and QOS. Models and packages are cached under
   `/scratch/$USER`, since home space is small.
+
+## Publish a read-only dashboard
+
+```sh
+louped publish site/
+```
+
+This writes the app and every answer its pages need as static files. Serve them at a domain's
+root:
+
+- **Hugging Face**: a static Space, `hf upload <user>/<space> site/ --repo-type space`.
+- **Vercel**: `vercel deploy site/`.
+- **GitHub Pages**: a user or organization site (`<user>.github.io`).
+
+Nothing runs there. Launching, the Playground, labelling and comparing two runs are off.

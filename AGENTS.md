@@ -75,6 +75,7 @@ tests/            Python tests, CPU only
 | A research question        | in a research project: `louped new <name> --domain <domain>`, then its README and `run.py` |
 | An eval                    | Inspect `@task`s in `experiments/<name>/task.py`                           |
 | A figure                   | a view from `louped.analysis.views`, logged with `log_json` under `views/` |
+| A chart no kind draws      | `views.vega(title, spec)`: any Vega-Lite spec with its data inline, no change to louped |
 | A number                   | `mlflow.log_metrics` inside `louped.tracking.start_run`                    |
 | A training run or a grid   | `experiments/<name>/*.yaml` starting `# louped train <recipe>` or `# louped grid` |
 | A paper's own harness      | a pinned clone under `.louped/vendor/`, run in its own venv ("Someone else's code" in `apps/site/content/docs/experiments.mdx`) |

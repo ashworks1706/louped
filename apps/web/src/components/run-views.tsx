@@ -20,6 +20,7 @@ import {
 
 import { Help } from "@/components/help";
 import { QueryState } from "@/components/query-state";
+import { VegaFigure } from "@/components/vega-figure";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import {
@@ -68,6 +69,7 @@ const READ: Record<View["kind"], string> = {
   table: "One row per item. Linked cells open the run or page they name.",
   tokens:
     "Each token is shaded by the picked series: darker is a larger value. Hover a token for its number.",
+  vega: "A chart the run drew itself. Hover marks for their values.",
 };
 
 /** One figure of any kind, with its title, how to read it, and its note. */
@@ -87,6 +89,7 @@ export function Figure({ view }: { view: View }) {
         {view.kind === "scatter" && <ScatterFigure view={view} />}
         {view.kind === "table" && <TableFigure view={view} />}
         {view.kind === "tokens" && <TokensFigure view={view} />}
+        {view.kind === "vega" && <VegaFigure view={view} />}
       </div>
     </figure>
   );
