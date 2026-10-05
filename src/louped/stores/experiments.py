@@ -25,7 +25,7 @@ import re
 from pathlib import Path
 from typing import get_args
 
-from louped.core import experiments_dir
+from louped.core import experiments_dir, trash
 from louped.core.project import config
 from louped.stores.runs import NotFound, list_runs
 from louped.stores.types import (
@@ -214,6 +214,11 @@ def write_readme(name: str, text: str) -> None:
     folder = _folder(name)
     front_matter(text, name)
     (folder / "README.md").write_text(text, encoding="utf-8")
+
+
+def delete_experiment(name: str) -> Path:
+    """Move an experiment's folder to the trash; its runs stay, under its name. Returns where."""
+    return trash(_folder(name), "experiments")
 
 
 def get_experiment(name: str) -> ExperimentDetail:

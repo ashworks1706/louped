@@ -12,6 +12,7 @@ from louped.core.paths import (
     logs_dir,
     saved_model,
     tracking_uri,
+    trash,
     vectors_dir,
 )
 
@@ -28,5 +29,6 @@ __all__ = [
     "named_fields",
     "saved_model",
     "tracking_uri",
+    "trash",
     "vectors_dir",
 ]

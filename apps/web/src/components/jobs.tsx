@@ -19,6 +19,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { CopyButton } from "@/components/copy-button";
+import { DeleteButton } from "@/components/delete-button";
 import { EmptyState } from "@/components/empty-state";
 import { Help } from "@/components/help";
 import { askToNotify } from "@/components/notifier";
@@ -31,6 +32,7 @@ import {
   ApiError,
   cancelJob,
   connectRemote,
+  deleteJob,
   importResult,
   isLive,
   launch,
@@ -243,17 +245,26 @@ function JobLoaded({ id }: { id: string }) {
               {j.title}
             </h1>
             <StatusDot status={j.status} />
-            {isLive(j.status) && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="ml-auto"
-                onClick={() => stop.mutate(j.id)}
-                disabled={stop.isPending}
-              >
-                <Square /> Stop
-              </Button>
-            )}
+            <div className="ml-auto flex gap-2">
+              {isLive(j.status) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => stop.mutate(j.id)}
+                  disabled={stop.isPending}
+                >
+                  <Square /> Stop
+                </Button>
+              )}
+              <DeleteButton
+                what="job"
+                name={j.title}
+                undo="It and its log move to .louped/trash/jobs. The runs it wrote stay."
+                remove={() => deleteJob(j.id)}
+                then="/runs/"
+                disabled={isLive(j.status) ? "Still running: stop it first" : undefined}
+              />
+            </div>
           </div>
           <JobFacts job={j} step={p?.label} />
           <ProgressBar job={j} log={j.log} />

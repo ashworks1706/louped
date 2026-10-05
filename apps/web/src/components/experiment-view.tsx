@@ -8,12 +8,21 @@ import { parseAsString, useQueryState } from "nuqs";
 import { EmptyState } from "@/components/empty-state";
 import { StatusLabel } from "@/components/experiments-list";
 import { EditableText } from "@/components/markdown-editor";
+import { DeleteButton } from "@/components/delete-button";
 import { PluginFrame, usePluginTabs } from "@/components/plugin-page";
 import { QueryState } from "@/components/query-state";
 import { RunsTable } from "@/components/runs-table";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { isLive, q, readme, saveReadme, type ExperimentDetail, type Launchable } from "@/lib/api";
+import {
+  deleteExperiment,
+  isLive,
+  q,
+  readme,
+  saveReadme,
+  type ExperimentDetail,
+  type Launchable,
+} from "@/lib/api";
 import { ago } from "@/lib/format";
 import { axisPath, experimentHref } from "@/lib/href";
 
@@ -90,7 +99,16 @@ function ExperimentHeader({ experiment: e }: { experiment: ExperimentDetail }) {
               {e.question ?? "No question written yet. Add one under ## Question in its README."}
             </p>
           </div>
-          <LaunchActions name={e.name} />
+          <div className="flex items-start gap-2">
+            <LaunchActions name={e.name} />
+            <DeleteButton
+              what="experiment"
+              name={e.name}
+              undo={`Its folder moves to .louped/trash/experiments; move it back to experiments/ to restore it. Its ${e.runs.length} runs stay.`}
+              remove={() => deleteExperiment(e.name)}
+              then={`${axisPath(e.axis)}/experiments/`}
+            />
+          </div>
         </div>
         <dl className="text-muted-foreground flex flex-wrap gap-x-6 gap-y-1 text-sm">
           <div className="flex gap-1.5">

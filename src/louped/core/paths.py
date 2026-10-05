@@ -56,3 +56,15 @@ def experiments_dir() -> Path:
     """The research questions: LOUPED_EXPERIMENTS when set, else experiments/ at the project's
     root."""
     return Path(os.environ.get("LOUPED_EXPERIMENTS", base() / "experiments")).resolve()
+
+
+def trash(path: Path, kind: str) -> Path:
+    """Move a file or folder louped deletes to <home>/trash/<kind>/, stamped, instead of removing
+    it: a deletion from the app is undone by moving it back. Returns where it went."""
+    import shutil
+    from datetime import UTC, datetime
+
+    target = home() / "trash" / kind / f"{datetime.now(UTC):%Y%m%d-%H%M%S}-{path.name}"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.move(path, target)
+    return target

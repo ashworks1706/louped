@@ -155,6 +155,14 @@ def create_app(
             raise HTTPException(400, str(exc)) from exc
         return req
 
+    @app.delete("/api/runs/{run_id}", dependencies=[Depends(launch.require_json)])
+    def delete_run(run_id: str) -> None:
+        editing()
+        try:
+            stores.delete_run(run_id)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+
     @app.get("/api/runs/{run_id}/views")
     def views(run_id: str) -> list[RunView]:
         return stores.list_views(run_id)
@@ -215,6 +223,12 @@ def create_app(
         except stores.BadExperiment as exc:  # the edit's fault, not the store's
             raise HTTPException(400, str(exc)) from exc
         return req
+
+    @app.delete("/api/experiments/{name}", dependencies=[Depends(launch.require_json)])
+    def delete_experiment(name: str) -> Text:
+        """Moves its folder to <home>/trash/experiments; says where."""
+        editing()
+        return Text(text=str(stores.delete_experiment(name)))
 
     @app.get("/api/experiments/{name}")
     def experiment(name: str) -> ExperimentDetail:

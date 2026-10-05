@@ -126,6 +126,21 @@ def list_artifact_paths(run_id: str, path: str) -> list[str] | None:
     return [a.path for a in _walk(client, run_id, path)]
 
 
+def delete_run(run_id: str) -> bool:
+    """Mark a run deleted in MLflow, which keeps it (`mlflow gc` removes it for good, and
+    MlflowClient.restore_run brings it back); False when there is no such run."""
+    client = _client()
+    if client is None:
+        return False
+    try:
+        client.delete_run(run_id.removeprefix(PREFIX))
+    except Exception as exc:
+        if _missing(exc):
+            return False
+        raise
+    return True
+
+
 #: The text files a run logged that can be edited in place.
 EDITABLE = (".md", ".txt", ".json", ".jsonl", ".ndjson", ".csv", ".tsv", ".yaml", ".yml", ".toml")
 #: The tag naming the files edited after the run, so the run says it was changed.

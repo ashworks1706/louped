@@ -22,9 +22,10 @@ import { RunViews } from "@/components/run-views";
 import { StatGrid } from "@/components/stat-grid";
 import { SamplesTable } from "@/components/samples-table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DeleteButton } from "@/components/delete-button";
 import { PluginFrame, usePluginTabs } from "@/components/plugin-page";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { API, isLive, q, saveArtifact, type RunDetail } from "@/lib/api";
+import { API, deleteRun, isLive, q, saveArtifact, type RunDetail } from "@/lib/api";
 import { artifactQuery } from "@/lib/artifacts";
 import { ago, headline } from "@/lib/format";
 import { ExperimentLink } from "@/components/experiment-link";
@@ -80,6 +81,20 @@ function RunHeader({ run }: { run: RunDetail }) {
           <KindBadge kind={run.kind} />
           <HostBadge host={run.host} />
           <StatusDot status={run.status} samples={run.samples} total={run.total} />
+          <div className="ml-auto">
+            <DeleteButton
+              what="run"
+              name={run.name}
+              undo={
+                run.id.startsWith("e-")
+                  ? "Its eval log moves to .louped/trash/logs; move it back to restore the run."
+                  : "MLflow keeps it marked deleted until mlflow gc; MlflowClient.restore_run brings it back."
+              }
+              remove={() => deleteRun(run.id)}
+              then="/runs/"
+              disabled={isLive(run.status) ? "Still running: cancel its job first" : undefined}
+            />
+          </div>
         </div>
         <dl className="text-muted-foreground flex flex-wrap gap-x-6 gap-y-1 text-sm">
           <div className="flex gap-1.5">
