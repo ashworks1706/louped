@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { mock } from "./items-run";
+import { mock, run } from "./items-run";
 import { mockSources, paper, pinned } from "./sources-api";
 
 // The project's sources: searched, read page by page, pinned and cited.
@@ -78,6 +78,31 @@ test("a notebook shows cell by cell, then whole in a frame that runs no scripts"
   await expect(
     page.frameLocator('[data-part="source/notebook"] iframe').getByText("printed 4"),
   ).toBeVisible();
+});
+
+test("a run's notebook shows as Jupyter does, in a frame that runs no scripts", async ({
+  page,
+}) => {
+  await mock(page);
+  const file = { path: "notebook/explore.ipynb", size: 10 };
+  await page.route("**/api/runs/m-1", (r) =>
+    r.fulfill({ json: { ...run, artifacts: [...run.artifacts, file] } }),
+  );
+  const asked: string[] = [];
+  await page.route("**/api/runs/m-1/notebook/notebook/explore.ipynb?*", (r) => {
+    asked.push(new URL(r.request().url()).searchParams.get("theme") ?? "");
+    return r.fulfill({
+      body: '<html><body><main class="jp-Notebook"><p>printed 9</p></main></body></html>',
+      contentType: "text/html",
+    });
+  });
+  await page.goto("/run/?id=m-1&tab=artifacts&file=notebook%2Fexplore.ipynb");
+  const frame = page.locator('iframe[title="notebook/explore.ipynb"]');
+  await expect(frame).toHaveAttribute("sandbox", "");
+  await expect(
+    page.frameLocator('iframe[title="notebook/explore.ipynb"]').getByText("printed 9"),
+  ).toBeVisible();
+  expect(asked[0]).toMatch(/^(light|dark)$/);
 });
 
 test("a citation in Markdown names the passage it rests on", async ({ page }) => {

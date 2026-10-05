@@ -3577,7 +3577,9 @@ export interface operations {
   };
   run_notebook_api_runs__run_id__notebook__path__get: {
     parameters: {
-      query?: never;
+      query?: {
+        theme?: "light" | "dark";
+      };
       header?: never;
       path: {
         run_id: string;
@@ -3792,7 +3794,9 @@ export interface operations {
   };
   source_notebook_api_sources__key__notebook_get: {
     parameters: {
-      query?: never;
+      query?: {
+        theme?: "light" | "dark";
+      };
       header?: never;
       path: {
         key: string;

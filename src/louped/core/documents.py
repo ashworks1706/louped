@@ -83,13 +83,19 @@ def notebook_cells(path: Path) -> list[str]:
     return [c.source for c in nbformat.read(str(path), as_version=4).cells]
 
 
-def notebook_html(notebook: Path | bytes) -> str:
-    """A notebook as one HTML page, its cells and saved outputs as JupyterLab shows them. The
+def notebook_html(notebook: Path | bytes, dark: bool = False) -> str:
+    """A notebook as one HTML page, its cells and saved outputs as JupyterLab shows them in its
+    light or dark theme. The
     page's scripts (MathJax, interactive outputs) are for a frame that allows them; the app's does
     not, so math shows as its TeX and an interactive output as its static copy, if it saved one."""
     import nbformat
     from nbconvert import HTMLExporter
 
-    text = notebook.read_text(encoding="utf-8") if isinstance(notebook, Path) else notebook.decode()
-    html, _ = HTMLExporter(template_name="lab").from_notebook_node(nbformat.reads(text, 4))
+    try:
+        text = notebook.read_text("utf-8") if isinstance(notebook, Path) else notebook.decode()
+        node = nbformat.reads(text, 4)
+    except (ValueError, nbformat.ValidationError) as exc:  # not UTF-8, not JSON, not a notebook
+        raise ValueError(f"not a notebook louped can read: {exc}") from exc
+    exporter = HTMLExporter(template_name="lab", theme="dark" if dark else "light")
+    html, _ = exporter.from_notebook_node(node)
     return html

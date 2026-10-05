@@ -154,6 +154,10 @@ def find_ui(given: Path | None = None) -> Path | None:
     return None
 
 
+#: The app's theme, for a page it shows in a frame.
+Theme = Literal["light", "dark"]
+
+
 def _notebook_page(html: str) -> HTMLResponse:
     """A notebook's page, sandboxed by its own header too: a notebook from the web can carry any
     script in its outputs, and opened outside the app's frame it still runs none."""
@@ -223,11 +227,15 @@ def create_app(
         return Response(read_artifact(run_id, path), media_type=media)
 
     @app.get("/api/runs/{run_id}/notebook/{path:path}")
-    def run_notebook(run_id: str, path: str) -> HTMLResponse:
+    def run_notebook(run_id: str, path: str, theme: Theme = "light") -> HTMLResponse:
         """A notebook the run logged, as a page, for a frame that runs no scripts."""
         if ".." in Path(path).parts or not path.endswith(".ipynb"):
             raise HTTPException(400, "not a notebook's path")
-        return _notebook_page(documents.notebook_html(read_artifact(run_id, path)))
+        try:
+            html = documents.notebook_html(read_artifact(run_id, path), dark=theme == "dark")
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        return _notebook_page(html)
 
     @app.put(
         "/api/runs/{run_id}/artifacts/{path:path}", dependencies=[Depends(launch.require_json)]
@@ -289,7 +297,7 @@ def create_app(
         return FileResponse(path, media_type=kind, headers={"Cache-Control": "no-cache"})
 
     @app.get("/api/sources/{key}/notebook")
-    def source_notebook(key: str) -> HTMLResponse:
+    def source_notebook(key: str, theme: Theme = "light") -> HTMLResponse:
         """A notebook source as a page, for a frame that runs no scripts."""
         try:
             path = library.source_file(key)
@@ -299,7 +307,10 @@ def create_app(
             raise HTTPException(400, str(exc)) from exc
         if path.suffix != ".ipynb":
             raise HTTPException(400, f"{key} is not a notebook")
-        return _notebook_page(documents.notebook_html(path))
+        try:
+            return _notebook_page(documents.notebook_html(path, dark=theme == "dark"))
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
 
     @app.get("/api/pins")
     def pins(key: str | None = None) -> list[library.Pin]:

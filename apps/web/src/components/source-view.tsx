@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { CopyButton } from "@/components/copy-button";
 import { DeleteButton } from "@/components/delete-button";
+import { Help } from "@/components/help";
 import { NotebookFrame } from "@/components/notebook-frame";
 import { Part, part, partId } from "@/components/parts";
 import { PdfPage } from "@/components/pdf-page";
@@ -125,8 +126,15 @@ function Viewer({ source: s }: { source: Source }) {
           </div>
           {s.kind === "ipynb" && (
             <Part id="source/notebook" as="section" className="flex flex-col gap-2">
-              <h2 className="text-sm font-medium">The whole notebook, with its outputs</h2>
-              <NotebookFrame url={`${sourceNotebook(s.key)}?sha=${s.sha256}`} title={s.title} />
+              <h2 className="flex items-center gap-1.5 text-sm font-medium">
+                The whole notebook, with its outputs
+                <Help label="How to read the whole notebook">
+                  The notebook as Jupyter shows it, with the outputs it was saved with. Nothing in
+                  it runs here: math shows as TeX, and an interactive chart shows only if the
+                  notebook saved a static copy. Pin from the cells above.
+                </Help>
+              </h2>
+              <NotebookFrame url={sourceNotebook(s.key)} version={s.sha256} title={s.title} />
             </Part>
           )}
         </div>

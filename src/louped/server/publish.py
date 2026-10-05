@@ -125,7 +125,7 @@ def _artifact(
         segments = "/".join(_enc(s) for s in artifact["path"].split("/"))
         got = api.get(f"/api/runs/{_enc(run)}/{route}/{segments}")
         if got.status_code != 200:
-            done.failed.append(f"{run}/{artifact['path']}: {got.status_code}")
+            done.failed.append(f"{run}/{artifact['path']} ({route}): {got.status_code}")
             return
         # a static host decodes the URL, so the file goes at the decoded path
         folder = (out / "api" / "runs" / run / route).resolve()

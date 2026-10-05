@@ -226,7 +226,7 @@ def options(launchable: str) -> list[Option]:
     if launchable.startswith("notebook:"):
         from louped.notebooks import parameters
 
-        return [Option(flag=f"--{p.name}", kind="text", default=p.default,
+        return [Option(flag=f"--{p.name}", kind="text", default=p.shown,
                        help=" ".join(x for x in (p.type or "", p.help) if x))
                 for p in parameters(_notebook(launchable))]  # fmt: skip
     if launchable in COMMANDS:

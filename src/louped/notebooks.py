@@ -4,17 +4,20 @@ A notebook's parameters are the variables of its cell tagged "parameters" (in Ju
 tags; a notebook from Colab needs the tag added). A run's values replace them: papermill adds a
 cell after that one, holding them.
 
-The notebook runs in an IPython kernel of louped's own environment, in its own folder, so it reads
-files beside it as Jupyter would. Its run is in the notebook's experiment; the kernel finds it in
-MLFLOW_RUN_ID and MLFLOW_TRACKING_URI, so mlflow.log_* and louped.tracking.log_json in a cell log
-to it. The run keeps its parameters and the executed copy, notebook/<name>.ipynb, with every
-cell's output. A cell that raises fails the run, and the copy still shows the cells up to it.
+The notebook runs in an IPython kernel started from louped's own Python (not a kernel installed
+elsewhere under the same name), in the notebook's folder, so it reads files beside it as Jupyter
+would. Its run is in the notebook's experiment; the kernel's environment names it
+(MLFLOW_RUN_ID, MLFLOW_TRACKING_URI), so mlflow.log_* and louped.tracking.log_json in a cell log
+to it. The run keeps every parameter's value and the executed copy, notebook/<name>.ipynb, with
+every cell's output. A cell that raises fails the run, and the copy still shows the cells up to
+it.
 """
 
 from __future__ import annotations
 
 import ast
-import os
+import json
+import sys
 import tempfile
 from pathlib import Path
 
@@ -34,6 +37,8 @@ class Parameter(BaseModel):
     name: str
     #: Its value in the notebook, as Python source.
     default: str
+    #: Its value as a run's value is written: a str without its quotes, else the source.
+    shown: str
     #: int, float, str or bool: its annotation's, else its default's; None for any other.
     type: str | None = None
     #: Its comment in the notebook.
@@ -46,9 +51,13 @@ def parameters(path: Path) -> list[Parameter]:
     from papermill.inspection import inspect_notebook
 
     found = inspect_notebook(str(path)).values()
-    return [Parameter(name=p["name"], default=p["default"], help=p["help"],
-                      type=_type(p["inferred_type_name"], p["default"]))
-            for p in found]  # fmt: skip
+    out = []
+    for p in found:
+        kind = _type(p["inferred_type_name"], p["default"])
+        shown = str(ast.literal_eval(p["default"])) if kind == "str" else p["default"]
+        out.append(Parameter(name=p["name"], default=p["default"], shown=shown, type=kind,
+                             help=p["help"]))  # fmt: skip
+    return out
 
 
 def values(path: Path, given: dict[str, str]) -> dict[str, object]:
@@ -70,6 +79,8 @@ def run_notebook(path: Path, given: dict[str, str] | None = None) -> str:
     after the run has kept the executed copy."""
     import mlflow
     import papermill
+    from jupyter_client.kernelspec import KernelSpecManager
+    from jupyter_client.manager import KernelManager
 
     path = path.resolve()
     root = experiments_dir().resolve()
@@ -77,22 +88,24 @@ def run_notebook(path: Path, given: dict[str, str] | None = None) -> str:
         raise ValueError(f"{path} is not a notebook in {root}")
     experiment = path.relative_to(root).parts[0]
     params = values(path, given or {})
-    with (start_run(experiment, name=path.stem, params=params or None, kind="notebook") as run,
+    logged = {p.name: p.shown for p in parameters(path)} | (given or {})
+    with (start_run(experiment, name=path.stem, params=logged or None, kind="notebook") as run,
           tempfile.TemporaryDirectory() as tmp):  # fmt: skip
         executed = Path(tmp) / path.name
         env = {"MLFLOW_RUN_ID": run.info.run_id, "MLFLOW_TRACKING_URI": mlflow.get_tracking_uri()}
-        before = {k: os.environ.get(k) for k in env}
-        os.environ.update(env)  # the kernel starts with this process's environment
+        # python3, as notebooks name their kernel, but only this one: louped's Python, this run
+        spec = Path(tmp) / "kernels" / "python3"
+        spec.mkdir(parents=True)
+        (spec / "kernel.json").write_text(json.dumps({
+            "argv": [sys.executable, "-m", "ipykernel_launcher", "-f", "{connection_file}"],
+            "display_name": "Python 3", "language": "python", "env": env}))  # fmt: skip
+        specs = KernelSpecManager(kernel_dirs=[str(spec.parent)], ensure_native_kernel=False)
+        kernel = KernelManager(kernel_name="python3", kernel_spec_manager=specs)
         try:
             papermill.execute_notebook(str(path), str(executed), parameters=params,
-                                       kernel_name="python3", cwd=str(path.parent),
+                                       kernel_name="python3", km=kernel, cwd=str(path.parent),
                                        progress_bar=False)  # fmt: skip
         finally:
-            for k, v in before.items():
-                if v is None:
-                    os.environ.pop(k, None)
-                else:
-                    os.environ[k] = v
             if executed.is_file():
                 mlflow.log_artifact(str(executed), FOLDER)
         return mlflow_runs.PREFIX + run.info.run_id

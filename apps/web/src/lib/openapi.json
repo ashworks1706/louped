@@ -345,6 +345,17 @@
               "type": "string",
               "title": "Path"
             }
+          },
+          {
+            "name": "theme",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": ["light", "dark"],
+              "type": "string",
+              "default": "light",
+              "title": "Theme"
+            }
           }
         ],
         "responses": {
@@ -632,6 +643,17 @@
             "schema": {
               "type": "string",
               "title": "Key"
+            }
+          },
+          {
+            "name": "theme",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": ["light", "dark"],
+              "type": "string",
+              "default": "light",
+              "title": "Theme"
             }
           }
         ],
