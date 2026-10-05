@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { DEFAULT_LAYOUT, expect, test } from "./fixtures";
 
 const plugins = [
   {
@@ -63,9 +63,22 @@ const echo = (r: import("@playwright/test").Route) =>
     body: "<body><p id=q></p><script>q.textContent = location.search</script></body>",
   });
 const tabs = [{ ...plugins[0], panel: false, run: true, experiment: true }];
+// the server's default gives every plugin with a run.html or experiment.html a tab
+const withTabs = {
+  ...DEFAULT_LAYOUT,
+  regions: {
+    ...DEFAULT_LAYOUT.regions,
+    "run.tabs": [...DEFAULT_LAYOUT.regions["run.tabs"], { block: "plugin", plugin: "verdicts" }],
+    "experiment.tabs": [
+      ...DEFAULT_LAYOUT.regions["experiment.tabs"],
+      { block: "plugin", plugin: "verdicts" },
+    ],
+  },
+};
 
 test("a plugin adds a tab to a run's page, opened with the run's id", async ({ page }, info) => {
   await page.route("**/api/plugins", (r) => r.fulfill({ json: tabs }));
+  await page.route("**/api/ui/layout*", (r) => r.fulfill({ json: withTabs }));
   await page.route("**/x/verdicts/run.html*", echo);
   await page.route("**/api/runs/m-1", (r) =>
     r.fulfill({
@@ -97,6 +110,7 @@ test("a plugin adds a tab to a run's page, opened with the run's id", async ({ p
 
 test("a plugin adds a tab to an experiment's page, opened with its name", async ({ page }) => {
   await page.route("**/api/plugins", (r) => r.fulfill({ json: tabs }));
+  await page.route("**/api/ui/layout*", (r) => r.fulfill({ json: withTabs }));
   await page.route("**/x/verdicts/experiment.html*", echo);
   await page.route("**/api/runs", (r) => r.fulfill({ json: [] }));
   await page.route("**/api/launch", (r) => r.fulfill({ json: [] }));

@@ -20,7 +20,9 @@ description: Start a research experiment in a louped project. Use when the user 
 5. Write `run.py` from existing tools (transformers, nnsight, Inspect, TRL) and `louped` where it
    has the piece. `Args` is the Launch form. Inside `start_run`: numbers with
    `mlflow.log_metrics`, per-item records as `raw/<condition>.jsonl` (one file per condition, an
-   id field in every row) so the run page lines them up, a `report.md` for people. A paper's
+   id field in every row) so the run page lines them up, a `report.md` for people. Put the item
+   itself in every row (its question or claim, its gold answer), so an item opens on what it is,
+   and write `raw/fields.json`, `{"field": "what it means"}`, for each field's ?. A paper's
    harness with its own pins runs in its own environment, not this one.
 6. Run a small check here first (`launch` then `job`, or the app's Launch page), read it with
    `read-results`, then the real run, on a cluster if the model is large (`run-elsewhere`).

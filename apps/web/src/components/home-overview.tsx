@@ -5,6 +5,11 @@ import Link from "next/link";
 
 import { ChevronRight } from "lucide-react";
 
+import { ActiveExperiments } from "@/components/experiments-list";
+import { LayoutErrors, PluginBlock, RegionGrid, useLayout } from "@/components/layout";
+import { QueryState } from "@/components/query-state";
+import { RunsList } from "@/components/runs-list";
+
 import { StatusDot } from "@/components/run-badges";
 import { Stat, StatGrid } from "@/components/stat-grid";
 import { isLive, q } from "@/lib/api";
@@ -162,6 +167,68 @@ export function DomainCards() {
           </Link>
         );
       })}
+    </div>
+  );
+}
+
+const MORE =
+  "text-muted-foreground hover:text-foreground text-sm underline-offset-4 hover:underline";
+
+/** Home's region: where the research stands, in the blocks the layout lists. */
+export function HomeBlocks() {
+  const layout = useLayout(null);
+  if (!layout.data) return <QueryState query={layout}>{() => null}</QueryState>;
+  return (
+    <div>
+      <LayoutErrors page={layout.data} />
+      <RegionGrid
+        region="home"
+        roomy
+        blocks={layout.data.regions.home}
+        render={(b) => {
+          switch (b.block) {
+            case "stats":
+              return { body: <HomeStats /> };
+            case "live":
+              return { body: <LiveNow /> };
+            case "domains":
+              return { title: "Domains", body: <DomainCards /> };
+            case "active":
+              return {
+                title: "Active questions",
+                body: (
+                  <>
+                    <ActiveExperiments />
+                    <div className="flex gap-4">
+                      <Link href="/behavior/experiments/" className={MORE}>
+                        Behavior experiments
+                      </Link>
+                      <Link href="/efficiency/experiments/" className={MORE}>
+                        Efficiency experiments
+                      </Link>
+                    </div>
+                  </>
+                ),
+              };
+            case "latest":
+              return {
+                title: "Latest runs",
+                body: (
+                  <>
+                    <RunsList limit={8} compact />
+                    <Link href="/runs/" className={MORE}>
+                      All runs
+                    </Link>
+                  </>
+                ),
+              };
+            case "plugin":
+              return { body: <PluginBlock b={b} page="index.html" /> };
+            default:
+              return null;
+          }
+        }}
+      />
     </div>
   );
 }

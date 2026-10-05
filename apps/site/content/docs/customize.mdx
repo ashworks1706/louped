@@ -1,0 +1,89 @@
+---
+title: Customize the app
+description: Point at any part of a page and have your agent change it, in louped's own look.
+---
+
+Every page in the app is made of blocks: the metric cards, the report, a run's tabs, the
+experiment's README. Your agent can reorder, hide, rename or add them, and add notes and cards of
+your own. The page updates as it works, with no build or restart.
+
+## Point at a block
+
+Press the crosshair in the top bar (or **Point your agent at a block** in ⌘K) and click any part
+of a page. Your agent then sees which block you mean through `ui_selection`, so you can just say
+"show this one first" or "put the examples next to this". The click also copies a reference to
+paste into an agent without louped's tools:
+
+```
+louped block run.overview/metric/accuracy
+page: /run/?id=m-7f3a
+run: m-7f3a
+shows: accuracy 0.62
+region: run.overview (ui_page lists its blocks; set_layout changes them)
+```
+
+## Layouts
+
+A page's blocks come from `layout.json` at the project's root, or from
+`experiments/<name>/layout.json` for that experiment's page and its runs' pages. Your agent
+writes these with `set_layout`, which checks them first. They are plain files to commit.
+
+```json title="layout.json"
+{
+  "preset": "eval",
+  "regions": {
+    "run.overview": [
+      { "block": "text", "text": "Read **flips** first." },
+      { "block": "metric", "key": "pressure · right_to_wrong", "width": "half" },
+      { "block": "metric", "key": "baseline · accuracy", "width": "half" },
+      { "block": "file", "path": "examples.md", "title": "Examples" }
+    ]
+  }
+}
+```
+
+| Region              | Blocks                                                                                        |
+| ------------------- | --------------------------------------------------------------------------------------------- |
+| `home`              | `stats`, `live`, `domains`, `active`, `latest`                                                |
+| `run.tabs`          | `overview`, `items`, `figures`, `samples`, `log`, `artifacts`, `config`, `file`               |
+| `run.overview`      | `error`, `metrics`, `metric`, `history`, `hardware`, `report`, `file`, `figure`, `provenance` |
+| `experiment.tabs`   | `design`, `runs`                                                                              |
+| `experiment.design` | `readme`, `result`, `runs`                                                                    |
+
+Every region can also hold `text` (your own Markdown) and `plugin` (a page from one of your
+[plugins](/docs/plugins)). Any block takes `title`, `about` (its ?) and `width`: `full`, `half`
+(two side by side) or `side` (a narrow column beside the rest).
+
+A file that does not check is not used. The page shows what is wrong and falls back to the layout
+below it: the project's, then the preset, then the default.
+
+## Presets
+
+| Preset     | What it does                                                    |
+| ---------- | --------------------------------------------------------------- |
+| `eval`     | Opens a run on its items; the overview keeps numbers and report |
+| `training` | Curves first: history and hardware, figures before files        |
+| `focus`    | Only numbers, report, items and files                           |
+
+## Theme
+
+`louped.toml` sets the app's tokens: `radius`, and the colours for each mode. Plugin pages get them
+too.
+
+```toml title="louped.toml"
+[theme]
+radius = "0.25rem"
+
+[theme.dark]
+border = "oklch(1 0 0 / 15%)"
+```
+
+The colours are `background`, `foreground`, `card`, `muted`, `muted-foreground`, `accent`,
+`border`, `input`, `ring`, `primary`, `secondary` (each with its `-foreground`), `positive`,
+`negative` and `intervention`, the one accent, which marks an active intervention.
+
+## What stays
+
+The top bar, the sidebar and each page's header are louped's own, so every project reads the same.
+Layouts, the theme and plugin blocks load only on your machine; a [published
+dashboard](/docs/remote#publish-a-read-only-dashboard) shows your layouts without plugins.

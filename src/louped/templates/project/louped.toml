@@ -18,3 +18,13 @@
 # [domains.reproduction]
 # axis = "checks"
 # title = "Reproducing known results"
+
+# The app's look: token values over its defaults. radius for both modes; colours (the names in
+# the docs' Customize page: border, muted-foreground, ...) under [theme.light] and [theme.dark].
+# What each page shows is layout.json, which your agent edits (the change-ui skill).
+#
+# [theme]
+# radius = "0.25rem"
+#
+# [theme.dark]
+# border = "oklch(1 0 0 / 15%)"

@@ -1,4 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+
+import { expect, test } from "./fixtures";
 
 // A mocked API: the Playground's research tools (pushback, patching, dose-response, speed) and
 // the quality-against-cost scatter a grid logs.

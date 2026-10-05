@@ -1,11 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, FlaskConical, Moon } from "lucide-react";
+import { BookOpen, Crosshair, FlaskConical, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
+import { setSelecting, useCanPoint } from "@/components/select-mode";
 import {
   Command,
   CommandEmpty,
@@ -42,6 +43,7 @@ export function CommandMenu({ children }: { children: React.ReactNode }) {
   // Fetched only once the menu opens, so a page that never opens it pays nothing.
   const experiments = useQuery({ ...q.experiments(), enabled: open });
   const plugins = useQuery({ ...q.plugins(), enabled: open });
+  const canPoint = useCanPoint();
 
   React.useEffect(() => {
     let leader = false;
@@ -130,6 +132,15 @@ export function CommandMenu({ children }: { children: React.ReactNode }) {
                   <Moon />
                   <span>Toggle theme</span>
                 </CommandItem>
+                {canPoint && (
+                  <CommandItem
+                    value="Point your agent at a block select card change layout"
+                    onSelect={() => run(() => setSelecting(true))}
+                  >
+                    <Crosshair />
+                    <span>Point your agent at a block</span>
+                  </CommandItem>
+                )}
                 <CommandItem
                   value="Docs documentation architecture roadmap"
                   onSelect={() => run(() => window.open(DOCS, "_blank", "noopener,noreferrer"))}

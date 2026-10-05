@@ -9,6 +9,7 @@ import { Suspense, useCallback, useEffect, useState, useSyncExternalStore } from
 import { useCommandMenu } from "@/components/command-menu";
 import { useLive } from "@/components/home-overview";
 import { Mark } from "@/components/mark";
+import { SelectButton } from "@/components/select-mode";
 import { ServerStatus } from "@/components/server-status";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -105,7 +106,10 @@ function TopBar({ folded, toggle }: { folded: boolean; toggle: () => void }) {
   const pathname = usePathname();
   const section = sectionOf(pathname);
   return (
-    <header className="bg-background/80 sticky top-0 z-40 flex h-12 items-center gap-2 border-b px-3 backdrop-blur">
+    <header
+      data-ui="shell.topbar"
+      className="bg-background/80 sticky top-0 z-40 flex h-12 items-center gap-2 border-b px-3 backdrop-blur"
+    >
       <MobileNav />
       <Button
         variant="ghost"
@@ -140,6 +144,7 @@ function TopBar({ folded, toggle }: { folded: boolean; toggle: () => void }) {
       </nav>
       <div className="ml-auto flex items-center gap-2">
         <LiveJobs />
+        <SelectButton />
         <SearchButton />
         <span className="hidden lg:block">
           <ServerStatus />

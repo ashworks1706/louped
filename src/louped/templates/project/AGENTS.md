@@ -10,8 +10,10 @@ results.
 - `louped mcp`, registered in `.mcp.json`, drives the running app: `experiments`, `runs`, `run`,
   `samples`, `figures`, `compare` to read; `new_experiment`, `launch`, `job`, `export_job`,
   `import_result`, `push`, `pull` to act. Work started through it shows in the app. Start `louped serve` first.
+  `ui_page`, `ui_selection`, `set_layout` and `set_preset` change what the app's pages show; the
+  person can point at any block in the app, and `ui_selection` says which.
 - Skills in `.claude/skills/`: `new-experiment`, `read-results`, `run-elsewhere`, `write-report`,
-  `add-plugin`.
+  `add-plugin`, `change-ui`.
 - The CLI does the same steps: `louped new`, `louped push`, `louped pull`, `louped --help`.
 - Never ask for a Hugging Face token in chat. If push or pull says one is missing, ask the person
   to press Connect on Runs or run `louped push` in a terminal: both ask for it and keep it out of
@@ -41,7 +43,8 @@ results.
 
 | Path              | What                                                  |
 | ----------------- | ----------------------------------------------------- |
-| `louped.toml`      | the project's root and settings (domains, remote)     |
+| `louped.toml`      | the project's root and settings (domains, remote, theme) |
+| `layout.json`     | what the app's pages show (`change-ui`); committed     |
 | `experiments/`    | the questions; committed                              |
 | `plugins/`        | the project's own pages, routes and tools; committed  |
 | `.louped/`         | runs, eval logs, jobs, caches; gitignored, rebuildable |

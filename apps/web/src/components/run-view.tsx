@@ -8,7 +8,7 @@ import { useTheme } from "next-themes";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { useEffect, useRef, useState } from "react";
 
-import { ArtifactBrowser } from "@/components/artifact-browser";
+import { ArtifactBrowser, RunFile } from "@/components/artifact-browser";
 import { CopyButton } from "@/components/copy-button";
 import { EmptyState } from "@/components/empty-state";
 import { hasItems, ItemsView } from "@/components/items-view";
@@ -18,14 +18,31 @@ import { HistoryCharts } from "@/components/history-chart";
 import { MetricValue } from "@/components/metric";
 import { QueryState } from "@/components/query-state";
 import { HostBadge, KindBadge, StatusDot } from "@/components/run-badges";
-import { RunViews } from "@/components/run-views";
+import { Figure, RunViews } from "@/components/run-views";
 import { StatGrid } from "@/components/stat-grid";
 import { SamplesTable } from "@/components/samples-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DeleteButton } from "@/components/delete-button";
-import { PluginFrame, usePluginTabs } from "@/components/plugin-page";
+import { PluginFrame } from "@/components/plugin-page";
+import {
+  blockId,
+  LayoutErrors,
+  PluginBlock,
+  RegionGrid,
+  textBlock,
+  useLayout,
+} from "@/components/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { API, deleteRun, isLive, q, saveArtifact, type RunDetail } from "@/lib/api";
+import {
+  API,
+  deleteRun,
+  isLive,
+  q,
+  saveArtifact,
+  type Block,
+  type PluginInfo,
+  type RunDetail,
+} from "@/lib/api";
 import { artifactQuery } from "@/lib/artifacts";
 import { ago, headline } from "@/lib/format";
 import { ExperimentLink } from "@/components/experiment-link";
@@ -68,7 +85,7 @@ function RunLoaded({ id }: { id: string }) {
 
 function RunHeader({ run }: { run: RunDetail }) {
   return (
-    <header className="border-b">
+    <header className="border-b" data-ui="run.header">
       <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 py-6">
         <Link
           href="/runs/"
@@ -133,101 +150,237 @@ function RunTabs({ run }: { run: RunDetail }) {
     }
     wasLive.current = isLive(run.status);
   }, [client, run.id, run.status]);
-  const isEval = run.kind === "eval";
+  const layout = useLayout(run.experiment);
+  const plugins = useQuery(q.plugins());
+  if (!layout.data) return <QueryState query={layout}>{() => null}</QueryState>;
   const hasFigures = run.artifacts.some((a) => a.path.startsWith("views/"));
-  const hasFiles = run.artifacts.some((a) => !a.path.startsWith("views/"));
-  const items = hasItems(run);
-  const plugins = usePluginTabs("run");
+  const tabs = layout.data.regions["run.tabs"].flatMap((b, at) => {
+    const t =
+      b.block === "text"
+        ? { value: `t-${at}`, label: "Notes", ...textBlock(b) }
+        : runTab(run, b, layout.data.regions["run.overview"], plugins.data ?? []);
+    return t ? [{ ...t, b, at, label: b.title ?? t.label }] : [];
+  });
+  const values = tabs.map((t) => t.value);
   // A run whose results are only figures opens on them.
-  const tab = chosen ?? (hasFigures && headline(run.metrics).length === 0 ? "figures" : "overview");
+  const first =
+    values[0] === "overview" &&
+    hasFigures &&
+    headline(run.metrics).length === 0 &&
+    values.includes("figures")
+      ? "figures"
+      : values[0];
+  const tab = chosen && values.includes(chosen) ? chosen : first;
   return (
-    <Tabs value={tab} onValueChange={setTab}>
-      <TabsList>
-        <TabsTrigger value="overview">Overview</TabsTrigger>
-        {items && <TabsTrigger value="items">Items</TabsTrigger>}
-        {hasFigures && <TabsTrigger value="figures">Figures</TabsTrigger>}
-        {isEval && <TabsTrigger value="samples">Samples</TabsTrigger>}
-        {run.log && <TabsTrigger value="log">Log</TabsTrigger>}
-        {hasFiles && <TabsTrigger value="artifacts">Artifacts</TabsTrigger>}
-        <TabsTrigger value="config">Config</TabsTrigger>
-        {plugins.map((p) => (
-          <TabsTrigger key={p.name} value={`x-${p.name}`}>
-            {p.title}
-          </TabsTrigger>
+    <>
+      <LayoutErrors page={layout.data} />
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          {tabs.map((t) => (
+            <TabsTrigger key={t.value} value={t.value} data-ui={blockId("run.tabs", t.b, t.at)}>
+              {t.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        {tabs.map((t) => (
+          <TabsContent key={t.value} value={t.value}>
+            {t.body}
+          </TabsContent>
         ))}
-      </TabsList>
-      <TabsContent value="overview">
-        <Overview run={run} />
-      </TabsContent>
-      {items && (
-        <TabsContent value="items">
-          <ItemsView run={run} />
-        </TabsContent>
-      )}
-      {hasFigures && (
-        <TabsContent value="figures">
-          <RunViews id={run.id} live={isLive(run.status)} />
-        </TabsContent>
-      )}
-      {isEval && (
-        <TabsContent value="samples">
-          <Samples id={run.id} hasLog={!!run.log} live={isLive(run.status)} />
-        </TabsContent>
-      )}
-      {run.log && (
-        <TabsContent value="log">
-          <InspectFrame log={run.log} />
-        </TabsContent>
-      )}
-      {hasFiles && (
-        <TabsContent value="artifacts">
-          <ArtifactBrowser run={run} />
-        </TabsContent>
-      )}
-      <TabsContent value="config">
-        <KeyValues title="Parameters" values={run.params} />
-        <div className="h-6" />
-        <KeyValues title="Tags" values={run.tags} />
-      </TabsContent>
-      {plugins.map((p) => (
-        <TabsContent key={p.name} value={`x-${p.name}`}>
-          <PluginFrame name={p.name} page="run.html" query={{ run: run.id }} />
-        </TabsContent>
-      ))}
-    </Tabs>
+      </Tabs>
+    </>
   );
 }
 
-function Overview({ run }: { run: RunDetail }) {
+/** A run.tabs block as a tab: its value in ?tab=, its name and what it holds; null when this run
+ * has nothing for it (Samples on a run that is not an eval). */
+function runTab(
+  run: RunDetail,
+  b: Block,
+  overview: Block[],
+  plugins: PluginInfo[],
+): { value: string; label: string; body: React.ReactNode } | null {
+  const live = isLive(run.status);
+  switch (b.block) {
+    case "overview":
+      return {
+        value: "overview",
+        label: "Overview",
+        body: <Overview run={run} blocks={overview} />,
+      };
+    case "items":
+      return hasItems(run)
+        ? { value: "items", label: "Items", body: <ItemsView run={run} /> }
+        : null;
+    case "figures":
+      return run.artifacts.some((a) => a.path.startsWith("views/"))
+        ? { value: "figures", label: "Figures", body: <RunViews id={run.id} live={live} /> }
+        : null;
+    case "samples":
+      return run.kind === "eval"
+        ? {
+            value: "samples",
+            label: "Samples",
+            body: <Samples id={run.id} hasLog={!!run.log} live={live} />,
+          }
+        : null;
+    case "log":
+      return run.log ? { value: "log", label: "Log", body: <InspectFrame log={run.log} /> } : null;
+    case "artifacts":
+      return run.artifacts.some((a) => !a.path.startsWith("views/"))
+        ? { value: "artifacts", label: "Artifacts", body: <ArtifactBrowser run={run} /> }
+        : null;
+    case "config":
+      return {
+        value: "config",
+        label: "Config",
+        body: (
+          <>
+            <KeyValues title="Parameters" values={run.params} />
+            <div className="h-6" />
+            <KeyValues title="Tags" values={run.tags} />
+          </>
+        ),
+      };
+    case "file":
+      return run.artifacts.some((a) => a.path === b.path)
+        ? { value: `f-${b.path}`, label: b.path!, body: <RunFile run={run} path={b.path!} /> }
+        : null;
+    case "plugin":
+      return {
+        value: `x-${b.plugin}`,
+        label: plugins.find((p) => p.name === b.plugin)?.title ?? b.plugin!,
+        body: (
+          <PluginFrame
+            name={b.plugin!}
+            page={b.page ?? "run.html"}
+            query={{ run: run.id, ...(run.experiment ? { experiment: run.experiment } : {}) }}
+          />
+        ),
+      };
+    default:
+      return null;
+  }
+}
+
+/** The run.overview region: its blocks, each drawn when this run has something for it. */
+function Overview({ run, blocks }: { run: RunDetail; blocks: Block[] }) {
+  return <RegionGrid region="run.overview" blocks={blocks} render={(b) => overviewBlock(run, b)} />;
+}
+
+function overviewBlock(
+  run: RunDetail,
+  b: Block,
+): { title?: string; about?: string; body: React.ReactNode } | null {
+  const has = (path: string) => run.artifacts.some((a) => a.path === path);
   const metrics = headline(run.metrics);
-  return (
-    <div className="flex flex-col gap-6">
-      {run.error && (
-        <pre className="border-negative/30 bg-negative/5 text-negative overflow-x-auto rounded-xl border p-4 text-xs whitespace-pre-wrap">
-          {run.error}
-        </pre>
-      )}
-      {metrics.length > 0 ? (
-        <StatGrid>
-          {metrics.map(([key, value, err]) => (
-            <div key={key} className="flex flex-col gap-1 p-4">
-              <MetricName k={key} className="text-muted-foreground text-xs" />
-              <MetricValue value={value} err={err} className="text-2xl font-medium" />
+  switch (b.block) {
+    case "error":
+      return run.error
+        ? {
+            body: (
+              <pre className="border-negative/30 bg-negative/5 text-negative overflow-x-auto rounded-xl border p-4 text-xs whitespace-pre-wrap">
+                {run.error}
+              </pre>
+            ),
+          }
+        : null;
+    case "metrics":
+      return {
+        body:
+          metrics.length > 0 ? (
+            <StatGrid>
+              {metrics.map(([key, value, err]) => (
+                <div
+                  key={key}
+                  data-ui={`${blockId("run.overview", b)}/${key}`}
+                  className="flex flex-col gap-1 p-4"
+                >
+                  <MetricName k={key} className="text-muted-foreground text-xs" />
+                  <MetricValue value={value} err={err} className="text-2xl font-medium" />
+                </div>
+              ))}
+            </StatGrid>
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              No metrics recorded.
+              {run.artifacts.some((a) => a.path.startsWith("views/")) &&
+                " Its results are figures, under Figures."}
+            </p>
+          ),
+      };
+    case "metric": {
+      const found = metrics.find(([key]) => key === b.key);
+      return {
+        body: (
+          <StatGrid className="sm:grid-cols-1 lg:grid-cols-1">
+            <div className="flex flex-col gap-1 p-4">
+              <MetricName k={b.key!} className="text-muted-foreground text-xs" />
+              {found ? (
+                <MetricValue value={found[1]} err={found[2]} className="text-2xl font-medium" />
+              ) : (
+                <span className="text-muted-foreground text-sm">Not recorded by this run.</span>
+              )}
             </div>
-          ))}
-        </StatGrid>
-      ) : (
-        <p className="text-muted-foreground text-sm">
-          No metrics recorded.
-          {run.artifacts.some((a) => a.path.startsWith("views/")) &&
-            " Its results are figures, under Figures."}
-        </p>
-      )}
-      <HistoryCharts history={run.history} />
-      {hasHardware(run.history) && <Hardware history={run.history} />}
-      {run.artifacts.some((a) => a.path === "report.md") && <Report runId={run.id} />}
-      <Provenance run={run} />
-    </div>
+          </StatGrid>
+        ),
+      };
+    }
+    case "history":
+      return { body: <HistoryCharts history={run.history} /> };
+    case "hardware":
+      return hasHardware(run.history) ? { body: <Hardware history={run.history} /> } : null;
+    case "report":
+      return has("report.md") ? { title: "Report", body: <Report runId={run.id} /> } : null;
+    case "file":
+      return {
+        title: b.path!,
+        body: has(b.path!) ? (
+          <RunFile run={run} path={b.path!} />
+        ) : (
+          <p className="text-muted-foreground text-sm">This run wrote no {b.path}.</p>
+        ),
+      };
+    case "figure":
+      return { body: <RunFigure id={run.id} index={b.index!} b={b} live={isLive(run.status)} /> };
+    case "provenance":
+      return { title: "Provenance", body: <Provenance run={run} /> };
+    case "plugin":
+      return {
+        body: (
+          <PluginBlock
+            b={b}
+            page="run.html"
+            query={{ run: run.id, ...(run.experiment ? { experiment: run.experiment } : {}) }}
+          />
+        ),
+      };
+    default:
+      return null;
+  }
+}
+
+/** One of the run's figures, by index; the block's title and about over the figure's own. */
+function RunFigure({ id, index, b, live }: { id: string; index: number; b: Block; live: boolean }) {
+  const views = useQuery(q.views(id, live));
+  return (
+    <QueryState query={views}>
+      {(all) =>
+        all[index] ? (
+          <Figure
+            view={{
+              ...all[index].view,
+              title: b.title ?? all[index].view.title,
+              about: b.about ?? all[index].view.about,
+            }}
+          />
+        ) : (
+          <p className="text-muted-foreground text-sm">
+            This run has {all.length} figures; there is none at {index}.
+          </p>
+        )
+      }
+    </QueryState>
   );
 }
 
@@ -236,23 +389,20 @@ function Report({ runId }: { runId: string }) {
   const text = useQuery(artifactQuery(runId, "report.md"));
   const client = useQueryClient();
   return (
-    <section className="flex flex-col gap-2">
-      <h2 className="text-sm font-medium">Report</h2>
-      <QueryState query={text}>
-        {(md) => (
-          <article className="rounded-xl border px-6 py-5">
-            <EditableText
-              name="report.md"
-              shown={md}
-              save={async (t) => {
-                await saveArtifact(runId, "report.md", t);
-                await client.invalidateQueries({ queryKey: ["artifact", runId, "report.md"] });
-              }}
-            />
-          </article>
-        )}
-      </QueryState>
-    </section>
+    <QueryState query={text}>
+      {(md) => (
+        <article className="rounded-xl border px-6 py-5">
+          <EditableText
+            name="report.md"
+            shown={md}
+            save={async (t) => {
+              await saveArtifact(runId, "report.md", t);
+              await client.invalidateQueries({ queryKey: ["artifact", runId, "report.md"] });
+            }}
+          />
+        </article>
+      )}
+    </QueryState>
   );
 }
 
@@ -307,28 +457,25 @@ function Provenance({ run }: { run: RunDetail }) {
         .join(" · "),
     ]);
   return (
-    <section className="flex flex-col gap-2">
-      <h2 className="text-sm font-medium">Provenance</h2>
-      <dl className="divide-y rounded-xl border">
-        {rows.map(([k, v]) => (
-          <div key={k} className="grid grid-cols-[8rem_minmax(0,1fr)] gap-4 px-4 py-2 text-sm">
-            <dt className="text-muted-foreground">{k}</dt>
-            <dd className="font-mono text-xs leading-5 break-words">{v}</dd>
-          </div>
-        ))}
-        {command.data && (
-          <div className="grid grid-cols-[8rem_minmax(0,1fr)] gap-4 px-4 py-2 text-sm">
-            <dt className="text-muted-foreground">Command</dt>
-            <dd className="flex min-w-0 items-start gap-2">
-              <code className="bg-muted/50 min-w-0 flex-1 rounded-md p-2 font-mono text-xs break-all whitespace-pre-wrap">
-                {command.data.trim()}
-              </code>
-              <CopyButton text={command.data.trim()} />
-            </dd>
-          </div>
-        )}
-      </dl>
-    </section>
+    <dl className="divide-y rounded-xl border">
+      {rows.map(([k, v]) => (
+        <div key={k} className="grid grid-cols-[8rem_minmax(0,1fr)] gap-4 px-4 py-2 text-sm">
+          <dt className="text-muted-foreground">{k}</dt>
+          <dd className="font-mono text-xs leading-5 break-words">{v}</dd>
+        </div>
+      ))}
+      {command.data && (
+        <div className="grid grid-cols-[8rem_minmax(0,1fr)] gap-4 px-4 py-2 text-sm">
+          <dt className="text-muted-foreground">Command</dt>
+          <dd className="flex min-w-0 items-start gap-2">
+            <code className="bg-muted/50 min-w-0 flex-1 rounded-md p-2 font-mono text-xs break-all whitespace-pre-wrap">
+              {command.data.trim()}
+            </code>
+            <CopyButton text={command.data.trim()} />
+          </dd>
+        </div>
+      )}
+    </dl>
   );
 }
 

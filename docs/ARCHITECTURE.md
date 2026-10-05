@@ -186,6 +186,14 @@ detail. Each research domain lives under its own path: `/behavior/` Overview, Ex
 Benchmark (speed, reply), Training. An experiment's page is under its domain's path. Probe and
 Benchmark are one playground with different tools. Every technical term has a ? from
 `apps/web/src/lib/glossary.ts`.
+
+Home, a run's page and an experiment's page are data (server/ui.py): regions (`run.tabs`,
+`run.overview`, ...) of blocks from a fixed catalog, read from an experiment's `layout.json` over
+the project's over a preset over the default, each file checked before it is used. The person's
+agent changes them with `set_layout`; select mode in the app hands it the block the person clicked
+(every block carries `data-ui="<region>/<block>"`). A block the catalog lacks is a plugin page,
+drawn with the kit at `/kit/` (louped.css, louped.js) so it reads as the app's own. louped.toml's
+`[theme]` sets token values only. The frame (top bar, sidebar, page headers) is not a layout.
 Design rules are in `apps/web/AGENTS.md`. `apps/site` is the docs site.
 
 ## Correctness traps the code must test

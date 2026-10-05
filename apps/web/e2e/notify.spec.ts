@@ -1,4 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+
+import { expect, test } from "./fixtures";
 
 // A mocked API: one launchable script, a launch that queues a job, and job and run lists the test
 // moves from live to an end state, as the server's worker and a script would.

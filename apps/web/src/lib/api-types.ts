@@ -49,7 +49,8 @@ export interface paths {
     get: operations["run_api_runs__run_id__get"];
     put?: never;
     post?: never;
-    delete?: never;
+    /** Delete Run */
+    delete: operations["delete_run_api_runs__run_id__delete"];
     options?: never;
     head?: never;
     patch?: never;
@@ -306,7 +307,11 @@ export interface paths {
     get: operations["experiment_api_experiments__name__get"];
     put?: never;
     post?: never;
-    delete?: never;
+    /**
+     * Delete Experiment
+     * @description Moves its folder to <home>/trash/experiments; says where.
+     */
+    delete: operations["delete_experiment_api_experiments__name__delete"];
     options?: never;
     head?: never;
     patch?: never;
@@ -498,7 +503,8 @@ export interface paths {
     get: operations["job_api_launch_jobs__job_id__get"];
     put?: never;
     post?: never;
-    delete?: never;
+    /** Delete */
+    delete: operations["delete_api_launch_jobs__job_id__delete"];
     options?: never;
     head?: never;
     patch?: never;
@@ -623,6 +629,99 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/ui/layout": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Layout */
+    get: operations["layout_api_ui_layout_get"];
+    /**
+     * Set Region
+     * @description Sets one region of the project's or an experiment's layout.json, checked first.
+     */
+    put: operations["set_region_api_ui_layout_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/ui/catalog": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Catalog */
+    get: operations["catalog_api_ui_catalog_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/ui/preset": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Set Preset */
+    put: operations["set_preset_api_ui_preset_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/ui/theme": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Theme */
+    get: operations["get_theme_api_ui_theme_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/ui/selection": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Selection */
+    get: operations["selection_api_ui_selection_get"];
+    put?: never;
+    /**
+     * Select
+     * @description Keeps the block a person pointed at, until the next; in memory only.
+     */
+    post: operations["select_api_ui_selection_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/plugins": {
     parameters: {
       query?: never;
@@ -676,6 +775,47 @@ export interface components {
       path: string;
       /** Size */
       size: number | null;
+    };
+    /**
+     * Block
+     * @description One piece of a region. Only the fields its kind needs are set.
+     */
+    Block: {
+      /** Block */
+      block: string;
+      /** Title */
+      title?: string | null;
+      /** About */
+      about?: string | null;
+      /**
+       * Width
+       * @default full
+       * @enum {string}
+       */
+      width: "full" | "half" | "side";
+      /** Key */
+      key?: string | null;
+      /** Path */
+      path?: string | null;
+      /** Index */
+      index?: number | null;
+      /** Plugin */
+      plugin?: string | null;
+      /** Page */
+      page?: string | null;
+      /** Text */
+      text?: string | null;
+    };
+    /** Catalog */
+    Catalog: {
+      /** Regions */
+      regions: {
+        [key: string]: components["schemas"]["Kind"][];
+      };
+      /** Presets */
+      presets: {
+        [key: string]: string;
+      };
     };
     /** Comparison */
     Comparison: {
@@ -1096,6 +1236,18 @@ export interface components {
       /** Log */
       log: string;
     };
+    /** Kind */
+    Kind: {
+      /** Block */
+      block: string;
+      /** About */
+      about: string;
+      /**
+       * Needs
+       * @default []
+       */
+      needs: string[];
+    };
     /** LabelRequest */
     LabelRequest: {
       /** Label */
@@ -1245,6 +1397,24 @@ export interface components {
        * @default false
        */
       required: boolean;
+    };
+    /**
+     * Page
+     * @description What a page shows, region by region, and where each region came from.
+     */
+    Page: {
+      /** Regions */
+      regions: {
+        [key: string]: components["schemas"]["Block"][];
+      };
+      /** Sources */
+      sources: {
+        [key: string]: string;
+      };
+      /** Errors */
+      errors: string[];
+      /** Files */
+      files: string[];
     };
     /** PairedScore */
     PairedScore: {
@@ -1555,6 +1725,44 @@ export interface components {
       explanation: string | null;
     };
     /**
+     * Selection
+     * @description The block a person pointed at in the app, for their agent.
+     */
+    Selection: {
+      /** Id */
+      id: string;
+      /** Url */
+      url: string;
+      /** Run */
+      run?: string | null;
+      /** Experiment */
+      experiment?: string | null;
+      /**
+       * Text
+       * @default
+       */
+      text: string;
+    };
+    /** SetPreset */
+    SetPreset: {
+      /** Experiment */
+      experiment?: string | null;
+      /** Preset */
+      preset: string | null;
+    };
+    /** SetRegion */
+    SetRegion: {
+      /** Experiment */
+      experiment?: string | null;
+      /**
+       * Region
+       * @enum {string}
+       */
+      region: "home" | "run.tabs" | "run.overview" | "experiment.tabs" | "experiment.design";
+      /** Blocks */
+      blocks: components["schemas"]["Block"][] | null;
+    };
+    /**
      * SpeedRequest
      * @description The prompt timed base and, with interventions or adapters, changed.
      */
@@ -1660,6 +1868,22 @@ export interface components {
     Text: {
       /** Text */
       text: string;
+    };
+    /**
+     * Theme
+     * @description Token values over the defaults, for light and dark mode; errors name what was dropped.
+     */
+    Theme: {
+      /** Light */
+      light: {
+        [key: string]: string;
+      };
+      /** Dark */
+      dark: {
+        [key: string]: string;
+      };
+      /** Errors */
+      errors: string[];
     };
     /** TokenRow */
     TokenRow: {
@@ -1820,6 +2044,37 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["RunDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  delete_run_api_runs__run_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
         };
       };
       /** @description Validation Error */
@@ -2351,6 +2606,37 @@ export interface operations {
       };
     };
   };
+  delete_experiment_api_experiments__name__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Text"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   info_api_playground_get: {
     parameters: {
       query?: never;
@@ -2704,6 +2990,37 @@ export interface operations {
       };
     };
   };
+  delete_api_launch_jobs__job_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        job_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   export_job_api_launch_export_post: {
     parameters: {
       query?: never;
@@ -2881,6 +3198,196 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Job"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  layout_api_ui_layout_get: {
+    parameters: {
+      query?: {
+        experiment?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Page"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  set_region_api_ui_layout_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SetRegion"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Page"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  catalog_api_ui_catalog_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Catalog"];
+        };
+      };
+    };
+  };
+  set_preset_api_ui_preset_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SetPreset"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Page"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_theme_api_ui_theme_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Theme"];
+        };
+      };
+    };
+  };
+  selection_api_ui_selection_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Selection"] | null;
+        };
+      };
+    };
+  };
+  select_api_ui_selection_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Selection"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Selection"];
         };
       };
       /** @description Validation Error */

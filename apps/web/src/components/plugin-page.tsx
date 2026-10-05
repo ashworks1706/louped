@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Puzzle } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useQueryState } from "nuqs";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
@@ -93,24 +93,32 @@ function Body({ plugin }: { plugin: PluginInfo }) {
   return <PluginFrame name={plugin.name} />;
 }
 
-/** The plugins that add a tab to every run's page or every experiment's. */
-export function usePluginTabs(on: "run" | "experiment"): PluginInfo[] {
-  const plugins = useQuery(q.plugins());
-  return (plugins.data ?? []).filter((p) => p[on]);
-}
-
 /** A plugin's page in a frame (its own page, or its run or experiment tab with that one's id),
  * handed the app's theme each time it loads or the theme changes. */
 export function PluginFrame({
   name,
   page = "",
   query,
+  fit = false,
 }: {
   name: string;
-  page?: "" | "run.html" | "experiment.html";
+  /** A page of its panel/, such as run.html; the panel's index when empty. */
+  page?: string;
   query?: Record<string, string>;
+  /** A block in a layout: as tall as the page says it is (the kit's louped.js says so). */
+  fit?: boolean;
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
+  const [height, setHeight] = useState<number | null>(null);
+  useEffect(() => {
+    if (!fit) return;
+    const onMessage = (e: MessageEvent<{ type?: string; height?: number }>) => {
+      if (e.source !== frame.current?.contentWindow || e.data?.type !== "louped:height") return;
+      if (typeof e.data.height === "number") setHeight(Math.ceil(e.data.height));
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [fit]);
   const { resolvedTheme } = useTheme();
   const theme = () => {
     const doc = frame.current?.contentDocument;
@@ -120,7 +128,10 @@ export function PluginFrame({
     for (const t of TOKENS)
       doc.documentElement.style.setProperty(`--${t}`, style.getPropertyValue(`--${t}`));
     doc.documentElement.classList.toggle("dark", resolvedTheme === "dark");
-    doc.documentElement.style.colorScheme = resolvedTheme === "dark" ? "dark" : "light";
+    doc.documentElement.style.setProperty(
+      "color-scheme",
+      resolvedTheme === "dark" ? "dark" : "light",
+    );
     // the app's fonts are declared in its own sheets, which a frame does not see
     if (!doc.getElementById("louped-fonts")) {
       const fonts = Object.assign(doc.createElement("style"), { id: "louped-fonts" });
@@ -152,7 +163,10 @@ export function PluginFrame({
       title={name}
       src={`${API}/x/${encodeURIComponent(name)}/${page}${query ? `?${new URLSearchParams(query)}` : ""}`}
       onLoad={theme}
-      className="h-[calc(100dvh-14rem)] min-h-96 w-full rounded-xl border"
+      style={fit && height !== null ? { height } : undefined}
+      className={
+        fit ? "min-h-16 w-full" : "h-[calc(100dvh-14rem)] min-h-96 w-full rounded-xl border"
+      }
     />
   );
 }

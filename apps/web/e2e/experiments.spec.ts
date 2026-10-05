@@ -1,4 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+
+import { expect, test } from "./fixtures";
 
 // A mocked API: one experiment of each status, one with more runs than a card shows, and the
 // longest domain title, so grouping, filtering and wrapping are all exercised.

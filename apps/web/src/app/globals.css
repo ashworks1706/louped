@@ -110,3 +110,13 @@
   font-family: var(--font-mono);
   font-size: 12px;
 }
+
+/* Select mode: the block under the pointer is outlined; a click points the agent at it. */
+[data-selecting] [data-ui] {
+  cursor: crosshair;
+}
+[data-selecting] [data-ui-hover] {
+  outline: 1px dashed var(--foreground);
+  outline-offset: 3px;
+  border-radius: calc(var(--radius) + 4px);
+}

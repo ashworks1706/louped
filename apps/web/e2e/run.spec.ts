@@ -1,4 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+
+import { expect, test } from "./fixtures";
 
 // An analysis run that wrote one JSONL file per condition, a report and its RunMeta: what a paper
 // harness leaves behind.

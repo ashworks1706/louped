@@ -1,6 +1,6 @@
 "use client";
 
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { Download } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 import Link from "next/link";
@@ -70,13 +70,23 @@ export function ItemsView({ run }: { run: RunDetail }) {
           </NativeSelect>
         </label>
       )}
-      <Folder key={folder.dir} runId={run.id} files={folder.files} />
+      <Folder
+        key={folder.dir}
+        runId={run.id}
+        files={folder.files}
+        meanings={run.artifacts.find((a) => a.path === join(folder.dir, FIELDS))?.path}
+      />
     </div>
   );
 }
 
-function Folder({ runId, files }: { runId: string; files: string[] }) {
+/** What each record field means, written by the run beside its records: {"field": "meaning"}. */
+const FIELDS = "fields.json";
+const join = (dir: string, name: string) => (dir ? `${dir}/${name}` : name);
+
+function Folder({ runId, files, meanings }: { runId: string; files: string[]; meanings?: string }) {
   const queries = useQueries({ queries: files.map((f) => artifactQuery(runId, f)) });
+  const about = useQuery({ ...artifactQuery(runId, meanings ?? ""), enabled: !!meanings });
   const failed = queries.find((q) => q.error);
   if (failed) return <p className="text-negative text-sm">{String(failed.error)}</p>;
   if (queries.some((q) => q.data === undefined)) return <Skeleton className="h-64 w-full" />;
@@ -97,7 +107,43 @@ function Folder({ runId, files }: { runId: string; files: string[] }) {
       </p>
     );
   }
-  return <Aligned files={files} tables={tables} />;
+  const meaning = about.error
+    ? { meanings: {}, error: String(about.error) }
+    : parseMeanings(about.data);
+  return (
+    <div className="flex flex-col gap-3">
+      {meaning.error && (
+        <p className="text-negative text-sm">
+          {FIELDS} not read: {meaning.error}
+        </p>
+      )}
+      <Aligned files={files} tables={tables} about={meaning.meanings} />
+    </div>
+  );
+}
+
+/** fields.json as {field: meaning}; anything else in it is an error to show, not to skip. */
+function parseMeanings(text: string | undefined): {
+  meanings: Record<string, string>;
+  error?: string;
+} {
+  if (!text) return { meanings: {} };
+  let got: unknown;
+  try {
+    got = JSON.parse(text);
+  } catch (e) {
+    return { meanings: {}, error: String(e) };
+  }
+  if (!got || typeof got !== "object" || Array.isArray(got))
+    return { meanings: {}, error: 'expected {"field": "meaning"}' };
+  const entries = Object.entries(got);
+  const bad = entries.filter(([, v]) => typeof v !== "string").map(([k]) => k);
+  return {
+    meanings: Object.fromEntries(
+      entries.filter((e): e is [string, string] => typeof e[1] === "string"),
+    ),
+    error: bad.length ? `not text: ${bad.join(", ")}` : undefined,
+  };
 }
 
 type Transition = { down: number; up: number; wasOne: number; wasZero: number };
@@ -134,7 +180,15 @@ export function LinedUp({ rows, name }: { rows: Row[]; name: string }) {
   );
 }
 
-function Aligned({ files, tables }: { files: string[]; tables: Row[][] }) {
+function Aligned({
+  files,
+  tables,
+  about = {},
+}: {
+  files: string[];
+  tables: Row[][];
+  about?: Record<string, string>;
+}) {
   const names = files.map(stem);
   const key = useMemo(() => joinKey(tables), [tables]);
   const fields = useMemo(() => (key ? sharedFields(tables, key) : []), [tables, key]);
@@ -164,6 +218,18 @@ function Aligned({ files, tables }: { files: string[]; tables: Row[][] }) {
     const order = [...new Set(tables.flatMap((t) => t.map((r) => String(r[key]))))];
     return order.map((id) => ({ id, rows: byKey.map((m) => m.get(id)) }));
   }, [tables, key]);
+
+  // the item's own fields (its question, its answer): equal across the conditions for every item
+  // that more than one file holds, and not a file's own name for itself
+  const itemFields = useMemo(() => {
+    const held = items.map((i) => i.rows.filter((r): r is Row => !!r)).filter((r) => r.length > 1);
+    if (held.length === 0) return [];
+    return Object.keys(held[0][0]).filter(
+      (k) =>
+        !constant.has(k) &&
+        held.every((rs) => rs.every((r) => JSON.stringify(r[k]) === JSON.stringify(rs[0][k]))),
+    );
+  }, [items, constant]);
 
   if (!key || !field)
     return (
@@ -381,6 +447,8 @@ function Aligned({ files, tables }: { files: string[]; tables: Row[][] }) {
               rows={opened.rows}
               ref_={ref}
               constant={constant}
+              itemFields={itemFields}
+              about={about}
             />
           )}
         </SheetContent>
@@ -493,7 +561,9 @@ function Summary({
   );
 }
 
-/** One item in every condition side by side; fields that differ from the reference outlined. */
+/** One item: what it is (the fields the conditions share for every item, such as its question
+ * and its answer), then each condition's record side by side with what differs from the reference
+ * outlined. A field's ? is its meaning from the run's fields.json. */
 function ItemDetail({
   id,
   keyName,
@@ -501,6 +571,8 @@ function ItemDetail({
   rows,
   ref_,
   constant,
+  itemFields,
+  about,
 }: {
   id: string;
   keyName: string;
@@ -508,8 +580,15 @@ function ItemDetail({
   rows: (Row | undefined)[];
   ref_: number;
   constant: Set<string>;
+  itemFields: string[];
+  about: Record<string, string>;
 }) {
   const base = rows[ref_];
+  const present = rows.filter((r): r is Row => !!r);
+  const shared = itemFields.filter((k) => present[0] && k in present[0]);
+  const item = Object.fromEntries(shared.map((k) => [k, present[0][k]]));
+  const own = (r: Row) =>
+    Object.fromEntries(Object.entries(r).filter(([k]) => !shared.includes(k) && !constant.has(k)));
   return (
     <>
       <div className="border-b px-6 py-4 pr-12">
@@ -517,11 +596,17 @@ function ItemDetail({
           <span className="text-muted-foreground font-mono text-sm">{keyName}</span> {id}
         </SheetTitle>
         <SheetDescription className="text-muted-foreground text-xs">
-          Every condition&apos;s record for this item; fields that differ from {names[ref_]} are
+          The item, then what each condition did with it; fields that differ from {names[ref_]} are
           outlined.
         </SheetDescription>
       </div>
-      <div className="flex-1 overflow-auto px-6 py-5">
+      <div className="flex flex-1 flex-col gap-6 overflow-auto px-6 py-5">
+        {shared.length > 1 && (
+          <section className="flex flex-col gap-3 rounded-xl border p-4">
+            <h3 className="text-sm font-medium">The item</h3>
+            <RecordFields row={item} about={about} />
+          </section>
+        )}
         <div
           className="grid gap-6"
           style={{ gridTemplateColumns: `repeat(auto-fit, minmax(16rem, 1fr))` }}
@@ -542,7 +627,11 @@ function ItemDetail({
                   {i === ref_ && <span className="text-muted-foreground"> · reference</span>}
                 </h3>
                 {r ? (
-                  <RecordFields row={r} changed={changed} />
+                  <RecordFields
+                    row={shared.length > 1 ? own(r) : r}
+                    changed={changed}
+                    about={about}
+                  />
                 ) : (
                   <p className="text-muted-foreground text-sm">Not in this file.</p>
                 )}

@@ -76,6 +76,8 @@ What the app shows depends on what the script writes:
 | Write                                       | Shown as                                    |
 | ------------------------------------------- | ------------------------------------------- |
 | `raw/<condition>.jsonl`, an id in every row | **Items**: each item under every condition  |
+| The item's own text and answer in every row | **Items**: an item opens on what it is      |
+| `raw/fields.json`, `{"field": "meaning"}`   | **Items**: a ? on each field                |
 | One JSONL file with a `condition` column    | **Artifacts**: line up by that column       |
 | JSONL rows with a time and a kind (traces)  | **Artifacts**: a timeline per request       |
 | `report.md`                                 | **Overview**                                |

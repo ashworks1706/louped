@@ -10,24 +10,28 @@ louped has no agent of its own. It connects to the one you already use.
 - `AGENTS.md`: how to work in the project.
 - `.mcp.json`: starts `louped mcp`, which talks to the running app.
 - `.claude/skills/`: steps for starting an experiment, reading results, running on a cluster,
-  writing a report and adding a plugin.
+  writing a report, changing the app's pages and adding a plugin.
 
 Start the app with `louped serve`, then open your agent in the project folder and ask it what to
 test.
 
 ## Tools the agent gets
 
-| Tool                                                | What it does                             |
-| --------------------------------------------------- | ---------------------------------------- |
-| `experiments`, `experiment`, `runs`, `run`          | Lists questions and runs                 |
-| `samples`, `sample`, `figures`, `figure`, `compare` | Reads results                            |
-| `new_experiment`                                    | Starts a question                        |
-| `launchables`, `launch_options`, `launch`           | Starts a job                             |
-| `jobs`, `job`, `cancel_job`                         | Follows or stops jobs                    |
-| `export_job`, `import_result`                       | Sends a job to a cluster, brings it back |
-| `push`, `pull`                                      | Shares runs through the remote           |
+| Tool                                                | What it does                                |
+| --------------------------------------------------- | ------------------------------------------- |
+| `experiments`, `experiment`, `runs`, `run`          | Lists questions and runs                    |
+| `samples`, `sample`, `figures`, `figure`, `compare` | Reads results                               |
+| `new_experiment`                                    | Starts a question                           |
+| `launchables`, `launch_options`, `launch`           | Starts a job                                |
+| `jobs`, `job`, `cancel_job`                         | Follows or stops jobs                       |
+| `export_job`, `import_result`                       | Sends a job to a cluster, brings it back    |
+| `push`, `pull`                                      | Shares runs through the remote              |
+| `ui_page`, `ui_selection`                           | Reads the app's pages and what you point at |
+| `set_layout`, `set_preset`                          | Changes what a page shows                   |
 
-Work the agent starts shows in the app like your own.
+Work the agent starts shows in the app like your own. To change a page, point at it: the
+crosshair in the app's top bar hands the block you click to your agent
+([Customize the app](/docs/customize)).
 
 ## Without `louped init`
 

@@ -1,6 +1,6 @@
 ---
 title: Plugins
-description: Add pages, tabs on runs and experiments, routes, a command or agent tools to louped from your own project.
+description: Add pages, tabs, blocks, routes, a command or agent tools to louped from your own project.
 ---
 
 Most additions need no plugin. A new chart is a [view](/docs/experiments), and `views.vega` draws
@@ -53,27 +53,38 @@ The pages are served from `/x/verdicts/`:
 - `run.html` is a tab, named after the plugin, on every run's page. It opens with `?run=<run id>`.
 - `experiment.html` is a tab on every experiment's page. It opens with `?experiment=<name>`.
 
-A tab reads the id from its URL and fetches what it shows:
+Any other page in `panel/`, such as `card.html`, is a block a [layout](/docs/customize) can place
+anywhere, sized to what it draws.
+
+## The kit
+
+Build pages from louped's kit, so they look like the rest of the app in both modes:
 
 ```html title="panel/run.html"
-<p id="out"></p>
-<script>
-  const run = new URLSearchParams(location.search).get("run");
-  fetch(`/api/runs/${run}`)
-    .then((r) => r.json())
-    .then((r) => (out.textContent = `${Object.keys(r.metrics).length} metrics`));
+<link rel="stylesheet" href="/kit/louped.css" />
+<script type="module">
+  import { api, run, stats, table } from "/kit/louped.js";
+
+  const r = await api(`/runs/${run}`);
+  document.body.append(stats(Object.entries(r.metrics)));
+  document.body.append(table(await api(`/x/verdicts/rows?run=${run}`)));
 </script>
 ```
 
-Their scripts call the same API the app does, such as `fetch("/api/runs")` or
-`fetch("/api/x/verdicts/left")`. The app hands every page its theme, so these follow light and dark
-mode:
+| From the kit                                                    | What it is                                                  |
+| --------------------------------------------------------------- | ----------------------------------------------------------- |
+| `run`, `experiment`                                             | The run or experiment the page is on                        |
+| `api(path, init)`                                               | `/api<path>` as JSON; a failure throws the server's message |
+| `stats([[label, value, note]])`                                 | The app's metric cards                                      |
+| `table(rows, columns)`                                          | The app's table, numbers right-aligned                      |
+| `h(tag, props, ...children)`, `empty`                           | An element; an empty state                                  |
+| `l-card`, `l-button`, `l-input`, `l-badge`, `l-muted`, `l-mono` | Classes for the rest                                        |
 
-- the colours as CSS variables, such as `var(--foreground)`, `var(--border)` and
-  `var(--muted-foreground)`;
-- the fonts, as `var(--font-geist-sans)` and `var(--font-geist-mono)`.
+Its scripts call the same API the app does, such as `fetch("/api/runs")` or
+`fetch("/api/x/verdicts/left")`. The app hands every page its theme: the colours as CSS variables,
+such as `var(--foreground)` and `var(--border)`, and the fonts as `var(--font-geist-sans)` and
+`var(--font-geist-mono)`.
 
-Built-in pages stay as they are: a plugin adds pages and tabs beside them. A plugin that fails to
-load shows its error on its page. Plugins run your project's code in
+A plugin that fails to load shows its error on its page. Plugins run your project's code in
 louped's process. They load only on your own machine, never with `louped serve --expose` or in
 `louped publish`.
