@@ -95,3 +95,29 @@ test("picked rows are read alone, saved as a cohort and run again", async ({ pag
   await expect(page).toHaveURL(/\/launch\/\?id=script%3Ahello%2Frun\.py&cohort=two/);
   await expect(page.getByText("--cohort two")).toBeVisible();
 });
+
+test("records that don't say what the item is say so, and no reply stands in for it", async ({
+  page,
+}) => {
+  await mock(page);
+  const reply = (condition: string, pred: string) => ({
+    qid: 28,
+    gold: "True",
+    pred,
+    correct: pred === "True" ? 1 : 0,
+    response: `A long reply from ${condition}, which is not the item itself at all.`,
+  });
+  for (const [name, pred] of [
+    ["baseline", "True"],
+    ["pressure", "False"],
+  ])
+    await page.route(`**/api/runs/m-1/artifacts/raw/${name}.jsonl`, (r) =>
+      r.fulfill({ body: JSON.stringify(reply(name, pred)) + "\n" }),
+    );
+  await page.goto("/run/?id=m-1&tab=items");
+  await expect(page.locator('[data-part="items/column/response"]')).toHaveCount(0);
+  await page.locator('[data-part="items/row/28"]').click();
+  await expect(page.locator('[data-part="item/title"]')).toContainText(
+    "These records don't say what the item is",
+  );
+});

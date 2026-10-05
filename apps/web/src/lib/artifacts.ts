@@ -201,15 +201,36 @@ export function defaultField(tables: Row[][], fields: string[]): string | null {
   return binary ?? fields[0] ?? null;
 }
 
-/** The longest string field in a file's first rows, if it reads like text: the item's prompt. */
-export function textField(rows: Row[], key: string): string | null {
-  const sample = rows.slice(0, 20);
+/** What an item is called in its records: a field it holds the same in every condition. */
+const ITEM_NAMES = [
+  "claim",
+  "question",
+  "prompt",
+  "input",
+  "statement",
+  "problem",
+  "instruction",
+  "query",
+  "text",
+];
+
+/** The item's own text (its claim, its question): a field the reference's record has and every
+ * other condition that has it holds the same, so never a condition's own reply. A conventional
+ * name first, else the longest that reads like text; null when the records do not say what the
+ * item is. */
+export function itemText(rows: (Row | undefined)[], ref: number, key: string): string | null {
+  const base = rows[ref];
+  if (!base) return null;
+  const same = (f: string) =>
+    typeof base[f] === "string" &&
+    rows.every((r) => !r || !(f in r) || JSON.stringify(r[f]) === JSON.stringify(base[f]));
+  const fields = Object.keys(base).filter((f) => f !== key && same(f));
+  const named = ITEM_NAMES.find((n) => fields.includes(n));
+  if (named) return named;
   let best: [string, number] | null = null;
-  for (const f of Object.keys(sample[0] ?? {})) {
-    if (f === key) continue;
-    const lens = sample.map((r) => (typeof r[f] === "string" ? (r[f] as string).length : 0));
-    const mean = lens.reduce((a, b) => a + b, 0) / Math.max(1, lens.length);
-    if (mean >= 20 && (!best || mean > best[1])) best = [f, mean];
+  for (const f of fields) {
+    const n = (base[f] as string).length;
+    if (n >= 20 && (!best || n > best[1])) best = [f, n];
   }
   return best?.[0] ?? null;
 }
