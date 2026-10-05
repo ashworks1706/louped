@@ -6,8 +6,8 @@ import { docsRoute, repoUrl, tagline } from "@/lib/shared";
 
 import experimentDark from "../../../public/demo/experiment-dark.png";
 import experimentLight from "../../../public/demo/experiment-light.png";
-import hardwareDark from "../../../public/demo/hardware-dark.png";
-import hardwareLight from "../../../public/demo/hardware-light.png";
+import figureDark from "../../../public/demo/figure-dark.png";
+import figureLight from "../../../public/demo/figure-light.png";
 import homeDark from "../../../public/demo/home-dark.png";
 import homeLight from "../../../public/demo/home-light.png";
 import itemDark from "../../../public/demo/item-dark.png";
@@ -15,11 +15,9 @@ import itemLight from "../../../public/demo/item-light.png";
 import itemsDark from "../../../public/demo/items-dark.png";
 import itemsLight from "../../../public/demo/items-light.png";
 import launchDark from "../../../public/demo/launch-dark.png";
-import layoutDark from "../../../public/demo/layout-dark.png";
-import layoutLight from "../../../public/demo/layout-light.png";
 import launchLight from "../../../public/demo/launch-light.png";
-import tracesDark from "../../../public/demo/traces-dark.png";
-import tracesLight from "../../../public/demo/traces-light.png";
+import picksDark from "../../../public/demo/picks-dark.png";
+import picksLight from "../../../public/demo/picks-light.png";
 
 const INSTALL = "pip install 'louped[server,tracking,interp,agent]'";
 
@@ -31,62 +29,54 @@ const STEPS: { title: string; text: string; code?: string; shot: Shot; alt: stri
     text: "One command sets up a folder for your questions, an example to try, and the files your coding agent needs.",
     code: `${INSTALL}\nlouped init my-research && cd my-research\nlouped serve`,
     shot: [homeLight, homeDark],
-    alt: "A new project in the app, with its example question",
+    alt: "A project's home: its domains and active questions",
   },
   {
     title: "Ask your agent",
-    text: "Tell Claude Code, Codex or Cursor what to test. It writes the experiment: the question, the plan and the code.",
+    text: "Tell Claude Code, Codex or Cursor what to test. It writes the experiment: the question, the plan and the script.",
     shot: [experimentLight, experimentDark],
-    alt: "An experiment's page: its question, hypotheses and test",
+    alt: "An experiment's page: its question, hypotheses, test and result",
   },
   {
     title: "Run it",
-    text: "Small runs go on your machine. Large ones go to a Slurm cluster as one job, and the results come back to your app.",
+    text: "The script's options become a form. Small runs go on your machine. Large ones go to a Slurm cluster as one job, and the results come back to your app.",
     shot: [launchLight, launchDark],
-    alt: "The launch form, with the choice to run here or on a cluster",
+    alt: "The launch form for an experiment's script, with its options",
   },
   {
     title: "Read the results",
-    text: "See every item under every condition: what changed, and out of how many. Open one to compare the conditions side by side.",
-    shot: [itemLight, itemDark],
-    alt: "One question under baseline, evidence and pushback, side by side",
+    text: "See every item under every condition: what changed against the reference, out of how many, with a 95% interval.",
+    shot: [itemsLight, itemsDark],
+    alt: "Fifty items under three conditions, each against the reference",
   },
   {
-    title: "Make it yours",
-    text: "Shift+click any rows, cards or fields and ask your agent about them: it gets their data, and points back at the evidence on screen. Ask it to rename, hide, reorder or add any part, in louped's look; the page updates as it works.",
-    shot: [layoutLight, layoutDark],
-    alt: "A run's page laid out by an agent, with the card being pointed at outlined",
+    title: "Point your agent at it",
+    text: "Shift+click rows, cards or fields. Your agent reads what you picked, with its data, and points back at the evidence on screen. Ask it to change any part of a page, or add a page of its own.",
+    shot: [picksLight, picksDark],
+    alt: "Three rows picked on the Items tab, with the tray your agent reads",
   },
 ];
 
 const MORE: { title: string; text: string; shot: Shot; alt: string }[] = [
   {
-    title: "What a run cost",
-    text: "Every run records the GPU energy, power and memory it used, and the code, packages and seed behind it.",
-    shot: [hardwareLight, hardwareDark],
-    alt: "A run's results with the energy and hardware it used",
+    title: "Each answer, side by side",
+    text: "Open an item to read what the model said under each condition. Fields that differ from the reference are outlined.",
+    shot: [itemLight, itemDark],
+    alt: "One question with the model's answer with the vector added, left out and subtracted",
   },
   {
-    title: "Agent traces",
-    text: "Open an agent's trace files as a timeline per request. louped view opens any results you already have.",
-    shot: [tracesLight, tracesDark],
-    alt: "Agent requests as timelines of retrieval, model calls and tools",
+    title: "Every point traces back",
+    text: "Hover a point in a figure to see its item, the files that hold it and the script that drew it. Click it to open the item.",
+    shot: [figureLight, figureDark],
+    alt: "A scatter of items, one hovered, with the item and files it traces to",
   },
 ];
 
-function Screenshot({
-  shot: [light, dark],
-  alt,
-  priority = false,
-}: {
-  shot: Shot;
-  alt: string;
-  priority?: boolean;
-}) {
+function Screenshot({ shot: [light, dark], alt }: { shot: Shot; alt: string }) {
   return (
     <div className="w-full overflow-hidden rounded-xl border shadow-2xl shadow-black/5">
-      <Image src={light} alt={alt} priority={priority} className="dark:hidden" />
-      <Image src={dark} alt={alt} priority={priority} className="hidden dark:block" />
+      <Image src={light} alt={alt} className="dark:hidden" />
+      <Image src={dark} alt={alt} className="hidden dark:block" />
     </div>
   );
 }
@@ -111,13 +101,28 @@ export default function HomePage() {
         </Link>
       </div>
 
-      <div className="mt-20 w-full">
-        <Screenshot
-          shot={[itemsLight, itemsDark]}
-          alt="Sixteen questions under three conditions: what pushback and evidence did to each answer"
-          priority
+      <figure className="mt-20 w-full">
+        <video
+          className="w-full rounded-xl border shadow-2xl shadow-black/5"
+          src="/demo/demo.mp4"
+          poster="/demo/demo-poster.jpg"
+          aria-label="A walk through louped: an experiment, its items, picks for the agent, one item's answers and a traced figure"
+          autoPlay
+          muted
+          loop
+          playsInline
+          controls
         />
-      </div>
+        <figcaption className="text-fd-muted-foreground mt-3 text-center text-xs text-balance">
+          A re-analysis of CAA&apos;s released Llama 2 7B Chat results, run in louped.{" "}
+          <a
+            href={`${repoUrl}/tree/main/apps/site/demo`}
+            className="hover:text-fd-foreground underline"
+          >
+            The project and the script that made this video
+          </a>
+        </figcaption>
+      </figure>
 
       <section className="mt-28 flex w-full flex-col gap-20" aria-labelledby="how">
         <h2 id="how" className="text-center text-2xl font-semibold tracking-tight md:text-3xl">
@@ -126,7 +131,7 @@ export default function HomePage() {
         {STEPS.map((step, i) => (
           <div
             key={step.title}
-            className="grid items-start gap-8 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]"
+            className="grid grid-cols-1 items-start gap-8 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]"
           >
             <div className="flex flex-col gap-3 md:sticky md:top-24">
               <span className="text-fd-muted-foreground font-mono text-xs">0{i + 1}</span>
