@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 
 import { DEFAULT_LAYOUT, expect, test } from "./fixtures";
 import { mock } from "./items-run";
+import { mockPages } from "./pages-api";
 import kinds from "./part-kinds.json" with { type: "json" };
 
 // Every part of a page has an address: a person Shift+clicks parts to hand them to their agent,
@@ -49,11 +50,31 @@ const PAGES: [string, string][] = [
   ["item", "/run/?id=m-1&tab=items&item=28"],
   ["artifacts", "/run/?id=m-1&tab=artifacts&file=raw%2Fbaseline.jsonl"],
   ["config", "/run/?id=m-1&tab=config"],
+  ["samples", "/run/?id=e-1&tab=samples"],
+  ["sample", "/run/?id=e-1&tab=samples&sample=1"],
+  ["figures", "/run/?id=m-1&tab=figures"],
+  ["training run", "/run/?id=t-1"],
+  ["behavior", "/behavior/"],
+  ["efficiency", "/efficiency/"],
+  ["efficiency experiments", "/efficiency/experiments/"],
+  ["probe reply", "/behavior/probe/?tab=reply"],
+  ["probe inspect", "/behavior/probe/?tab=inspect"],
+  ["probe patch", "/behavior/probe/?tab=patch"],
+  ["probe dose", "/behavior/probe/?tab=dose"],
+  ["benchmark", "/efficiency/benchmark/"],
+  ["vectors", "/behavior/vectors/"],
+  ["circuits", "/behavior/circuits/"],
+  ["feature", "/behavior/feature/?run=m-1&f=12"],
+  ["training", "/efficiency/training/"],
+  ["compare", "/compare/?a=e-1&b=e-1"],
+  ["compare sample", "/compare/?a=e-1&b=e-1&changed=false&sample=1"],
+  ["launch", "/launch/?id=script%3Ahello%2Frun.py"],
+  ["job", "/job/?id=j1"],
 ];
 
 for (const [name, url] of PAGES) {
   test(`every part of ${name} has an address the server knows`, async ({ page }) => {
-    await mock(page);
+    await mockPages(page);
     await page.goto(url);
     await expect(page.locator("main [data-part]").first()).toBeVisible();
     await page.waitForLoadState("networkidle");
@@ -125,6 +146,55 @@ test("Shift+click picks parts for the agent, with what they stand for", async ({
   await page.keyboard.press("Escape"); // closes the panel, keeps the pick
   await expect(page).not.toHaveURL(/item=28/);
   await expect(tray).toContainText("1 picked");
+});
+
+test("a layout hides, renames and hints parts of the tool pages too", async ({ page }) => {
+  await mockPages(page, {
+    "playground/tab/dose": { hidden: false, order: 0 },
+    "playground/tab/patch": { hidden: true },
+    "playground/field/strength": { hidden: false, label: "Push", note: "Try 2 first." },
+    "playground/field/follow-up": { hidden: true },
+    "launch/option/--loud": { hidden: true },
+    "launch/option/--name": { hidden: false, label: "who", note: "Your **advisor**." },
+    "domain/section/runs": { hidden: true },
+    "compare/section/paired": { hidden: false, note: "Read the interval, not the mean." },
+    "feature/figure/histogram": { hidden: true },
+    "job/log": { hidden: false, note: "The error is at the end." },
+    "empty/no-experiments-here-yet": { hidden: false, note: "Start one with the agent." },
+  });
+  await page.goto("/behavior/probe/");
+  const tabs = page.locator('[data-part^="playground/tab/"]');
+  await expect(tabs).toHaveText(["Dose", "Reply", "Inspect"]);
+  await expect(page.getByRole("tab", { name: "Dose" })).toHaveAttribute("aria-selected", "true");
+  const strength = page.locator('[data-part="playground/field/strength"]');
+  await expect(strength).toContainText("Push");
+  await expect(strength).toContainText("Try 2 first.");
+  await page.goto("/behavior/probe/?tab=reply");
+  await expect(page.getByLabel("Prompt")).toBeVisible();
+  await expect(page.getByLabel("Follow-up")).toHaveCount(0);
+
+  await page.goto("/launch/?id=script%3Ahello%2Frun.py");
+  await expect(page.locator("#opt---name")).toBeVisible();
+  await expect(page.locator('[data-part="launch/option/--loud"]')).toHaveCount(0);
+  await expect(page.locator('[data-part="launch/option/--name"]')).toContainText("who");
+  await expect(page.locator('[data-part="launch/option/--name"] strong')).toHaveText("advisor");
+
+  await page.goto("/behavior/");
+  await expect(page.locator('[data-part="domain/section/tools"]')).toBeVisible();
+  await expect(page.locator('[data-part="domain/section/runs"]')).toHaveCount(0);
+  await page.goto("/efficiency/");
+  await expect(page.locator('[data-part="empty/no-experiments-here-yet"]')).toContainText(
+    "Start one with the agent.",
+  );
+  await page.goto("/compare/?a=e-1&b=e-1");
+  await expect(page.locator('[data-part="compare/section/paired"]')).toContainText(
+    "Read the interval, not the mean.",
+  );
+  await page.goto("/behavior/feature/?run=m-1&f=12");
+  await expect(page.locator('[data-part="feature/figure/promotes"]')).toBeVisible();
+  await expect(page.locator('[data-part="feature/figure/histogram"]')).toHaveCount(0);
+  await page.goto("/job/?id=j1");
+  await expect(page.locator('[data-part="job/log"]')).toContainText("The error is at the end.");
 });
 
 test("a layout's parts rename, explain, order, hide and set defaults", async ({ page }, info) => {

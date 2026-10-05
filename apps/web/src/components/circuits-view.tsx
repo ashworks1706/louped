@@ -7,6 +7,7 @@ import { parseAsString, useQueryState } from "nuqs";
 
 import { EmptyState } from "@/components/empty-state";
 import { ExamplesButton } from "@/components/jobs";
+import { part } from "@/components/parts";
 import { QueryState } from "@/components/query-state";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -38,6 +39,7 @@ export function CircuitsView() {
           <div className="flex flex-col gap-3">
             <NativeSelect
               aria-label="Graph"
+              {...part("circuits/graph")}
               value={current.slug}
               onChange={(e) => void setSlug(e.target.value)}
               className="max-w-full"
@@ -50,6 +52,7 @@ export function CircuitsView() {
             </NativeSelect>
             <iframe
               key={current.slug}
+              {...part("circuits/viewer")}
               title={`Attribution graph ${current.slug}`}
               src={`${API}/circuit/?slug=${encodeURIComponent(current.slug)}`}
               className="h-[calc(100svh-14rem)] min-h-[32rem] w-full rounded-xl border"

@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect } from "react";
 import { useLayout } from "@/components/layout";
 import { Markdown } from "@/components/markdown";
 import type { PartRule } from "@/lib/api";
+import { part } from "@/lib/parts";
 export { part, partId } from "@/lib/parts";
 import { cn } from "@/lib/utils";
 
@@ -98,4 +99,26 @@ export function partData(id: string): unknown {
     .filter((p) => id === p || id.startsWith(`${p}/`))
     .sort((a, b) => b.length - a.length)[0];
   return prefix ? (resolvers.get(prefix)!(id) ?? null) : null;
+}
+
+/** A part a layout may hide or put a note under: a section, a card, a group of controls. */
+export function Part({
+  id,
+  className,
+  children,
+  as: As = "div",
+}: {
+  id: string;
+  className?: string;
+  children: React.ReactNode;
+  as?: "div" | "section" | "header";
+}) {
+  const rule = useRules()(id);
+  if (rule.hidden) return null;
+  return (
+    <As {...part(id)} className={className}>
+      {children}
+      <PartNote rule={rule} />
+    </As>
+  );
 }

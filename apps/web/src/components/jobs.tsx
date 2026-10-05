@@ -22,7 +22,7 @@ import { CopyButton } from "@/components/copy-button";
 import { DeleteButton } from "@/components/delete-button";
 import { EmptyState } from "@/components/empty-state";
 import { Help } from "@/components/help";
-import { part, partId, useRules } from "@/components/parts";
+import { Part, part, partId, useRules } from "@/components/parts";
 import { askToNotify } from "@/components/notifier";
 import { QueryState } from "@/components/query-state";
 import { KindBadge, StatusDot } from "@/components/run-badges";
@@ -245,16 +245,20 @@ function JobLoaded({ id }: { id: string }) {
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-6">
           <Link
             href="/runs/"
+            {...part("job/back")}
             className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 text-xs"
           >
             <ArrowLeft className="size-3" /> Runs
           </Link>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="min-w-0 truncate font-mono text-xl font-semibold tracking-tight">
+            <h1
+              className="min-w-0 truncate font-mono text-xl font-semibold tracking-tight"
+              {...part("job/title")}
+            >
               {j.title}
             </h1>
             <StatusDot status={j.status} />
-            <div className="ml-auto flex gap-2">
+            <div className="ml-auto flex gap-2" {...part("job/actions")}>
               {isLive(j.status) && (
                 <Button
                   variant="outline"
@@ -280,7 +284,10 @@ function JobLoaded({ id }: { id: string }) {
         </div>
       </header>
       <section className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-6">
-        <div className="bg-muted/50 flex items-start gap-2 rounded-lg border py-1 pr-1 pl-3">
+        <div
+          className="bg-muted/50 flex items-start gap-2 rounded-lg border py-1 pr-1 pl-3"
+          {...part("job/command")}
+        >
           <code className="flex-1 py-1.5 font-mono text-xs [overflow-wrap:anywhere]">
             <span className="text-muted-foreground select-none">$ </span>
             {j.argv.join(" ")}
@@ -297,7 +304,10 @@ function JobLoaded({ id }: { id: string }) {
 function JobFacts({ job, step }: { job: Job; step?: string }) {
   const elapsed = useElapsed(job);
   return (
-    <dl className="text-muted-foreground flex flex-wrap gap-x-6 gap-y-1 text-sm">
+    <dl
+      className="text-muted-foreground flex flex-wrap gap-x-6 gap-y-1 text-sm"
+      {...part("job/facts")}
+    >
       <div className="flex gap-1.5">
         <dt>Started</dt>
         <dd className="text-foreground">{job.started ? ago(job.started) : "waiting in queue"}</dd>
@@ -332,7 +342,7 @@ function Log({ log, live }: { log: string; live: boolean }) {
     if (pinned.current) box.current?.scrollTo({ top: box.current.scrollHeight });
   }, [log]);
   return (
-    <div className="flex flex-col gap-2">
+    <Part id="job/log" className="flex flex-col gap-2">
       <h2 className="text-muted-foreground flex items-center gap-2 text-xs font-medium">
         Log
         {live && <span className="bg-foreground size-1.5 rounded-full motion-safe:animate-pulse" />}
@@ -349,7 +359,7 @@ function Log({ log, live }: { log: string; live: boolean }) {
       >
         {log || "No output yet."}
       </pre>
-    </div>
+    </Part>
   );
 }
 
@@ -365,7 +375,7 @@ function RunLinks({ log }: { log: string }) {
   ];
   if (!ids.length) return null;
   return (
-    <section className="flex flex-col gap-2">
+    <Part as="section" id="job/wrote" className="flex flex-col gap-2">
       <h2 className="text-muted-foreground text-xs font-medium">Wrote</h2>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
         {ids.map((id) => {
@@ -374,6 +384,7 @@ function RunLinks({ log }: { log: string }) {
             <Link
               key={id}
               href={runHref(id)}
+              {...part(partId("job/run", id))}
               className="hover:bg-accent/40 flex min-w-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors"
             >
               <span className="min-w-0 flex-1 truncate">{run?.name ?? id}</span>
@@ -382,7 +393,7 @@ function RunLinks({ log }: { log: string }) {
           );
         })}
       </div>
-    </section>
+    </Part>
   );
 }
 

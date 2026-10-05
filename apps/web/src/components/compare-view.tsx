@@ -10,6 +10,7 @@ import { useMemo } from "react";
 
 import { EmptyState } from "@/components/empty-state";
 import { Help } from "@/components/help";
+import { Part, PartData, part, partId } from "@/components/parts";
 import { Delta, MetricValue, ScoreCell } from "@/components/metric";
 import { QueryState } from "@/components/query-state";
 import { runHref } from "@/lib/href";
@@ -89,7 +90,7 @@ function Pickers({
   );
   return (
     <div className="flex flex-wrap items-end gap-3">
-      <label className="flex min-w-0 flex-col gap-1.5">
+      <label className="flex min-w-0 flex-col gap-1.5" {...part("compare/pick/a")}>
         <span className="text-muted-foreground text-xs">Baseline</span>
         <NativeSelect
           className="max-w-80"
@@ -105,12 +106,13 @@ function Pickers({
         size="icon-sm"
         variant="ghost"
         aria-label="Swap baseline and changed"
+        {...part("compare/pick/swap")}
         disabled={!a && !b}
         onClick={() => set({ a: b, b: a })}
       >
         <ArrowLeftRight />
       </Button>
-      <label className="flex min-w-0 flex-col gap-1.5">
+      <label className="flex min-w-0 flex-col gap-1.5" {...part("compare/pick/b")}>
         <span className="text-muted-foreground text-xs">Changed</span>
         <NativeSelect
           className="max-w-80"
@@ -162,6 +164,7 @@ function Heads({ a, b }: { a: RunDetail; b: RunDetail }) {
           <Link
             key={label as string}
             href={runHref(r.id)}
+            {...part(partId("compare/run", (label as string).toLowerCase()))}
             className="hover:bg-accent/40 flex items-center gap-3 rounded-xl border p-4 transition-colors"
           >
             <span className="grid size-7 place-items-center rounded-md border font-mono text-xs">
@@ -186,7 +189,7 @@ function Judge({ a, b }: { a: string; b: string }) {
     onSuccess: (job) => router.push(`/launch/?id=judge&job=${encodeURIComponent(job.id)}`),
   });
   return (
-    <div className="-mt-4 flex items-center justify-end gap-2">
+    <Part id="compare/section/judge" className="-mt-4 flex items-center justify-end gap-2">
       {go.error && <span className="text-negative text-xs">{go.error.message}</span>}
       <Button size="sm" variant="outline" disabled={go.isPending} onClick={() => go.mutate()}>
         Judge
@@ -196,7 +199,7 @@ function Judge({ a, b }: { a: string; b: string }) {
         and picks the better one. The result is a run with B&apos;s win rate. Pick the judge model
         on Launch.
       </Help>
-    </div>
+    </Part>
   );
 }
 
@@ -204,7 +207,7 @@ function Metrics({ a, b }: { a: RunDetail; b: RunDetail }) {
   const keys = [...new Set([...headline(a.metrics), ...headline(b.metrics)].map(([k]) => k))];
   if (keys.length === 0) return null;
   return (
-    <div>
+    <Part id="compare/section/metrics">
       <h2 className="text-muted-foreground mb-3 text-sm font-medium">Metrics</h2>
       <Table>
         <TableHeader>
@@ -222,7 +225,7 @@ function Metrics({ a, b }: { a: RunDetail; b: RunDetail }) {
             const va = a.metrics[k];
             const vb = b.metrics[k];
             return (
-              <TableRow key={k}>
+              <TableRow key={k} {...part(partId("compare/metric", k))}>
                 <TableCell>
                   <MetricName k={k} />
                 </TableCell>
@@ -244,7 +247,7 @@ function Metrics({ a, b }: { a: RunDetail; b: RunDetail }) {
           })}
         </TableBody>
       </Table>
-    </div>
+    </Part>
   );
 }
 
@@ -258,7 +261,11 @@ function Paired({ a, b }: { a: string; b: string }) {
   const { scores, only_a, only_b } = cmp.data;
   const ratios = scores.some((s) => isEfficiency(s.name));
   return (
-    <div>
+    <Part id="compare/section/paired">
+      <PartData
+        prefix="compare/score"
+        resolve={(id) => scores.find((s) => partId("compare/score", s.name) === id)}
+      />
       <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <h2 className="text-muted-foreground text-sm font-medium">Paired by sample</h2>
         <span className="text-muted-foreground text-xs">
@@ -294,7 +301,7 @@ function Paired({ a, b }: { a: string; b: string }) {
           {scores.map((s) => {
             const sure = s.low > 0 || s.high < 0;
             return (
-              <TableRow key={s.name}>
+              <TableRow key={s.name} {...part(partId("compare/score", s.name))}>
                 <TableCell>
                   <MetricName k={s.name} />
                 </TableCell>
@@ -336,7 +343,7 @@ function Paired({ a, b }: { a: string; b: string }) {
           })}
         </TableBody>
       </Table>
-    </div>
+    </Part>
   );
 }
 
@@ -379,7 +386,7 @@ function Samples({ a, b }: { a: RunDetail; b: RunDetail }) {
   const changed = pairs.filter((p) => p.changed).length;
 
   return (
-    <div>
+    <Part id="compare/section/samples">
       <div className="mb-3 flex items-center gap-3">
         <h2 className="text-muted-foreground text-sm font-medium">Samples</h2>
         <span className="text-muted-foreground text-xs">
@@ -414,7 +421,12 @@ function Samples({ a, b }: { a: RunDetail; b: RunDetail }) {
         </TableHeader>
         <TableBody>
           {rows.map((p) => (
-            <TableRow key={p.id} className="cursor-pointer" onClick={() => setOpen(p.id)}>
+            <TableRow
+              key={p.id}
+              className="cursor-pointer"
+              onClick={() => setOpen(p.id)}
+              {...part(partId("compare/sample", p.id))}
+            >
               <TableCell className="text-muted-foreground font-mono text-xs whitespace-nowrap">
                 {p.id}
               </TableCell>
@@ -445,7 +457,7 @@ function Samples({ a, b }: { a: RunDetail; b: RunDetail }) {
           {open !== null && <SideBySide a={a} b={b} sampleId={open} />}
         </SheetContent>
       </Sheet>
-    </div>
+    </Part>
   );
 }
 
@@ -455,7 +467,9 @@ function SideBySide({ a, b, sampleId }: { a: RunDetail; b: RunDetail; sampleId: 
   return (
     <>
       <div className="border-b px-6 py-4">
-        <SheetTitle className="font-semibold">Sample {sampleId}</SheetTitle>
+        <SheetTitle className="font-semibold" {...part("compare/open/title")}>
+          Sample {sampleId}
+        </SheetTitle>
         <SheetDescription className="text-muted-foreground text-sm">
           The same sample in both runs, side by side.
         </SheetDescription>
@@ -468,6 +482,7 @@ function SideBySide({ a, b, sampleId }: { a: RunDetail; b: RunDetail; sampleId: 
           <div
             key={label as string}
             className="flex min-w-0 flex-col gap-3 md:pr-6 md:last:pr-0 md:[&:last-child]:pl-6"
+            {...part(partId("compare/open/side", (label as string).toLowerCase()))}
           >
             <div className="flex items-center gap-2 text-sm">
               <span className="grid size-6 place-items-center rounded-md border font-mono text-xs">

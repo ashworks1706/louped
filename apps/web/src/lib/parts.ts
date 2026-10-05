@@ -6,3 +6,10 @@ export function partId(base: string, ...names: (string | number)[]): string {
 
 /** The props that make an element a part: its address, for Shift+click and the agent's cues. */
 export const part = (id: string) => ({ "data-part": id });
+
+/** A name as an address segment: lowercase words joined by -, for parts named by their text. */
+export const slug = (text: string) =>
+  text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");

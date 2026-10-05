@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import { EmptyState } from "@/components/empty-state";
 import { ExamplesButton } from "@/components/jobs";
+import { PartData, part, partId } from "@/components/parts";
 import { QueryState } from "@/components/query-state";
 import { Term } from "@/components/term";
 import { Button } from "@/components/ui/button";
@@ -47,9 +48,16 @@ export function VectorsTable() {
         const models = [...new Set(all.map((v) => v.model))].sort();
         return (
           <div className="flex flex-col gap-8">
+            <PartData
+              prefix="vectors/row"
+              resolve={(id) => all.find((v) => partId("vectors/row", v.name) === id)}
+            />
             {models.map((model) => (
               <section key={model} className="flex flex-col gap-2">
-                <h2 className="flex items-center gap-2 text-sm font-medium">
+                <h2
+                  className="flex items-center gap-2 text-sm font-medium"
+                  {...part(partId("vectors/model", model))}
+                >
                   <Term k="model">
                     <span className="font-mono">{model}</span>
                   </Term>
@@ -71,30 +79,38 @@ function Rows({ vectors }: { vectors: Direction[] }) {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="pl-4">Name</TableHead>
-          <TableHead className="text-right">
+          <TableHead {...part(partId("vectors/column", "name"))} className="pl-4">
+            Name
+          </TableHead>
+          <TableHead {...part(partId("vectors/column", "layer"))} className="text-right">
             <Term k="layer">Layer</Term>
           </TableHead>
-          <TableHead className="hidden sm:table-cell">
+          <TableHead {...part(partId("vectors/column", "method"))} className="hidden sm:table-cell">
             <Term k="method">Method</Term>
           </TableHead>
-          <TableHead className="hidden text-right sm:table-cell">
+          <TableHead
+            {...part(partId("vectors/column", "norm"))}
+            className="hidden text-right sm:table-cell"
+          >
             <Term k="norm">Norm</Term>
           </TableHead>
-          <TableHead className="hidden text-right md:table-cell">
+          <TableHead
+            {...part(partId("vectors/column", "dim"))}
+            className="hidden text-right md:table-cell"
+          >
             <Term k="dim">Dim</Term>
           </TableHead>
-          <TableHead className="hidden md:table-cell">
+          <TableHead {...part(partId("vectors/column", "source"))} className="hidden md:table-cell">
             <Term k="source">Source</Term>
           </TableHead>
-          <TableHead className="pr-4 text-right">
+          <TableHead {...part(partId("vectors/column", "use"))} className="pr-4 text-right">
             <span className="sr-only">Use</span>
           </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {vectors.map((v) => (
-          <TableRow key={v.name}>
+          <TableRow key={v.name} {...part(partId("vectors/row", v.name))}>
             <TableCell className="pl-4">
               <div className="font-mono text-sm">{v.name}</div>
               <div className="text-muted-foreground max-w-sm truncate text-xs">

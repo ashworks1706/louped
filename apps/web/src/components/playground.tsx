@@ -19,6 +19,7 @@ import { EmptyState } from "@/components/empty-state";
 import { ExamplesButton } from "@/components/jobs";
 import { QueryState } from "@/components/query-state";
 import { Help } from "@/components/help";
+import { arrange, Part, PartNote, part, partId, useRules } from "@/components/parts";
 import { Figure } from "@/components/run-views";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ import {
   type PlaygroundInfo,
   type View,
 } from "@/lib/api";
+import { slug } from "@/lib/parts";
 import { cn } from "@/lib/utils";
 
 const MODES = ["steer", "ablate", "heads"] as const;
@@ -84,7 +86,10 @@ export function Playground({ tools }: { tools: Tab[] }) {
     <QueryState query={info}>
       {(i) =>
         i.model == null && i.switchable ? (
-          <div className="mx-auto flex max-w-md flex-col gap-4 rounded-xl border p-6">
+          <Part
+            id="playground/load"
+            className="mx-auto flex max-w-md flex-col gap-4 rounded-xl border p-6"
+          >
             <div>
               <h2 className="font-medium">Load a model</h2>
               <p className="text-muted-foreground mt-1 text-sm">
@@ -96,7 +101,7 @@ export function Playground({ tools }: { tools: Tab[] }) {
               ready={(vectors.data ?? []).some((v) => v.model === EXAMPLE_MODEL)}
               tools={tools}
             />
-          </div>
+          </Part>
         ) : i.model == null ? (
           <EmptyState
             icon={MessageSquareText}
@@ -141,7 +146,7 @@ function Loaded({
     steps: parseAsInteger,
     heads: parseAsString.withDefault("0"),
     adapters: parseAsArrayOf(parseAsString).withDefault([]),
-    tab: parseAsStringLiteral(TABS).withDefault(tools[0]),
+    tab: parseAsStringLiteral(TABS),
     side: parseAsStringLiteral(SIDES).withDefault("base"),
     follow: parseAsString.withDefault(""),
     corrupt: parseAsString.withDefault(""),
@@ -158,7 +163,11 @@ function Loaded({
   const [draft, setDraft] = useState(s.prompt);
   // A diffusion model has no next token to patch, sweep or time: its tabs are Reply and Inspect.
   const offered = tools.filter((t) => !info.diffusion || t === "reply" || t === "inspect");
-  const tab = offered.includes(s.tab) ? s.tab : (offered[0] ?? "reply");
+  const rule = useRules();
+  // a layout may hide, rename or reorder the tabs; one the URL asks for still opens
+  const shownTabs = arrange(offered, (t) => partId("playground/tab", t), rule);
+  // the URL's tab, else the first the layout shows
+  const tab = s.tab && offered.includes(s.tab) ? s.tab : (shownTabs[0] ?? offered[0] ?? "reply");
   const repeats = Math.max(1, Math.min(10, s.repeats));
   const layers = info.layers ?? 1;
   const vector = vectors.find((v) => v.name === s.vector) ?? vectors[0];
@@ -426,7 +435,7 @@ function Loaded({
           />
         )}
         {!info.diffusion && s.mode === "heads" && (
-          <Field label={`Heads to zero, of ${info.heads ?? 0}`}>
+          <Field label={`Heads to zero, of ${info.heads ?? 0}`} name="heads">
             <Input
               aria-label="Heads"
               value={s.heads}
@@ -442,7 +451,7 @@ function Loaded({
           </p>
         )}
         <div className="grid grid-cols-2 gap-3">
-          <Field label={info.diffusion ? "Length" : "Max new tokens"}>
+          <Field label={info.diffusion ? "Length" : "Max new tokens"} name="tokens">
             <Input
               type="number"
               aria-label={info.diffusion ? "Length" : "Max new tokens"}
@@ -484,6 +493,7 @@ function Loaded({
 
       <div className="flex min-w-0 flex-col gap-4">
         <form
+          {...part("playground/prompt")}
           className="focus-within:border-ring flex flex-col rounded-xl border"
           onSubmit={(e) => {
             e.preventDefault();
@@ -547,9 +557,9 @@ function Loaded({
         </form>
         <Tabs value={tab} onValueChange={(tab) => void set({ tab: tab as Tab })}>
           <TabsList>
-            {offered.map((t) => (
-              <TabsTrigger key={t} value={t}>
-                {TAB_TITLES[t]}
+            {shownTabs.map((t) => (
+              <TabsTrigger key={t} value={t} {...part(partId("playground/tab", t))}>
+                {rule(partId("playground/tab", t)).label ?? TAB_TITLES[t]}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -614,12 +624,14 @@ function Loaded({
                   />
                 </Field>
               </div>
-              <Segmented
-                label="Method"
-                options={METHODS}
-                value={s.method}
-                onChange={(method) => void set({ method })}
-              />
+              <Field label="Method">
+                <Segmented
+                  label="Method"
+                  options={METHODS}
+                  value={s.method}
+                  onChange={(method) => void set({ method })}
+                />
+              </Field>
               <Views state={patched} empty="Run a clean and a corrupt prompt to patch them." />
             </TabsContent>
           )}
@@ -694,9 +706,12 @@ function Loaded({
                 onValueChange={(side) => void set({ side: side as (typeof SIDES)[number] })}
               >
                 <TabsList aria-label="Which stream to read">
-                  <TabsTrigger value="base">Base</TabsTrigger>
+                  <TabsTrigger value="base" {...part("playground/side/base")}>
+                    Base
+                  </TabsTrigger>
                   <TabsTrigger
                     value="intervention"
+                    {...part("playground/side/intervention")}
                     className="data-[state=active]:text-intervention min-w-0 truncate"
                   >
                     {label}
@@ -709,7 +724,7 @@ function Loaded({
             ) : shown.error ? (
               <span className="text-negative text-sm">{shown.error.message}</span>
             ) : shown.data ? (
-              shown.data.views.map((v, i) => <Figure key={`${shown.submittedAt}-${i}`} view={v} />)
+              <ViewList views={shown.data.views} at={shown.submittedAt} />
             ) : (
               <span className="text-muted-foreground text-sm">
                 Run a prompt to {info.diffusion ? "watch it denoise" : "read its layers"}.
@@ -722,22 +737,30 @@ function Loaded({
   );
 }
 
+/** One control with its label, a part a layout may hide, rename or put a note under; name is its
+ * address when the label changes with the model. */
 function Field({
   label,
+  name,
   help,
   children,
 }: {
   label: string;
+  name?: string;
   help?: string;
   children: React.ReactNode;
 }) {
+  const id = partId("playground/field", name ?? slug(label));
+  const rule = useRules()(id);
+  if (rule.hidden) return null;
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5" {...part(id)}>
       <span className="text-muted-foreground inline-flex items-center gap-1 text-xs font-medium">
-        {label}
-        {help && <Help label={`What is ${label}?`}>{help}</Help>}
+        {rule.label ?? label}
+        {help && <Help label={`What is ${label}?`}>{rule.about ?? help}</Help>}
       </span>
       {children}
+      <PartNote rule={rule} />
     </div>
   );
 }
@@ -842,10 +865,17 @@ function Views({
     return <span className="text-muted-foreground animate-pulse text-sm">Running…</span>;
   if (state.error) return <span className="text-negative text-sm">{state.error.message}</span>;
   if (!state.data) return <span className="text-muted-foreground text-sm">{empty}</span>;
+  return <ViewList views={state.data.views} at={state.submittedAt} />;
+}
+
+/** A tool's figures, each a part by its title that a layout may hide or put a note under. */
+function ViewList({ views, at }: { views: View[]; at: number }) {
+  const rule = useRules();
+  const id = (v: View) => partId("playground/figure", slug(v.title));
   return (
     <>
-      {state.data.views.map((v, i) => (
-        <Figure key={`${state.submittedAt}-${i}`} view={v} />
+      {arrange(views, id, rule).map((v, i) => (
+        <Figure key={`${at}-${i}`} view={v} id={id(v)} />
       ))}
     </>
   );
@@ -908,6 +938,7 @@ function Reply({
   return (
     <section
       data-testid={`reply-${intervention ? "intervention" : "base"}`}
+      {...part(partId("playground/reply", intervention ? "intervention" : "base"))}
       className={cn(
         "flex min-h-40 flex-col rounded-xl border",
         intervention && "border-intervention/40",
