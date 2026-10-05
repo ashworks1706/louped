@@ -75,7 +75,7 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
             raise ToolError(f"{method} {path} to {url} failed: {e!r}") from e
         return _read(response)
 
-    async def get(path: str, **params: Any) -> Any:
+    async def get(path: str, /, **params: Any) -> Any:
         return await send("GET", path, params={k: v for k, v in params.items() if v is not None})
 
     async def post(path: str, body: dict[str, Any]) -> Any:
@@ -197,6 +197,16 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         the run with its commit. ref is run:<run id>[/<path>][#<item>], such as a figure's mark
         run:m-1/views/umap.json#17, or experiment:<name>/views/<figure>.json[#<item>]."""
         return await get("/trace", ref=ref)
+
+    @mcp.tool(annotations=READ)
+    async def check(path: str | None = None) -> list[dict[str, Any]]:
+        """What in the project's Markdown is not grounded, file and line: a result number (0.92,
+        78%, 12/40) with no ref or citation in its paragraph, list item or table; a citation
+        naming no source, no page or a page with nothing pinned; a ref that does not resolve; a
+        pin whose words are no longer on its page. path is a file or folder in the project; every
+        .md under experiments/ and reports/ when empty. Run it before handing over a write-up and
+        fix each issue, or tell the user which you could not source."""
+        return await get("/check", path=path)
 
     @mcp.tool(annotations=WRITE)
     async def add_view(

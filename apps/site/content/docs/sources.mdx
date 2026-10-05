@@ -48,3 +48,19 @@ A pin holds words that are on its page. A paraphrase is refused, by the app and 
 Cite a page in any Markdown louped shows (an experiment's README, say) as
 `[@<key> p<page>]`, for example `[@sharma23 p4]`. It shows as a chip that opens the page, and on
 hover shows the source's title and the passages pinned there, or says the key is not a source.
+
+## Check a write-up
+
+`louped check` reads the Markdown under `experiments/` and `reports/` (or the files you name) and
+lists what is not grounded, by file and line:
+
+- A result number (a decimal such as 0.92, a percentage, or a fraction such as 12/40) with no ref
+  (`run:<id>`, `run:<id>/<file>`) or citation in its paragraph, list item or table. A table counts
+  with the paragraph above it.
+- A citation that names no source, no page, or a page with nothing pinned on it.
+- A ref that does not resolve.
+- A pin whose words are no longer on its page, because the source file changed.
+
+It exits 1 when it finds anything, so it can run in CI. Your agent runs it as `check` before
+handing over a write-up, as its `ground-claims` and `write-report` skills say. Whole numbers, such
+as counts and years, and anything in `code` are not checked, so write versions and paths as code.

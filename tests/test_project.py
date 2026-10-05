@@ -81,6 +81,7 @@ def test_init_writes_the_project_and_keeps_what_exists(tmp_path: Path) -> None:
     assert skills == [
         "add-plugin",
         "change-ui",
+        "ground-claims",
         "new-experiment",
         "read-results",
         "run-elsewhere",

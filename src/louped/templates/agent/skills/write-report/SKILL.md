@@ -9,15 +9,15 @@ limits, and nothing else.
 ## Every claim is checked
 
 1. Every number comes from a file or tool output you read in this session: `run`, `samples`,
-   `compare`, the run's records. Next to it, name its source, such as the run id, the file, or the
-   `compare` output. If you cannot point to a source, leave the number out.
+   `compare`, the run's records. Next to it, put its ref: `run:<id>`, `run:<id>/<file>`, or the
+   figure it is read from. If you cannot point to a source, leave the number out.
 2. Give a rate with its count and denominator: "12/40 (30%)", not "30%". Under ~30 items, call it
    a pilot.
 3. State a difference between conditions only from `compare` on the same items, with its paired
    interval. Otherwise say the runs are not comparable.
-4. Cite a paper only if you read it in this session, and give its link. Do not cite from memory or
-   invent a reference. If a comparison to prior work needs a paper you have not read, write
-   "not checked".
+4. Cite a paper only if you read it in this session from `sources/`, pinned the passage, and
+   cite it as `[@<key> p<page>]` (the ground-claims skill). Do not cite from memory or invent a
+   reference. If a comparison to prior work needs a paper you have not read, write "not checked".
 5. Quote examples from the records exactly, with their item id. Show one item where the effect
    happened and one where it did not. Do not pick only the striking ones.
 
@@ -74,6 +74,7 @@ At most three claims. Put the rest in the records, the run page or a table.
 
 Re-read it as a reviewer would:
 
+- Run `check` on it and fix every issue.
 - Check each number against its source.
 - For each claim, ask what result would have contradicted it.
 - Delete any sentence whose removal loses nothing.

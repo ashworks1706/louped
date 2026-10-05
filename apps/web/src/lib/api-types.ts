@@ -251,6 +251,27 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Grounded
+     * @description What in the project's Markdown is not grounded (louped check): a file or folder in
+     *     the project, or every .md under experiments/ and reports/.
+     */
+    get: operations["grounded_api_check_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/trace": {
     parameters: {
       query?: never;
@@ -1940,6 +1961,20 @@ export interface components {
         | components["schemas"]["PlotlyView"]
       )[];
     };
+    /** Issue */
+    Issue: {
+      /** File */
+      file: string;
+      /** Line */
+      line: number;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "number" | "citation" | "ref" | "pin";
+      /** Message */
+      message: string;
+    };
     /**
      * ItemSource
      * @description Which items a figure's marks stand for, so a mark opens its item and traces to the rows,
@@ -3627,6 +3662,37 @@ export interface operations {
         };
         content: {
           "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  grounded_api_check_get: {
+    parameters: {
+      query?: {
+        path?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Issue"][];
         };
       };
       /** @description Validation Error */

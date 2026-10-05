@@ -177,6 +177,7 @@ layers = [
     "louped.cli",
     "louped.server | louped.agent | louped.init",
     "louped.examples",
+    "louped.check",
     "louped.train | louped.sweep | louped.grid | louped.sync | louped.features | louped.circuits | louped.judge | louped.derive | louped.bench | louped.endpoint_bench | louped.sources",
     "louped.stores | louped.tracking | louped.analysis | louped.inspect_ext",
     "louped.interventions",
