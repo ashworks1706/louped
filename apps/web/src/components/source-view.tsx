@@ -7,6 +7,7 @@ import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { useEffect, useRef, useState } from "react";
 
 import { CopyButton } from "@/components/copy-button";
+import { PdfPage } from "@/components/pdf-page";
 import { DeleteButton } from "@/components/delete-button";
 import { Part, part, partId } from "@/components/parts";
 import { QueryState } from "@/components/query-state";
@@ -112,7 +113,11 @@ function Viewer({ source: s }: { source: Source }) {
           </div>
           <div ref={area} {...part("source/page")}>
             {s.kind === "pdf" ? (
-              <PdfPage source={s} page={page} pins={onPage} />
+              <PdfPage
+                file={`${sourceFile(s.key)}?sha=${s.sha256}`}
+                page={page}
+                marks={onPage.map((p) => p.exact)}
+              />
             ) : (
               <TextPage source={s} page={page} pins={onPage} />
             )}
@@ -209,117 +214,6 @@ function TextPage({ source: s, page, pins }: { source: Source; page: number; pin
         );
       }}
     </QueryState>
-  );
-}
-
-/** A PDF page drawn by pdf.js, with its text laid over it to select, pins marked. */
-function PdfPage({ source: s, page, pins }: { source: Source; page: number; pins: Pin[] }) {
-  const box = useRef<HTMLDivElement>(null);
-  const [doc, setDoc] = useState<import("pdfjs-dist/legacy/build/pdf.mjs").PDFDocumentProxy | null>(
-    null,
-  );
-  const [error, setError] = useState<string | null>(null);
-  const [width, setWidth] = useState(0);
-  useEffect(() => {
-    let done = false;
-    let task: import("pdfjs-dist/legacy/build/pdf.mjs").PDFDocumentLoadingTask | null = null;
-    void (async () => {
-      try {
-        // the legacy build: the modern one needs JavaScript newer than many browsers have
-        const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-        pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-          "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
-          import.meta.url,
-        ).toString();
-        if (done) return;
-        task = pdfjs.getDocument({ url: sourceFile(s.key) });
-        const loaded = await task.promise;
-        if (!done) setDoc(loaded);
-      } catch (e) {
-        if (!done) setError(e instanceof Error ? e.message : String(e));
-      }
-    })();
-    return () => {
-      done = true;
-      void task?.destroy();
-    };
-  }, [s.key, s.sha256]);
-  useEffect(() => {
-    const el = box.current;
-    if (!el) return;
-    const seen = new ResizeObserver(([e]) => setWidth(Math.floor(e.contentRect.width)));
-    seen.observe(el);
-    return () => seen.disconnect();
-  }, []);
-  const quotes = pins.map((p) => p.exact).join("\n");
-  useEffect(() => {
-    const el = box.current;
-    if (!doc || !el || width === 0) return;
-    let done = false;
-    let cancel = () => {};
-    void (async () => {
-      const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-      const p = await doc.getPage(page);
-      if (done) return;
-      const viewport = p.getViewport({ scale: width / p.getViewport({ scale: 1 }).width });
-      const ratio = window.devicePixelRatio || 1;
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.floor(viewport.width * ratio);
-      canvas.height = Math.floor(viewport.height * ratio);
-      canvas.style.width = `${viewport.width}px`;
-      canvas.style.height = `${viewport.height}px`;
-      const text = document.createElement("div");
-      text.className = "textLayer";
-      el.replaceChildren(canvas, text);
-      el.style.height = `${viewport.height}px`;
-      el.style.setProperty("--total-scale-factor", String(viewport.scale));
-      const drawing = p.render({
-        canvas,
-        viewport,
-        transform: ratio === 1 ? undefined : [ratio, 0, 0, ratio, 0, 0],
-      });
-      const layer = new pdfjs.TextLayer({
-        textContentSource: p.streamTextContent(),
-        container: text,
-        viewport,
-      });
-      cancel = () => {
-        drawing.cancel();
-        layer.cancel();
-      };
-      try {
-        await Promise.all([drawing.promise, layer.render()]);
-      } catch (e) {
-        if (!done && !(e instanceof Error && e.name === "RenderingCancelledException"))
-          setError(e instanceof Error ? e.message : String(e));
-        return;
-      }
-      if (done) return;
-      // mark the spans a pin's words fall in
-      const spans = layer.textDivs;
-      const whole = spans.map((d) => d.textContent ?? "").join("");
-      const starts: number[] = [];
-      spans.reduce((at, d) => (starts.push(at), at + (d.textContent ?? "").length), 0);
-      for (const [a, b] of quoteRanges(whole, quotes ? quotes.split("\n") : []))
-        spans.forEach((d, i) => {
-          const from = starts[i];
-          const to = from + (d.textContent ?? "").length;
-          if (from < b && to > a) d.classList.add("pinned");
-        });
-    })();
-    return () => {
-      done = true;
-      cancel();
-    };
-  }, [doc, page, width, quotes]);
-  return (
-    <>
-      <div
-        ref={box}
-        className="pdf-page relative w-full overflow-hidden rounded-xl border bg-white"
-      />
-      {error && <p className="text-negative text-sm">This PDF could not be drawn: {error}</p>}
-    </>
   );
 }
 

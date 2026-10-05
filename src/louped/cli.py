@@ -260,6 +260,18 @@ class Judge:
 
 
 @dataclass(frozen=True)
+class Export:
+    """Export a vega or plotly figure to reports/figures/, with a sidecar holding its ref and
+    trace."""
+
+    ref: tyro.conf.Positional[str]
+    """run:<id>/views/<name>.json or experiment:<name>/views/<name>.json."""
+    format: Literal["svg", "png", "pdf"] = "svg"
+    name: str | None = None
+    """The file's name; from the ref when empty."""
+
+
+@dataclass(frozen=True)
 class Check:
     """Check the project's Markdown is grounded: each result number (0.92, 78%, 12/40) beside a
     ref or citation, each citation on a pinned page, each ref resolving, each pin still on its
@@ -363,6 +375,7 @@ Command = (
     | Annotated[Judge, tyro.conf.subcommand("judge")]
     | Annotated[Derive, tyro.conf.subcommand("derive")]
     | Annotated[Check, tyro.conf.subcommand("check")]
+    | Annotated[Export, tyro.conf.subcommand("export")]
     | Annotated[Sources, tyro.conf.subcommand("source")]
     | Annotated[Mcp, tyro.conf.subcommand("mcp")]
     | Annotated[Examples, tyro.conf.subcommand("examples")]
@@ -390,6 +403,7 @@ COMMANDS = {
     "judge",
     "derive",
     "check",
+    "export",
     "source",
     "mcp",
     "examples",
@@ -614,6 +628,14 @@ def main() -> None:
                             cmd.judge))  # fmt: skip
             except (ValueError, FileNotFoundError) as exc:
                 raise SystemExit(str(exc)) from exc
+        case Export() as cmd:
+            from louped.reports import export_figure
+            from louped.stores.runs import NotFound
+
+            try:
+                print(export_figure(cmd.ref, cmd.format, cmd.name).model_dump_json(indent=2))
+            except (ValueError, RuntimeError, NotFound) as exc:
+                raise SystemExit(str(exc)) from exc
         case Check() as cmd:
             import json
 
@@ -627,7 +649,7 @@ def main() -> None:
                 print(json.dumps([i.model_dump() for i in issues], indent=2))
             else:
                 for i in issues:
-                    print(f"{i.file}:{i.line}: {i.message}")
+                    print(f"{i.where()}: {i.message}")
                 print(f"{len(issues)} issue{'' if len(issues) == 1 else 's'}")
             raise SystemExit(1 if issues else 0)
         case Derive() as cmd:

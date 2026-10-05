@@ -13,6 +13,8 @@ export const itemHref = (run: string, folder: string, item: string) =>
 export const sourceHref = (key: string, page?: number) =>
   `/source/?key=${encodeURIComponent(key)}${page ? `&page=${page}` : ""}`;
 
+export const reportHref = (path: string) => `/report/?path=${encodeURIComponent(path)}`;
+
 export const jobHref = (id: string) => `/job/?id=${encodeURIComponent(id)}`;
 
 /** The pages a domain's experiments live under; the checks file under behavior's. */

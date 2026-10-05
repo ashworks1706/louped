@@ -18,6 +18,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { ExportFigure } from "@/components/export-figure";
 import { Help } from "@/components/help";
 import { MarkTrace, useOpenMark } from "@/components/mark-trace";
 import { part, partId, PartData, PartNote, useRules } from "@/components/parts";
@@ -123,7 +124,12 @@ export function Figure({ view, id, source }: { view: View; id?: string; source?:
           {view.title}
           <Help label={`How to read ${view.title}`}>{view.about ?? READ[view.kind]}</Help>
         </span>
-        {view.note && <span className="text-muted-foreground text-xs">{view.note}</span>}
+        <span className="flex items-center gap-2">
+          {view.note && <span className="text-muted-foreground text-xs">{view.note}</span>}
+          {source && (view.kind === "vega" || view.kind === "plotly") && (
+            <ExportFigure figure={source} />
+          )}
+        </span>
         <PartNote rule={r} className="basis-full" />
       </figcaption>
       <div className="p-4">

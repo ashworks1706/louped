@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import quote
 
 import httpx
@@ -197,6 +197,22 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         the run with its commit. ref is run:<run id>[/<path>][#<item>], such as a figure's mark
         run:m-1/views/umap.json#17, or experiment:<name>/views/<figure>.json[#<item>]."""
         return await get("/trace", ref=ref)
+
+    @mcp.tool(annotations=READ)
+    async def reports() -> list[dict[str, Any]]:
+        """The files in the project's reports/: Markdown write-ups, decks (.pptx), documents
+        (.docx), PDFs and exported figures, each figure with the ref it was exported from."""
+        return await get("/reports")
+
+    @mcp.tool(annotations=WRITE)
+    async def export_figure(
+        ref: str, format: Literal["svg", "png", "pdf"] = "svg", name: str | None = None
+    ) -> dict[str, Any]:
+        """Export a vega or plotly figure (run:<id>/views/<name>.json or
+        experiment:<name>/views/<name>.json) to reports/figures/<name>.<format>, for a deck or a
+        document. A sidecar <file>.refs.json keeps its ref and trace. Put the ref in the slide's
+        speaker notes or beside the figure in a document."""
+        return await post("/reports/figures", {"ref": ref, "format": format, "name": name})
 
     @mcp.tool(annotations=READ)
     async def check(path: str | None = None) -> list[dict[str, Any]]:

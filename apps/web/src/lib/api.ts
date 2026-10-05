@@ -25,6 +25,7 @@ export type Trace = Schemas["Trace"];
 export type Source = Schemas["Source"];
 export type SourceHit = Schemas["Hit"];
 export type Pin = Schemas["Pin"];
+export type Report = Schemas["Report"];
 export type SourcePage = Schemas["SourcePage"];
 export type Pushed = Schemas["Pushed"];
 export type RemoteState = Schemas["RemoteState"];
@@ -245,6 +246,12 @@ export const sourceFile = (key: string) => `${API}/api/sources/${encodeURICompon
 export const addSource = (body: Schemas["SourceRequest"]) => post<Source>("/sources", body);
 export const addPin = (body: Schemas["PinRequest"]) => post<Pin>("/pins", body);
 export const deletePin = (id: string) => del(`/pins/${encodeURIComponent(id)}`);
+/** A file in reports/ as it is. */
+export const reportFile = (path: string) =>
+  `${API}/api/reports/file?path=${encodeURIComponent(path)}`;
+/** A figure exported to reports/figures/, with its ref and trace beside it. */
+export const exportFigure = (body: Schemas["FigureRequest"]) =>
+  post<Report>("/reports/figures", body);
 /** A blind pick of one pair by the side the person saw; null clears it. */
 export const abPick = (body: Schemas["AbPickRequest"]) => post<AbSession>("/ab/pick", body);
 /** What a Probe or Benchmark tool showed, kept as a run. */
@@ -323,6 +330,24 @@ export const q = {
   pins: (key?: string) => ({
     queryKey: ["pins", key ?? null],
     queryFn: () => get<Pin[]>(`/pins${key ? `?key=${encodeURIComponent(key)}` : ""}`),
+  }),
+  reports: () => ({
+    queryKey: ["reports"],
+    queryFn: () => get<Report[]>("/reports"),
+  }),
+  reportOutline: (path: string) => ({
+    queryKey: ["report-outline", path],
+    queryFn: () => get<string[]>(`/reports/outline?path=${encodeURIComponent(path)}`),
+  }),
+  /** A deck or document drawn as a PDF by LibreOffice: its bytes, or why it cannot be. */
+  reportPreview: (path: string, modified: string) => ({
+    queryKey: ["report-preview", path, modified],
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/reports/preview?path=${encodeURIComponent(path)}`);
+      if (!res.ok) throw new ApiError(res.status, await detail(res, path));
+      return new Uint8Array(await res.arrayBuffer());
+    },
+    retry: false,
   }),
   trace: (ref: string) => ({
     queryKey: ["trace", ref],

@@ -228,6 +228,14 @@ KINDS: list[Kind] = [
     _k(part="source/*", about="A source's viewer: its header, page controls, the page, Pin.",
        rules=PICK),
     _k(part="source/pin/*", about="One pinned passage of the source, by id.", rules=PICK),
+    # Reports
+    _k(part="reports/heading", about="The count of files in reports/.", rules=PICK),
+    _k(part="reports/table", about="The files in reports/.", rules=["note"]),
+    _k(part="reports/report/*", about="One file in reports/, by its path there.", rules=PICK),
+    _k(part="report/*", about="A report's viewer: its header, page controls, the page, the "
+       "figure, the note on why a deck shows as text.", rules=PICK),
+    _k(part="report/block/*", about="One slide or paragraph of a deck or document's text.",
+       rules=PICK),
     # Launch
     _k(part="launch/group/*", about="A group of things to launch.", rules=PICK),
     _k(part="launch/item/*", about="One thing to launch, by id (script:hello/run.py).",
