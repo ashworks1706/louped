@@ -108,6 +108,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/runs/{run_id}/notebook/{path}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Run Notebook
+     * @description A notebook the run logged, as a page, for a frame that runs no scripts.
+     */
+    get: operations["run_notebook_api_runs__run_id__notebook__path__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/runs/{run_id}/cohort": {
     parameters: {
       query?: never;
@@ -202,6 +222,26 @@ export interface paths {
      * @description A source's file as it was kept, for the app's viewer.
      */
     get: operations["source_file_api_sources__key__file_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/sources/{key}/notebook": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Source Notebook
+     * @description A notebook source as a page, for a frame that runs no scripts.
+     */
+    get: operations["source_notebook_api_sources__key__notebook_get"];
     put?: never;
     post?: never;
     delete?: never;
@@ -361,8 +401,8 @@ export interface paths {
     };
     /**
      * Grounded
-     * @description What in the project's Markdown is not grounded (louped check): a file or folder in
-     *     the project, or every .md under experiments/ and reports/.
+     * @description What in the project's write-ups is not grounded (louped check): a file or folder in
+     *     the project, or every .md, .pptx and .docx under experiments/ and reports/.
      */
     get: operations["grounded_api_check_get"];
     put?: never;
@@ -3535,6 +3575,40 @@ export interface operations {
       };
     };
   };
+  run_notebook_api_runs__run_id__notebook__path__get: {
+    parameters: {
+      query?: {
+        theme?: "light" | "dark";
+      };
+      header?: never;
+      path: {
+        run_id: string;
+        path: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   run_cohort_api_runs__run_id__cohort_post: {
     parameters: {
       query?: never;
@@ -3690,6 +3764,39 @@ export interface operations {
   source_file_api_sources__key__file_get: {
     parameters: {
       query?: never;
+      header?: never;
+      path: {
+        key: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  source_notebook_api_sources__key__notebook_get: {
+    parameters: {
+      query?: {
+        theme?: "light" | "dark";
+      };
       header?: never;
       path: {
         key: string;

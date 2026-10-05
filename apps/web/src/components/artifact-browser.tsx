@@ -9,6 +9,7 @@ import { CopyButton } from "@/components/copy-button";
 import { part, partId } from "@/components/parts";
 import { Markdown } from "@/components/markdown";
 import { EditableText } from "@/components/markdown-editor";
+import { NotebookFrame } from "@/components/notebook-frame";
 import { QueryState } from "@/components/query-state";
 import { LinedUp } from "@/components/items-view";
 import { Timeline } from "@/components/trace-view";
@@ -23,6 +24,7 @@ import {
   asRecords,
   editable,
   kindOf,
+  notebookUrl,
   parseDelimited,
   parseJsonl,
   traceShape,
@@ -240,9 +242,20 @@ function Preview({ runId, artifact }: { runId: string; artifact: Artifact }) {
   if (kind === "other" || (artifact.size ?? 0) > PREVIEW_BYTES)
     return (
       <p className="text-muted-foreground text-sm">
-        {kind === "other" ? "No preview for this type." : "Too large to preview here."} Open it with
-        Raw.
+        {kind === "other"
+          ? "No preview for this type. Open it with Raw."
+          : kind === "notebook"
+            ? "Too large to draw here. Download it with Raw and open it in Jupyter."
+            : "Too large to preview here. Open it with Raw."}
       </p>
+    );
+  if (kind === "notebook")
+    return (
+      <NotebookFrame
+        url={notebookUrl(runId, artifact.path)}
+        version={String(artifact.size ?? "")}
+        title={artifact.path}
+      />
     );
   return <TextPreview runId={runId} path={artifact.path} />;
 }

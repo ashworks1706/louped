@@ -23,7 +23,10 @@ louped source list
 | A notebook on GitHub or opened from it in Colab         | The `.ipynb`                                                 |
 | A direct link to a file                                 | The file                                                     |
 
-A page is a PDF page, a slide, a notebook cell, or a whole Markdown, text or Word file. The
+A page is a PDF page, a slide, a notebook cell, or a whole Markdown, text or Word file. A
+notebook's page also shows the whole notebook with its saved outputs, as Jupyter does. The page
+runs no scripts from the notebook, so math shows as TeX and an interactive chart shows only if the
+notebook saved a static copy of it. The
 search index lives in louped's state folder and is rebuilt from the files whenever one changes,
 so it never needs committing.
 

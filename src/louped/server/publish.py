@@ -118,18 +118,22 @@ def _artifact(
     if (artifact.get("size") or 0) > MAX_ARTIFACT:
         done.skipped.append(f"{run}/{artifact['path']}")
         return
-    segments = "/".join(_enc(s) for s in artifact["path"].split("/"))
-    got = api.get(f"/api/runs/{_enc(run)}/artifacts/{segments}")
-    if got.status_code != 200:
-        done.failed.append(f"{run}/{artifact['path']}: {got.status_code}")
-        return
-    # a static host decodes the URL, so the file goes at the decoded path
-    folder = (out / "api" / "runs" / run / "artifacts").resolve()
-    target = (folder / artifact["path"]).resolve()
-    if not target.is_relative_to(folder):
-        raise ValueError(f"{run}: artifact path {artifact['path']!r} leaves its run")
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(got.content)
+    # a notebook also goes as the page the run's Files tab shows it as
+    for route in (
+        ("artifacts", "notebook") if artifact["path"].endswith(".ipynb") else ("artifacts",)
+    ):
+        segments = "/".join(_enc(s) for s in artifact["path"].split("/"))
+        got = api.get(f"/api/runs/{_enc(run)}/{route}/{segments}")
+        if got.status_code != 200:
+            done.failed.append(f"{run}/{artifact['path']} ({route}): {got.status_code}")
+            return
+        # a static host decodes the URL, so the file goes at the decoded path
+        folder = (out / "api" / "runs" / run / route).resolve()
+        target = (folder / artifact["path"]).resolve()
+        if not target.is_relative_to(folder):
+            raise ValueError(f"{run}: artifact path {artifact['path']!r} leaves its run")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(got.content)
     done.files += 1
 
 

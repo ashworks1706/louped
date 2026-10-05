@@ -156,6 +156,10 @@ def catalogue() -> list[Launchable]:
             rel = script.relative_to(experiments_dir()).as_posix()
             out.append(Launchable(id=f"script:{rel}", group="Experiments", title=rel,
                                   description=doc[1].strip() if doc else ""))  # fmt: skip
+    for notebook in sorted(experiments_dir().glob("*/*.ipynb")):
+        rel = notebook.relative_to(experiments_dir()).as_posix()
+        what = "Runs with papermill; the run keeps every output."
+        out.append(Launchable(id=f"notebook:{rel}", group="Notebooks", title=rel, description=what))
     for cfg in sorted(experiments_dir().glob("*/*.yaml")):
         text = cfg.read_text(encoding="utf-8")
         if m := re.match(r"# louped train (\w+)", text):
@@ -219,6 +223,12 @@ def options(launchable: str) -> list[Option]:
         return TRAIN
     if launchable == "grid" or launchable.startswith("grid:"):
         return []  # everything is in the config
+    if launchable.startswith("notebook:"):
+        from louped.notebooks import parameters
+
+        return [Option(flag=f"--{p.name}", kind="text", default=p.shown,
+                       help=" ".join(x for x in (p.type or "", p.help) if x))
+                for p in parameters(_notebook(launchable))]  # fmt: skip
     if launchable in COMMANDS:
         target = f"from louped.cli import {COMMANDS[launchable][0]} as Args"
     elif launchable.startswith("data:"):
@@ -287,6 +297,13 @@ def _script(launchable: str) -> Path:
     return script
 
 
+def _notebook(launchable: str) -> Path:
+    notebook = (experiments_dir() / launchable.removeprefix("notebook:")).resolve()
+    if experiments_dir().resolve() not in notebook.parents or notebook.suffix != ".ipynb":
+        raise HTTPException(400, f"not an experiment notebook: {launchable}")
+    return notebook
+
+
 def _grid_template(launchable: str) -> str:
     if launchable == "grid":
         return GRID
@@ -327,6 +344,10 @@ def argv(req: LaunchRequest, job_dir: Path, remote: bool = False) -> list[str]:
         return [exe("inspect"), "eval", *positional, *flags, *logs]
     if req.id in COMMANDS:
         return [exe("louped"), req.id, *positional, *flags]
+    if req.id.startswith("notebook:"):  # each option is a parameter: --param name=value
+        params = [x for flag, value in req.options.items()
+                  for x in ("--param", f"{flag.removeprefix('--')}={value}")]  # fmt: skip
+        return [exe("louped"), "notebook", where(_notebook(req.id)), *params]
     if req.id.startswith("data:"):
         return [exe("louped"), "data", req.id.removeprefix("data:"), *positional, *flags]
     if req.id == "grid" or req.id.startswith("grid:"):
