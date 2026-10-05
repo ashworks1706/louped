@@ -106,7 +106,7 @@ export default function HomePage() {
           className="w-full rounded-xl border shadow-2xl shadow-black/5"
           src="/demo/demo.mp4"
           poster="/demo/demo-poster.jpg"
-          aria-label="A walk through louped: an experiment, its items, picks for the agent, one item's answers and a traced figure"
+          aria-label="A researcher asks their coding agent a question; the agent writes and runs the experiment, points at the results in louped, and answers about the items the researcher picks"
           autoPlay
           muted
           loop
@@ -114,13 +114,8 @@ export default function HomePage() {
           controls
         />
         <figcaption className="text-fd-muted-foreground mt-3 text-center text-xs text-balance">
-          A re-analysis of CAA&apos;s released Llama 2 7B Chat results, run in louped.{" "}
-          <a
-            href={`${repoUrl}/tree/main/apps/site/demo`}
-            className="hover:text-fd-foreground underline"
-          >
-            The project and the script that made this video
-          </a>
+          A researcher and their agent re-read CAA&apos;s released Llama 2 7B Chat results. The app
+          and its numbers are real; the agent&apos;s lines are scripted.
         </figcaption>
       </figure>
 

@@ -1,7 +1,10 @@
-// Record the demo: one pass through the demo project in the app, as a person would click it.
+// Record the demo: a researcher asks their coding agent a question and works through the answer
+// in the app.
 //   node apps/site/demo/record.mjs <app url> <out dir>
-// It saves the browser's own frames (frames/*.jpg) and timeline.json: each frame's time, where the
-// pointer was, each click, and where the camera should look. render.py turns them into the video.
+// The app is real: every page, number and pointer the agent puts on screen comes from the demo
+// project, through the same API the agent's tools call (ui_show, save_cohort). The agent's side
+// of the conversation is scripted: its lines are written here, and render.py draws them in a
+// panel beside the app. It saves the browser's own frames (frames/*.jpg) and timeline.json.
 import { mkdir, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 
@@ -17,6 +20,11 @@ const VIEW = { width: 1440, height: 900 };
 const runs = await (await fetch(`${app}/api/runs`)).json();
 const run = runs.find((r) => r.experiment === EXPERIMENT)?.id;
 if (!run) throw new Error(`no run of ${EXPERIMENT} at ${app}: build the demo project first`);
+const pages = {
+  experiment: `/behavior/experiment/?name=${EXPERIMENT}`,
+  items: `/run/?id=${run}&tab=items&ref=none`,
+  figures: `/run/?id=${run}&tab=figures`,
+};
 
 await mkdir(`${out}/frames`, { recursive: true });
 const browser = await chromium.launch(
@@ -26,13 +34,13 @@ const context = await browser.newContext({ viewport: VIEW, deviceScaleFactor: 2 
 await context.addInitScript(() => localStorage.setItem("theme", "light"));
 const page = await context.newPage();
 
-// the timeline, in seconds from the first frame's clock (CDP's, which is wall time)
+// the timeline, in seconds of wall time (CDP's frame clock)
 const now = () => Date.now() / 1000;
 const frames = [];
 const pointer = [];
 const clicks = [];
 const camera = [];
-const captions = [];
+const chat = [];
 let at = { x: VIEW.width / 2, y: VIEW.height / 2 };
 
 const cdp = await context.newCDPSession(page);
@@ -59,15 +67,14 @@ async function glide(x, y, ms = 700) {
   }
 }
 
-/** The centre of an element, in the page's CSS pixels. */
 async function centre(locator) {
   await locator.scrollIntoViewIfNeeded();
   const b = await locator.boundingBox();
   if (!b) throw new Error(`not on screen: ${locator}`);
-  return { x: b.x + b.width / 2, y: b.y + b.height / 2, b };
+  return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
 }
 
-async function click(locator, { shift = false, ms = 700 } = {}) {
+async function click(locator, { shift = false, ms = 600 } = {}) {
   const { x, y } = await centre(locator);
   await glide(x, y, ms);
   await wait(120);
@@ -84,11 +91,43 @@ const lookAt = async (locator, scale) => {
   const { x, y } = await centre(locator);
   look(scale, x, y);
 };
-const say = (text) => captions.push({ t: now(), text });
 
-await page.goto(`${app}/behavior/experiment/?name=${EXPERIMENT}`);
+/** A line in the agent panel; waits as long as it takes to type (you) or stream (agent). */
+async function say(who, text) {
+  chat.push({ t: now(), who, text });
+  const perChar = { you: 34, agent: 14, tool: 0 }[who];
+  await wait(400 + text.length * perChar);
+}
+const you = (text) => say("you", text);
+const agent = (text) => say("agent", text);
+const tool = (text) => say("tool", text);
+
+/** What the agent's ui_show does: the app opens the page and points at the parts. */
+async function show(url, parts = [], text = null) {
+  const r = await fetch(`${app}/api/ui/show`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ url, parts, text, style: "highlight" }),
+  });
+  if (!r.ok) throw new Error(`ui_show: ${r.status} ${await r.text()}`);
+  const path = url.split("?")[0];
+  await page.waitForURL((u) => u.pathname === path, { timeout: 8000 });
+  await page.waitForLoadState("networkidle");
+  await wait(900);
+}
+
+/** The address of the first part of a kind whose text holds some words. */
+const partWith = (prefix, words) =>
+  page.evaluate(
+    ([p, w]) =>
+      [...document.querySelectorAll(`[data-part^="${p}"]`)].find((e) => e.textContent.includes(w))
+        ?.dataset.part,
+    [prefix, words],
+  );
+
+await page.goto(`${app}/`);
 await page.waitForLoadState("networkidle");
-await wait(500);
+await wait(600);
 await cdp.send("Page.startScreencast", {
   format: "jpeg",
   quality: 92,
@@ -97,78 +136,41 @@ await cdp.send("Page.startScreencast", {
 });
 const start = now();
 look(1);
-await wait(600);
+await wait(700);
 
 // 1. the question
-say("An experiment is a question, a plan and a script");
-await lookAt(page.getByRole("heading", { name: EXPERIMENT }), 1.6);
-await glide(520, 160, 900);
-await wait(2600);
-look(1);
-await wait(700);
-
-// 2. its run, item by item
-say("Every run keeps each item under every condition");
-await click(page.getByRole("tab", { name: /Runs/ }));
-await wait(900);
-await click(page.getByRole("link", { name: /released results/ }).first());
-await page.waitForLoadState("networkidle");
-await wait(800);
-await click(page.getByRole("tab", { name: "Items" }));
-await page.waitForLoadState("networkidle");
-await wait(900);
-const against = page.locator(
-  'select[data-part="items/against"], [data-part="items/against"] select',
+await you(
+  "Does CAA's sycophancy vector move every item, or only the mean? Use their released Llama 2 7B results.",
 );
-await click(against);
-await against.selectOption("none");
-await wait(700);
-await lookAt(page.locator('[data-part="items/summary"]'), 1.2);
-say("Each condition against the reference, with paired intervals");
-await glide(980, 420, 900);
-await wait(3000);
-look(1);
-await wait(600);
-
-// 3. pick items for the agent
-say("Shift+click any rows: your agent sees what you picked");
-const rows = page.locator("tbody tr");
-for (const i of [1, 2, 3]) await click(rows.nth(i).locator("td").nth(1), { shift: true, ms: 500 });
-await wait(500);
-const tray = page.getByText(/picked/).first();
-await lookAt(tray, 1.5);
+await tool(`new_experiment ${EXPERIMENT}`);
+await agent(
+  "I wrote the question, three hypotheses and a run.py. It reads the result files CAA released, at a pinned commit, so no model runs.",
+);
+await show(pages.experiment);
+await lookAt(page.getByRole("heading", { name: EXPERIMENT }), 1.45);
 await wait(2600);
-await click(page.getByRole("button", { name: "Clear" }));
 look(1);
-await wait(700);
 
-// 4. what the model said
-say("Open an item to read each condition side by side");
-const records = page.locator('[data-part="items/records"] select');
-await click(records);
-await records.selectOption("open");
-await page.waitForLoadState("networkidle");
-await wait(900);
-await click(page.locator("tbody tr").first().locator("td").nth(1));
-await wait(1200);
-look(1.18, 900, 330);
-await glide(560, 420, 1200);
-await wait(1800);
-await glide(1240, 420, 1600);
-await wait(2200);
+// 2. the run, condition by condition
+await tool("launch script:does-caa-steer-every-item/run.py");
+await agent(
+  "Done. Mean P(agree) is 0.54 with the vector subtracted, 0.69 with none and 0.62 with it added. At layer 13, adding it does not raise the mean.",
+);
+await show(pages.items, ["items/summary"], "Each condition against none, with its interval.");
+await lookAt(page.locator('[data-part="items/summary"]'), 1.25);
+await wait(2600);
 look(1);
-await page.keyboard.press("Escape");
-await wait(700);
 
-// 5. a figure traced to its rows
-say("Hover any point to trace it to its item, files and script");
-await click(page.getByRole("tab", { name: "Figures" }));
+// 3. the items the mean hides
+await agent("Item by item, 22 of 50 move against the multiplier.");
+await page.goto(app + pages.figures); // to find the figure's address, which names its file
 await page.waitForLoadState("networkidle");
-await wait(1200);
+const figure = await partWith("figures/figure/", "Slope per item");
+if (!figure) throw new Error("no Slope per item figure on the run");
+await show(pages.figures, [figure], "Below zero: the vector moves the item the wrong way.");
 const plot = page.locator(".js-plotly-plot").first();
 await plot.scrollIntoViewIfNeeded();
-await page.mouse.wheel(0, 300);
-await wait(900);
+await wait(600);
 const low = await page.evaluate(() => {
   const pts = [...document.querySelectorAll(".js-plotly-plot .scatterlayer .point")];
   const b = pts.map((p) => p.getBoundingClientRect()).reduce((a, c) => (c.y > a.y ? c : a));
@@ -176,13 +178,63 @@ const low = await page.evaluate(() => {
 });
 look(1.3, low.x - 120, low.y + 30);
 await glide(low.x, low.y, 1100);
-await wait(2800);
-say("Click it to open the item");
-clicks.push({ t: now(), ...low });
-await page.mouse.click(low.x, low.y);
-await wait(1600);
+await wait(2600);
 look(1);
-await wait(2200);
+
+// 4. the researcher picks three and asks why
+await click(page.getByRole("tab", { name: "Items" }));
+await page.waitForLoadState("networkidle");
+await wait(800);
+const rows = page.locator("tbody tr");
+const tray = page.locator("[data-part-tray]");
+for (const [n, i] of [4, 6, 7].entries()) {
+  await click(rows.nth(i).locator("td").nth(1), { shift: true, ms: 500 });
+  await tray.getByText(`${n + 1} picked`).waitFor({ timeout: 3000 });
+}
+await wait(600);
+await lookAt(page.getByText(/picked/).first(), 1.4);
+await you("@sel why do these move the wrong way?");
+look(1);
+// what the agent's ui_selection does: it reads the picks, and the tray says so
+const picks = await (await fetch(`${app}/api/ui/selection`)).json();
+if (picks?.parts?.length !== 3)
+  throw new Error(`expected 3 picks, the app has ${picks?.parts?.length}`);
+await fetch(`${app}/api/ui/selection/read`, {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ version: picks.version }),
+});
+await tool("ui_selection: 3 picks");
+await agent(
+  "All three have the agreeing answer at (A), and each moves against the multiplier (slopes -0.12, -0.20, -0.36). Of the 22 items that do, 21 are (A). The vector may carry the answer letter, not only agreement.",
+);
+const saved = await fetch(`${app}/api/experiments/${EXPERIMENT}/cohorts/letter-a`, {
+  method: "PUT",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    ids: ["4", "6", "7"],
+    note: "Agreeing answer at (A); each moves against the multiplier.",
+    run,
+    folder: "ab",
+  }),
+});
+if (!saved.ok) throw new Error(`save_cohort: ${saved.status} ${await saved.text()}`);
+await tool("save_cohort letter-a");
+await wait(800);
+
+// 5. what to test next
+await you("What would settle it?");
+await agent(
+  "Swap A and B on every item and steer again. If the slopes follow the letter, the vector carries the letter. It is the README's next step.",
+);
+// Escape closes the agent's note first, then drops the picks
+await page.keyboard.press("Escape");
+await page.keyboard.press("Escape");
+await show(pages.experiment, ["experiment.design/readme"], "The next test is in the README.");
+await lookAt(page.getByRole("heading", { name: "Next", exact: true }), 1.4);
+await wait(3400);
+look(1);
+await wait(1500);
 
 await cdp.send("Page.stopScreencast");
 await wait(300);
@@ -195,7 +247,7 @@ const timeline = {
   pointer: rel(pointer),
   clicks: rel(clicks),
   camera: rel(camera),
-  captions: rel(captions),
+  chat: rel(chat),
 };
 await writeFile(`${out}/timeline.json`, JSON.stringify(timeline));
 await browser.close();
