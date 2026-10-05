@@ -34,7 +34,9 @@ extras: tracking, interp
 - `extras` is optional. A job sent to a cluster installs only these.
 - The first paragraph of **Question** and of **Result** shows on the Experiments page.
 - **Edit** on the experiment's page edits the README in place, with its rendering beside it. So
-  does Edit on a run's `report.md` or any Markdown file it logged, such as examples to judge.
+  does Edit on any text file a run logged: its `report.md`, examples to judge, or a JSON, JSONL,
+  CSV, YAML or TOML file. JSON, JSONL and TOML must still parse to be saved. The run then lists
+  the files under **Edited after** in its provenance, so its results never silently change.
 
 ### Domains
 

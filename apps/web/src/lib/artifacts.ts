@@ -31,6 +31,10 @@ export function kindOf(path: string): ArtifactKind {
   return "other";
 }
 
+/** The text files a run logged that the server lets the app edit (louped.stores.mlflow_runs). */
+export const editable = (path: string) =>
+  /\.(md|txt|json|jsonl|ndjson|csv|tsv|ya?ml|toml)$/i.test(path);
+
 /** Past this size a file is offered as a download, not read into the page. */
 export const PREVIEW_BYTES = 16 * 1024 * 1024;
 

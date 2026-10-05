@@ -24,7 +24,7 @@ from louped.stores.runs import (
     list_runs,
     list_samples,
     list_views,
-    write_markdown,
+    write_text,
 )
 from louped.stores.vectors import list_vectors
 
@@ -47,6 +47,6 @@ __all__ = [
     "list_views",
     "read_readme",
     "set_label",
-    "write_markdown",
     "write_readme",
+    "write_text",
 ]

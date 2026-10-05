@@ -150,7 +150,7 @@ def create_app(
     def edit_artifact(run_id: str, path: str, req: Text) -> Text:
         editing()
         try:
-            stores.write_markdown(run_id, path, req.text)
+            stores.write_text(run_id, path, req.text)
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
         return req
