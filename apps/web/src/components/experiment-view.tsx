@@ -1,18 +1,18 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, FlaskConical, Rocket } from "lucide-react";
 import Link from "next/link";
 import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 
 import { EmptyState } from "@/components/empty-state";
 import { StatusLabel } from "@/components/experiments-list";
-import { Markdown } from "@/components/markdown";
+import { EditableMarkdown } from "@/components/markdown-editor";
 import { QueryState } from "@/components/query-state";
 import { RunsTable } from "@/components/runs-table";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { isLive, q, type ExperimentDetail, type Launchable } from "@/lib/api";
+import { isLive, q, readme, saveReadme, type ExperimentDetail, type Launchable } from "@/lib/api";
 import { ago } from "@/lib/format";
 import { axisPath, experimentHref } from "@/lib/href";
 
@@ -164,6 +164,7 @@ const TABS = ["design", "runs"] as const;
 
 function ExperimentTabs({ experiment: e }: { experiment: ExperimentDetail }) {
   const own = useOwnLaunchables(e.name);
+  const client = useQueryClient();
   const [tab, setTab] = useQueryState("tab", parseAsStringLiteral(TABS).withDefault("design"));
   return (
     <Tabs value={tab} onValueChange={(v) => void setTab(v as (typeof TABS)[number])}>
@@ -179,7 +180,16 @@ function ExperimentTabs({ experiment: e }: { experiment: ExperimentDetail }) {
       <TabsContent value="design">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <article className="max-w-3xl min-w-0">
-            <Markdown>{e.readme}</Markdown>
+            <EditableMarkdown
+              name="README.md"
+              shown={e.readme}
+              source={() => readme(e.name)}
+              save={async (text) => {
+                await saveReadme(e.name, text);
+                await client.invalidateQueries({ queryKey: ["experiment", e.name] });
+                await client.invalidateQueries({ queryKey: ["experiments"] });
+              }}
+            />
           </article>
           <aside className="order-first flex flex-col gap-3 lg:sticky lg:top-6 lg:order-none lg:self-start">
             <h2 className="text-muted-foreground text-xs font-medium">Result</h2>
@@ -187,8 +197,7 @@ function ExperimentTabs({ experiment: e }: { experiment: ExperimentDetail }) {
               {e.result ?? "Not written yet. It goes under ## Result in the README."}
             </p>
             <p className="text-muted-foreground text-xs">
-              Edit <span className="font-mono">experiments/{e.name}/README.md</span>; this page
-              reads it.
+              From <span className="font-mono">experiments/{e.name}/README.md</span>.
             </p>
           </aside>
         </div>

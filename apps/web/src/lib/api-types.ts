@@ -98,7 +98,8 @@ export interface paths {
     };
     /** Artifact */
     get: operations["artifact_api_runs__run_id__artifacts__path__get"];
-    put?: never;
+    /** Edit Artifact */
+    put: operations["edit_artifact_api_runs__run_id__artifacts__path__put"];
     post?: never;
     delete?: never;
     options?: never;
@@ -269,6 +270,24 @@ export interface paths {
     /** Experiments */
     get: operations["experiments_api_experiments_get"];
     put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/experiments/{name}/readme": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Readme */
+    get: operations["readme_api_experiments__name__readme_get"];
+    /** Edit Readme */
+    put: operations["edit_readme_api_experiments__name__readme_put"];
     post?: never;
     delete?: never;
     options?: never;
@@ -1552,6 +1571,14 @@ export interface components {
       /** Extras */
       extras?: string[] | null;
     };
+    /**
+     * Text
+     * @description A Markdown file's text.
+     */
+    Text: {
+      /** Text */
+      text: string;
+    };
     /** TokenRow */
     TokenRow: {
       /** Tokens */
@@ -1808,6 +1835,42 @@ export interface operations {
         };
         content: {
           "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  edit_artifact_api_runs__run_id__artifacts__path__put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: string;
+        path: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Text"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Text"];
         };
       };
       /** @description Validation Error */
@@ -2105,6 +2168,72 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Experiment"][];
+        };
+      };
+    };
+  };
+  readme_api_experiments__name__readme_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Text"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  edit_readme_api_experiments__name__readme_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Text"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Text"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

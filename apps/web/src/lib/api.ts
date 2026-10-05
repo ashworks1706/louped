@@ -97,6 +97,28 @@ async function send(path: string, body: unknown, signal?: AbortSignal): Promise<
   return res;
 }
 
+async function put<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API}/api${path}`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new ApiError(res.status, await detail(res, path));
+  return res.json() as Promise<T>;
+}
+
+/** An experiment's README as written, front matter and all. */
+export const readme = (name: string) =>
+  get<{ text: string }>(`/experiments/${encodeURIComponent(name)}/readme`).then((r) => r.text);
+export const saveReadme = (name: string, text: string) =>
+  put(`/experiments/${encodeURIComponent(name)}/readme`, { text });
+/** Replaces a Markdown file a run logged. */
+export const saveArtifact = (run: string, path: string, text: string) =>
+  put(
+    `/runs/${encodeURIComponent(run)}/artifacts/${path.split("/").map(encodeURIComponent).join("/")}`,
+    { text },
+  );
+
 async function post<T>(path: string, body: unknown): Promise<T> {
   return (await send(path, body)).json() as Promise<T>;
 }

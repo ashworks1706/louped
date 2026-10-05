@@ -1,19 +1,19 @@
 "use client";
 
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, FileText } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 
 import { CopyButton } from "@/components/copy-button";
-import { Markdown } from "@/components/markdown";
+import { EditableMarkdown } from "@/components/markdown-editor";
 import { QueryState } from "@/components/query-state";
 import { LinedUp } from "@/components/items-view";
 import { Timeline } from "@/components/trace-view";
 import { JsonTree, RecordsTable } from "@/components/record-view";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { RunDetail } from "@/lib/api";
+import { saveArtifact, type RunDetail } from "@/lib/api";
 import {
   PREVIEW_BYTES,
   artifactQuery,
@@ -231,15 +231,27 @@ function Preview({ runId, artifact }: { runId: string; artifact: Artifact }) {
 
 function TextPreview({ runId, path }: { runId: string; path: string }) {
   const query = useQuery(artifactQuery(runId, path));
-  return <QueryState query={query}>{(text) => <Rendered path={path} text={text} />}</QueryState>;
+  return (
+    <QueryState query={query}>
+      {(text) => <Rendered runId={runId} path={path} text={text} />}
+    </QueryState>
+  );
 }
 
-function Rendered({ path, text }: { path: string; text: string }) {
+function Rendered({ runId, path, text }: { runId: string; path: string; text: string }) {
+  const client = useQueryClient();
   switch (kindOf(path)) {
     case "markdown":
       return (
         <article className="rounded-xl border px-6 py-5">
-          <Markdown>{text}</Markdown>
+          <EditableMarkdown
+            name={path.slice(path.lastIndexOf("/") + 1)}
+            shown={text}
+            save={async (t) => {
+              await saveArtifact(runId, path, t);
+              await client.invalidateQueries({ queryKey: ["artifact", runId, path] });
+            }}
+          />
         </article>
       );
     case "json":

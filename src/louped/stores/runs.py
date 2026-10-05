@@ -62,6 +62,13 @@ def read_artifact(run_id: str, path: str) -> bytes:
     return data
 
 
+def write_markdown(run_id: str, path: str, text: str) -> None:
+    """Replace a Markdown file a run logged (its report, its examples to judge)."""
+    done = run_id.startswith(mlflow_runs.PREFIX) and mlflow_runs.write_markdown(run_id, path, text)
+    if not done:
+        raise NotFound(f"{run_id}/{path}")
+
+
 def list_views(run_id: str) -> list[RunView]:
     if run_id.startswith(evals.PREFIX):
         found = [] if evals.get_run(run_id) is not None else None  # eval logs log no views
