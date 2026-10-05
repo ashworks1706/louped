@@ -9,6 +9,7 @@ judge is the task's model, so any Inspect model judges: louped/ and hf/ run loca
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -19,20 +20,7 @@ from inspect_ai.model import ChatMessageAssistant, ChatMessageUser, get_model
 from inspect_ai.scorer import Score, Target, mean, scorer, stderr
 from inspect_ai.solver import Generate, TaskState, solver
 
-CRITERION = "Which answer is more correct and more helpful?"
-
-PROMPT = """Compare two answers to the same request.
-
-[Request]
-{request}
-
-[Answer 1]
-{first}
-
-[Answer 2]
-{second}
-
-{criterion} Think briefly, then end with one line: "Verdict: 1", "Verdict: 2" or "Verdict: tie"."""
+from louped.core.judges import CRITERION, PROMPT
 
 VERDICT = re.compile(r"verdict\s*:\s*\**\s*(1|2|tie)\b", re.I)
 POINTS = {"b": 1.0, "a": 0.0, "tie": 0.5}
@@ -67,17 +55,19 @@ def pairs(a: str | Path, b: str | Path) -> list[Sample]:
 
 
 @solver
-def _judge(criterion: str):
+def _judge(criterion: str, prompt: str, parse: Callable[[str], str | None]):
     async def solve(state: TaskState, generate: Generate) -> TaskState:
         judge = get_model()
         state.messages = []  # the transcript is the judge's two exchanges; the request is in each
         winners: list[str | None] = []
         for first, second in (("a", "b"), ("b", "a")):
-            ask = PROMPT.format(request=state.input_text, first=state.metadata[first],
+            ask = prompt.format(request=state.input_text, first=state.metadata[first],
                                 second=state.metadata[second], criterion=criterion)  # fmt: skip
             reply = (await judge.generate(ask)).completion
             state.messages += [ChatMessageUser(content=ask), ChatMessageAssistant(content=reply)]
-            pick = verdict(reply)
+            pick = parse(reply)
+            if pick not in ("1", "2", "tie", None):
+                raise ValueError(f"the judge's verdict() gave {pick!r}: 1, 2, tie or None")
             winners.append({"1": first, "2": second, "tie": "tie"}.get(pick or ""))
         state.metadata["winners"] = winners
         return state
@@ -119,10 +109,12 @@ def parsed():
     return score
 
 
-def pairwise(a: str | Path, b: str | Path, criterion: str = CRITERION) -> Task:
-    """Two eval logs' shared samples, each judged in both orders."""
+def pairwise(a: str | Path, b: str | Path, criterion: str = CRITERION, prompt: str = PROMPT,
+             parse: Callable[[str], str | None] = verdict) -> Task:  # fmt: skip
+    """Two eval logs' shared samples, each judged in both orders: prompt filled with the request,
+    the two answers and criterion, the reply read by parse ("1", "2", "tie" or None)."""
     data = pairs(a, b)
     if not data:
         raise ValueError(f"{a} and {b} share no samples answered without error")
-    return Task(dataset=data, solver=_judge(criterion), scorer=[b_wins(), consistent(), parsed()],
-                name="judge")  # fmt: skip
+    return Task(dataset=data, solver=_judge(criterion, prompt, parse),
+                scorer=[b_wins(), consistent(), parsed()], name="judge")  # fmt: skip

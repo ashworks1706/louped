@@ -1303,6 +1303,102 @@
         }
       }
     },
+    "/api/judges": {
+      "get": {
+        "summary": "List Judges",
+        "description": "louped's judge and the project's judges/<name>.py, for Compare and Launch.",
+        "operationId": "list_judges_api_judges_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Judge"
+                  },
+                  "type": "array",
+                  "title": "Response List Judges Api Judges Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/judges/{name}": {
+      "put": {
+        "summary": "Save Judge",
+        "description": "Writes judges/<name>.py, replacing one of that name.",
+        "operationId": "save_judge_api_judges__name__put",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JudgeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Judge"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/evals": {
+      "get": {
+        "summary": "List Eval Tasks",
+        "description": "Every task Launch's inspect eval can run: the project's, then inspect_evals'.",
+        "operationId": "list_eval_tasks_api_evals_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EvalTask"
+                  },
+                  "type": "array",
+                  "title": "Response List Eval Tasks Api Evals Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/playground": {
       "get": {
         "summary": "Info",
@@ -3155,6 +3251,52 @@
         "title": "DoseRequest",
         "description": "A saved direction swept over strengths, read at the next token."
       },
+      "EvalTask": {
+        "properties": {
+          "task": {
+            "type": "string",
+            "title": "Task"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "group": {
+            "type": "string",
+            "title": "Group"
+          },
+          "about": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "About"
+          },
+          "samples": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Samples"
+          },
+          "source": {
+            "type": "string",
+            "enum": ["project", "inspect_evals"],
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": ["task", "title", "group", "source"],
+        "title": "EvalTask"
+      },
       "Experiment": {
         "properties": {
           "name": {
@@ -4050,6 +4192,103 @@
         "title": "JobDetail"
       },
       "JsonValue": {},
+      "Judge": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "about": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "About"
+          },
+          "criterion": {
+            "type": "string",
+            "title": "Criterion"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt",
+            "default": "Compare two answers to the same request.\n\n[Request]\n{request}\n\n[Answer 1]\n{first}\n\n[Answer 2]\n{second}\n\n{criterion} Think briefly, then end with one line: \"Verdict: 1\", \"Verdict: 2\" or \"Verdict: tie\"."
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": "louped/Qwen/Qwen2.5-1.5B-Instruct"
+          },
+          "parses": {
+            "type": "boolean",
+            "title": "Parses",
+            "default": false
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          }
+        },
+        "type": "object",
+        "required": ["name", "criterion"],
+        "title": "Judge"
+      },
+      "JudgeRequest": {
+        "properties": {
+          "criterion": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Criterion"
+          },
+          "prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "about": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "About"
+          }
+        },
+        "type": "object",
+        "required": ["criterion"],
+        "title": "JudgeRequest"
+      },
       "LabelRequest": {
         "properties": {
           "label": {
@@ -4401,6 +4640,18 @@
             "type": "boolean",
             "title": "Required",
             "default": false
+          },
+          "suggest": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "evals"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggest"
           }
         },
         "type": "object",

@@ -143,6 +143,9 @@ core                                     run metadata, paths, the project and it
   `louped.analysis.views`); SAE dashboards are JSON under `features/`. `louped derive` and an
   agent's `add_view` add to a finished run: columns under `derived/`, figures under `views/`,
   each listed in its `louped.added` tag. An experiment's own figures are `experiments/<name>/views/`.
+- Judges: `judges/<name>.py` in the project, read without running for the list
+  (`louped.core.judges`) and imported only by a judging job. Eval tasks are Inspect tasks: the
+  project's `@task` functions and inspect_evals' `eval.yaml` metadata (`louped.stores.catalog`).
 - Directions: one safetensors file each under `<LOUPED_HOME>/vectors`, provenance in the header,
   read without torch so `louped serve` needs no interp extra.
 - SAEs load through SAELens; louped reads the residual at the SAE's hook with nnsight, so the model

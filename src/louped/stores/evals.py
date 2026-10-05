@@ -153,6 +153,8 @@ def get_run(run_id: str) -> RunDetail | None:
     path, log = found
     params = {f"task.{k}": v for k, v in _stringify(log.eval.task_args).items()}
     params |= {f"model.{k}": v for k, v in _stringify(log.eval.model_args).items()}
+    # what the run was started with beyond its task: a judge's runs and file, a grid's cell
+    params |= {f"meta.{k}": v for k, v in _stringify(log.eval.metadata or {}).items()}
     params |= {
         f"generate.{k}": str(v)
         for k, v in log.eval.model_generate_config.model_dump(exclude_none=True).items()

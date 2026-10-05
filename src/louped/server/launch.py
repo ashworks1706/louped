@@ -31,6 +31,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from louped.core import experiments_dir, home, logs_dir, trash
+from louped.core.judges import find_judges
 
 log = logging.getLogger(__name__)
 
@@ -47,6 +48,8 @@ class Option(BaseModel):
     help: str = ""
     choices: list[str] = []
     required: bool = False
+    #: A catalog the form offers to pick the value from: "evals", every Inspect task found.
+    suggest: Literal["evals"] | None = None
 
 
 class Launchable(BaseModel):
@@ -182,7 +185,7 @@ def catalogue() -> list[Launchable]:
 
 #: inspect eval's form: the flags a run is usually changed by, not all of Inspect's.
 EVAL = [
-    Option(flag="task", kind="text", default=None, required=True,
+    Option(flag="task", kind="text", default=None, required=True, suggest="evals",
            help="inspect_evals/<name>, or file.py@task"),
     Option(flag="--model", kind="text", default="louped/Qwen/Qwen2.5-0.5B-Instruct",
            help="louped/<hub id or saved model>, or any Inspect model"),
@@ -231,7 +234,15 @@ def options(launchable: str) -> list[Option]:
                           text=True, timeout=120)  # fmt: skip
     if done.returncode != 0:
         raise HTTPException(500, done.stderr.strip().splitlines()[-1] if done.stderr else "failed")
-    return [Option.model_validate(o) for o in json.loads(done.stdout.splitlines()[-1])]
+    found = [Option.model_validate(o) for o in json.loads(done.stdout.splitlines()[-1])]
+    if launchable == "judge":  # the project's judges, by name
+        try:
+            names = [j.name for j in find_judges()]
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        found = [o.model_copy(update={"kind": "choice", "choices": names}) if o.flag == "--judge"
+                 else o for o in found]  # fmt: skip
+    return found
 
 
 def dump(args: type | None) -> None:

@@ -6,7 +6,7 @@ import { ArrowLeftRight, GitCompareArrows } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { parseAsBoolean, parseAsString, useQueryState, useQueryStates } from "nuqs";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { EmptyState } from "@/components/empty-state";
 import { Help } from "@/components/help";
@@ -198,23 +198,50 @@ function Curves({ a, b }: { a: RunDetail; b: RunDetail }) {
   );
 }
 
-/** Queue a local model judging B against A sample by sample; its run lands beside them. */
+/** Queue a judge reading B against A sample by sample; its run lands beside them. The judge is
+ * louped's own or one of the project's judges/<name>.py. */
 function Judge({ a, b }: { a: string; b: string }) {
   const router = useRouter();
+  const judges = useQuery(q.judges());
+  const [name, setName] = useState("default");
   const go = useMutation({
-    mutationFn: () => launch({ id: "judge", options: { a, b } }),
+    mutationFn: () => launch({ id: "judge", options: { a, b, "--judge": name } }),
     onSuccess: (job) => router.push(`/launch/?id=judge&job=${encodeURIComponent(job.id)}`),
   });
+  const chosen = judges.data?.find((j) => j.name === name);
   return (
     <Part id="compare/section/judge" className="-mt-4 flex items-center justify-end gap-2">
-      {go.error && <span className="text-negative text-xs">{go.error.message}</span>}
-      <Button size="sm" variant="outline" disabled={go.isPending} onClick={() => go.mutate()}>
+      {(go.error ?? judges.error) && (
+        <span className="text-negative text-xs">{(go.error ?? judges.error)!.message}</span>
+      )}
+      {(judges.data?.length ?? 0) > 1 && (
+        <NativeSelect
+          aria-label="Judge"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          title={chosen?.about ?? chosen?.criterion}
+          className="h-8 w-auto font-mono text-xs"
+          {...part("compare/pick/judge")}
+        >
+          {judges.data!.map((j) => (
+            <option key={j.name} value={j.name}>
+              {j.name}
+            </option>
+          ))}
+        </NativeSelect>
+      )}
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={go.isPending || !!judges.error}
+        onClick={() => go.mutate()}
+      >
         Judge
       </Button>
       <Help label="What does Judge do?">
-        A local model reads both runs&apos; answers to each sample, twice with the order swapped,
-        and picks the better one. The result is a run with B&apos;s win rate. Pick the judge model
-        on Launch.
+        A model reads both runs&apos; answers to each sample, twice with the order swapped, and
+        picks the better one by the judge&apos;s criterion. The result is a run with B&apos;s win
+        rate. Judges are files in judges/; your agent writes new ones.
       </Help>
     </Part>
   );

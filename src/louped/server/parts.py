@@ -204,7 +204,7 @@ KINDS: list[Kind] = [
     _k(part="feature/*", about="The feature's title, back link, stepper and numbers.",
        rules=PICK),
     # Compare
-    _k(part="compare/pick/*", about="The baseline (a), the changed run (b) and the swap.",
+    _k(part="compare/pick/*", about="Baseline (a), changed run (b), the swap and the judge.",
        rules=PICK),
     _k(part="compare/run/*", about="Run A or B's card.", rules=PICK),
     _k(part="compare/section/*", about="Metrics, curves, paired, samples or judge.",
@@ -220,6 +220,9 @@ KINDS: list[Kind] = [
        rules=PICK),
     _k(part="launch/option/*", about="One of a script's options, by flag.",
        rules=["hidden", "label", "about", "note"]),
+    _k(part="launch/browse/*", about="Opens the list of tasks an option can take, by flag.",
+       rules=["hidden", "label"]),
+    _k(part="launch/eval/*", about="One Inspect task in that list, by task.", rules=["hidden"]),
     _k(part="launch/config", about="The training or grid config, edited in place.",
        rules=["note"]),
     _k(part="launch/where", about="Where it runs: here, Sol, a Slurm cluster or a VM.",

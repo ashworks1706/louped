@@ -247,10 +247,13 @@ class Judge:
     """The baseline run's id."""
     b: tyro.conf.Positional[str]
     """The changed run's id."""
-    model: str = "louped/Qwen/Qwen2.5-1.5B-Instruct"
-    """The judge: louped/ or hf/ with a Hub id runs locally; any Inspect model works."""
-    criterion: str = "Which answer is more correct and more helpful?"
-    """The question the judge answers for each pair."""
+    judge: str = "default"
+    """Which judge reads the pairs: default, or one of the project's judges/<name>.py."""
+    model: str | None = None
+    """The judge model, else the judge's own (MODEL): louped/ or hf/ with a Hub id runs locally;
+    any Inspect model works."""
+    criterion: str | None = None
+    """The question for each pair, else the judge's own (CRITERION)."""
     limit: int | None = None
     """Pairs to judge; all when empty."""
     max_tokens: int = 512
@@ -553,8 +556,9 @@ def main() -> None:
             from louped.judge import judge
 
             try:
-                print(judge(cmd.a, cmd.b, cmd.model, cmd.criterion, cmd.limit, cmd.max_tokens))
-            except ValueError as exc:
+                print(judge(cmd.a, cmd.b, cmd.model, cmd.criterion, cmd.limit, cmd.max_tokens,
+                            cmd.judge))  # fmt: skip
+            except (ValueError, FileNotFoundError) as exc:
                 raise SystemExit(str(exc)) from exc
         case Derive() as cmd:
             import json

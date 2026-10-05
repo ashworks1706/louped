@@ -21,7 +21,9 @@ from pydantic import BaseModel, Field
 
 from louped import __version__, stores
 from louped.core import Direction, cohorts, home
+from louped.core.judges import Judge, find_judges, write_judge
 from louped.server import graphs, inspect_view, launch, playground, plugins, ui
+from louped.stores.catalog import EvalTask, eval_tasks
 from louped.stores.labels import Label
 from louped.stores.runs import read_artifact
 from louped.stores.types import (
@@ -47,6 +49,13 @@ DEV_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
 #: The Host headers answered by default: this machine only, so a page on another site cannot
 #: reach the API through a rebound DNS name.
 LOOPBACK = ["localhost", "127.0.0.1", "::1", "[::1]"]
+
+
+class JudgeRequest(BaseModel):
+    criterion: str = Field(min_length=1)
+    prompt: str | None = None
+    model: str | None = None
+    about: str | None = None
 
 
 class LabelRequest(BaseModel):
@@ -326,6 +335,31 @@ def create_app(
         try:
             return stores.save_experiment_view(name, view, req)
         except (ValueError, FileNotFoundError) as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.get("/api/judges")
+    def list_judges() -> list[Judge]:
+        """louped's judge and the project's judges/<name>.py, for Compare and Launch."""
+        try:
+            return find_judges()
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.put("/api/judges/{name}", dependencies=[Depends(launch.require_json)])
+    def save_judge(name: str, req: JudgeRequest) -> Judge:
+        """Writes judges/<name>.py, replacing one of that name."""
+        editing()
+        try:
+            return write_judge(name, req.criterion, req.prompt, req.model, req.about)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.get("/api/evals")
+    def list_eval_tasks() -> list[EvalTask]:
+        """Every task Launch's inspect eval can run: the project's, then inspect_evals'."""
+        try:
+            return eval_tasks()
+        except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
 
     @app.get("/api/experiments/{name}")

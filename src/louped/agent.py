@@ -36,7 +36,9 @@ edit its README and run.py in the project (the project's AGENTS.md says what goe
 work with launchables, launch_options and launch (a script is "script:<name>/run.py"); follow it
 with job; read results with run, figures, figure, samples and compare. A figure the person asks
 for (a chart of a file, points in 3D, an animation) is add_view, or derive when it needs a script
-over the run's files (new columns on its items); then ui_show. A run too large
+over the run's files (new columns on its items); then ui_show. Evals are Inspect tasks: eval_tasks
+lists the project's and inspect_evals' to launch with "eval". Judging two eval runs is launch
+"judge" with --judge one of judges; a new criterion or prompt is new_judge. A run too large
 for this machine goes to a cluster with export_job; its result comes back with import_result.
 Report a difference only with its paired interval from compare (or cohort, for a run's items),
 and name the run ids you used. Items the person picks can be saved as a cohort and run again.
@@ -168,6 +170,41 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         options = {"run": run_id, "script": script, **({"--name": name} if name else {})}
         job = await post("/launch", {"id": "derive", "options": options})
         return await _wait(job["id"], 600)
+
+    @mcp.tool(annotations=READ)
+    async def eval_tasks(search: str | None = None) -> list[dict[str, Any]]:
+        """Inspect tasks launch "eval" runs (option task): the project's @task functions
+        (experiments/<name>/task.py@fn), then inspect_evals' benchmarks (inspect_evals/<name>),
+        each with its title, group, what it measures and samples. search filters by any of
+        them, case-insensitively."""
+        found = await get("/evals")
+        if search:
+            word = search.lower()
+            found = [t for t in found if word in " ".join(str(v) for v in t.values()).lower()]
+        return found
+
+    @mcp.tool(annotations=READ)
+    async def judges() -> list[dict[str, Any]]:
+        """The judges that can read two eval runs' pairs (launch "judge" with --judge <name>):
+        louped's default and the project's judges/<name>.py, each with its criterion, prompt,
+        model and whether it parses replies itself."""
+        return await get("/judges")
+
+    @mcp.tool(annotations=WRITE)
+    async def new_judge(
+        name: str,
+        criterion: str,
+        prompt: str | None = None,
+        model: str | None = None,
+        about: str | None = None,
+    ) -> dict[str, Any]:
+        """Write judges/<name>.py (replacing one of that name): criterion is the question for each
+        pair; prompt, when the default's wording does not fit, fills {request}, {first},
+        {second} and {criterion} and asks for a last line "Verdict: 1", "Verdict: 2" or
+        "Verdict: tie"; model is the judge model it is meant for; about says what it is for.
+        For a verdict in another form, add a verdict(reply) function to the file yourself."""
+        body = {"criterion": criterion, "prompt": prompt, "model": model, "about": about}
+        return await send("PUT", f"/judges/{quote(name, safe='')}", json=body)
 
     @mcp.tool(annotations=READ)
     async def samples(run_id: str, limit: int = 20, offset: int = 0) -> list[dict[str, Any]]:
