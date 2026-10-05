@@ -21,7 +21,7 @@ import mlflow
 from mlflow import MlflowClient
 from mlflow.entities import Run
 
-from louped.core import artifacts_dir, capture, tracking_uri
+from louped.core import artifacts_dir, capture, cohorts, tracking_uri
 
 #: Seconds between samples of the machine while a run is open.
 SAMPLE_SECONDS = 2
@@ -70,3 +70,14 @@ def start_run(
 def log_json(obj: Any, path: str) -> None:
     """A JSON artifact on the active run, which the UI can render as a table or figure."""
     mlflow.log_text(json.dumps(obj, indent=2), path)
+
+
+def cohort_ids(experiment: str, name: str) -> list[str]:
+    """The item ids of a cohort saved in the experiment (experiments/<experiment>/cohorts/
+    <name>.json), as text; the active run, if any, is tagged louped.cohort with its name and
+    size, so its page says it ran on part of the items. FileNotFoundError when there is no such
+    cohort."""
+    saved = cohorts.read(experiment, name)
+    if mlflow.active_run() is not None:
+        mlflow.set_tags({"louped.cohort": name, "louped.cohort_n": str(len(saved.ids))})
+    return saved.ids

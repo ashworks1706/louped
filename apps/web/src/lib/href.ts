@@ -19,3 +19,6 @@ export const compareHref = (a: string, b: string) =>
 
 export const featureHref = (run: string, feature: number) =>
   `/behavior/feature/?run=${encodeURIComponent(run)}&f=${feature}`;
+
+/** A cohort's ids in the URL: comma-separated, each URL-encoded. */
+export const idsParam = (ids: string[]) => ids.map(encodeURIComponent).join(",");

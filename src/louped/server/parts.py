@@ -75,7 +75,7 @@ KINDS: list[Kind] = [
     # a run's page
     _k(part="run/title", about="The run's name.", rules=PICK),
     _k(part="run/back", about="The link back to Runs.", rules=["hidden"]),
-    _k(part="run/badge/*", about="The run's kind, host or status.", rules=["hidden"]),
+    _k(part="run/badge/*", about="The run's kind, host, status or cohort.", rules=["hidden"]),
     _k(part="run/meta/*", about="The run's model, experiment, created time or id.", rules=LIST),
     _k(part="run/delete", about="Moves the run to the trash.", rules=["hidden"]),
     _k(part="run.overview/metrics/*", about="One metric's card in the metrics block.",
@@ -95,6 +95,10 @@ KINDS: list[Kind] = [
     _k(part="items/against", about="The reference condition.", rules=CONTROL),
     _k(part="items/show", about="Which items show: all, changed, changed:<c>, down:<c> (1→0), "
        "up:<c> (0→1).", rules=CONTROL),
+    _k(part="items/cohort", about="Which items the conditions are read on: every item, the "
+       "ones picked, or a cohort saved in the experiment.", rules=CONTROL),
+    _k(part="items/cohort/note", about="The cohort's note, and its items no file holds.",
+       rules=PICK),
     _k(part="items/count", about="How many items are shown.", rules=PICK),
     _k(part="items/download", about="Downloads the items shown.", rules=["hidden"]),
     _k(part="items/column/*", about="A column of the items table: the key, the text or a "

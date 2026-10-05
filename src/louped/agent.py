@@ -11,6 +11,7 @@ import asyncio
 import re
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 from mcp.server.mcpserver import MCPServer
@@ -35,7 +36,8 @@ edit its README and run.py in the project (the project's AGENTS.md says what goe
 work with launchables, launch_options and launch (a script is "script:<name>/run.py"); follow it
 with job; read results with run, figures, figure, samples and compare. A run too large for this
 machine goes to a cluster with export_job; its result comes back with import_result.
-Report a difference only with its paired interval from compare, and name the run ids you used.
+Report a difference only with its paired interval from compare (or cohort, for a run's items),
+and name the run ids you used. Items the person picks can be saved as a cohort and run again.
 Jobs run one at a time on this machine's GPU, so do not queue more than the question needs.
 The app's pages are data: ui_page shows them and every kind of part on them; ui_selection says
 which parts the person Shift+clicked, with their data; set_layout, set_preset and set_part change
@@ -147,6 +149,48 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         """Two eval runs over the same samples: each score's paired difference (b minus a) with
         its 95% bootstrap interval, and the samples that moved. a is the baseline."""
         return await get("/compare", a=a, b=b)
+
+    @mcp.tool(annotations=READ)
+    async def cohort(
+        run: str,
+        ids: list[str] | None = None,
+        folder: str | None = None,
+        field: str | None = None,
+        reference: str | None = None,
+    ) -> dict[str, Any]:
+        """A run's per-item records (a folder of JSONL files, one per condition) on some items:
+        ids as the records' key holds them (ui_selection's items/row parts name them; None for
+        every item). Each condition's value (rate and Wilson interval for a 0/1 field), and its
+        paired difference from the reference with a 95% bootstrap interval, and which ids no
+        file holds. Unset, folder is the first by name, field a conventional outcome name (correct,
+        score, ...) else the first 0/1 field, reference a baseline-like file else the first by
+        name; pass them to match what the person sees on the Items tab."""
+        body = {"ids": ids, "folder": folder, "field": field, "reference": reference}
+        return await post(f"/runs/{quote(run, safe='')}/cohort", body)
+
+    @mcp.tool(annotations=READ)
+    async def cohorts(experiment: str) -> list[dict[str, Any]]:
+        """The cohorts saved in an experiment: name, ids, the run and folder they came from,
+        and why (note)."""
+        return await get(f"/experiments/{quote(experiment, safe='')}/cohorts")
+
+    @mcp.tool(annotations=WRITE)
+    async def save_cohort(
+        experiment: str,
+        name: str,
+        ids: list[str],
+        note: str,
+        run: str | None = None,
+        folder: str = "",
+        key: str | None = None,
+    ) -> dict[str, Any]:
+        """Save items as a cohort (experiments/<experiment>/cohorts/<name>.json; name is
+        lowercase letters, digits and -), with a note on what they have in common. A run.py
+        takes it with a --cohort option that reads louped.tracking.cohort_ids(EXPERIMENT,
+        name), so a run can be made on just them."""
+        body = {"ids": ids, "note": note, "run": run, "folder": folder, "key": key}
+        path = f"/experiments/{quote(experiment, safe='')}/cohorts/{quote(name, safe='')}"
+        return await send("PUT", path, json=body)
 
     @mcp.tool(annotations=READ)
     async def vectors() -> list[dict[str, Any]]:

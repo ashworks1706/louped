@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Rocket } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { parseAsString, useQueryStates } from "nuqs";
+import { parseAsString, useQueryState, useQueryStates } from "nuqs";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -208,7 +208,14 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
     },
   });
   const opts = options.data ?? [];
-  const sent = changed(opts, values);
+  // a cohort to run on, from Save cohort on a run's Items tab
+  const [cohort] = useQueryState("cohort", parseAsString);
+  const takesCohort = opts.some((o) => o.flag === "--cohort");
+  const filled =
+    cohort && takesCohort && values["--cohort"] === undefined
+      ? { ...values, "--cohort": cohort }
+      : values;
+  const sent = changed(opts, filled);
   const missing = opts.filter((o) => (o.required || !o.flag.startsWith("-")) && !(o.flag in sent));
   const command = preview(item, recipe, sent);
   const request = {
@@ -270,6 +277,12 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
         </div>
       )}
 
+      {cohort && options.isSuccess && !takesCohort && (
+        <p className="text-negative max-w-2xl text-sm">
+          This script has no --cohort option, so it would run on every item, not cohort {cohort}.
+          Add one to its Args that reads louped.tracking.cohort_ids(EXPERIMENT, args.cohort).
+        </p>
+      )}
       <QueryState query={options} rows={3}>
         {(list) =>
           list.length > 0 && (
@@ -278,7 +291,7 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
                 <Field
                   key={o.flag}
                   option={o}
-                  value={values[o.flag]}
+                  value={filled[o.flag]}
                   onChange={(v) => setValues((old) => ({ ...old, [o.flag]: v }))}
                 />
               ))}

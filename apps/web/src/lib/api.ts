@@ -27,6 +27,7 @@ export type View = RunView["view"];
 export type Direction = Schemas["Direction"];
 type Graph = Schemas["Graph"];
 type Comparison = Schemas["Comparison"];
+export type PairedScore = Schemas["PairedScore"];
 export type PlaygroundInfo = Schemas["PlaygroundInfo"];
 type GenerateRequest = Schemas["GenerateRequest"];
 type InspectRequest = Schemas["InspectRequest"];
@@ -53,6 +54,10 @@ export type Picked = Schemas["Picked"];
 export type PartRule = Schemas["PartRule"];
 export type Cue = Schemas["Cue"];
 export type Cues = Schemas["Cues"];
+export type CohortStats = Schemas["CohortStats"];
+export type SavedCohort = Schemas["Saved"];
+type CohortQuery = Schemas["CohortQuery"];
+type Cohort = Schemas["Cohort"];
 
 export class ApiError extends Error {
   constructor(
@@ -142,6 +147,16 @@ export const deleteExperiment = (name: string) => del(`/experiments/${encodeURIC
 /** Deletes a run that has ended: an eval's log goes to the trash, an MLflow run is marked deleted. */
 export const deleteRun = (id: string) => del(`/runs/${encodeURIComponent(id)}`);
 /** Moves a job that has ended, with its log, to the trash; its runs stay. */
+/** Each condition of a run's items on some of them, and its paired difference from the
+ * reference. */
+export const cohortStats = (run: string, body: CohortQuery) =>
+  post<CohortStats>(`/runs/${encodeURIComponent(run)}/cohort`, body);
+/** Saves items as experiments/<experiment>/cohorts/<name>.json. */
+export const saveCohort = (experiment: string, name: string, cohort: Omit<Cohort, "created">) =>
+  put<SavedCohort>(
+    `/experiments/${encodeURIComponent(experiment)}/cohorts/${encodeURIComponent(name)}`,
+    cohort,
+  );
 export const deleteJob = (id: string) => del(`/launch/jobs/${encodeURIComponent(id)}`);
 
 async function post<T>(path: string, body: unknown): Promise<T> {
@@ -335,6 +350,13 @@ export const q = {
   experiments: () => ({
     queryKey: ["experiments"],
     queryFn: () => get<Experiment[]>("/experiments"),
+  }),
+  cohorts: (experiment: string) => ({
+    queryKey: ["cohorts", experiment],
+    queryFn: () =>
+      isSnapshot()
+        ? Promise.resolve([] as SavedCohort[])
+        : get<SavedCohort[]>(`/experiments/${encodeURIComponent(experiment)}/cohorts`),
   }),
   experiment: (name: string) => ({
     queryKey: ["experiment", name],

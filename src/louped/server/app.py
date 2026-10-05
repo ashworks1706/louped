@@ -17,10 +17,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from louped import __version__, stores
-from louped.core import Direction, home
+from louped.core import Direction, cohorts, home
 from louped.server import graphs, inspect_view, launch, playground, plugins, ui
 from louped.stores.labels import Label
 from louped.stores.runs import read_artifact
@@ -50,6 +50,17 @@ LOOPBACK = ["localhost", "127.0.0.1", "::1", "[::1]"]
 class LabelRequest(BaseModel):
     #: The person's pick for the pair, or null to clear it.
     label: Label | None
+
+
+class CohortQuery(BaseModel):
+    """Which items to read each condition on (every item when ids is null), from which folder of
+    the run's records, on which field, against which condition; the Items tab's defaults when
+    unset."""
+
+    ids: list[str] | None = Field(None, max_length=100_000)
+    folder: str | None = None
+    field: str | None = None
+    reference: str | None = None
 
 
 class Text(BaseModel):
@@ -163,6 +174,15 @@ def create_app(
         except ValueError as exc:
             raise HTTPException(409, str(exc)) from exc
 
+    @app.post("/api/runs/{run_id}/cohort", dependencies=[Depends(launch.require_json)])
+    def run_cohort(run_id: str, req: CohortQuery) -> stores.CohortStats:
+        """Each condition of a run's per-item records on some of its items, and each one's
+        paired difference from the reference with a 95% interval."""
+        try:
+            return stores.cohort(run_id, req.ids, req.folder, req.field, req.reference)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+
     @app.get("/api/runs/{run_id}/views")
     def views(run_id: str) -> list[RunView]:
         return stores.list_views(run_id)
@@ -229,6 +249,25 @@ def create_app(
         """Moves its folder to <home>/trash/experiments; says where."""
         editing()
         return Text(text=str(stores.delete_experiment(name)))
+
+    @app.get("/api/experiments/{name}/cohorts")
+    def cohort_list(name: str) -> list[cohorts.Saved]:
+        stores.get_experiment(name)  # NotFound for a name that is no experiment
+        try:
+            return cohorts.listed(name)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+
+    @app.put(
+        "/api/experiments/{name}/cohorts/{cohort}", dependencies=[Depends(launch.require_json)]
+    )
+    def save_cohort(name: str, cohort: str, req: cohorts.Cohort) -> cohorts.Saved:
+        """Writes experiments/<name>/cohorts/<cohort>.json, replacing one of that name."""
+        editing()
+        try:
+            return cohorts.save(name, cohort, req)
+        except (ValueError, FileNotFoundError) as exc:
+            raise HTTPException(400, str(exc)) from exc
 
     @app.get("/api/experiments/{name}")
     def experiment(name: str) -> ExperimentDetail:

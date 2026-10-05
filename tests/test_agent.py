@@ -145,5 +145,5 @@ def test_louped_mcp_speaks_mcp_over_stdio() -> None:
 
     found, error = asyncio.run(connect())
     assert {"experiments", "runs", "figure", "compare", "launch", "job", "new_experiment",
-            "export_job", "import_result"} <= found  # fmt: skip
+            "export_job", "import_result", "cohort", "cohorts", "save_cohort"} <= found  # fmt: skip
     assert "no louped server at http://127.0.0.1:9" in error

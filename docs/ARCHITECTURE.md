@@ -197,7 +197,9 @@ picks parts, with what each stands for (an item's records, a condition's numbers
 `ui_selection`; the agent's `ui_show` opens a page and points at parts with a note, and hears back
 which were missing. A block the catalog lacks is a plugin page, drawn with the kit at `/kit/`
 (louped.css, louped.js) so it reads as the app's own. louped.toml's `[theme]` sets token values
-only.
+only. Picked item rows are a cohort: `stores/items.py` reads a run's conditions on them, with the
+paired bootstrap interval `compare` uses, and `core/cohorts.py` saves them in the experiment
+(`cohorts/<name>.json`) for a run.py's `--cohort` (`louped.tracking.cohort_ids`).
 Design rules are in `apps/web/AGENTS.md`. `apps/site` is the docs site.
 
 ## Correctness traps the code must test

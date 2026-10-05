@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
+import { CohortActions } from "@/components/cohort-actions";
 import { partData } from "@/components/parts";
 import { Button } from "@/components/ui/button";
 import { isSnapshot, pick, q, type Picked } from "@/lib/api";
@@ -199,6 +200,7 @@ export function PartPicker() {
             </li>
           ))}
         </ul>
+        <CohortActions parts={parts} />
         {parts.length > 0 && (
           <Button
             variant="ghost"

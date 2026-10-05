@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { RunDetail } from "@/lib/api";
+import { cohortStats, isSnapshot, q, type PairedScore, type RunDetail } from "@/lib/api";
 import {
   artifactQuery,
   asBinary,
@@ -79,6 +79,8 @@ export function ItemsView({ run }: { run: RunDetail }) {
       <Folder
         key={folder.dir}
         runId={run.id}
+        experiment={run.experiment}
+        dir={folder.dir}
         files={folder.files}
         meanings={run.artifacts.find((a) => a.path === join(folder.dir, FIELDS))?.path}
       />
@@ -90,7 +92,19 @@ export function ItemsView({ run }: { run: RunDetail }) {
 const FIELDS = "fields.json";
 const join = (dir: string, name: string) => (dir ? `${dir}/${name}` : name);
 
-function Folder({ runId, files, meanings }: { runId: string; files: string[]; meanings?: string }) {
+function Folder({
+  runId,
+  experiment,
+  dir,
+  files,
+  meanings,
+}: {
+  runId: string;
+  experiment: string | null | undefined;
+  dir: string;
+  files: string[];
+  meanings?: string;
+}) {
   const queries = useQueries({ queries: files.map((f) => artifactQuery(runId, f)) });
   const about = useQuery({ ...artifactQuery(runId, meanings ?? ""), enabled: !!meanings });
   const failed = queries.find((q) => q.error);
@@ -123,7 +137,12 @@ function Folder({ runId, files, meanings }: { runId: string; files: string[]; me
           {FIELDS} not read: {meaning.error}
         </p>
       )}
-      <Aligned files={files} tables={tables} about={meaning.meanings} />
+      <Aligned
+        files={files}
+        tables={tables}
+        about={meaning.meanings}
+        run={{ id: runId, experiment: experiment ?? null, folder: dir }}
+      />
     </div>
   );
 }
@@ -195,14 +214,19 @@ export function LinedUp({ rows, name }: { rows: Row[]; name: string }) {
   );
 }
 
+/** Where lined-up records come from, when they are a run's: its cohorts apply. */
+type Source = { id: string; experiment: string | null; folder: string };
+
 function Aligned({
   files,
   tables,
   about = {},
+  run,
 }: {
   files: string[];
   tables: Row[][];
   about?: Record<string, string>;
+  run?: Source;
 }) {
   const names = files.map(stem);
   const key = useMemo(() => joinKey(tables), [tables]);
@@ -211,6 +235,12 @@ function Aligned({
   const [refParam, setRef] = useQueryState("ref", parseAsString);
   const [showParam, setShow] = useQueryState("show", parseAsString);
   const [item, setItem] = useQueryState("item", parseAsString);
+  const [idsParamValue, setIds] = useQueryState("ids", parseAsString);
+  const [cohortName, setCohort] = useQueryState("cohort", parseAsString);
+  const saved = useQuery({
+    ...q.cohorts(run?.experiment ?? ""),
+    enabled: !!run?.experiment,
+  });
   const [search, setSearch] = useState("");
   const rule = useRules();
   // a control's value: the URL's, else the layout's default for it, else the app's
@@ -232,24 +262,48 @@ function Aligned({
   const against = refParam ?? control("against").default;
   const ref = against && names.includes(against) ? names.indexOf(against) : 0;
 
-  const items = useMemo(() => {
+  const every = useMemo(() => {
     if (!key) return [];
     const byKey = tables.map((t) => new Map(t.map((r) => [String(r[key]), r])));
     const order = [...new Set(tables.flatMap((t) => t.map((r) => String(r[key]))))];
     return order.map((id) => ({ id, rows: byKey.map((m) => m.get(id)) }));
   }, [tables, key]);
+  // a cohort: the items picked (ids in the URL) or saved by name; every item without one
+  const cohortWanted = cohortName ?? rule("items/cohort").default ?? null;
+  const savedCohort = saved.data?.find((c) => c.name === cohortWanted);
+  const cohortIds = useMemo(
+    () =>
+      idsParamValue ? idsParamValue.split(",").map(decodeURIComponent) : (savedCohort?.ids ?? null),
+    [idsParamValue, savedCohort],
+  );
+  const items = useMemo(() => {
+    if (!cohortIds) return every;
+    const want = new Set(cohortIds);
+    return every.filter((it) => want.has(it.id));
+  }, [every, cohortIds]);
+  const notHeld = cohortIds ? new Set(cohortIds).size - items.length : 0;
 
   // the item's own fields (its question, its answer): equal across the conditions for every item
   // that more than one file holds, and not a file's own name for itself
   const itemFields = useMemo(() => {
-    const held = items.map((i) => i.rows.filter((r): r is Row => !!r)).filter((r) => r.length > 1);
+    const held = every.map((i) => i.rows.filter((r): r is Row => !!r)).filter((r) => r.length > 1);
     if (held.length === 0) return [];
     return Object.keys(held[0][0]).filter(
       (k) =>
         !constant.has(k) &&
         held.every((rs) => rs.every((r) => JSON.stringify(r[k]) === JSON.stringify(rs[0][k]))),
     );
-  }, [items, constant]);
+  }, [every, constant]);
+
+  // each condition's paired difference from the reference on these items, from the server,
+  // whose interval is the one compare and the agent report
+  const paired = useQuery({
+    queryKey: ["cohort-stats", run?.id, run?.folder, field, names[ref], cohortIds],
+    queryFn: () =>
+      cohortStats(run!.id, { ids: cohortIds, folder: run!.folder, field, reference: names[ref] }),
+    enabled: !!run && !!key && !!field && !isSnapshot(),
+    retry: false,
+  });
 
   if (!key || !field)
     return (
@@ -259,7 +313,7 @@ function Aligned({
       </p>
     );
 
-  const binary = items.every((it) => it.rows.every((r) => !r || asBinary(r[field]) !== null));
+  const binary = every.every((it) => it.rows.every((r) => !r || asBinary(r[field]) !== null));
   const text = textField(tables[ref], key);
   const differs = (it: (typeof items)[number], i: number) =>
     i !== ref &&
@@ -298,6 +352,13 @@ function Aligned({
     return { both, changed, k, n, t };
   });
 
+  const pairs = new Map((paired.data?.paired ?? []).map((p) => [p.name, p]));
+  const cohortLabel = idsParamValue
+    ? `${cohortIds!.length} picked`
+    : savedCohort
+      ? `cohort ${savedCohort.name}`
+      : null;
+
   const needle = search.toLowerCase();
   const shown = items.filter((it) => {
     if (
@@ -318,12 +379,12 @@ function Aligned({
     if (kind === "up") return before === 0 && after === 1;
     return true;
   });
-  const opened = items.find((it) => it.id === item);
+  const opened = every.find((it) => it.id === item);
 
   // what a picked part stands for: an item's record under every condition, a condition's numbers
   const itemsData = (id: string) => {
     const [, kind, a, b] = id.split("/").map(decodeURIComponent);
-    const found = items.find((it) => it.id === a);
+    const found = every.find((it) => it.id === a);
     const records = (it: (typeof items)[number]) =>
       Object.fromEntries(names.map((n, i) => [n, trim(it.rows[i] ?? null)]));
     if (kind === "row" && found)
@@ -332,6 +393,10 @@ function Aligned({
         compared_on: field,
         reference: names[ref],
         records: records(found),
+        // where it is from, so picked rows can be saved as a cohort
+        ...(run
+          ? { from: { run: run.id, experiment: run.experiment, folder: run.folder, key } }
+          : {}),
       };
     if (kind === "cell" && found) {
       const i = names.indexOf(b);
@@ -350,10 +415,17 @@ function Aligned({
       if (i < 0) return null;
       const st = stats[i];
       const ci = binary && st.n ? wilson(st.k, st.n) : null;
+      const p = pairs.get(a);
       return {
         condition: a,
         field,
         reference: names[ref],
+        on: cohortLabel ?? "every item",
+        ...(p
+          ? {
+              paired: { n: p.n, diff: p.diff, interval95: [p.low, p.high], up: p.up, down: p.down },
+            }
+          : {}),
         ...(binary ? { rate: st.n ? st.k / st.n : null, k: st.k, n: st.n, interval95: ci } : {}),
         ...(i === ref
           ? {}
@@ -400,7 +472,16 @@ function Aligned({
     <div className="flex flex-col gap-4">
       <PartData prefix="items" resolve={itemsData} />
       <PartData prefix="item" resolve={itemData} />
-      <Summary names={names} ref_={ref} field={field} binary={binary} stats={stats} rule={rule} />
+      <Summary
+        names={names}
+        ref_={ref}
+        field={field}
+        binary={binary}
+        stats={stats}
+        rule={rule}
+        pairs={pairs}
+        pairedError={paired.error ? String(paired.error) : (paired.data?.unpaired ?? null)}
+      />
       <div className="flex flex-wrap items-center gap-2">
         {!control("search").hidden && (
           <Input
@@ -474,6 +555,34 @@ function Aligned({
             )}
           </NativeSelect>
         </label>
+        {(idsParamValue || (saved.data?.length ?? 0) > 0) && (
+          <label
+            className={cn(
+              "flex items-center gap-1.5 text-xs",
+              control("cohort").hidden && "hidden",
+            )}
+            {...part("items/cohort")}
+          >
+            <span className="text-muted-foreground">{control("cohort").label ?? "On"}</span>
+            <NativeSelect
+              value={idsParamValue ? "*picked" : (cohortWanted ?? "")}
+              onChange={(e) => {
+                if (e.target.value === "*picked") return;
+                void setIds(null);
+                void setCohort(e.target.value || null);
+              }}
+              className="text-xs"
+            >
+              <option value="">every item</option>
+              {idsParamValue && <option value="*picked">{cohortIds!.length} picked</option>}
+              {saved.data?.map((c) => (
+                <option key={c.name} value={c.name}>
+                  cohort {c.name} · {c.ids.length}
+                </option>
+              ))}
+            </NativeSelect>
+          </label>
+        )}
         <span className="text-muted-foreground ml-auto font-mono text-xs" {...part("items/count")}>
           {shown.length} of {items.length} items
         </span>
@@ -496,6 +605,13 @@ function Aligned({
           <Download /> Items
         </Button>
       </div>
+      <CohortNote
+        name={cohortWanted}
+        found={!!savedCohort || !!idsParamValue}
+        loading={saved.isPending && !!run?.experiment}
+        note={idsParamValue ? null : (savedCohort?.note ?? null)}
+        notHeld={notHeld}
+      />
       <div className="overflow-x-auto rounded-xl border">
         <Table>
           <TableHeader>
@@ -643,6 +759,8 @@ function Summary({
   binary,
   stats,
   rule,
+  pairs,
+  pairedError,
 }: {
   names: string[];
   ref_: number;
@@ -650,6 +768,8 @@ function Summary({
   binary: boolean;
   stats: { both: number; changed: number; k: number; n: number; t: Transition }[];
   rule: (id: string) => Rule;
+  pairs: Map<string, PairedScore>;
+  pairedError: string | null;
 }) {
   const heading = rule("items/summary");
   const stat = (n: string) => partId("items/stat", n);
@@ -670,6 +790,9 @@ function Summary({
         )}
       </div>
       <PartNote rule={heading} />
+      {pairedError && (
+        <p className="text-negative text-xs">Paired differences not computed: {pairedError}</p>
+      )}
       <div className="grid overflow-hidden rounded-xl border sm:grid-cols-2 lg:grid-cols-4 [&>*]:-mr-px [&>*]:-mb-px [&>*]:border-r [&>*]:border-b">
         {arrange(names, stat, rule).map((n) => {
           const i = names.indexOf(n);
@@ -712,11 +835,58 @@ function Summary({
               {i !== ref_ && !binary && (
                 <span className="text-muted-foreground text-xs">changed from the reference</span>
               )}
+              {pairs.has(n) && <Paired p={pairs.get(n)!} binary={binary} />}
               <PartNote rule={r} />
             </div>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/** A condition minus the reference over the items both hold, with its 95% interval: points
+ * for a 0/1 field. */
+function Paired({ p, binary }: { p: PairedScore; binary: boolean }) {
+  const f = (x: number) =>
+    binary
+      ? `${x > 0 ? "+" : ""}${(x * 100).toFixed(1)}`
+      : `${x > 0 ? "+" : ""}${x.toPrecision(3)}`;
+  return (
+    <span className="text-muted-foreground flex items-center gap-1 font-mono text-xs tabular-nums">
+      Δ {f(p.diff)}
+      {binary && " pts"} · {f(p.low)} to {f(p.high)}
+      <Help>{`Paired difference from the reference over the ${p.n} items both hold, with its 95% bootstrap interval: the interval the agent and Compare report.`}</Help>
+    </span>
+  );
+}
+
+/** What the items are read on, when not every item: a saved cohort's note, ids no file holds,
+ * or a cohort name the experiment does not have. */
+function CohortNote({
+  name,
+  found,
+  loading,
+  note,
+  notHeld,
+}: {
+  name: string | null;
+  found: boolean;
+  loading: boolean;
+  note: string | null;
+  notHeld: number;
+}) {
+  if (!found && (!name || loading)) return null;
+  if (found && !note && notHeld === 0) return null;
+  return (
+    <div className="flex flex-col gap-1 text-xs" {...part("items/cohort/note")}>
+      {!found && <p className="text-negative">This experiment has no cohort {name}.</p>}
+      {note && <p className="text-muted-foreground">{note}</p>}
+      {notHeld > 0 && (
+        <p className="text-muted-foreground">
+          {notHeld} of the cohort&apos;s items are not in these files.
+        </p>
+      )}
     </div>
   );
 }

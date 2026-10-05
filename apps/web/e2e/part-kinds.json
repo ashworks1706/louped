@@ -41,7 +41,7 @@
   },
   {
     "part": "run/badge/*",
-    "about": "The run's kind, host or status.",
+    "about": "The run's kind, host, status or cohort.",
     "rules": ["hidden"]
   },
   {
@@ -103,6 +103,16 @@
     "part": "items/show",
     "about": "Which items show: all, changed, changed:<c>, down:<c> (1\u21920), up:<c> (0\u21921).",
     "rules": ["hidden", "label", "default"]
+  },
+  {
+    "part": "items/cohort",
+    "about": "Which items the conditions are read on: every item, the ones picked, or a cohort saved in the experiment.",
+    "rules": ["hidden", "label", "default"]
+  },
+  {
+    "part": "items/cohort/note",
+    "about": "The cohort's note, and its items no file holds.",
+    "rules": []
   },
   {
     "part": "items/count",

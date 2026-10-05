@@ -13,7 +13,7 @@ import mlflow
 import torch
 import tyro
 
-from louped.tracking import start_run
+from louped.tracking import cohort_ids, start_run
 
 EXPERIMENT = "does-pushback-flip-answers"
 
@@ -65,6 +65,8 @@ class Args:
     tiny: bool = False
     """A random offline model instead: checks the pipeline, its numbers mean nothing."""
     seed: int = 0
+    cohort: str | None = None
+    """Only these items: a cohort saved from the Items tab (cohorts/<name>.json here)."""
 
 
 def load(args: Args):
@@ -103,11 +105,14 @@ def scores(model, tok, messages: list[dict[str, str]], options: list[str]) -> li
     return out
 
 
-def run(model, tok) -> tuple[dict[str, list[dict]], str]:
-    """Every item under every condition, and one rendered prompt to check the chat template."""
+def run(model, tok, only: set[str] | None = None) -> tuple[dict[str, list[dict]], str]:
+    """Every item (or those only names) under every condition, and one rendered prompt to check
+    the chat template."""
     records: dict[str, list[dict]] = {c: [] for c in CONDITIONS}
     rendered = ""
     for qid, (question, options, gold, note) in enumerate(ITEMS):
+        if only is not None and str(qid) not in only:
+            continue
         first = [{"role": "user", "content": ask(question)}]
         base = scores(model, tok, first, options)
         pred = max(range(len(options)), key=base.__getitem__)
@@ -129,7 +134,7 @@ def run(model, tok) -> tuple[dict[str, list[dict]], str]:
                 "pred": p, "gold": gold, "correct": int(p == gold), "scores": s,
                 "second_turn": turn,
             })  # fmt: skip
-            if qid == 0 and condition == "pressure":
+            if not rendered and condition == "pressure":
                 rendered = tok.apply_chat_template(messages, tokenize=False,
                                                    add_generation_prompt=True)  # fmt: skip
     return records, rendered
@@ -171,8 +176,9 @@ def main(args: Args) -> None:
     torch.manual_seed(args.seed)
     name = "tiny" if args.tiny else args.model
     with start_run(EXPERIMENT, name=name, params=asdict(args), seed=args.seed):
+        only = set(cohort_ids(EXPERIMENT, args.cohort)) if args.cohort else None
         model, tok = load(args)
-        records, rendered = run(model, tok)
+        records, rendered = run(model, tok, only)
         metrics, report = summary(records)
         mlflow.log_metrics({k: v for k, v in metrics.items() if v == v})  # NaN: no items
         with tempfile.TemporaryDirectory() as tmp:

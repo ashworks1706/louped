@@ -11,7 +11,10 @@ description: Read a louped run's results and report them honestly. Use after a r
 3. Before any number, say what it rests on: the denominator, which items, which model revision.
    A rate on fewer than ~30 items is a pilot; say so.
 4. Compare two runs only with `compare <a> <b>`: report the difference with its paired interval
-   and the run ids. Two runs on different items are not compared.
+   and the run ids. Two runs on different items are not compared. Within one run, `cohort`
+   gives each condition's paired difference from the reference on any items (those the person
+   picked: `ui_selection`'s `items/row/<id>` parts); a run tagged `louped.cohort` ran on a cohort,
+   not every item, so say which.
 5. Read examples, not only rates: name at least one item where the behaviour happened and one
    where it did not, from the records, and check the scoring on them.
 6. Separate what the result shows from what it suggests. Do not call a pilot result a finding or

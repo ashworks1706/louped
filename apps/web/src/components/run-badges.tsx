@@ -15,6 +15,23 @@ export function HostBadge({ host }: { host?: string | null }) {
   );
 }
 
+/** A run made on a cohort, part of the experiment's items (louped.tracking.cohort_ids). */
+export function CohortBadge({ tags }: { tags: Record<string, string> }) {
+  const name = tags["louped.cohort"];
+  if (!name) return null;
+  const n = tags["louped.cohort_n"];
+  return (
+    <Badge
+      variant="outline"
+      className="font-mono"
+      title={`Ran on cohort ${name}${n ? `, ${n} items` : ""}, not every item`}
+    >
+      cohort {name}
+      {n && ` · ${n}`}
+    </Badge>
+  );
+}
+
 /** A run's status; a live one pulses and shows how many samples are done. */
 export function StatusDot({
   status,

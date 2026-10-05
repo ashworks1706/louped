@@ -23,7 +23,9 @@ description: Start a research experiment in a louped project. Use when the user 
    id field in every row) so the run page lines them up, a `report.md` for people. Put the item
    itself in every row (its question or claim, its gold answer), so an item opens on what it is,
    and write `raw/fields.json`, `{"field": "what it means"}`, for each field's ?. A paper's
-   harness with its own pins runs in its own environment, not this one.
+   harness with its own pins runs in its own environment, not this one. Give `Args` a
+   `cohort: str | None = None` option that keeps only `louped.tracking.cohort_ids(EXPERIMENT,
+   args.cohort)` (ids as text), so items picked on the run page can be run again alone.
 6. Run a small check here first (`launch` then `job`, or the app's Launch page), read it with
    `read-results`, then the real run, on a cluster if the model is large (`run-elsewhere`).
 7. Write the Result (model, date, numbers with denominators) and Next. Set `status: answered`
