@@ -2,25 +2,37 @@
 
 ## What louped is
 
-louped is a local workbench for research on language models along two axes: behavior and alignment
-(what models do and why) and efficiency and systems (what it costs to run them), plus instrument
-checks that reproduce known results so both can be trusted. A research question is an experiment;
-the app shows which questions are active, launches them and reads their results.
+louped is a local workbench for research on language models. The research has two axes:
 
-Every experiment uses one method: change a model (interventions, fine-tuning, prompts, adapters,
-kernels), measure what changed (evals on both versions, sample by sample, with paired intervals
-and moved/held verdicts), and explain it (lens, patching, probes, SAE features, circuits).
+- behavior and alignment (what models do and why)
+- efficiency and systems (what it costs to run them)
 
-It is built on existing free tools and writes only what joins them: one way to describe a change,
-one provider that runs any change in an eval, one data format for results, and the UI over all of
-it. A tool louped needs runs inside it, as a library, or in an environment of its own when it pins
-other versions. Nothing it does well is rewritten.
+Instrument checks reproduce known results, so the results on both axes can be trusted. A research
+question is an experiment. The app shows which questions are active, launches them and reads their
+results.
+
+Every experiment uses one method:
+
+1. Change a model (interventions, fine-tuning, prompts, adapters, kernels).
+2. Measure what changed (evals on both versions, sample by sample, with paired intervals and
+   moved/held verdicts).
+3. Explain it (lens, patching, probes, SAE features, circuits).
+
+It is built on existing free tools and writes only what joins them:
+
+- one way to describe a change
+- one provider that runs any change in an eval
+- one data format for results
+- the UI over all of it
+
+A tool louped needs runs inside it as a library. When the tool pins other versions, it runs in an
+environment of its own. louped does not rewrite what a tool already does well.
 
 ## The package and a project
 
-louped is installed once (`pip install louped`: the library, the `louped` command, the API and
-the UI, which the wheel carries as `louped/web`) and used in research projects, each its own
-folder and repository. `louped init` makes one:
+louped is installed once (`pip install louped`). The install gives the library, the `louped`
+command, the API and the UI, which the wheel carries as `louped/web`. You use it in research
+projects; each project is its own folder and repository. `louped init` makes one:
 
 ```
 my-research/
@@ -31,21 +43,24 @@ my-research/
   .louped/             what louped writes: runs, logs, jobs, vendored harnesses; gitignored
 ```
 
-What is written by hand is versioned; what louped writes can be deleted and rebuilt by running the
-experiments. `louped.core.project` finds the root; `louped.core.paths` puts `.louped/` and
-`experiments/` there unless `LOUPED_HOME` and `LOUPED_EXPERIMENTS` say otherwise. louped's own
-repository is not a project: it holds the package and, under `src/louped/templates/`, what `init`
-copies (also served to Claude Code as a plugin through `.claude-plugin/marketplace.json`).
+What is written by hand is versioned. What louped writes can be deleted and rebuilt by running the
+experiments. `louped.core.project` finds the root. `louped.core.paths` puts `.louped/` and
+`experiments/` there, unless `LOUPED_HOME` and `LOUPED_EXPERIMENTS` set other paths.
 
-A model with an architecture of its own (an engine's trained retrieval layers) is studied once it
-ships PyTorch modeling code: `load(remote_code=True)`, opt-in, since it runs the repository's
-code. An engine's runtime behaviour (retrieval during generation) is mirrored by `inject`'s hook
-points and checked against the engine through its endpoint; louped does not instrument a Rust or
-C++ forward pass.
+louped's own repository is not a project. It holds the package and, under `src/louped/templates/`,
+the files that `init` copies. These files are also served to Claude Code as a plugin through
+`.claude-plugin/marketplace.json`.
+
+louped can study a model with an architecture of its own (for example, an engine's trained
+retrieval layers) when the model ships PyTorch modeling code. Use `load(remote_code=True)`. It is
+opt-in, because it runs the repository's code. `inject`'s hook points mirror an engine's runtime
+behavior (retrieval during generation), and louped checks them against the engine through its
+endpoint. louped does not instrument a Rust or C++ forward pass.
 
 louped has no agent of its own. The person's agent (Claude Code, Codex, Cursor) drives it through
-`louped mcp` and follows the project's `AGENTS.md`; the person reads and judges in the UI.
-`louped view <folder>` opens results that were made without louped, read-only, with no project.
+`louped mcp` and follows the project's `AGENTS.md`. The person reads and judges in the UI.
+`louped view <folder>` opens results that were made without louped. It opens them read-only, with
+no project.
 
 ## The one idea: a change runs everywhere
 
@@ -53,11 +68,17 @@ louped has no agent of its own. The person's agent (Claude Code, Codex, Cursor) 
 policy = model + interventions + adapters + generation settings
 ```
 
-The same policy runs in an Inspect eval (through the `louped/` provider, agents with tools
-included), a training run, the Probe and Benchmark tools and an analysis. Base, steered, ablated, fine-tuned and
-prompted versions are therefore compared by one eval, one scorer and one view. A check is a plain
-function, wrapped once as an Inspect scorer (`inspect_ext.as_scorer`) and once as a reward
-(`train.rewards.as_reward`), so an eval becomes an RL environment without a rewrite.
+The same policy runs in:
+
+- an Inspect eval (through the `louped/` provider, agents with tools included)
+- a training run
+- the Probe and Benchmark tools
+- an analysis
+
+Thus one eval, one scorer and one view compare the base, steered, ablated, fine-tuned and prompted
+versions. A check is a plain function. It is wrapped once as an Inspect scorer
+(`inspect_ext.as_scorer`) and once as a reward (`train.rewards.as_reward`). Thus an eval becomes an
+RL environment without a rewrite.
 
 ## Tools
 
@@ -75,45 +96,52 @@ function, wrapped once as an Inspect scorer (`inspect_ext.as_scorer`) and once a
 | Tracking | MLflow on SQLite, Inspect logs | library |
 | API and UI | FastAPI; Next.js static export, shadcn/ui, TanStack Query, nuqs, Recharts, Plotly (3D, animation; loaded when shown) | |
 
-Rejected: verifiers (pulls in hosted-API clients; TRL's environments cover it), vLLM, EasySteer and
-cluster launchers such as submitit (a job runs here through louped's own provider, or is exported as
-a bundle whose job.sh the cluster's own scheduler runs and whose result comes back through the
-remote or is imported),
-TransformerLens (reimplements architectures, lags new models), Hydra (each tool keeps its native
-config; scripts use tyro), W&B (its server is not free to self-host), a plugin registry or marketplace (Inspect's
-registries and Python entry points exist; a project's own plugins/ folder is all louped reads,
-see louped.core.plugins: routes, a command, MCP tools, and static pages shown at a sidebar entry
-or as a tab on every run and experiment).
+Rejected:
+
+| Tool | Why rejected |
+|---|---|
+| verifiers | It pulls in hosted-API clients. TRL's environments cover it. |
+| vLLM, EasySteer, cluster launchers such as submitit | A job runs here through louped's own provider. Or it is exported as a bundle: the cluster's own scheduler runs its job.sh, and its result comes back through the remote or is imported. |
+| TransformerLens | It reimplements architectures and lags new models. |
+| Hydra | Each tool keeps its native config. Scripts use tyro. |
+| W&B | Its server is not free to self-host. |
+| A plugin registry or marketplace | Inspect's registries and Python entry points exist. louped reads only a project's own plugins/ folder (see louped.core.plugins): routes, a command, MCP tools, and static pages shown at a sidebar entry or as a tab on every run and experiment. |
 
 ## Research axes and domains
 
-louped is organised by research question, not by the system that asks or by the tool that answers.
+louped is organized by research question, not by the system that asks or by the tool that answers.
 
 | Axis | Domains |
 |---|---|
 | Behavior and alignment | mechanisms; sycophancy and honesty; steering and conditioning; agent behavior |
-| Efficiency and systems | context and retrieval inside the model; inference cost and kernels; small and specialised models |
+| Efficiency and systems | context and retrieval inside the model; inference cost and kernels; small and specialized models |
 | Instrument checks | reproducing known results |
 
 A question is an experiment in a project's `experiments/`, named for the question. Its README opens
-with front matter naming its domain and status (active, parked, answered); the project's
-`louped.toml` lists its domains and their axes, else `louped.stores.experiments.DEFAULT_DOMAINS`
-does, and an experiment naming none of them is refused. Evaluation,
-training, interventions and analysis are methods every domain uses, so they are packages in
-`src/louped`, not domains.
+with front matter that names its domain and status (active, parked, answered). The project's
+`louped.toml` lists its domains and their axes. If it does not, `louped.stores.experiments.DEFAULT_DOMAINS`
+lists them. louped refuses an experiment that names none of them. Evaluation, training,
+interventions and analysis are methods every domain uses. Thus they are packages in `src/louped`,
+not domains.
 
-Nothing in `src/louped` knows about any one system: a system you study comes in as a model id, an
-OpenAI-compatible endpoint (`louped.grid.endpoint`), an agent endpoint that reports the tools it ran
-in a `trace` field on its reply (the `agent/` provider), its regression cases as JSONL
-(`louped.inspect_ext.cases`) or its logged model calls, and its specifics stay in an experiment's
-options. The default domains, and how a project lists its own, are in `apps/site/content/docs/experiments.mdx`; what
-goes in an experiment's folder, and how the app finds it, in `apps/site/content/docs/experiments.mdx`.
+Nothing in `src/louped` knows about any one system. A system you study comes in as one of these:
+
+- a model id
+- an OpenAI-compatible endpoint (`louped.grid.endpoint`)
+- an agent endpoint that reports the tools it ran in a `trace` field on its reply (the `agent/`
+  provider)
+- its regression cases as JSONL (`louped.inspect_ext.cases`)
+- its logged model calls
+
+Its specifics stay in an experiment's options. `apps/site/content/docs/experiments.mdx` gives the
+default domains and how a project lists its own. The same page tells what goes in an experiment's
+folder and how the app finds it.
 
 ## Packages and layers
 
-One distribution (`louped`), import name `louped`, one extra per capability so an install carries
-only what it uses. A package imports only packages below it; `import-linter` enforces the contract
-in `pyproject.toml`.
+There is one distribution (`louped`), with the import name `louped`. It has one extra per
+capability, so an install carries only what it uses. A package imports only packages below it.
+`import-linter` enforces the contract in `pyproject.toml`.
 
 ```
 experiments                              leaf, in a project; nothing imports it
@@ -146,15 +174,16 @@ core                                     run metadata, paths, the project and it
   `louped.analysis.views`); SAE dashboards are JSON under `features/`. `louped derive` and an
   agent's `add_view` add to a finished run: columns under `derived/`, figures under `views/`,
   each listed in its `louped.added` tag. An experiment's own figures are `experiments/<name>/views/`.
-- Sources: `sources/` in the project (`louped.sources`): papers, docs, slides and notebooks listed
-  in `sources/index.json` with key, origin URL and sha256; their text page by page in an FTS5
-  index at `<home>/sources.db`, rebuilt from the files when one changes. Pins in
-  `sources/pins.jsonl` (the quote as it stands on its page), checked against the page's
-  text; the web app draws PDFs with pdf.js and renders `[@key pN]` in Markdown as citation chips.
-  `louped.reports` lists reports/, previews decks and documents through LibreOffice when installed,
-  and exports Vega-Lite (vl-convert) and Plotly (Kaleido, with Chrome) figures with a
-  `<file>.refs.json` sidecar holding the ref and its trace. `louped.core.documents` reads PDFs,
-  decks, documents and notebooks for both, and draws a notebook as HTML (nbconvert) for a frame
+- Sources: `sources/` in the project (`louped.sources`). It holds papers, docs, slides and
+  notebooks, listed in `sources/index.json` with key, origin URL and sha256. Their text is stored
+  page by page in an FTS5 index at `<home>/sources.db`. The index is rebuilt from the files when
+  one changes. Pins are in `sources/pins.jsonl` (the quote as it stands on its page), checked
+  against the page's text. The web app draws PDFs with pdf.js and renders `[@key pN]` in Markdown
+  as citation chips.
+  `louped.reports` lists reports/. It previews decks and documents through LibreOffice when
+  installed. It exports Vega-Lite (vl-convert) and Plotly (Kaleido, with Chrome) figures with a
+  `<file>.refs.json` sidecar that holds the ref and its trace. `louped.core.documents` reads PDFs,
+  decks, documents and notebooks for both. It draws a notebook as HTML (nbconvert) for a frame
   with no scripts.
 - Notebooks: `louped.notebooks` runs an experiment's `.ipynb` with papermill inside a run; the
   cell tagged `parameters` is the launch form, and the run keeps `notebook/<name>.ipynb`. The
@@ -162,7 +191,7 @@ core                                     run metadata, paths, the project and it
   `louped.check` lists result numbers with no ref or citation beside them, citations without a
   pinned page, refs that do not resolve, and pins whose quote left its page.
 - Refs (`louped.core.refs`) address evidence: `run:<id>/<path>#<item>`, `experiment:<name>/<path>`.
-  A vega or plotly figure whose marks are items says so (`items`; plotly trace `ids`), and
+  A vega or plotly figure whose marks are items says so (`items`; plotly trace `ids`).
   `louped.stores.trace` follows a mark's ref to the derive script and commit, the item's record
   in every file, and the run's commit (`GET /api/trace`, MCP `trace`).
 - Judges: `judges/<name>.py` in the project, read without running for the list
@@ -173,10 +202,10 @@ core                                     run metadata, paths, the project and it
 - SAEs load through SAELens; louped reads the residual at the SAE's hook with nnsight, so the model
   is never swapped for a TransformerLens one.
 - Every run writes `RunMeta`: commit and dirty flag, package versions, seed.
-- Every run started by `start_run` also carries the machine while it was open, as MLflow's
-  `system/` metrics sampled every 2 s: GPU power, utilisation and memory (NVML, which sees every
-  process on a GPU), CPU and RAM. The UI keeps them out of a run's results and shows them, with
-  the GPU energy, under Hardware.
+- Every run started by `start_run` also records the machine while the run was open. It records
+  MLflow's `system/` metrics, sampled every 2 s: GPU power, utilization and memory (NVML, which
+  sees every process on a GPU), CPU and RAM. The UI keeps them out of a run's results. It shows
+  them, with the GPU energy, under Hardware.
 
 ## Server and UI
 
@@ -186,11 +215,12 @@ Every route reads what another tool wrote.
 
 Three parts compute: the Probe and Benchmark tools, job launch, and model load.
 
-- The tools (server/playground.py, behind the Probe and Benchmark pages): generate streams a
-  reply and continues a conversation; inspect returns a prompt's views; patch patches the residual
-  stream or heads between a clean and a corrupt prompt; dose sweeps a saved direction over
-  strengths at the next token; speed measures time to first token, decode throughput and peak
-  memory, base and changed.
+- The tools (server/playground.py, behind the Probe and Benchmark pages):
+  - generate streams a reply and continues a conversation.
+  - inspect returns a prompt's views.
+  - patch patches the residual stream or heads between a clean and a corrupt prompt.
+  - dose sweeps a saved direction over strengths at the next token.
+  - speed measures time to first token, decode throughput and peak memory, base and changed.
 - A job is an existing command in a subprocess: an experiment script or notebook, `louped train`,
   `louped grid`, `louped new`, `louped features` or `inspect eval`. Jobs run one at a time. Each job
   writes its output to `<home>/jobs`. A job's form is read from the command's own argument parser.
@@ -198,41 +228,52 @@ Three parts compute: the Probe and Benchmark tools, job launch, and model load.
   Slurm cluster or a VM. When the project is a pushed git commit, the bundle is one file that
   clones it. The results come back through the remote, or as an archive that is imported.
 
-Launching and loading run code on this machine. So both are on only for a loopback server, never
+Launching and loading run code on this machine. Thus both are on only for a loopback server, never
 with `--expose`.
 
-Runs move between machines as bundles (`louped.sync`): a folder laid out as a louped home (Inspect
-logs, an MLflow store with its artifacts, result.json). `louped push` writes one per push into the
-remote, any fsspec URL (`remote` in louped.toml); `louped pull` and `louped import` add a bundle's
-runs to the stores, skipping runs already there. An `hf://buckets/` remote is made, private, on
-the first push; its token is huggingface_hub's own (`hf auth login`, HF_TOKEN), which the app's
-Connect dialog and the CLI's first push ask for and never write into the project. `louped publish` (server/publish.py) writes the UI
-with every GET answer its pages ask for as static files, for any static host.
+Runs move between machines as bundles (`louped.sync`). A bundle is a folder laid out as a louped
+home (Inspect logs, an MLflow store with its artifacts, result.json). `louped push` writes one
+bundle per push into the remote. The remote is any fsspec URL (`remote` in louped.toml).
+`louped pull` and `louped import` add a bundle's runs to the stores, and skip runs already there.
 
-`louped mcp` is a stdio MCP server for coding agents. It imports nothing from the server: it calls
-the same HTTP API the UI does, so an agent's jobs share the queue and the `--expose` guard, and show
-on the Runs page.
+The first push makes an `hf://buckets/` remote, private. Its token is huggingface_hub's own
+(`hf auth login`, HF_TOKEN). The app's Connect dialog and the CLI's first push ask for it and never
+write it into the project. `louped publish` (server/publish.py) writes the UI as static files, with
+every GET answer its pages ask for, for any static host.
 
-Pages: a top bar of sections over a sidebar of the section's pages, which folds to icons. The
-workspace: Home, Runs (jobs with their progress, then every run), Compare, Launch, Sources and
-Reports, with Run, Job, Source and Report detail. Each research domain lives under its own path: `/behavior/` Overview, Experiments, Probe
-(reply, inspect, patch, dose), Vectors, Circuits, Feature; `/efficiency/` Overview, Experiments,
-Benchmark (speed, reply), Training. An experiment's page is under its domain's path. Probe and
-Benchmark are one set of tools (server/playground.py), each page showing its own. Every technical term has a ? from
-`apps/web/src/lib/glossary.ts`.
+`louped mcp` is a stdio MCP server for coding agents. It imports nothing from the server. It calls
+the same HTTP API the UI does. Thus an agent's jobs share the queue and the `--expose` guard, and
+show on the Runs page.
 
-Home, a run's page and an experiment's page are data (server/ui.py): regions (`run.tabs`,
-`run.overview`, ...) of blocks from a fixed catalog, read from an experiment's `layout.json` over
-the project's over a preset over the default, each file checked before it is used. The person's
-agent changes them with `set_layout`. Inside the blocks every part (card, row, cell, field,
-column, control) has an address (server/parts.py lists the kinds), and a layout's `parts` change
-them by address: hidden, label, about, note, order, a control's default. Shift+click in the app
-picks parts, with what each stands for (an item's records, a condition's numbers), for the agent's
-`ui_selection`; the agent's `ui_show` opens a page and points at parts with a note, and hears back
-which were missing. A block the catalog lacks is a plugin page, drawn with the kit at `/kit/`
-(louped.css, louped.js) so it reads as the app's own. louped.toml's `[theme]` sets token values
-only. Picked item rows are a cohort: `stores/items.py` reads a run's conditions on them, with the
-paired bootstrap interval `compare` uses, and `core/cohorts.py` saves them in the experiment
+Pages: a top bar of sections is over a sidebar of the section's pages. The sidebar folds to icons.
+
+| Section | Pages |
+|---|---|
+| Workspace | Home, Runs (jobs with their progress, then every run), Compare, Launch, Sources and Reports, with Run, Job, Source and Report detail |
+| `/behavior/` | Overview, Experiments, Probe (reply, inspect, patch, dose), Vectors, Circuits, Feature |
+| `/efficiency/` | Overview, Experiments, Benchmark (speed, reply), Training |
+
+Each research domain lives under its own path. An experiment's page is under its domain's path.
+Probe and Benchmark are one set of tools (server/playground.py); each page shows its own. Every
+technical term has a ? from `apps/web/src/lib/glossary.ts`.
+
+Home, a run's page and an experiment's page are data (server/ui.py). They are regions
+(`run.tabs`, `run.overview`, ...) of blocks from a fixed catalog. The layout is read from an
+experiment's `layout.json` over the project's over a preset over the default. Each file is checked
+before it is used. The person's agent changes them with `set_layout`.
+
+Inside the blocks every part (card, row, cell, field, column, control) has an address
+(server/parts.py lists the kinds). A layout's `parts` change them by address: hidden, label,
+about, note, order, a control's default. Shift+click in the app picks parts for the agent's
+`ui_selection`, with what each part stands for (an item's records, a condition's numbers). The
+agent's `ui_show` opens a page and points at parts with a note. It hears back which parts were
+missing.
+
+A block the catalog lacks is a plugin page. It is drawn with the kit at `/kit/` (louped.css,
+louped.js), so it reads as the app's own. louped.toml's `[theme]` sets token values only.
+
+Picked item rows are a cohort. `stores/items.py` reads a run's conditions on them, with the
+paired bootstrap interval `compare` uses. `core/cohorts.py` saves them in the experiment
 (`cohorts/<name>.json`) for a run.py's `--cohort` (`louped.tracking.cohort_ids`).
 Design rules are in `apps/web/AGENTS.md`. `apps/site` is the docs site.
 

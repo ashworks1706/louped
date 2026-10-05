@@ -1,28 +1,29 @@
 # louped: agent guide
 
-louped is a local workbench for research on LLM behavior and efficiency: each research question is an
-experiment, filed under a domain on one of two axes (behavior and alignment, efficiency and
-systems) or under the instrument checks. Read `docs/ARCHITECTURE.md` for the design and the tools
-it runs, `docs/ROADMAP.md` for what is next.
-Do not contradict them; propose an edit to the doc instead.
+louped is a local workbench for research on LLM behavior and efficiency. Each research question is
+an experiment. It is filed under a domain on one of two axes (behavior and alignment, efficiency
+and systems), or under the instrument checks. Read `docs/ARCHITECTURE.md` for the design and the
+tools it runs. Read `docs/ROADMAP.md` for what is next. Do not contradict them; propose an edit to
+the doc instead.
 
 ## Rules that decide most changes
 
-- **Integrate, don't rewrite.** Before writing code, name the tool that already does it and run it
-  inside louped: as a library, or in its own environment when it pins other versions. Own code is
-  the join between tools. A new dependency must be free and permissively licensed (MIT, Apache,
-  BSD, OFL) and justified in the PR.
+- **Integrate, don't rewrite.** Before you write code, name the tool that already does it. Run that
+  tool inside louped: as a library, or in its own environment when it pins other versions. Own
+  code is the join between tools. A new dependency must be free and permissively licensed (MIT,
+  Apache, BSD, OFL). Justify it in the PR.
 - **No speculative code.** No module, option or abstraction without a caller today.
 - **Questions before infrastructure.** Code in `src/louped` earns its place when an experiment needs
   it. A question is an experiment in a research project (`louped init`, its own repository), not in
-  this one: `experiments/<name>/`, its README opening with its domain and status (the project's
-  `louped.toml`, else `DEFAULT_DOMAINS` in `src/louped/stores/experiments.py`). Nothing in
-  `src/louped` or an experiment's name is tied to one application: a system comes in as a model
-  id, an OpenAI-compatible endpoint, an agent endpoint or logged calls.
+  this one. It is `experiments/<name>/`, and its README opens with its domain and status. The
+  domains come from the project's `louped.toml`, else from `DEFAULT_DOMAINS` in
+  `src/louped/stores/experiments.py`. Nothing in `src/louped` or an experiment's name is tied to
+  one application. A system comes in as a model id, an OpenAI-compatible endpoint, an agent
+  endpoint or logged calls.
 - **Say what happened.** No silent fallbacks: raise, or print what was chosen. No fake paths in
   `src/louped`; stand-ins belong in tests.
 - **Reproducible numbers.** Anything that writes a result writes `louped.core.RunMeta` next to it.
-- **Local.** No step calls a hosted model; a judge, if one is needed, is a local model through the
+- **Local.** No step calls a hosted model. If a judge is needed, it is a local model through the
   `louped/` provider.
 
 ## Commands
@@ -87,23 +88,27 @@ tests/            Python tests, CPU only
 The app finds each of these by convention: no registration. `apps/site/content/docs/experiments.mdx`
 has the details.
 
-nnsight traces the source of the block it runs: keep trace bodies in files, use explicit loops
-(not comprehensions) inside them, and touch modules in execution order. The UI talks to the server
-over HTTP only.
+nnsight traces the source of the block it runs. Thus:
+
+- Keep trace bodies in files.
+- Use explicit loops (not comprehensions) inside them.
+- Touch modules in execution order.
+
+The UI talks to the server over HTTP only.
 
 ## Branches and pull requests
 
-`main` takes no direct pushes. Work on a branch, open a pull request, squash merge. Conventional
-commit titles (`feat:`, `fix:`, `docs:`, `chore:`); release-please builds the changelog from them.
-The one required check is `CI`. Never force-push to `main`, move a tag or publish a release unless
-asked.
+`main` takes no direct pushes. Work on a branch, open a pull request, and squash merge. Use
+conventional commit titles (`feat:`, `fix:`, `docs:`, `chore:`). release-please builds the
+changelog from them. The one required check is `CI`. Never force-push to `main`, move a tag or
+publish a release unless asked.
 
 ## Agent tooling
 
 `.claude/skills/` holds the workflows for developing louped (`check`, `roadmap`, `code-quality`, and
 vendored debugging, TDD, verification and security skills). Run the `louped-reviewer` agent before
-opening a pull request and `web-reviewer` after any change under `apps/web`.
+you open a pull request. Run `web-reviewer` after any change under `apps/web`.
 
-`.mcp.json` registers `louped mcp`, which drives a running `louped serve`: read experiments, runs,
-figures and samples, compare runs, and launch jobs through the app's queue. Prefer it to the CLI
-for running experiments, so the work shows in the app.
+`.mcp.json` registers `louped mcp`, which drives a running `louped serve`. It reads experiments,
+runs, figures and samples, compares runs, and launches jobs through the app's queue. Prefer it to
+the CLI for running experiments, so the work shows in the app.

@@ -4,8 +4,15 @@ description: Add pages, tabs, blocks, routes, a command or agent tools to louped
 ---
 
 Most additions need no plugin. A new chart is a [view](/docs/experiments), and `views.vega` draws
-any Vega-Lite chart. A plugin is for the rest: a page of your own in the app, a tab on every run
-or experiment, the API routes they call, a command, or tools for your agent. You don't need a louped release for any of it.
+any Vega-Lite chart. A plugin is for the rest:
+
+- a page of your own in the app
+- a tab on every run or experiment
+- the API routes they call
+- a command
+- tools for your agent
+
+You don't need a louped release for any of it.
 
 A plugin is a folder under `plugins/` in your project:
 
@@ -81,10 +88,11 @@ Build pages from louped's kit, so they look like the rest of the app in both mod
 | `l-card`, `l-button`, `l-input`, `l-badge`, `l-muted`, `l-mono` | Classes for the rest                                        |
 
 Its scripts call the same API the app does, such as `fetch("/api/runs")` or
-`fetch("/api/x/verdicts/left")`. The app hands every page its theme: the colours as CSS variables,
-such as `var(--foreground)` and `var(--border)`, and the fonts as `var(--font-geist-sans)` and
-`var(--font-geist-mono)`.
+`fetch("/api/x/verdicts/left")`. The app hands every page its theme:
+
+- the colors as CSS variables, such as `var(--foreground)` and `var(--border)`
+- the fonts as `var(--font-geist-sans)` and `var(--font-geist-mono)`
 
 A plugin that fails to load shows its error on its page. Plugins run your project's code in
-louped's process. They load only on your own machine, never with `louped serve --expose` or in
-`louped publish`.
+louped's process. They load only on your own machine. They never load with
+`louped serve --expose` or in `louped publish`.

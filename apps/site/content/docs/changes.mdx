@@ -12,12 +12,12 @@ inspect eval task.py --model louped/Qwen/Qwen2.5-0.5B-Instruct \
 
 ## Interventions
 
-| Kind     | What it does                                 |
-| -------- | -------------------------------------------- |
-| `steer`  | Adds a saved direction at one layer          |
-| `ablate` | Removes a direction at every layer           |
-| `inject` | Adds the state of some passages at one layer |
-| `heads`  | Turns off chosen attention heads             |
+| Kind     | What it does                                  |
+| -------- | --------------------------------------------- |
+| `steer`  | Adds a saved direction at one layer           |
+| `ablate` | Removes a direction at every layer            |
+| `inject` | Adds the state of given passages at one layer |
+| `heads`  | Turns off chosen attention heads              |
 
 `inject` takes `at`: `all` (every token, the default), `prompt` (the prompt only) or `chunks`
 (every `chunk`-th generated token). These match an engine that retrieves while it generates.
@@ -27,7 +27,7 @@ inspect eval task.py --model louped/Qwen/Qwen2.5-0.5B-Instruct \
 | Argument      | What it does                                                       |
 | ------------- | ------------------------------------------------------------------ |
 | `bank`        | Loads LoRA adapters by name, all off                               |
-| `adapters`    | Turns on some of the bank                                          |
+| `adapters`    | Turns on chosen adapters from the bank                             |
 | `merges`      | Adds merged adapters (`linear`, `ties`, ...)                       |
 | `phases`      | Changes the live adapters partway through a reply                  |
 | `diffusion`   | Serves a masked diffusion model                                    |
@@ -61,9 +61,14 @@ seeds: [0, 1, 2]
 louped grid grid.yaml
 ```
 
-For each condition you get the change from the baseline with a 95% paired interval, and two
-verdicts: whether the metric **moved**, and whether the `held` score **held**. Add
-`extra: [latency/mean, peak_memory/mean]` to see what each condition costs next to what it changes.
+For each condition you get the change from the baseline with a 95% paired interval. You also get
+two verdicts:
+
+- whether the metric **moved**
+- whether the `held` score **held**
+
+Add `extra: [latency/mean, peak_memory/mean]` to see what each condition costs next to what it
+changes.
 
 A condition can also be a model behind an OpenAI-compatible endpoint, such as llama-server, vLLM or
-Ollama: use `endpoint(name, url)` from `louped.grid`.
+Ollama. For this, use `endpoint(name, url)` from `louped.grid`.

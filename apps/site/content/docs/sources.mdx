@@ -4,9 +4,9 @@ description: The papers, docs, slides and notebooks your claims rest on, kept wi
 ---
 
 `sources/` sits beside `experiments/` and is committed with it. Each paper, doc, deck or notebook
-there has a key, which is what a citation names, plus a title and the URL it came from.
-`sources/index.json` lists them. louped reads each one page by page so that you and your agent
-can search and quote it.
+there has a key, a title and the URL it came from. A citation names the key. `sources/index.json`
+lists them. louped reads each one page by page, so that you and your agent can search and quote
+it.
 
 ```bash
 louped source add paper.pdf --key sharma23
@@ -25,32 +25,38 @@ louped source list
 
 A page is a PDF page, a slide, a notebook cell, or a whole Markdown, text or Word file. A
 notebook's page also shows the whole notebook with its saved outputs, as Jupyter does. The page
-runs no scripts from the notebook, so math shows as TeX and an interactive chart shows only if the
-notebook saved a static copy of it. The
-search index lives in louped's state folder and is rebuilt from the files whenever one changes,
-so it never needs committing.
+runs no scripts from the notebook. Thus:
 
-A Colab notebook kept in Google Drive needs your sign-in, so download it (File > Download .ipynb)
-and add the file instead. louped fetches over https from public addresses only, never from this
-machine or its local network.
+- Math shows as TeX.
+- An interactive chart shows only if the notebook saved a static copy of it.
 
-Your agent searches `sources/` with `search_sources` before it looks anything up on the web,
-quotes from `source_page`, and keeps a new paper with `add_source`, which records the URL the
-file came from.
+The search index lives in louped's state folder. louped rebuilds it from the files whenever one
+changes. Thus you never need to commit it.
+
+A Colab notebook kept in Google Drive needs your sign-in. Download it (File > Download .ipynb) and
+add the file instead. louped fetches over https from public addresses only. It never fetches from
+this machine or its local network.
+
+Your agent:
+
+- searches `sources/` with `search_sources` before it looks anything up on the web
+- quotes from `source_page`
+- keeps a new paper with `add_source`, which records the URL the file came from
 
 ## Read, pin and cite
 
-The Sources page (G S) searches every page and lists the sources. Open one to read it: a PDF as
-it prints, anything else as its text. Select words on the page and press Pin to keep that
-passage, with a note if you like. Pins are kept in `sources/pins.jsonl`, each with its quote,
-page and the words either side, so a pin can always be found again.
+The Sources page (G S) searches every page and lists the sources. Open a source to read it. A PDF
+shows as it prints; any other file shows as its text. To keep a passage, select words on the page
+and press Pin. You can add a note. Pins are kept in `sources/pins.jsonl`. Each pin has its quote,
+its page and the words on each side of it. Thus a pin can always be found again.
 
-A pin holds words that are on its page. A paraphrase is refused, by the app and by the agent's
-`pin` tool alike, so a citation always points at what the source says.
+A pin holds words that are on its page. The app and the agent's `pin` tool both refuse a
+paraphrase. Thus a citation always points at what the source says.
 
-Cite a page in any Markdown louped shows (an experiment's README, say) as
-`[@<key> p<page>]`, for example `[@sharma23 p4]`. It shows as a chip that opens the page, and on
-hover shows the source's title and the passages pinned there, or says the key is not a source.
+Cite a page in any Markdown louped shows (for example, an experiment's README) as
+`[@<key> p<page>]`, for example `[@sharma23 p4]`. It shows as a chip that opens the page. On hover,
+the chip shows the source's title and the passages pinned there. If the key is not a source, the
+chip says so.
 
 ## Check a write-up
 
@@ -64,6 +70,6 @@ in them (or the files you name). It lists what is not grounded, by file and line
 - A ref that does not resolve.
 - A pin whose words are no longer on its page, because the source file changed.
 
-It exits 1 when it finds anything, so it can run in CI. Your agent runs it as `check` before
-handing over a write-up, as its `ground-claims` and `write-report` skills say. Whole numbers, such
-as counts and years, and anything in `code` are not checked, so write versions and paths as code.
+It exits 1 when it finds anything, so it can run in CI. Your agent runs it as `check` before it
+hands over a write-up, as its `ground-claims` and `write-report` skills say. It does not check whole
+numbers (such as counts and years) or anything in `code`. Thus write versions and paths as code.

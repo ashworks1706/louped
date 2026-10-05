@@ -47,8 +47,8 @@ project by looking for `louped.toml` in the current folder and its parents.
 | `LOUPED_NEURONPEDIA`      | `https://neuronpedia.org`, for feature pages         |
 
 The first `louped push` or `louped pull` in a project with no remote asks for one. Press Enter
-for a private Hugging Face bucket of your own. It also asks for a Hugging Face token when an
-`hf://` remote finds none, and saves the remote to `louped.toml`.
+for a private Hugging Face bucket of your own. If an `hf://` remote finds no Hugging Face token,
+the command also asks for one. It saves the remote to `louped.toml`.
 
 ## Training sets: `louped data`
 

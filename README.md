@@ -8,7 +8,7 @@
 
 Keep your research questions about language models in a project. Each question is an experiment
 with a README (the question and the test) and a script that runs it. Your coding agent writes and
-runs them; you read the results item by item in louped's app. Everything runs on your machine or
+runs them. You read the results item by item in louped's app. Everything runs on your machine or
 your cluster, with open-weight models.
 
 <picture>
@@ -30,13 +30,13 @@ Open http://127.0.0.1:8000 and launch the example experiment.
 
 1. **Make a project** with `louped init`. It also connects your coding agent.
 2. **Ask a question.** Your agent (Claude Code, Codex, Cursor) writes the experiment.
-3. **Run it** on your machine, or send it to a Slurm cluster; with a remote set, the job pushes
+3. **Run it** on your machine, or send it to a Slurm cluster. With a remote set, the job pushes
    its results and `louped pull` brings them in.
 4. **Read the results**: every item under every condition, what changed, and out of how many.
-   Edit a run's write-up beside its rendering; delete what you no longer need to the trash.
-5. **Share and shape it.** Push runs for others to pull, or publish a read-only dashboard. Shift+click
-   any rows, cards or fields to ask your agent about them, or to have it change them; it points
-   back at what it means.
+   Edit a run's write-up beside its rendering. Move what you no longer need to the trash.
+5. **Share and shape it.** Push runs for others to pull, or publish a read-only dashboard.
+   Shift+click rows, cards or fields to ask your agent about them, or to have it change them. The
+   agent points back at what it means.
 
 Already have results? `louped view <folder>` opens them read-only.
 

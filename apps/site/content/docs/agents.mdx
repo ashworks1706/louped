@@ -12,7 +12,7 @@ louped has no agent of its own. It connects to the one you already use.
 - `.claude/skills/`: steps for starting an experiment, reading results, running on a cluster,
   writing a report, changing the app's pages and adding a plugin.
 
-Start the app with `louped serve`, then open your agent in the project folder and ask it what to
+Start the app with `louped serve`. Then open your agent in the project folder and ask it what to
 test.
 
 ## Tools the agent gets
@@ -41,13 +41,17 @@ test.
 | `check`                                                  | Finds numbers and citations with no source              |
 | `reports`, `export_figure`                               | Lists reports/ and exports a figure into it             |
 
-Work the agent starts shows in the app like your own. To ask about or change something on a
-page, Shift+click it (as many parts as you like) and your agent gets them with their data
+Work the agent starts shows in the app like your own. To ask about or change a part of a page,
+Shift+click it. You can pick as many parts as you like. Your agent gets them with their data
 ([Customize the app](/docs/customize)).
 
-Ask for a view the app lacks ("these claims in 3D", "a column for which ones hedge") and the agent
-makes it where it belongs: a column in the run's Items, a figure on the run or on the experiment's
-page, then points you at it. Ask again to change it; it keeps the name.
+You can ask for a view the app lacks ("these claims in 3D", "a column for which ones hedge"). The
+agent makes it where it belongs:
+
+- a column in the run's Items
+- a figure on the run or on the experiment's page
+
+Then it points you at it. Ask again to change it; it keeps the name.
 
 ## Without `louped init`
 
