@@ -64,7 +64,11 @@ def trash(path: Path, kind: str) -> Path:
     import shutil
     from datetime import UTC, datetime
 
+    source = os.path.realpath(path)
+    roots = [os.path.realpath(r) for r in (home(), logs_dir(), experiments_dir())]
+    if not any(source.startswith(r + os.sep) for r in roots):
+        raise ValueError(f"{path} is not under louped's home, logs or experiments")
     target = home() / "trash" / kind / f"{datetime.now(UTC):%Y%m%d-%H%M%S}-{path.name}"
     target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.move(path, target)
+    shutil.move(source, target)
     return target
