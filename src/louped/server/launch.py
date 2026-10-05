@@ -400,7 +400,8 @@ class Jobs:
             job = self.get(job_id)
             if job.status in ("queued", "running"):
                 raise HTTPException(409, f"job {job_id} is {job.status}: cancel it first")
-            trash(self.dir / job_id, "jobs")
+            # The folder is the one listed, not one built from the request's id.
+            trash(next(d for d in self.dir.iterdir() if d.name == job.id), "jobs")
 
     def work(self) -> None:
         import fcntl
