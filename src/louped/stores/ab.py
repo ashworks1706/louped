@@ -20,6 +20,7 @@ from typing import Literal
 
 from louped.core import home
 from louped.core.judges import POINTS
+from louped.core.paths import inside
 from louped.stores import evals
 from louped.stores.compare import interval
 from louped.stores.labels import kappa, pick
@@ -120,7 +121,7 @@ def _run(run_id: str) -> str:
 
 
 def _path(a: str, b: str) -> Path:
-    return home() / "ab" / f"{_run(a)}~{_run(b)}.json"
+    return inside(home() / "ab", f"{_run(a)}~{_run(b)}.json")
 
 
 def _load(a: str, b: str) -> dict:
