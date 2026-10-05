@@ -129,6 +129,27 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/trace": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Trace
+     * @description Where a ref's evidence comes from: a figure's mark down to the script that made the
+     *     figure, the item's rows in every file, and the run with its commit.
+     */
+    get: operations["trace_api_trace_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/runs/{run_id}/views": {
     parameters: {
       query?: never;
@@ -1786,6 +1807,20 @@ export interface components {
         | components["schemas"]["PlotlyView"]
       )[];
     };
+    /**
+     * ItemSource
+     * @description Which items a figure's marks stand for, so a mark opens its item and traces to the rows,
+     *     script and commit behind it. A plotly figure names each mark's item in its trace's `ids`; a
+     *     vega figure in the data field `field`.
+     */
+    ItemSource: {
+      /** Run */
+      run?: string | null;
+      /** Folder */
+      folder?: string | null;
+      /** Field */
+      field?: string | null;
+    };
     /** Job */
     Job: {
       /** Id */
@@ -2229,6 +2264,7 @@ export interface components {
       note?: string | null;
       /** About */
       about?: string | null;
+      items?: components["schemas"]["ItemSource"] | null;
     };
     /** PluginInfo */
     PluginInfo: {
@@ -2757,6 +2793,42 @@ export interface components {
       /** Parse Error */
       parse_error?: string | null;
     };
+    /**
+     * Trace
+     * @description Where a ref's evidence comes from: the figure, the script that made it, the item's rows in
+     *     every file, and the run with its commit.
+     */
+    Trace: {
+      /** Ref */
+      ref: string;
+      /** Steps */
+      steps: components["schemas"]["TraceStep"][];
+    };
+    /**
+     * TraceStep
+     * @description One link of a trace, from what was asked about down to the run it came from.
+     */
+    TraceStep: {
+      /** Ref */
+      ref: string;
+      /**
+       * What
+       * @enum {string}
+       */
+      what: "figure" | "script" | "item" | "run";
+      /** Title */
+      title: string;
+      /** Commit */
+      commit?: string | null;
+      /** Dirty */
+      dirty?: boolean | null;
+      /** Rows */
+      rows?: {
+        [key: string]: {
+          [key: string]: unknown;
+        };
+      } | null;
+    };
     /** Turn */
     Turn: {
       /**
@@ -2800,6 +2872,7 @@ export interface components {
       note?: string | null;
       /** About */
       about?: string | null;
+      items?: components["schemas"]["ItemSource"] | null;
     };
     /** Kind */
     louped__server__parts__Kind: {
@@ -3088,6 +3161,37 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["CohortStats"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  trace_api_trace_get: {
+    parameters: {
+      query: {
+        ref: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Trace"];
         };
       };
       /** @description Validation Error */

@@ -21,6 +21,7 @@ export type ScatterView = Schemas["ScatterView"];
 export type TokensView = Schemas["TokensView"];
 export type VegaView = Schemas["VegaView"];
 export type PlotlyView = Schemas["PlotlyView"];
+export type Trace = Schemas["Trace"];
 export type Pushed = Schemas["Pushed"];
 export type RemoteState = Schemas["RemoteState"];
 export type PluginInfo = Schemas["PluginInfo"];
@@ -297,6 +298,10 @@ export const q = {
   agreement: (id: string) => ({
     queryKey: ["agreement", id],
     queryFn: () => get<Agreement>(`/runs/${encodeURIComponent(id)}/agreement`),
+  }),
+  trace: (ref: string) => ({
+    queryKey: ["trace", ref],
+    queryFn: () => get<Trace>(`/trace?ref=${encodeURIComponent(ref)}`),
   }),
   views: (id: string, live = false) => ({
     queryKey: ["views", id],

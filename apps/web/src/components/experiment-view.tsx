@@ -236,14 +236,20 @@ function ExperimentTabs({ experiment: e }: { experiment: ExperimentDetail }) {
   const views = (
     <div className="flex flex-col gap-4">
       {shownViews.map((v) => (
-        <Figure key={v.path} view={v.view} id={at(v.path)} />
+        <Figure
+          key={v.path}
+          view={v.view}
+          id={at(v.path)}
+          source={`experiment:${e.name}/${v.path}`}
+        />
       ))}
     </div>
   );
   /** One of the experiment's figures by its path, or what is missing. */
   const one = (path: string) => {
     const v = figures.data?.find((f) => f.path === path);
-    if (v) return <Figure view={v.view} id={at(v.path)} />;
+    if (v)
+      return <Figure view={v.view} id={at(v.path)} source={`experiment:${e.name}/${v.path}`} />;
     return figures.isPending ? null : (
       <p className="text-muted-foreground text-sm">
         No figure{" "}
