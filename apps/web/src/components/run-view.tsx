@@ -12,7 +12,7 @@ import { ArtifactBrowser } from "@/components/artifact-browser";
 import { CopyButton } from "@/components/copy-button";
 import { EmptyState } from "@/components/empty-state";
 import { hasItems, ItemsView } from "@/components/items-view";
-import { Markdown } from "@/components/markdown";
+import { EditableMarkdown } from "@/components/markdown-editor";
 import { Hardware, hasHardware } from "@/components/hardware";
 import { HistoryCharts } from "@/components/history-chart";
 import { MetricValue } from "@/components/metric";
@@ -23,7 +23,7 @@ import { StatGrid } from "@/components/stat-grid";
 import { SamplesTable } from "@/components/samples-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { API, isLive, q, type RunDetail } from "@/lib/api";
+import { API, isLive, q, saveArtifact, type RunDetail } from "@/lib/api";
 import { artifactQuery } from "@/lib/artifacts";
 import { ago, headline } from "@/lib/format";
 import { ExperimentLink } from "@/components/experiment-link";
@@ -207,13 +207,21 @@ function Overview({ run }: { run: RunDetail }) {
 /** The report a run wrote for people (report.md at its top level), rendered. */
 function Report({ runId }: { runId: string }) {
   const text = useQuery(artifactQuery(runId, "report.md"));
+  const client = useQueryClient();
   return (
     <section className="flex flex-col gap-2">
       <h2 className="text-sm font-medium">Report</h2>
       <QueryState query={text}>
         {(md) => (
           <article className="rounded-xl border px-6 py-5">
-            <Markdown>{md}</Markdown>
+            <EditableMarkdown
+              name="report.md"
+              shown={md}
+              save={async (t) => {
+                await saveArtifact(runId, "report.md", t);
+                await client.invalidateQueries({ queryKey: ["artifact", runId, "report.md"] });
+              }}
+            />
           </article>
         )}
       </QueryState>

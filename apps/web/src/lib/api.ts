@@ -19,6 +19,10 @@ export type LineView = Schemas["LineView"];
 export type TableView = Schemas["TableView"];
 export type ScatterView = Schemas["ScatterView"];
 export type TokensView = Schemas["TokensView"];
+export type VegaView = Schemas["VegaView"];
+export type Pushed = Schemas["Pushed"];
+export type RemoteState = Schemas["RemoteState"];
+export type PluginInfo = Schemas["PluginInfo"];
 export type View = RunView["view"];
 export type Direction = Schemas["Direction"];
 type Graph = Schemas["Graph"];
@@ -51,8 +55,26 @@ export class ApiError extends Error {
   }
 }
 
+/** A page from `louped publish`: its API answers are files, api/<key>.json (see publish.py). */
+export const isSnapshot = () =>
+  typeof document !== "undefined" &&
+  document.querySelector('meta[name="louped-snapshot"]') !== null;
+
+/** Longer keys are hashed, as publish.py names their files. */
+const MAX_KEY = 200;
+
+async function url(path: string): Promise<string> {
+  if (!isSnapshot()) return `${API}/api${path}`;
+  let key = encodeURIComponent(path).replaceAll("%", ",");
+  if (key.length > MAX_KEY) {
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(key));
+    key = "h-" + [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+  return `${API}/api/${key}.json`;
+}
+
 async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
-  const res = await fetch(`${API}/api${path}`, { signal });
+  const res = await fetch(await url(path), { signal });
   if (!res.ok) throw new ApiError(res.status, await detail(res, path));
   return res.json() as Promise<T>;
 }
@@ -76,6 +98,28 @@ async function send(path: string, body: unknown, signal?: AbortSignal): Promise<
   if (!res.ok) throw new ApiError(res.status, await detail(res, path));
   return res;
 }
+
+async function put<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API}/api${path}`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new ApiError(res.status, await detail(res, path));
+  return res.json() as Promise<T>;
+}
+
+/** An experiment's README as written, front matter and all. */
+export const readme = (name: string) =>
+  get<{ text: string }>(`/experiments/${encodeURIComponent(name)}/readme`).then((r) => r.text);
+export const saveReadme = (name: string, text: string) =>
+  put(`/experiments/${encodeURIComponent(name)}/readme`, { text });
+/** Replaces a Markdown file a run logged. */
+export const saveArtifact = (run: string, path: string, text: string) =>
+  put(
+    `/runs/${encodeURIComponent(run)}/artifacts/${path.split("/").map(encodeURIComponent).join("/")}`,
+    { text },
+  );
 
 async function post<T>(path: string, body: unknown): Promise<T> {
   return (await send(path, body)).json() as Promise<T>;
@@ -103,8 +147,8 @@ export const health = (signal?: AbortSignal) => get<Health>("/health", signal);
 
 export const launch = (req: LaunchRequest) => post<Job>("/launch", req);
 
-/** Downloads the bundle that runs req on another machine. */
-export async function exportJob(req: ExportRequest): Promise<string> {
+/** Downloads what runs req on another machine; note says what it is and how results come back. */
+export async function exportJob(req: ExportRequest): Promise<{ name: string; note: string }> {
   const res = await send("/launch/export", req);
   const name =
     /filename="?([^";]+)"?/.exec(res.headers.get("content-disposition") ?? "")?.[1] ??
@@ -113,8 +157,16 @@ export async function exportJob(req: ExportRequest): Promise<string> {
   const a = Object.assign(document.createElement("a"), { href: url, download: name });
   a.click();
   URL.revokeObjectURL(url);
-  return name;
+  return { name, note: res.headers.get("x-louped-note") ?? "" };
 }
+
+/** Pushes this louped's new runs to the project's remote. */
+export const pushRuns = () => post<Pushed>("/launch/push", {});
+/** Adds the runs in the remote this louped has not pulled. */
+export const pullRuns = () => post<Imported[]>("/launch/pull", {});
+/** Sets the project's remote (empty: a private HF bucket of your own), keeping a token if given. */
+export const connectRemote = (body: Schemas["Connect"]) =>
+  post<RemoteState>("/launch/remote", body);
 
 /** Adds a result archive from another machine to this louped. */
 export async function importResult(file: File): Promise<Imported> {
@@ -148,6 +200,13 @@ const every = (live: boolean | undefined): number | false => (live ? LIVE_MS : f
  * live run poll until it ends. */
 export const q = {
   health: () => ({ queryKey: ["health"], queryFn: () => get<Health>("/health"), retry: false }),
+  /** The project's plugins: none in a published dashboard, which has no answer for them. */
+  plugins: () => ({
+    queryKey: ["plugins"],
+    queryFn: () => (isSnapshot() ? Promise.resolve([]) : get<PluginInfo[]>("/plugins")),
+    retry: false,
+    staleTime: Infinity,
+  }),
   runs: () => ({
     queryKey: ["runs"],
     queryFn: () => get<RunSummary[]>("/runs"),

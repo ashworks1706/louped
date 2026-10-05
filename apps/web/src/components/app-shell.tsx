@@ -1,9 +1,10 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { Menu, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 import { useCommandMenu } from "@/components/command-menu";
 import { useLive } from "@/components/home-overview";
@@ -20,7 +21,17 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { activeHref, DOMAINS, NAV, SECTIONS, sectionOf, type NavItem } from "@/lib/nav";
+import { q } from "@/lib/api";
+import {
+  activeHref,
+  DOMAINS,
+  NAV,
+  pluginItem,
+  pluginPath,
+  SECTIONS,
+  sectionOf,
+  type NavItem,
+} from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 /** Whether the sidebar is folded to icons: this viewer's choice, kept in the browser when it
@@ -201,8 +212,31 @@ function SidebarNav({ folded = false, onNavigate }: { folded?: boolean; onNaviga
           onNavigate={onNavigate}
         />
       ))}
+      <Suspense>
+        <PluginLinks folded={folded} onNavigate={onNavigate} />
+      </Suspense>
     </nav>
   );
+}
+
+/** The project's plugins in this section: louped.core.plugins, one entry each. */
+function PluginLinks({ folded, onNavigate }: { folded: boolean; onNavigate?: () => void }) {
+  const pathname = usePathname();
+  const name = useSearchParams().get("name");
+  const section = sectionOf(pathname);
+  const plugins = useQuery(q.plugins());
+  const here = pathname.replace(/\/?$/, "/") === pluginPath(section);
+  return (plugins.data ?? [])
+    .filter((p) => p.section === section)
+    .map((p) => (
+      <NavLink
+        key={p.name}
+        item={pluginItem(p)}
+        active={here && name === p.name}
+        folded={folded}
+        onNavigate={onNavigate}
+      />
+    ));
 }
 
 function NavLink({

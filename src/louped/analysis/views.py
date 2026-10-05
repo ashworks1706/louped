@@ -1,9 +1,10 @@
 """The shapes the Run page's Figures tab renders. A run stores each as JSON under views/ in MLflow.
 
-Five kinds cover the standard figures: a heatmap (patching: layer by position; attention: one
+Six kinds cover the figures: a heatmap (patching: layer by position; attention: one
 slice per layer and head; the logit lens and a diffusion trajectory, each cell labelled with its
 token), a line chart (anything by layer), a scatter (one labelled point per condition: quality
-against cost), a table, and tokens (text coloured by a per-token value).
+against cost), a table, tokens (text coloured by a per-token value), and vega: any other chart as
+a Vega-Lite spec with its data inline, so a new figure needs no change to the UI.
 Keeping them as data, not images, is what lets the UI hover, sort and link them. Each takes
 `about`: one or two sentences on how to read it, shown behind a ? beside its title.
 """
@@ -126,3 +127,20 @@ def tokens(
         raise ValueError("pairs need exactly one row")
     return {"kind": "tokens", "title": title, "rows": rows, "pairs": pairs, "note": note,
             "about": about}  # fmt: skip
+
+
+def vega(
+    title: str, spec: dict[str, Any], note: str | None = None, about: str | None = None
+) -> dict[str, Any]:
+    """Any chart as a Vega-Lite spec (https://vega.github.io/vega-lite/). The UI draws it in its
+    own theme, so leave colours and fonts out; data must be inline (`data.values`)."""
+    if _loads(spec):
+        raise ValueError("a vega view's data must be inline (data.values), not loaded from a url")
+    return {"kind": "vega", "title": title, "spec": spec, "note": note, "about": about}
+
+
+def _loads(spec: Any) -> bool:
+    """Whether a spec names a url anywhere Vega reads one: not inside its rows (`values`)."""
+    if isinstance(spec, dict):
+        return "url" in spec or any(_loads(v) for k, v in spec.items() if k != "values")
+    return isinstance(spec, list) and any(_loads(v) for v in spec)

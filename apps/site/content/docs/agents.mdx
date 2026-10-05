@@ -9,7 +9,8 @@ louped has no agent of its own. It connects to the one you already use.
 
 - `AGENTS.md`: how to work in the project.
 - `.mcp.json`: starts `louped mcp`, which talks to the running app.
-- `.claude/skills/`: steps for starting an experiment, reading results, and running on a cluster.
+- `.claude/skills/`: steps for starting an experiment, reading results, running on a cluster,
+  writing a report and adding a plugin.
 
 Start the app with `louped serve`, then open your agent in the project folder and ask it what to
 test.
@@ -24,6 +25,7 @@ test.
 | `launchables`, `launch_options`, `launch`           | Starts a job                             |
 | `jobs`, `job`, `cancel_job`                         | Follows or stops jobs                    |
 | `export_job`, `import_result`                       | Sends a job to a cluster, brings it back |
+| `push`, `pull`                                      | Shares runs through the remote           |
 
 Work the agent starts shows in the app like your own.
 

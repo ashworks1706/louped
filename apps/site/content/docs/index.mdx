@@ -16,10 +16,12 @@ writes and runs the experiments; you read the results in louped's app.
    agent.
 2. **Ask a question.** Tell your agent (Claude Code, Codex, Cursor) what to test. It writes the
    experiment.
-3. **Run it.** Small runs go on your machine. Large ones go to a Slurm cluster, and the results
-   come back to your app.
+3. **Run it.** Small runs go on your machine. Large ones go to a Slurm cluster, which pushes the
+   results to your remote. **Pull** brings them into your app.
 4. **Read the results.** The run page shows every item under every condition, what changed, and
-   out of how many.
+   out of how many. Edit the write-up beside its rendering.
+5. **Share and extend.** Push runs for others to pull, publish a read-only dashboard, or add your
+   own pages and tools as plugins.
 
 Everything runs on your hardware with open-weight models. No API key is needed.
 
@@ -27,5 +29,7 @@ Everything runs on your hardware with open-weight models. No API key is needed.
   <Card title="Get started" href="/docs/quickstart" />
   <Card title="Write an experiment" href="/docs/experiments" />
   <Card title="Use your coding agent" href="/docs/agents" />
+  <Card title="Share and run elsewhere" href="/docs/remote" />
+  <Card title="Plugins" href="/docs/plugins" />
   <Card title="Recipes" href="/docs/recipes" />
 </Cards>

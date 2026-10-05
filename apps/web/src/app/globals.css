@@ -100,3 +100,13 @@
     left: 100%;
   }
 }
+
+/* vega-embed's tooltip over a vega figure, in the popover's tokens */
+#vg-tooltip-element.vg-tooltip.custom-theme {
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 2px);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}

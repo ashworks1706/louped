@@ -11,9 +11,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 declare module "@tanstack/react-query" {
   interface Register {
-    /** action names what failed in its toast; quiet is for a mutation whose result pane already
-     * shows its error in place. */
-    mutationMeta: { action?: string; quiet?: boolean };
+    /** action names what failed in its toast; quiet is for a mutation that shows its error in
+     * place (its result pane, a dialog), always or for the errors it picks. */
+    mutationMeta: { action?: string; quiet?: boolean | ((error: Error) => boolean) };
   }
 }
 
@@ -25,7 +25,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
         // Every failed action says so, with the server's own message.
         mutationCache: new MutationCache({
           onError: (error, _vars, _ctx, mutation) => {
-            if (mutation.meta?.quiet) return;
+            const quiet = mutation.meta?.quiet;
+            if (typeof quiet === "function" ? quiet(error) : quiet) return;
             toast.error(`${mutation.meta?.action ?? "Request"} failed`, {
               description: error.message,
               duration: Infinity,

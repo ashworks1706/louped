@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -193,8 +193,21 @@ class TokensView(BaseModel):
     about: str | None = None
 
 
+class VegaView(BaseModel):
+    """Any chart as a Vega-Lite spec with its data inline: what the other kinds do not draw."""
+
+    kind: Literal["vega"]
+    title: str
+    #: A Vega-Lite spec. Its data must be inline (`data.values`): the UI loads nothing else.
+    spec: dict[str, Any]
+    note: str | None = None
+    #: How to read the figure, behind the ? beside its title.
+    about: str | None = None
+
+
 View = Annotated[
-    HeatmapView | LineView | ScatterView | TableView | TokensView, Field(discriminator="kind")
+    HeatmapView | LineView | ScatterView | TableView | TokensView | VegaView,
+    Field(discriminator="kind"),
 ]
 
 

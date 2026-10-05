@@ -196,6 +196,26 @@ def _without(readme: str, *headings: str) -> str:
     return "".join(out)
 
 
+def _folder(name: str) -> Path:
+    found = next((f for f in _folders() if f.name == name), None)
+    if found is None:
+        raise NotFound(name)
+    return found
+
+
+def read_readme(name: str) -> str:
+    """An experiment's README as written, front matter and all."""
+    return (_folder(name) / "README.md").read_text(encoding="utf-8")
+
+
+def write_readme(name: str, text: str) -> None:
+    """Replace an experiment's README; refused (BadExperiment) when its front matter would no
+    longer name a domain and status, which would take the experiment off its page."""
+    folder = _folder(name)
+    front_matter(text, name)
+    (folder / "README.md").write_text(text, encoding="utf-8")
+
+
 def get_experiment(name: str) -> ExperimentDetail:
     """One experiment with its README; NotFound when no folder has that name. The README leaves
     out Question and Result, which the experiment already carries as fields."""

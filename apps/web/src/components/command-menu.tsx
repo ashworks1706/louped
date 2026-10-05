@@ -18,7 +18,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Kbd } from "@/components/ui/kbd";
 import { q } from "@/lib/api";
 import { experimentHref } from "@/lib/href";
-import { fullTitle, NAV } from "@/lib/nav";
+import { fullTitle, NAV, pluginItem } from "@/lib/nav";
 
 const DOCS = "https://github.com/ashworks1706/louped/tree/main/docs";
 
@@ -41,6 +41,7 @@ export function CommandMenu({ children }: { children: React.ReactNode }) {
   const { resolvedTheme, setTheme } = useTheme();
   // Fetched only once the menu opens, so a page that never opens it pays nothing.
   const experiments = useQuery({ ...q.experiments(), enabled: open });
+  const plugins = useQuery({ ...q.plugins(), enabled: open });
 
   React.useEffect(() => {
     let leader = false;
@@ -87,7 +88,7 @@ export function CommandMenu({ children }: { children: React.ReactNode }) {
             <CommandList>
               <CommandEmpty>Nothing matches.</CommandEmpty>
               <CommandGroup heading="Go to">
-                {NAV.map((item) => (
+                {[...NAV, ...(plugins.data ?? []).map(pluginItem)].map((item) => (
                   <CommandItem
                     key={item.href}
                     value={`${fullTitle(item)} ${item.description}`}
@@ -96,9 +97,12 @@ export function CommandMenu({ children }: { children: React.ReactNode }) {
                     <item.icon />
                     <span>{fullTitle(item)}</span>
                     <span className="ml-auto flex gap-1">
-                      {item.shortcut.split(" ").map((k) => (
-                        <Kbd key={k}>{k}</Kbd>
-                      ))}
+                      {item.shortcut
+                        .split(" ")
+                        .filter(Boolean)
+                        .map((k) => (
+                          <Kbd key={k}>{k}</Kbd>
+                        ))}
                     </span>
                   </CommandItem>
                 ))}

@@ -4,13 +4,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import TYPE_CHECKING, Annotated, Literal
 
 import tyro
 
 from louped import __version__
 from louped.data.cli import Command as DataCommand
 from louped.train.cli import Command as TrainCommand
+
+if TYPE_CHECKING:
+    from louped.server.remote import Imported
 
 
 @dataclass(frozen=True)
@@ -155,6 +158,40 @@ class Import:
 
 
 @dataclass(frozen=True)
+class Push:
+    """Push the runs this louped made and has not pushed to the remote, as one new bundle: `remote`
+    in louped.toml, or LOUPED_REMOTE. At a terminal it asks for a remote when none is set (a
+    private HF bucket of your own by default) and for a Hugging Face token when an hf:// remote
+    needs one. Needs the sync extra."""
+
+    remote: str | None = None
+    """A remote other than the configured one: any fsspec URL, such as hf://buckets/<user>/<name>."""
+    result: Path | None = None
+    """An exported job's out/result.json: the bundle carries its job, host, exit code and log."""
+
+
+@dataclass(frozen=True)
+class Pull:
+    """Add the runs in the remote's bundles this louped has not pulled. A job exported from here
+    and pushed from the cluster takes its result. Needs the sync extra."""
+
+    remote: str | None = None
+    """A remote other than the configured one."""
+
+
+@dataclass(frozen=True)
+class Publish:
+    """Write this project's dashboard as static, read-only files to put on any static host at a
+    domain's root: an HF static Space, Vercel, or a GitHub Pages user site. Needs the server
+    extra."""
+
+    out: tyro.conf.Positional[Path]
+    """An empty or new folder."""
+    web_dir: Path | None = None
+    """The UI's static export; found as for serve."""
+
+
+@dataclass(frozen=True)
 class Bench:
     """What serving a model costs on this machine, per weight format: throughput and latency as
     requests arrive together, and prefill time and memory as the prompt grows. One run with its
@@ -252,6 +289,9 @@ Command = (
     | Annotated[Features, tyro.conf.subcommand("features")]
     | Annotated[Circuit, tyro.conf.subcommand("circuit")]
     | Annotated[Import, tyro.conf.subcommand("import")]
+    | Annotated[Push, tyro.conf.subcommand("push")]
+    | Annotated[Pull, tyro.conf.subcommand("pull")]
+    | Annotated[Publish, tyro.conf.subcommand("publish")]
     | Annotated[Bench, tyro.conf.subcommand("bench")]
     | Annotated[EndpointBench, tyro.conf.subcommand("endpoint-bench")]
     | Annotated[Judge, tyro.conf.subcommand("judge")]
@@ -259,6 +299,30 @@ Command = (
     | Annotated[Examples, tyro.conf.subcommand("examples")]
     | Annotated[Version, tyro.conf.subcommand("version")]
 )
+
+#: louped's own commands; a plugin of the same name does not replace one.
+COMMANDS = {
+    "serve",
+    "data",
+    "train",
+    "sweep",
+    "grid",
+    "init",
+    "new",
+    "view",
+    "features",
+    "circuit",
+    "import",
+    "push",
+    "pull",
+    "publish",
+    "bench",
+    "endpoint-bench",
+    "judge",
+    "mcp",
+    "examples",
+    "version",
+}
 
 
 def serve(cmd: Serve) -> None:
@@ -306,7 +370,56 @@ def view(cmd: View) -> None:
                 port=cmd.port)  # fmt: skip
 
 
+def _imported(done: Imported) -> str:
+    again = f", {len(done.skipped)} already here" if done.skipped else ""
+    return f"{len(done.runs)} runs from {done.host} (exit {done.exit_code}){again}"
+
+
+def _connect(given: str | None) -> None:
+    """At a terminal, ask for what push and pull lack: a remote for the project, and a Hugging Face
+    token for an hf:// one. Elsewhere (a cluster job) they fail with what to set instead."""
+    import sys
+    from getpass import getpass
+
+    from louped import sync
+
+    if not sys.stdin.isatty():
+        return
+    url = given or sync.configured()
+    if url is None:
+        url = input("Remote (Enter for a private Hugging Face bucket of your own): ").strip()
+    if (not url or sync.bucket(url)) and not sync.has_token():
+        print("A Hugging Face token with write access: https://huggingface.co/settings/tokens")
+        print(f"Signed in as {sync.save_token(getpass('Token: ').strip())}")
+    if not url:
+        url = sync.suggested()
+        assert url is not None  # a token was just saved
+    if given is None and sync.configured() is None:
+        sync.set_remote(url)
+        print(f"remote = {url} (louped.toml)")
+
+
+def _plugin_command() -> bool:
+    """Run `louped <name> ...` with the project plugin of that name's main, when no command of
+    louped's own has the name; whether one ran."""
+    import sys
+
+    if len(sys.argv) < 2 or sys.argv[1].startswith("-") or sys.argv[1] in COMMANDS:
+        return False
+    from louped.core.plugins import find_plugins
+
+    plugin = next((p for p in find_plugins() if p.name == sys.argv[1]), None)
+    module = plugin.load() if plugin is not None else None
+    run = getattr(module, "main", None)
+    if run is None:
+        return False
+    run(sys.argv[2:])
+    return True
+
+
 def main() -> None:
+    if _plugin_command():
+        return
     match cmd := tyro.cli(Command):
         case Serve() as cmd:
             serve(cmd)
@@ -368,8 +481,41 @@ def main() -> None:
                 done = import_result(cmd.path, Jobs(work=False))
             except ValueError as exc:
                 raise SystemExit(str(exc)) from exc
-            print(f"{len(done.runs)} runs from {done.host} (exit {done.exit_code})"
-                  + (f", {len(done.skipped)} already here" if done.skipped else ""))  # fmt: skip
+            print(_imported(done))
+        case Push() as cmd:
+            from louped.sync import push
+
+            try:
+                _connect(cmd.remote)
+                pushed = push(cmd.remote, cmd.result)
+            except ValueError as exc:
+                raise SystemExit(str(exc)) from exc
+            print(f"{len(pushed.runs)} runs to {pushed.remote}/{pushed.bundle}" if pushed.bundle
+                  else "nothing new to push")  # fmt: skip
+        case Pull() as cmd:
+            from louped.server.launch import Jobs
+            from louped.server.remote import pull_results
+
+            try:
+                _connect(cmd.remote)
+                pulled = pull_results(Jobs(work=False), cmd.remote)
+            except ValueError as exc:
+                raise SystemExit(str(exc)) from exc
+            for done in pulled:
+                print(_imported(done))
+            if not pulled:
+                print("nothing new to pull")
+        case Publish() as cmd:
+            from louped.server.app import find_ui
+            from louped.server.publish import describe, publish
+
+            web = find_ui(cmd.web_dir)
+            if web is None:
+                raise SystemExit("louped publish needs the built UI: pass --web-dir")
+            try:
+                print(describe(publish(cmd.out, web)))
+            except ValueError as exc:
+                raise SystemExit(str(exc)) from exc
         case Bench() as cmd:
             from louped.bench import bench
             from louped.models.load import Quant

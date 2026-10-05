@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import tempfile
 from datetime import UTC, datetime
+from pathlib import Path
 
 from mlflow import MlflowClient
 from mlflow.entities import Run
@@ -121,6 +122,35 @@ def list_artifact_paths(run_id: str, path: str) -> list[str] | None:
             return None
         raise
     return [a.path for a in _walk(client, run_id, path)]
+
+
+def write_markdown(run_id: str, path: str, text: str) -> bool:
+    """Replace a Markdown file a run already logged, in its local artifact folder; False when the
+    run or file is not there. Refused for anything but .md, and for a store that is not local."""
+    rel = Path(path)
+    if rel.is_absolute() or ".." in rel.parts:
+        raise ValueError(f"{path}: a path inside the run's artifacts")
+    if not path.endswith(".md"):
+        raise ValueError("only a run's Markdown files are edited here")
+    client = _client()
+    if client is None:
+        return False
+    try:
+        uri = client.get_run(run_id.removeprefix(PREFIX)).info.artifact_uri or ""
+    except Exception as exc:
+        if _missing(exc):
+            return False
+        raise
+    if not uri.startswith("file://") and not uri.startswith("/"):
+        raise ValueError(f"{run_id}'s artifacts are not on this machine ({uri})")
+    # realpath and a prefix check: the guard code scanning recognizes for a path from a request
+    folder = os.path.realpath(uri.removeprefix("file://"))
+    target = os.path.realpath(os.path.join(folder, rel))
+    if not target.startswith(folder + os.sep) or not os.path.isfile(target):
+        return False
+    with open(target, "w", encoding="utf-8") as out:
+        out.write(text)
+    return True
 
 
 def read_artifact(run_id: str, path: str) -> bytes | None:

@@ -78,7 +78,13 @@ def test_init_writes_the_project_and_keeps_what_exists(tmp_path: Path) -> None:
     assert ".louped/" in (folder / ".gitignore").read_text().splitlines()
     assert json.loads((folder / ".mcp.json").read_text())["mcpServers"]["louped"]["args"] == ["mcp"]
     skills = sorted(p.parent.name for p in (folder / ".claude/skills").glob("*/SKILL.md"))
-    assert skills == ["new-experiment", "read-results", "run-elsewhere"]
+    assert skills == [
+        "add-plugin",
+        "new-experiment",
+        "read-results",
+        "run-elsewhere",
+        "write-report",
+    ]
     assert not (folder / "experiments" / EXAMPLE).exists()
     again = init(folder, example=False)
     assert "wrote" not in again and (folder / ".gitignore").read_text().count(".louped/") == 1

@@ -1,0 +1,140 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { Puzzle } from "lucide-react";
+import { useTheme } from "next-themes";
+import { useQueryState } from "nuqs";
+import { useEffect, useRef } from "react";
+
+import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
+import { QueryState } from "@/components/query-state";
+import { API, q, type PluginInfo } from "@/lib/api";
+import { pluginItem } from "@/lib/nav";
+
+/** The tokens a panel is handed, so it reads as part of the app: var(--foreground) and the rest. */
+const TOKENS = [
+  "radius",
+  "background",
+  "foreground",
+  "card",
+  "card-foreground",
+  "popover",
+  "popover-foreground",
+  "primary",
+  "primary-foreground",
+  "secondary",
+  "secondary-foreground",
+  "muted",
+  "muted-foreground",
+  "accent",
+  "accent-foreground",
+  "border",
+  "input",
+  "ring",
+  "intervention",
+  "positive",
+  "negative",
+  "font-geist-sans",
+  "font-geist-mono",
+];
+
+/** A project plugin's page: its panel, its load error, or what it adds without one. */
+export function PluginPage() {
+  const [name] = useQueryState("name");
+  const plugins = useQuery(q.plugins());
+  return (
+    <QueryState query={plugins}>
+      {(all) => {
+        const plugin = all.find((p) => p.name === name);
+        if (!plugin)
+          return (
+            <section className="mx-auto max-w-6xl px-6 py-8">
+              <EmptyState
+                icon={Puzzle}
+                title="No such plugin"
+                body="A plugin is a folder under the project's plugins/ with a plugin.toml."
+                action={{ href: "/", label: "Home" }}
+              />
+            </section>
+          );
+        return (
+          <>
+            <PageHeader item={pluginItem(plugin)} />
+            <section className="mx-auto max-w-6xl px-6 py-8">
+              <Body plugin={plugin} />
+            </section>
+          </>
+        );
+      }}
+    </QueryState>
+  );
+}
+
+function Body({ plugin }: { plugin: PluginInfo }) {
+  if (plugin.error)
+    return (
+      <div className="flex flex-col gap-2">
+        <p className="text-negative text-sm">plugins/{plugin.name}/plugin.py did not load:</p>
+        <pre className="bg-muted overflow-x-auto rounded-md p-3 font-mono text-xs">
+          {plugin.error}
+        </pre>
+      </div>
+    );
+  if (!plugin.panel)
+    return (
+      <p className="text-muted-foreground text-sm">
+        It adds routes, commands or agent tools, and no page: a page is{" "}
+        <span className="font-mono">plugins/{plugin.name}/panel/index.html</span>.
+      </p>
+    );
+  return <Panel name={plugin.name} />;
+}
+
+/** The panel in a frame, handed the app's theme each time it loads or the theme changes. */
+function Panel({ name }: { name: string }) {
+  const frame = useRef<HTMLIFrameElement>(null);
+  const { resolvedTheme } = useTheme();
+  const theme = () => {
+    const doc = frame.current?.contentDocument;
+    if (!doc) return;
+    const style = getComputedStyle(document.body);
+    for (const t of TOKENS)
+      doc.documentElement.style.setProperty(`--${t}`, style.getPropertyValue(`--${t}`));
+    doc.documentElement.classList.toggle("dark", resolvedTheme === "dark");
+    doc.documentElement.style.colorScheme = resolvedTheme === "dark" ? "dark" : "light";
+    // the app's fonts are declared in its own sheets, which a frame does not see
+    if (!doc.getElementById("louped-fonts")) {
+      const fonts = Object.assign(doc.createElement("style"), { id: "louped-fonts" });
+      fonts.textContent = [...document.styleSheets]
+        .flatMap((sheet) => {
+          try {
+            return [...sheet.cssRules];
+          } catch {
+            return []; // another origin's sheet cannot be read, and holds none of the app's fonts
+          }
+        })
+        .filter((rule) => rule instanceof CSSFontFaceRule)
+        // its urls are relative to the sheet, not the frame
+        .map((rule) =>
+          rule.cssText.replace(
+            /url\("([^"]+)"\)/g,
+            (_, u: string) =>
+              `url("${new URL(u, rule.parentStyleSheet?.href ?? location.href).href}")`,
+          ),
+        )
+        .join("\n");
+      doc.head.append(fonts);
+    }
+  };
+  useEffect(theme); // after every render: the theme may have changed
+  return (
+    <iframe
+      ref={frame}
+      title={name}
+      src={`${API}/x/${encodeURIComponent(name)}/`}
+      onLoad={theme}
+      className="h-[calc(100dvh-14rem)] min-h-96 w-full rounded-xl border"
+    />
+  );
+}
