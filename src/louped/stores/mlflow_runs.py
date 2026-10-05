@@ -129,12 +129,9 @@ def write_markdown(run_id: str, path: str, text: str) -> bool:
     run or file is not there. Refused for anything but .md, and for a store that is not local."""
     rel = Path(path)
     if rel.is_absolute() or ".." in rel.parts:
-        raise ValueError("bad path")
+        raise ValueError(f"{path}: a path inside the run's artifacts")
     if not path.endswith(".md"):
         raise ValueError("only a run's Markdown files are edited here")
-    artifact_path = Path(path)
-    if artifact_path.is_absolute() or ".." in artifact_path.parts:
-        raise ValueError("bad path")
     client = _client()
     if client is None:
         return False
