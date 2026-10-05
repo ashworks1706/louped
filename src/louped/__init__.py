@@ -1,4 +1,4 @@
-"""louped: a research testbed for looking inside language models."""
+"""louped: a local workbench for research on LLM behavior and efficiency."""
 
 import os
 from importlib.metadata import PackageNotFoundError, version

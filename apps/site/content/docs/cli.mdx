@@ -13,7 +13,7 @@ project by looking for `louped.toml` in the current folder and its parents.
 | `louped view <folder>`            | Opens existing results, read-only                                                 |
 | `louped new <name> --domain <d>`  | Starts an experiment                                                              |
 | `louped mcp`                      | The MCP server for your coding agent                                              |
-| `louped import <file>`            | Adds results from a cluster job                                                   |
+| `louped import <file or folder>`  | Adds results from a cluster job: its archive, or the archive unpacked             |
 | `louped push` / `louped pull`     | Shares runs through the project's remote; sets one up first                       |
 | `louped publish <dir>`            | Writes a read-only dashboard as static files                                      |
 | `louped grid <yaml>`              | Compares conditions against a baseline                                            |
@@ -25,28 +25,47 @@ project by looking for `louped.toml` in the current folder and its parents.
 | `louped features`                 | Builds SAE feature dashboards                                                     |
 | `louped derive <run> <script>`    | Adds columns or a figure to a run from its files                                  |
 | `louped notebook <file.ipynb>`    | Runs a notebook with papermill in a run; `--param name=value` sets a parameter    |
-| `louped check [paths]`            | Lists result numbers, citations and refs in Markdown that are not grounded        |
+| `louped check [paths]`            | Lists result numbers, citations and refs that are not grounded; `--json`          |
 | `louped export <ref>`             | Exports a figure to reports/figures/ with its ref and trace                       |
 | `louped source add <file or url>` | Keeps a paper, doc, deck or notebook in `sources/`; `search`, `list`              |
 | `louped circuit`                  | Builds an attribution graph                                                       |
-| `louped data ...`                 | Builds training sets from logged model calls                                      |
+| `louped data <step>`              | Builds a training set from logged model calls (see below)                         |
 | `louped examples`                 | Fills every page with example runs from a tiny model                              |
 | `louped version`                  | Prints the version                                                                |
 | `louped <plugin>`                 | Runs a project plugin's command                                                   |
 
 ## Environment variables
 
-| Variable                  | Default                       |
-| ------------------------- | ----------------------------- |
-| `LOUPED_HOME`             | `.louped/` in the project     |
-| `LOUPED_EXPERIMENTS`      | `experiments/` in the project |
-| `LOUPED_SYSTEM_METRICS=0` | Turns off hardware sampling   |
-| `LOUPED_REMOTE`           | `remote` in `louped.toml`     |
-| `HF_TOKEN`                | The `hf auth login` token     |
+| Variable                  | Default                                              |
+| ------------------------- | ---------------------------------------------------- |
+| `LOUPED_HOME`             | `.louped/` in the project                            |
+| `LOUPED_EXPERIMENTS`      | `experiments/` in the project                        |
+| `LOUPED_SYSTEM_METRICS=0` | Turns off hardware sampling                          |
+| `LOUPED_REMOTE`           | `remote` in `louped.toml`                            |
+| `HF_TOKEN`                | The `hf auth login` token                            |
+| `LOUPED_HOST`             | This machine's host name, as a pushed run records it |
+| `LOUPED_NEURONPEDIA`      | `https://neuronpedia.org`, for feature pages         |
 
 The first `louped push` or `louped pull` in a project with no remote asks for one. Press Enter
 for a private Hugging Face bucket of your own. It also asks for a Hugging Face token when an
 `hf://` remote finds none, and saves the remote to `louped.toml`.
+
+## Training sets: `louped data`
+
+`louped data` builds a training set from a system's logged model calls, in steps. Run them in
+this order:
+
+| Step      | What it does                                                                  |
+| --------- | ----------------------------------------------------------------------------- |
+| `export`  | Reads logged calls (trace files or Phoenix spans) and removes secrets         |
+| `collect` | Asks a teacher model each prompt, when there are no logs                      |
+| `verify`  | Removes malformed examples and duplicates                                     |
+| `review`  | Shows each example in the terminal; you keep, fix (in your editor) or drop it |
+| `curate`  | Builds the training set from the kept and fixed examples                      |
+| `overlap` | Finds evaluation items that share an n-gram with the training set             |
+| `stats`   | Shows what the set holds and how much is not reviewed                         |
+
+`review` records who decided with `--by`, or your `USER` name. It runs in a terminal only.
 
 `louped serve --host` needs `--expose`. An exposed server is read-only: no launching or model
 loading.

@@ -1,6 +1,6 @@
 # louped: agent guide
 
-louped is a local testbed for research on LLM behavior and efficiency: each research question is an
+louped is a local workbench for research on LLM behavior and efficiency: each research question is an
 experiment, filed under a domain on one of two axes (behavior and alignment, efficiency and
 systems) or under the instrument checks. Read `docs/ARCHITECTURE.md` for the design and the tools
 it runs, `docs/ROADMAP.md` for what is next.
@@ -34,7 +34,7 @@ just bootstrap          first run: dependencies and git hooks
 just check              the gate: Python (ruff, pyright, import-linter, pytest), web and site builds
 just test-e2e           Playwright on the built UI; screenshots land in apps/web/test-results
 just fmt                format everything
-just serve              API and UI on :8000 (builds the UI first if needed)
+just serve              build the UI, then serve the API and UI on :8000
 just web                UI dev server on :3000
 just site               docs site on :3001
 just api-types          regenerate the UI's API types after changing a server route or model
@@ -56,7 +56,7 @@ src/louped/        the package (distribution louped); layers in docs/ARCHITECTUR
   retrieval/      search and its metrics
   train/          sft, dpo, grpo, classify, reft, sweeps, replayed tool environments
   stores/         read Inspect logs, MLflow, vectors, experiments/
-  server/         the API, the Playground, launching jobs
+  server/         the API, the Probe and Benchmark tools, launching jobs
   agent.py        the MCP server coding agents drive louped through
   sweep.py grid.py features.py circuits.py cli.py
   templates/      what `louped init` copies: the project files, the agent's skills and MCP config
@@ -79,7 +79,7 @@ tests/            Python tests, CPU only
 | A project's own page, routes, command or agent tools | its `plugins/<name>/` (`louped.core.plugins`), no change to louped |
 | A number                   | `mlflow.log_metrics` inside `louped.tracking.start_run`                    |
 | A training run or a grid   | `experiments/<name>/*.yaml` starting `# louped train <recipe>` or `# louped grid` |
-| A paper's own harness      | a pinned clone under `.louped/vendor/`, run in its own venv ("Someone else's code" in `apps/site/content/docs/experiments.mdx`) |
+| A paper's own harness      | a pinned clone under `.louped/vendor/`, run in its own venv ("Code from a paper" in `apps/site/content/docs/experiments.mdx`) |
 | What a new project gets    | `src/louped/templates/`: project files, agent skills, the example experiment |
 | A domain                   | `[domains.<key>]` in the project's `louped.toml` ("Domains" in `apps/site/content/docs/experiments.mdx`) |
 | A view kind the UI lacks   | `louped.analysis.views`, `View` in `stores/types.py`, a renderer in `apps/web/src/components/run-views.tsx`, `just api-types` |

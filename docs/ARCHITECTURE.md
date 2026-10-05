@@ -2,7 +2,7 @@
 
 ## What louped is
 
-louped is a local testbed for research on language models along two axes: behavior and alignment
+louped is a local workbench for research on language models along two axes: behavior and alignment
 (what models do and why) and efficiency and systems (what it costs to run them), plus instrument
 checks that reproduce known results so both can be trusted. A research question is an experiment;
 the app shows which questions are active, launches them and reads their results.
@@ -54,7 +54,7 @@ policy = model + interventions + adapters + generation settings
 ```
 
 The same policy runs in an Inspect eval (through the `louped/` provider, agents with tools
-included), a training run, the Playground and an analysis. Base, steered, ablated, fine-tuned and
+included), a training run, the Probe and Benchmark tools and an analysis. Base, steered, ablated, fine-tuned and
 prompted versions are therefore compared by one eval, one scorer and one view. A check is a plain
 function, wrapped once as an Inspect scorer (`inspect_ext.as_scorer`) and once as a reward
 (`train.rewards.as_reward`), so an eval becomes an RL environment without a rewrite.
@@ -118,7 +118,7 @@ in `pyproject.toml`.
 ```
 experiments                              leaf, in a project; nothing imports it
 cli
-server | agent | init                    FastAPI over the stores; Playground; launching jobs; the
+server | agent | init                    FastAPI over the stores; Probe and Benchmark; jobs; the
                                          MCP server, an HTTP client of the API; louped init
 check                                    what in the project's write-ups is not grounded
 reports                                  reports/: decks, documents, exported figures
@@ -181,18 +181,25 @@ core                                     run metadata, paths, the project and it
 ## Server and UI
 
 `apps/web` is a static Next.js export that `louped serve` serves next to the API; there is no Node
-server in production. The server owns no database and no auth; every route reads what another tool
-wrote. Three things compute: the Playground (generate, which streams and continues a conversation
-for a follow-up; inspect, which returns a prompt's views; patch, residual or head patching between a
-clean and a corrupt prompt; dose, a saved direction swept over strengths at the next token; speed,
-time to first token, decode throughput and peak memory, base and changed), launching jobs, and
-loading a model into the Playground. A job is an existing command (an experiment script,
-`louped train`, `louped grid`, `louped new`, `louped features`, `inspect eval`) in a subprocess, one at
-a time, its output under `<home>/jobs`; or exported (server/remote.py) as a bundle whose job.sh
-runs it on Sol, a Slurm cluster or a VM (one file that clones the project when it is a pushed git
-commit), and whose results come back through the remote or as an archive imported into the stores;
-each form is read from the command's own argument parser. Launching and loading run code on this machine, so both are on only for a loopback server,
-never with `--expose`.
+server in production. The server owns no database and no auth.
+Every route reads what another tool wrote.
+
+Three parts compute: the Probe and Benchmark tools, job launch, and model load.
+
+- The tools (server/playground.py, behind the Probe and Benchmark pages): generate streams a
+  reply and continues a conversation; inspect returns a prompt's views; patch patches the residual
+  stream or heads between a clean and a corrupt prompt; dose sweeps a saved direction over
+  strengths at the next token; speed measures time to first token, decode throughput and peak
+  memory, base and changed.
+- A job is an existing command in a subprocess: an experiment script or notebook, `louped train`,
+  `louped grid`, `louped new`, `louped features` or `inspect eval`. Jobs run one at a time. Each job
+  writes its output to `<home>/jobs`. A job's form is read from the command's own argument parser.
+- A job can also be exported (server/remote.py) as a bundle. Its job.sh runs it on Sol, another
+  Slurm cluster or a VM. When the project is a pushed git commit, the bundle is one file that
+  clones it. The results come back through the remote, or as an archive that is imported.
+
+Launching and loading run code on this machine. So both are on only for a loopback server, never
+with `--expose`.
 
 Runs move between machines as bundles (`louped.sync`): a folder laid out as a louped home (Inspect
 logs, an MLflow store with its artifacts, result.json). `louped push` writes one per push into the
@@ -207,11 +214,11 @@ the same HTTP API the UI does, so an agent's jobs share the queue and the `--exp
 on the Runs page.
 
 Pages: a top bar of sections over a sidebar of the section's pages, which folds to icons. The
-workspace: Home, Runs (jobs with their progress, then every run), Compare, Launch, with Run and Job
-detail. Each research domain lives under its own path: `/behavior/` Overview, Experiments, Probe
+workspace: Home, Runs (jobs with their progress, then every run), Compare, Launch, Sources and
+Reports, with Run, Job, Source and Report detail. Each research domain lives under its own path: `/behavior/` Overview, Experiments, Probe
 (reply, inspect, patch, dose), Vectors, Circuits, Feature; `/efficiency/` Overview, Experiments,
 Benchmark (speed, reply), Training. An experiment's page is under its domain's path. Probe and
-Benchmark are one playground with different tools. Every technical term has a ? from
+Benchmark are one set of tools (server/playground.py), each page showing its own. Every technical term has a ? from
 `apps/web/src/lib/glossary.ts`.
 
 Home, a run's page and an experiment's page are data (server/ui.py): regions (`run.tabs`,

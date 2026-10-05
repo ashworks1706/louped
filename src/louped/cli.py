@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 @dataclass(frozen=True)
 class Serve:
     """Start the API and, when it has been built, the UI. Models, runs and jobs are picked in the
-    UI: the Playground loads a model, Launch starts experiments, training, grids and evals."""
+    UI: Probe and Benchmark load a model; Launch starts experiments, training, grids and evals."""
 
     host: str = "127.0.0.1"
     port: int = 8000
