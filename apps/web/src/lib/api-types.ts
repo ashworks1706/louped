@@ -129,6 +129,67 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/sources": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Sources
+     * @description The project's sources/: papers, docs, slides and notebooks, by key.
+     */
+    get: operations["sources_api_sources_get"];
+    put?: never;
+    /**
+     * Add Source
+     * @description A file or URL added to sources/, its text to the search index.
+     */
+    post: operations["add_source_api_sources_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/sources/search": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Search Sources
+     * @description The source pages holding every word of q, best first.
+     */
+    get: operations["search_sources_api_sources_search_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/sources/{key}/pages/{page}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Source Page */
+    get: operations["source_page_api_sources__key__pages__page__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/trace": {
     parameters: {
       query?: never;
@@ -1726,6 +1787,17 @@ export interface components {
       /** Counts */
       counts: number[];
     };
+    /** Hit */
+    Hit: {
+      /** Key */
+      key: string;
+      /** Title */
+      title: string;
+      /** Page */
+      page: number;
+      /** Snippet */
+      snippet: string;
+    };
     /** ImportPath */
     ImportPath: {
       /** Path */
@@ -2622,6 +2694,49 @@ export interface components {
        */
       style: "highlight" | "spotlight" | "pointer";
     };
+    /** Source */
+    Source: {
+      /** Key */
+      key: string;
+      /** Title */
+      title: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "pdf" | "pptx" | "docx" | "ipynb" | "md" | "txt";
+      /** File */
+      file: string;
+      /** Origin */
+      origin?: string | null;
+      /** Sha256 */
+      sha256: string;
+      /**
+       * Added
+       * Format: date-time
+       */
+      added: string;
+      /** Pages */
+      pages: number;
+    };
+    /** SourcePage */
+    SourcePage: {
+      /** Key */
+      key: string;
+      /** Page */
+      page: number;
+      /** Text */
+      text: string;
+    };
+    /** SourceRequest */
+    SourceRequest: {
+      /** Location */
+      location: string;
+      /** Key */
+      key?: string | null;
+      /** Title */
+      title?: string | null;
+    };
     /**
      * SpeedRequest
      * @description The prompt timed base and, with interventions or adapters, changed.
@@ -3161,6 +3276,123 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["CohortStats"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  sources_api_sources_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Source"][];
+        };
+      };
+    };
+  };
+  add_source_api_sources_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SourceRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Source"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  search_sources_api_sources_search_get: {
+    parameters: {
+      query: {
+        q: string;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Hit"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  source_page_api_sources__key__pages__page__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        key: string;
+        page: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SourcePage"];
         };
       };
       /** @description Validation Error */

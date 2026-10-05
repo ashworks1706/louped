@@ -120,10 +120,10 @@ experiments                              leaf, in a project; nothing imports it
 cli
 server | agent | init                    FastAPI over the stores; Playground; launching jobs; the
                                          MCP server, an HTTP client of the API; louped init
-train | sweep | grid | sync | features | circuits | judge | bench | derive
+train | sweep | grid | sync | features | circuits | judge | bench | derive | sources
                                          training recipes and sweeps; steering sweeps; condition
                                          grids; SAE dashboards; attribution graphs; pairwise judging;
-                                         serving cost; columns and figures from a run's files
+                                         serving cost; columns and figures from a run's files; the project's sources
 stores | tracking | analysis | inspect_ext
                                          read Inspect logs and MLflow; start a run; lens, patching,
                                          probes, attention, SAE features as views; the louped/
@@ -143,6 +143,9 @@ core                                     run metadata, paths, the project and it
   `louped.analysis.views`); SAE dashboards are JSON under `features/`. `louped derive` and an
   agent's `add_view` add to a finished run: columns under `derived/`, figures under `views/`,
   each listed in its `louped.added` tag. An experiment's own figures are `experiments/<name>/views/`.
+- Sources: `sources/` in the project (`louped.sources`): papers, docs, slides and notebooks listed
+  in `sources/index.json` with key, origin URL and sha256; their text page by page in an FTS5
+  index at `<home>/sources.db`, rebuilt from the files when one changes.
 - Refs (`louped.core.refs`) address evidence: `run:<id>/<path>#<item>`, `experiment:<name>/<path>`.
   A vega or plotly figure whose marks are items says so (`items`; plotly trace `ids`), and
   `louped.stores.trace` follows a mark's ref to the derive script and commit, the item's record

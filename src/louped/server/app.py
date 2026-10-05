@@ -14,6 +14,7 @@ import mimetypes
 from pathlib import Path
 from typing import Literal
 
+import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -22,6 +23,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from louped import __version__, stores
+from louped import sources as library
 from louped.core import Direction, cohorts, home
 from louped.core.judges import Judge, find_judges, write_judge
 from louped.server import graphs, inspect_view, launch, playground, plugins, ui
@@ -90,6 +92,19 @@ class CohortQuery(BaseModel):
 class Text(BaseModel):
     """A Markdown file's text."""
 
+    text: str
+
+
+class SourceRequest(BaseModel):
+    #: A file on this machine or an https URL (an arXiv page, a shared Google Doc, a file).
+    location: str
+    key: str | None = None
+    title: str | None = None
+
+
+class SourcePage(BaseModel):
+    key: str
+    page: int
     text: str
 
 
@@ -206,6 +221,36 @@ def create_app(
             return stores.cohort(run_id, req.ids, req.folder, req.field, req.reference)
         except ValueError as exc:
             raise HTTPException(422, str(exc)) from exc
+
+    @app.get("/api/sources")
+    def sources() -> list[library.Source]:
+        """The project's sources/: papers, docs, slides and notebooks, by key."""
+        return library.list_sources()
+
+    @app.get("/api/sources/search")
+    def search_sources(q: str, limit: int = 10) -> list[library.Hit]:
+        """The source pages holding every word of q, best first."""
+        return library.search(q, min(max(limit, 1), 50))
+
+    @app.get("/api/sources/{key}/pages/{page}")
+    def source_page(key: str, page: int) -> SourcePage:
+        try:
+            return SourcePage(key=key, page=page, text=library.page_text(key, page))
+        except KeyError as exc:
+            raise HTTPException(404, exc.args[0]) from exc
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.post("/api/sources", dependencies=[Depends(launch.require_json)])
+    def add_source(req: SourceRequest) -> library.Source:
+        """A file or URL added to sources/, its text to the search index."""
+        editing()
+        try:
+            return library.add_source(req.location, req.key, req.title, project_only=True)
+        except (ValueError, FileNotFoundError) as exc:
+            raise HTTPException(400, str(exc)) from exc
+        except httpx.HTTPError as exc:
+            raise HTTPException(502, f"could not fetch {req.location}: {exc}") from exc
 
     @app.get("/api/trace")
     def trace(ref: str) -> Trace:

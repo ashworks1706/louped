@@ -1,0 +1,35 @@
+---
+title: Sources
+description: The papers, docs, slides and notebooks your claims rest on, kept with the project.
+---
+
+`sources/` sits beside `experiments/` and is committed with it. Each paper, doc, deck or notebook
+there has a key, which is what a citation names, plus a title and the URL it came from.
+`sources/index.json` lists them. louped reads each one page by page so that you and your agent
+can search and quote it.
+
+```bash
+louped source add paper.pdf --key sharma23
+louped source add https://arxiv.org/abs/2310.13548
+louped source search "sycophancy pushback"
+louped source list
+```
+
+| You add                                                 | louped keeps                                                 |
+| ------------------------------------------------------- | ------------------------------------------------------------ |
+| A PDF, `.pptx`, `.docx`, `.ipynb`, `.md` or `.txt` file | A copy in `sources/`                                         |
+| An arXiv page                                           | The paper's PDF and title                                    |
+| A shared Google Doc or Slides deck                      | A PDF snapshot, so a quote points at text that cannot change |
+| A notebook on GitHub or opened from it in Colab         | The `.ipynb`                                                 |
+| A direct link to a file                                 | The file                                                     |
+
+A page is a PDF page, a slide, a notebook cell, or a whole Markdown, text or Word file. The
+search index lives in louped's state folder and is rebuilt from the files whenever one changes,
+so it never needs committing.
+
+A Colab notebook kept in Google Drive needs your sign-in, so download it (File > Download .ipynb)
+and add the file instead.
+
+Your agent searches `sources/` with `search_sources` before it looks anything up on the web,
+quotes from `source_page`, and keeps a new paper with `add_source`, which records the URL the
+file came from.
