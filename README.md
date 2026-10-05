@@ -30,7 +30,8 @@ Open http://127.0.0.1:8000 and launch the example experiment.
 
 1. **Make a project** with `louped init`. It also connects your coding agent.
 2. **Ask a question.** Your agent (Claude Code, Codex, Cursor) writes the experiment.
-3. **Run it** on your machine, or send it to a Slurm cluster and import the results.
+3. **Run it** on your machine, or send it to a Slurm cluster; with a remote set, the job pushes
+   its results and `louped pull` brings them in.
 4. **Read the results**: every item under every condition, what changed, and out of how many.
 
 Already have results? `louped view <folder>` opens them read-only.
