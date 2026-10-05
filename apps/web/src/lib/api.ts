@@ -21,6 +21,7 @@ export type ScatterView = Schemas["ScatterView"];
 export type TokensView = Schemas["TokensView"];
 export type VegaView = Schemas["VegaView"];
 export type Pushed = Schemas["Pushed"];
+export type PluginInfo = Schemas["PluginInfo"];
 export type View = RunView["view"];
 export type Direction = Schemas["Direction"];
 type Graph = Schemas["Graph"];
@@ -195,6 +196,13 @@ const every = (live: boolean | undefined): number | false => (live ? LIVE_MS : f
  * live run poll until it ends. */
 export const q = {
   health: () => ({ queryKey: ["health"], queryFn: () => get<Health>("/health"), retry: false }),
+  /** The project's plugins: none in a published dashboard, which has no answer for them. */
+  plugins: () => ({
+    queryKey: ["plugins"],
+    queryFn: () => (isSnapshot() ? Promise.resolve([]) : get<PluginInfo[]>("/plugins")),
+    retry: false,
+    staleTime: Infinity,
+  }),
   runs: () => ({
     queryKey: ["runs"],
     queryFn: () => get<RunSummary[]>("/runs"),

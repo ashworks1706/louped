@@ -606,6 +606,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/plugins": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Plugins */
+    get: operations["plugins_api_plugins_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1288,6 +1305,24 @@ export interface components {
        * @default false
        */
       switchable: boolean;
+    };
+    /** PluginInfo */
+    PluginInfo: {
+      /** Name */
+      name: string;
+      /** Title */
+      title: string;
+      /**
+       * Section
+       * @enum {string}
+       */
+      section: "workspace" | "behavior" | "efficiency";
+      /** Description */
+      description: string;
+      /** Panel */
+      panel: boolean;
+      /** Error */
+      error?: string | null;
     };
     /** Pushed */
     Pushed: {
@@ -2775,6 +2810,26 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  plugins_api_plugins_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PluginInfo"][];
         };
       };
     };

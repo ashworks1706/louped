@@ -298,6 +298,30 @@ Command = (
     | Annotated[Version, tyro.conf.subcommand("version")]
 )
 
+#: louped's own commands; a plugin of the same name does not replace one.
+COMMANDS = {
+    "serve",
+    "data",
+    "train",
+    "sweep",
+    "grid",
+    "init",
+    "new",
+    "view",
+    "features",
+    "circuit",
+    "import",
+    "push",
+    "pull",
+    "publish",
+    "bench",
+    "endpoint-bench",
+    "judge",
+    "mcp",
+    "examples",
+    "version",
+}
+
 
 def serve(cmd: Serve) -> None:
     try:
@@ -349,7 +373,27 @@ def _imported(done: Imported) -> str:
     return f"{len(done.runs)} runs from {done.host} (exit {done.exit_code}){again}"
 
 
+def _plugin_command() -> bool:
+    """Run `louped <name> ...` with the project plugin of that name's main, when no command of
+    louped's own has the name; whether one ran."""
+    import sys
+
+    if len(sys.argv) < 2 or sys.argv[1].startswith("-") or sys.argv[1] in COMMANDS:
+        return False
+    from louped.core.plugins import find_plugins
+
+    plugin = next((p for p in find_plugins() if p.name == sys.argv[1]), None)
+    module = plugin.load() if plugin is not None else None
+    run = getattr(module, "main", None)
+    if run is None:
+        return False
+    run(sys.argv[2:])
+    return True
+
+
 def main() -> None:
+    if _plugin_command():
+        return
     match cmd := tyro.cli(Command):
         case Serve() as cmd:
             serve(cmd)

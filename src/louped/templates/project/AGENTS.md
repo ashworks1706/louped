@@ -10,7 +10,8 @@ results.
 - `louped mcp`, registered in `.mcp.json`, drives the running app: `experiments`, `runs`, `run`,
   `samples`, `figures`, `compare` to read; `new_experiment`, `launch`, `job`, `export_job`,
   `import_result`, `push`, `pull` to act. Work started through it shows in the app. Start `louped serve` first.
-- Skills in `.claude/skills/`: `new-experiment`, `read-results`, `run-elsewhere`, `write-report`.
+- Skills in `.claude/skills/`: `new-experiment`, `read-results`, `run-elsewhere`, `write-report`,
+  `add-plugin`.
 - The CLI does the same steps: `louped new`, `louped import`, `louped --help`.
 
 ## The method
@@ -39,4 +40,5 @@ results.
 | ----------------- | ----------------------------------------------------- |
 | `louped.toml`      | the project's root and settings (its domains)         |
 | `experiments/`    | the questions; committed                              |
+| `plugins/`        | the project's own pages, routes and tools; committed  |
 | `.louped/`         | runs, eval logs, jobs, caches; gitignored, rebuildable |

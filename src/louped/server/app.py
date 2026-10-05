@@ -21,7 +21,7 @@ from pydantic import BaseModel
 
 from louped import __version__, stores
 from louped.core import Direction, home
-from louped.server import graphs, inspect_view, launch, playground
+from louped.server import graphs, inspect_view, launch, playground, plugins
 from louped.stores.labels import Label
 from louped.stores.runs import read_artifact
 from louped.stores.types import (
@@ -222,6 +222,7 @@ def create_app(
 
     app.include_router(playground.router(switchable=launching))
     app.include_router(launch.router(launching))
+    plugins.mount(app, launching)
     graphs.mount(app)
     inspect_view.mount(app)
 

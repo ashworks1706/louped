@@ -10,6 +10,7 @@ import {
   ListTree,
   MessageSquareText,
   Move3d,
+  Puzzle,
   Rocket,
   Waypoints,
   type LucideIcon,
@@ -186,4 +187,26 @@ export function navItem(href: string): NavItem {
 export function fullTitle(item: NavItem): string {
   const domain = DOMAINS.find((d) => d.section === item.section);
   return domain ? `${domain.title} · ${item.title}` : item.title;
+}
+
+/** Where a section's plugin pages live: /x/, /behavior/x/, /efficiency/x/, with ?name=. */
+export const pluginPath = (section: Section) =>
+  section === "workspace" ? "/x/" : `/${section}/x/`;
+
+/** A project plugin's sidebar entry (louped.core.plugins); no G jump, since names are the
+ * project's own. */
+export function pluginItem(p: {
+  name: string;
+  title: string;
+  description: string;
+  section: Section;
+}): NavItem {
+  return {
+    href: `${pluginPath(p.section)}?name=${encodeURIComponent(p.name)}`,
+    title: p.title,
+    description: p.description,
+    icon: Puzzle,
+    shortcut: "",
+    section: p.section,
+  };
 }

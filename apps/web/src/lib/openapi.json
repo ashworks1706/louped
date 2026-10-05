@@ -1385,6 +1385,28 @@
           }
         }
       }
+    },
+    "/api/plugins": {
+      "get": {
+        "summary": "Plugins",
+        "operationId": "plugins_api_plugins_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PluginInfo"
+                  },
+                  "type": "array",
+                  "title": "Response Plugins Api Plugins Get"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3011,6 +3033,45 @@
         "type": "object",
         "required": ["model", "layers"],
         "title": "PlaygroundInfo"
+      },
+      "PluginInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "section": {
+            "type": "string",
+            "enum": ["workspace", "behavior", "efficiency"],
+            "title": "Section"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "panel": {
+            "type": "boolean",
+            "title": "Panel"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": ["name", "title", "section", "description", "panel"],
+        "title": "PluginInfo"
       },
       "Pushed": {
         "properties": {

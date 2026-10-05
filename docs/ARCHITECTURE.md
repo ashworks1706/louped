@@ -79,8 +79,9 @@ Rejected: verifiers (pulls in hosted-API clients; TRL's environments cover it), 
 cluster launchers such as submitit (a job runs here through louped's own provider, or is exported as
 a bundle whose job.sh the cluster's own scheduler runs and whose result is imported back),
 TransformerLens (reimplements architectures, lags new models), Hydra (each tool keeps its native
-config; scripts use tyro), W&B (its server is not free to self-host), a plugin registry (Inspect's
-registries and Python entry points exist).
+config; scripts use tyro), W&B (its server is not free to self-host), a plugin registry or marketplace (Inspect's
+registries and Python entry points exist; a project's own plugins/ folder is all louped reads,
+see louped.core.plugins).
 
 ## Research axes and domains
 
@@ -129,7 +130,7 @@ interventions                            steer, ablate, inject and heads specs; 
 vectors                                  directions as safetensors
 models | data | retrieval                load a model, adapter banks, masked diffusion; training
                                          sets; search and its metrics
-core                                     run metadata, paths, the project
+core                                     run metadata, paths, the project and its plugins
 ```
 
 ## Data

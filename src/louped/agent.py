@@ -17,6 +17,8 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp_types import ToolAnnotations
 
+from louped.core.plugins import find_plugins
+
 #: How to use the tools, sent to the agent when it connects.
 INSTRUCTIONS = """louped is a research testbed for language models: behavior (what models do and
 the mechanisms behind it) and efficiency (what it costs to run them).
@@ -267,6 +269,11 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
             await asyncio.sleep(0.5)
         return await get(f"/launch/jobs/{job_id}")
 
+    # the project's plugins add their own tools (louped.core.plugins)
+    for plugin in find_plugins():
+        module = plugin.load()
+        if module is not None and (add := getattr(module, "tools", None)) is not None:
+            add(mcp, api)
     return mcp
 
 
