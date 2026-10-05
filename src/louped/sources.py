@@ -89,24 +89,24 @@ def source(key: str) -> Source:
     return found[key]
 
 
-def add_source(location: str, key: str | None = None, title: str | None = None,
-               transport: httpx.BaseTransport | None = None, project_only: bool = False,
-               ) -> Source:  # fmt: skip
+def is_url(location: str) -> bool:
+    return re.match(r"^https?://", location) is not None
+
+
+def add_source(location: str | Path, key: str | None = None, title: str | None = None,
+               transport: httpx.BaseTransport | None = None) -> Source:  # fmt: skip
     """Add a file or a URL to sources/ and its text to the search index. A key already taken is
-    refused unless it is the same file again, which returns the one there. With project_only (the
-    server's way), a file must be inside the project: what the app is asked for over HTTP never
-    reads elsewhere on the machine."""
+    refused unless it is the same file again, which returns the one there. A Path is always a
+    file; the server passes one already confined to the project."""
     root = sources_dir()
-    if re.match(r"^https?://", location):
+    if isinstance(location, str) and is_url(location):
         if not location.startswith("https://"):
             raise ValueError(f"{location} is not https: louped fetches over https only")
         url, found_title, suggested = _resolve(location, transport)
         data, kind = _fetch(url, transport)
         origin: str | None = location
     else:
-        # a path relative to the project, or an absolute one inside it
-        path = (inside(experiments_dir().parent, location) if project_only
-                else Path(location).expanduser())  # fmt: skip
+        path = Path(location).expanduser()
         if not path.is_file():
             raise FileNotFoundError(f"no file {location}")
         kind = _kind(path.name)

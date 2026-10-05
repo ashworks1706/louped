@@ -26,6 +26,7 @@ from louped import __version__, stores
 from louped import sources as library
 from louped.core import Direction, cohorts, home
 from louped.core.judges import Judge, find_judges, write_judge
+from louped.core.paths import experiments_dir, inside
 from louped.server import graphs, inspect_view, launch, playground, plugins, ui
 from louped.stores import ab
 from louped.stores.catalog import EvalTask, eval_tasks
@@ -246,7 +247,10 @@ def create_app(
         """A file or URL added to sources/, its text to the search index."""
         editing()
         try:
-            return library.add_source(req.location, req.key, req.title, project_only=True)
+            # a file must be inside the project: over HTTP the app never reads elsewhere
+            location = (req.location if library.is_url(req.location)
+                        else inside(experiments_dir().parent, req.location))  # fmt: skip
+            return library.add_source(location, req.key, req.title)
         except (ValueError, FileNotFoundError) as exc:
             raise HTTPException(400, str(exc)) from exc
         except httpx.HTTPError as exc:
