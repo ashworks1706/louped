@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/ashworks1706/louped/compare/v0.2.0...v0.3.0) (2026-10-05)
+
+
+### Features
+
+* plugin tabs on runs and experiments, edit any run text file, delete to the trash ([#34](https://github.com/ashworks1706/louped/issues/34)) ([076d9dc](https://github.com/ashworks1706/louped/commit/076d9dc9aa07c35e280a47fde80cd56b7eb187bb))
+
 ## [0.2.0](https://github.com/ashworks1706/louped/compare/v0.1.3...v0.2.0) (2026-10-05)
 
 
