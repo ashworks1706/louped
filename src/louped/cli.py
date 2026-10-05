@@ -273,6 +273,44 @@ class Derive:
 
 
 @dataclass(frozen=True)
+class SourceAdd:
+    """Keep a paper, doc, deck or notebook in sources/: a file, or an https URL (an arXiv page,
+    a shared Google Doc or Slides deck, a notebook on GitHub, a direct file link)."""
+
+    location: tyro.conf.Positional[str]
+    key: str | None = None
+    """What citations name it by; from its title when empty."""
+    title: str | None = None
+
+
+@dataclass(frozen=True)
+class SourceSearch:
+    """The pages of sources/ holding every word of the query, best first."""
+
+    query: tyro.conf.Positional[str]
+    limit: int = 10
+
+
+@dataclass(frozen=True)
+class SourceList:
+    """Every source in sources/index.json."""
+
+
+SourceCommand = (
+    Annotated[SourceAdd, tyro.conf.subcommand("add")]
+    | Annotated[SourceSearch, tyro.conf.subcommand("search")]
+    | Annotated[SourceList, tyro.conf.subcommand("list")]
+)
+
+
+@dataclass(frozen=True)
+class Sources:
+    """The project's sources/: papers, docs, slides and notebooks, searched and cited."""
+
+    cmd: tyro.conf.OmitArgPrefixes[tyro.conf.OmitSubcommandPrefixes[SourceCommand]]  # type: ignore[valid-type]
+
+
+@dataclass(frozen=True)
 class Mcp:
     """An MCP server on stdio for coding agents, over a running louped serve: read experiments,
     runs, figures and compares; launch, follow and cancel jobs. Needs the agent extra."""
@@ -312,6 +350,7 @@ Command = (
     | Annotated[EndpointBench, tyro.conf.subcommand("endpoint-bench")]
     | Annotated[Judge, tyro.conf.subcommand("judge")]
     | Annotated[Derive, tyro.conf.subcommand("derive")]
+    | Annotated[Sources, tyro.conf.subcommand("source")]
     | Annotated[Mcp, tyro.conf.subcommand("mcp")]
     | Annotated[Examples, tyro.conf.subcommand("examples")]
     | Annotated[Version, tyro.conf.subcommand("version")]
@@ -337,6 +376,7 @@ COMMANDS = {
     "endpoint-bench",
     "judge",
     "derive",
+    "source",
     "mcp",
     "examples",
     "version",
@@ -568,6 +608,22 @@ def main() -> None:
             try:
                 print(json.dumps({"run": cmd.run, "added": derive(cmd.run, cmd.script, cmd.name)}))
             except (ValueError, FileNotFoundError) as exc:
+                raise SystemExit(str(exc)) from exc
+        case Sources(cmd=sub):
+            from louped import sources
+
+            try:
+                match sub:
+                    case SourceAdd():
+                        print(sources.add_source(sub.location, sub.key, sub.title)
+                              .model_dump_json(indent=2))  # fmt: skip
+                    case SourceSearch():
+                        for hit in sources.search(sub.query, sub.limit):
+                            print(f"{hit.key} p{hit.page}  {hit.snippet}")
+                    case SourceList():
+                        for s in sources.list_sources():
+                            print(f"{s.key}  {s.kind}  {s.pages}p  {s.title}")
+            except (ValueError, FileNotFoundError, KeyError) as exc:
                 raise SystemExit(str(exc)) from exc
         case Mcp() as cmd:
             try:

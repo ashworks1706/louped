@@ -35,8 +35,10 @@ Work like this: read the experiments and runs first. Start a question with new_e
 edit its README and run.py in the project (the project's AGENTS.md says what goes where). Start
 work with launchables, launch_options and launch (a script is "script:<name>/run.py"); follow it
 with job; read results with run, figures, figure, samples and compare; trace says where a figure's
-mark or a record comes from (its rows, script and commit). A figure the person asks
-for (a chart of a file, points in 3D, an animation) is add_view, or derive when it needs a script
+mark or a record comes from (its rows, script and commit). Papers and docs the project rests
+on are its sources: search_sources and source_page before the web, add_source to keep one.
+A figure the person asks for (a chart of a file, points in 3D, an animation) is add_view, or
+derive when it needs a script
 over the run's files (new columns on its items); then ui_show. Evals are Inspect tasks: eval_tasks
 lists the project's and inspect_evals' to launch with "eval". Judging two eval runs is launch
 "judge" with --judge one of judges; a new criterion or prompt is new_judge. The person's own
@@ -52,6 +54,8 @@ them; ui_show opens a page and points the person at parts, with a note."""
 
 READ = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False)
+#: Writes, and reaches the web when given a URL.
+FETCH = ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=True)
 STOP = ToolAnnotations(read_only_hint=False, destructive_hint=True, open_world_hint=False)
 #: Seconds ui_show waits for the app: a poll, the page opening, eight seconds of looking.
 SHOW_WAIT = 15
@@ -140,6 +144,34 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         if not 0 <= index < len(found):
             raise ToolError(f"{run_id} has {len(found)} figures")
         return found[index]["view"]
+
+    @mcp.tool(annotations=READ)
+    async def sources() -> list[dict[str, Any]]:
+        """The project's sources/: the papers, docs, slides and notebooks its claims rest on,
+        each with its key (what a citation names), title, kind, origin URL and pages."""
+        return await get("/sources")
+
+    @mcp.tool(annotations=READ)
+    async def search_sources(query: str, limit: int = 10) -> list[dict[str, Any]]:
+        """The pages of the project's sources holding every word of query, best first, each with
+        its key, page and a snippet. Search here before going to the web."""
+        return await get("/sources/search", q=query, limit=limit)
+
+    @mcp.tool(annotations=READ)
+    async def source_page(key: str, page: int) -> dict[str, Any]:
+        """One page of a source's text, counted from 1: what to quote, word for word."""
+        return await get(f"/sources/{quote(key, safe='')}/pages/{page}")
+
+    @mcp.tool(annotations=FETCH)
+    async def add_source(
+        location: str, key: str | None = None, title: str | None = None
+    ) -> dict[str, Any]:
+        """Keep a paper, doc, deck or notebook in the project's sources/ so it can be searched,
+        quoted and cited: a file in the project (copy one from elsewhere in first), or an https
+        URL (an arXiv page, a shared Google Doc or Slides deck, a notebook on GitHub or opened
+        from GitHub in Colab, a direct file link). Fetch a paper only from its primary source;
+        the URL is recorded with the file."""
+        return await post("/sources", {"location": location, "key": key, "title": title})
 
     @mcp.tool(annotations=READ)
     async def trace(ref: str) -> dict[str, Any]:
