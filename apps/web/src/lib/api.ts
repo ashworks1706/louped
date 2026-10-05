@@ -45,6 +45,10 @@ export type Imported = Schemas["Imported"];
 export type Agreement = Schemas["Agreement"];
 export type Label = "a" | "b" | "tie";
 type JobDetail = Schemas["JobDetail"];
+export type Block = Schemas["Block"];
+export type UiPage = Schemas["Page"];
+export type Theme = Schemas["Theme"];
+export type Selection = Schemas["Selection"];
 
 export class ApiError extends Error {
   constructor(
@@ -175,6 +179,9 @@ export async function exportJob(req: ExportRequest): Promise<{ name: string; not
   return { name, note: res.headers.get("x-louped-note") ?? "" };
 }
 
+/** Hands the person's agent the block they pointed at (ui_selection). */
+export const pointAt = (s: Selection) => post<Selection>("/ui/selection", s);
+
 /** Pushes this louped's new runs to the project's remote. */
 export const pushRuns = () => post<Pushed>("/launch/push", {});
 /** Adds the runs in the remote this louped has not pulled. */
@@ -209,6 +216,8 @@ export const isLive = (status: string) =>
 
 /** How often a page refetches a run that is still writing. */
 const LIVE_MS = 3000;
+/** How often a page rereads its layout while an agent may be changing it. */
+const LAYOUT_MS = 2000;
 const every = (live: boolean | undefined): number | false => (live ? LIVE_MS : false);
 
 /** Query keys and fetchers, one per endpoint, so pages never build URLs by hand. Queries over a
@@ -299,6 +308,19 @@ export const q = {
     queryFn: () => get<JobDetail>(`/launch/jobs/${encodeURIComponent(id)}`),
     refetchInterval: (query: Query<JobDetail>) =>
       every(query.state.data && isLive(query.state.data.status)),
+  }),
+  /** What a page's regions show (louped.server.ui). poll follows layout.json as an agent edits
+   * it, on a server that launches. */
+  layout: (experiment: string | null | undefined, poll: boolean) => ({
+    queryKey: ["layout", experiment ?? null],
+    queryFn: () =>
+      get<UiPage>(`/ui/layout${experiment ? `?experiment=${encodeURIComponent(experiment)}` : ""}`),
+    refetchInterval: poll ? LAYOUT_MS : (false as const),
+  }),
+  theme: (poll: boolean) => ({
+    queryKey: ["theme"],
+    queryFn: () => get<Theme>("/ui/theme"),
+    refetchInterval: poll ? LAYOUT_MS : (false as const),
   }),
   experiments: () => ({
     queryKey: ["experiments"],

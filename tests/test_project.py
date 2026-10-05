@@ -80,6 +80,7 @@ def test_init_writes_the_project_and_keeps_what_exists(tmp_path: Path) -> None:
     skills = sorted(p.parent.name for p in (folder / ".claude/skills").glob("*/SKILL.md"))
     assert skills == [
         "add-plugin",
+        "change-ui",
         "new-experiment",
         "read-results",
         "run-elsewhere",

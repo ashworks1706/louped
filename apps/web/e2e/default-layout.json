@@ -1,0 +1,111 @@
+{
+  "regions": {
+    "home": [
+      {
+        "block": "stats",
+        "width": "full"
+      },
+      {
+        "block": "live",
+        "width": "full"
+      },
+      {
+        "block": "domains",
+        "width": "full"
+      },
+      {
+        "block": "active",
+        "width": "full"
+      },
+      {
+        "block": "latest",
+        "width": "full"
+      }
+    ],
+    "run.tabs": [
+      {
+        "block": "overview",
+        "width": "full"
+      },
+      {
+        "block": "items",
+        "width": "full"
+      },
+      {
+        "block": "figures",
+        "width": "full"
+      },
+      {
+        "block": "samples",
+        "width": "full"
+      },
+      {
+        "block": "log",
+        "width": "full"
+      },
+      {
+        "block": "artifacts",
+        "width": "full"
+      },
+      {
+        "block": "config",
+        "width": "full"
+      }
+    ],
+    "run.overview": [
+      {
+        "block": "error",
+        "width": "full"
+      },
+      {
+        "block": "metrics",
+        "width": "full"
+      },
+      {
+        "block": "history",
+        "width": "full"
+      },
+      {
+        "block": "hardware",
+        "width": "full"
+      },
+      {
+        "block": "report",
+        "width": "full"
+      },
+      {
+        "block": "provenance",
+        "width": "full"
+      }
+    ],
+    "experiment.tabs": [
+      {
+        "block": "design",
+        "width": "full"
+      },
+      {
+        "block": "runs",
+        "width": "full"
+      }
+    ],
+    "experiment.design": [
+      {
+        "block": "readme",
+        "width": "full"
+      },
+      {
+        "block": "result",
+        "width": "side"
+      }
+    ]
+  },
+  "sources": {
+    "home": "default",
+    "run.tabs": "default",
+    "run.overview": "default",
+    "experiment.tabs": "default",
+    "experiment.design": "default"
+  },
+  "errors": [],
+  "files": ["layout.json"]
+}

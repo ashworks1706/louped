@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 // Mocked API: the viewers louped embeds (Inspect View, Neuronpedia, circuit-tracer) as iframes.
 const run = {

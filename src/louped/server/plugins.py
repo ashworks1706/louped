@@ -26,9 +26,10 @@ class PluginInfo(BaseModel):
     error: str | None = None
 
 
-def mount(app: FastAPI, launching: bool) -> None:
+def mount(app: FastAPI, launching: bool, pages: dict[str, list[str]]) -> None:
     """Load the plugins when launching is on, and list them; with --expose there are none. Call
-    before Inspect View's catch-all /api mount."""
+    before Inspect View's catch-all /api mount. Fills pages with each mounted plugin's panel
+    pages, which layouts may place."""
     found: list[PluginInfo] = []
     for plugin in find_plugins() if launching else []:
         info = PluginInfo(name=plugin.name, title=plugin.title, section=plugin.section,
@@ -43,6 +44,7 @@ def mount(app: FastAPI, launching: bool) -> None:
             module = None
         if module is not None and (router := getattr(module, "router", None)) is not None:
             app.include_router(router, prefix=f"/api/x/{plugin.name}")
+        pages[plugin.name] = sorted(f.name for f in (plugin.folder / "panel").glob("*.html"))
         if plugin.panel is not None:
             app.mount(f"/x/{plugin.name}", StaticFiles(directory=plugin.panel, html=True),
                       name=f"plugin-{plugin.name}")  # fmt: skip

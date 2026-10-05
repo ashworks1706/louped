@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { DEFAULT_LAYOUT, expect, test } from "./fixtures";
 
 const run = {
   id: "m-1",
@@ -139,6 +139,13 @@ test("a published page reads its answers from files", async ({ page }) => {
     }),
   );
   await page.route(file("/runs/m-1"), (r) => r.fulfill({ json: run }));
+  await page.route(`**/api/${encodeURIComponent("/ui/").replaceAll("%", ",")}*.json`, (r) =>
+    r.fulfill({
+      json: r.request().url().includes("theme")
+        ? { light: {}, dark: {}, errors: [] }
+        : DEFAULT_LAYOUT,
+    }),
+  );
   await page.route(file("/runs/m-1/views"), (r) =>
     r.fulfill({ json: [{ path: "views/00-v.json", view: vega }] }),
   );

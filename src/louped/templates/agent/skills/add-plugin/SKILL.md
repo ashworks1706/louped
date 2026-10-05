@@ -23,11 +23,17 @@ description: Add a page, a tab on every run or experiment, API routes, a command
      your way where the user already looks.
    - `experiment.html`: a tab on every experiment's page, opened with `?experiment=<name>`.
 
+   - Any other `<page>.html`: a block a layout places anywhere (`change-ui`), opened with the
+     run or experiment of the page it is on.
+
    For each page:
-   - Use plain HTML and JavaScript, or a built bundle. It calls `/api/...` as the app does.
-   - Style it only with the app's variables: `var(--background)`, `var(--foreground)`,
-     `var(--muted-foreground)`, `var(--border)`, `var(--font-geist-sans)`,
-     `var(--font-geist-mono)` for numbers. Use no other colours.
+   - Build it from louped's kit, so it looks like the app: `<link rel="stylesheet"
+     href="/kit/louped.css">` and `import { api, run, experiment, stats, table, h, empty } from
+     "/kit/louped.js"` in a module script. `api(path)` reads `/api<path>`; `stats` and `table`
+     draw the app's metric cards and tables. As a block, the kit fits its frame to the page.
+   - Use only the kit's classes (`l-card`, `l-stats`, `l-table`, `l-button`, `l-input`,
+     `l-badge`, `l-muted`, `l-mono`, `l-empty`) and the app's variables (`var(--foreground)`,
+     `var(--border)`, ...). No colours, fonts, shadows or CSS frameworks of its own.
    - Keep it to one question per page, with little text, as the rest of the app is.
 5. Restart `louped serve` and open the plugin's sidebar entry, or its tab on a run or experiment.
    A load error shows on its page.

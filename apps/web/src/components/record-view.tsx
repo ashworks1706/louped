@@ -3,6 +3,7 @@
 import { ArrowDown, ArrowUp, Download } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { Help } from "@/components/help";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -54,7 +55,16 @@ function Scalar({ value }: { value: string | number | boolean | null }) {
 
 /** One record, field by field: text as a block, a list of numbers as bars with its largest
  * marked, anything nested as a tree. `changed` fields are outlined. */
-export function RecordFields({ row, changed }: { row: Row; changed?: Set<string> }) {
+export function RecordFields({
+  row,
+  changed,
+  about,
+}: {
+  row: Row;
+  changed?: Set<string>;
+  /** What fields mean, from the run's fields.json: a ? beside each named one. */
+  about?: Record<string, string>;
+}) {
   return (
     <dl className="flex flex-col gap-3">
       {Object.entries(row).map(([k, v]) => (
@@ -65,7 +75,10 @@ export function RecordFields({ row, changed }: { row: Row; changed?: Set<string>
             changed?.has(k) && "border-foreground/40 rounded-md border border-dashed p-2",
           )}
         >
-          <dt className="text-muted-foreground font-mono text-xs">{k}</dt>
+          <dt className="text-muted-foreground flex items-center gap-1 font-mono text-xs">
+            {k}
+            {about?.[k] && <Help label={`What ${k} means`}>{about[k]}</Help>}
+          </dt>
           <dd className="min-w-0">
             <FieldValue value={v} />
           </dd>

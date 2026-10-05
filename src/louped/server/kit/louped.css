@@ -1,0 +1,175 @@
+/* louped's look for plugin pages: the app hands the page its tokens (var(--foreground) and the
+   rest) and its fonts; these classes are the app's own cards, numbers, tables and buttons drawn
+   with them. Link it with <link rel="stylesheet" href="/kit/louped.css">. */
+
+:root {
+  color-scheme: light dark;
+}
+html,
+body {
+  margin: 0;
+  background: transparent;
+  color: var(--foreground);
+  font: 14px/1.5 var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+}
+/* as a block in a layout, the app draws the frame: the page fills it edge to edge */
+html[data-block] body {
+  padding: 0;
+}
+a {
+  color: inherit;
+  text-underline-offset: 4px;
+}
+
+/* a bordered box, as the app's figures and tables */
+.l-card {
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 4px);
+  padding: 1rem;
+}
+.l-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.l-muted {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+.l-mono {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.l-positive {
+  color: var(--positive);
+}
+.l-negative {
+  color: var(--negative);
+}
+/* the one accent: an intervention is active */
+.l-intervention {
+  color: var(--intervention);
+}
+
+/* numbers in bordered cells, as the app's metric cards */
+.l-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 4px);
+}
+.l-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0 -1px -1px 0;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 1rem;
+}
+.l-stat > :first-child {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+.l-stat > :nth-child(2) {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+.l-stat > :nth-child(3) {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+/* rows, numbers right-aligned */
+.l-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 4px);
+  font-size: 0.875rem;
+}
+.l-table th {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-align: left;
+}
+.l-table th,
+.l-table td {
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem 1rem;
+}
+.l-table tr:last-child td {
+  border-bottom: 0;
+}
+.l-table .l-num {
+  text-align: right;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.l-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2rem;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 2px);
+  background: var(--background);
+  color: var(--foreground);
+  padding: 0 0.75rem;
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+.l-button:hover {
+  background: var(--accent);
+}
+.l-button.l-primary {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.l-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.l-button:focus-visible,
+.l-input:focus-visible {
+  outline: 3px solid color-mix(in oklch, var(--ring) 50%, transparent);
+}
+.l-input {
+  height: 2rem;
+  border: 1px solid var(--input);
+  border-radius: calc(var(--radius) - 2px);
+  background: transparent;
+  color: inherit;
+  padding: 0 0.75rem;
+  font: inherit;
+}
+.l-badge {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 0.5rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+/* what fills an empty block, as the app's empty states */
+.l-empty {
+  border: 1px dashed var(--border);
+  border-radius: calc(var(--radius) + 4px);
+  padding: 2rem;
+  color: var(--muted-foreground);
+  text-align: center;
+}

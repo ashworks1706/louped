@@ -36,7 +36,9 @@ work with launchables, launch_options and launch (a script is "script:<name>/run
 with job; read results with run, figures, figure, samples and compare. A run too large for this
 machine goes to a cluster with export_job; its result comes back with import_result.
 Report a difference only with its paired interval from compare, and name the run ids you used.
-Jobs run one at a time on this machine's GPU, so do not queue more than the question needs."""
+Jobs run one at a time on this machine's GPU, so do not queue more than the question needs.
+The app's pages are data: ui_page shows them, ui_selection says which block the person pointed
+at, and set_layout and set_preset change them."""
 
 READ = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False)
@@ -258,6 +260,42 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         """Add the runs pushed to the project's remote that this louped has not pulled, including
         the results of jobs exported from here; returns what each bundle added."""
         return await post("/launch/pull", {})
+
+    @mcp.tool(annotations=READ)
+    async def ui_page(experiment: str | None = None) -> dict[str, Any]:
+        """The app's pages as data: each region (home, run.tabs, run.overview, experiment.tabs,
+        experiment.design) with its blocks and where they come from, the blocks each region can
+        hold, the presets, and the layout files. With experiment, as that experiment's page and
+        its runs' pages show. Change a region with set_layout or a preset with set_preset; the
+        change-ui skill says how to keep a page louped's own."""
+        found = await get("/ui/layout", experiment=experiment)
+        return {**found, **await get("/ui/catalog")}
+
+    @mcp.tool(annotations=READ)
+    async def ui_selection() -> dict[str, Any] | None:
+        """The block the person last pointed at in the app (select mode): its id
+        ("<region>/<block>", "/<key>" for one card in it), the page, its run or experiment, and
+        its text. None when they have not pointed at one since the server started."""
+        return await get("/ui/selection")
+
+    @mcp.tool(annotations=WRITE)
+    async def set_layout(
+        region: str, blocks: list[dict[str, Any]] | None, experiment: str | None = None
+    ) -> dict[str, Any]:
+        """Set one region's blocks, in order, in layout.json (the project's, or with experiment
+        that experiment's, for its page and its runs'). A block is {"block": name} plus what its
+        kind needs (key, path, index, plugin) and optionally title, about and width (full, half,
+        side). blocks None removes the region from the file. The server checks it first; the app
+        shows it at once. Returns the page as ui_page does."""
+        body = {"region": region, "blocks": blocks, "experiment": experiment}
+        return await send("PUT", "/ui/layout", json=body)
+
+    @mcp.tool(annotations=WRITE)
+    async def set_preset(preset: str | None, experiment: str | None = None) -> dict[str, Any]:
+        """Start the project's (or an experiment's) pages from a preset (ui_page lists them).
+        "default" uses none, even over the project's; None names none in this file, so an
+        experiment follows the project's. Regions set in layout.json stay over it."""
+        return await send("PUT", "/ui/preset", json={"preset": preset, "experiment": experiment})
 
     async def _wait(job_id: str, seconds: int) -> dict[str, Any]:
         for _ in range(seconds * 2):

@@ -15,6 +15,8 @@ import itemLight from "../../../public/demo/item-light.png";
 import itemsDark from "../../../public/demo/items-dark.png";
 import itemsLight from "../../../public/demo/items-light.png";
 import launchDark from "../../../public/demo/launch-dark.png";
+import layoutDark from "../../../public/demo/layout-dark.png";
+import layoutLight from "../../../public/demo/layout-light.png";
 import launchLight from "../../../public/demo/launch-light.png";
 import tracesDark from "../../../public/demo/traces-dark.png";
 import tracesLight from "../../../public/demo/traces-light.png";
@@ -48,6 +50,12 @@ const STEPS: { title: string; text: string; code?: string; shot: Shot; alt: stri
     text: "See every item under every condition: what changed, and out of how many. Open one to compare the conditions side by side.",
     shot: [itemLight, itemDark],
     alt: "One question under baseline, evidence and pushback, side by side",
+  },
+  {
+    title: "Make it yours",
+    text: "Point at any card and ask your agent to change it: move it, rename it, add a note or a card of your own, drawn in louped's look. The page updates as it works.",
+    shot: [layoutLight, layoutDark],
+    alt: "A run's page laid out by an agent, with the card being pointed at outlined",
   },
 ];
 
@@ -90,8 +98,8 @@ export default function HomePage() {
         {tagline}
       </h1>
       <p className="text-fd-muted-foreground mt-5 max-w-lg text-center text-balance">
-        Your coding agent writes and runs the experiments. You read the results, item by item.
-        Local, open models, free.
+        Your coding agent writes and runs the experiments, and shapes the app around them. You read
+        the results, item by item. Local, open models, free.
       </p>
       <div className="mt-10 flex max-w-full flex-wrap items-center justify-center gap-3">
         <CopyCommand command={INSTALL} />

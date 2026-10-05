@@ -1,4 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+
+import { expect, test } from "./fixtures";
 
 // A mocked API: the Playground's Inspect tab against one lens, projection and attention view.
 const tokens = ["<user>", "hi", "<assistant>"];

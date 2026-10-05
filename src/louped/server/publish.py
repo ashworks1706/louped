@@ -82,15 +82,21 @@ def publish(out: Path, web: Path) -> Published:
         done.files += 1
         return got.json()
 
-    for path in ("/health", "/vectors", "/graphs"):
+    for path in ("/health", "/vectors", "/graphs", "/ui/layout", "/ui/theme"):
         save(path)
     save("/playground", expected=False)  # no model is loaded in a snapshot
+    layouts: set[str] = set()  # each run's page asks for its experiment's, listed or not
     for experiment in save("/experiments") or []:
         save(f"/experiments/{_enc(experiment['name'])}")
+        layouts.add(experiment["name"])
+        save(f"/ui/layout?experiment={_enc(experiment['name'])}")
     for run in save("/runs") or []:
         done.runs += 1
         rid = _enc(run["id"])
         detail = save(f"/runs/{rid}") or {}
+        if (named := run.get("experiment")) and named not in layouts:
+            layouts.add(named)
+            save(f"/ui/layout?experiment={_enc(named)}")
         evaled = run["id"].startswith("e-")
         for sample in save(f"/runs/{rid}/samples", expected=evaled) or []:
             save(f"/runs/{rid}/samples/{_enc(sample['id'])}?epoch={sample['epoch']}")

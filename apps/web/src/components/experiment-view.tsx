@@ -9,7 +9,15 @@ import { EmptyState } from "@/components/empty-state";
 import { StatusLabel } from "@/components/experiments-list";
 import { EditableText } from "@/components/markdown-editor";
 import { DeleteButton } from "@/components/delete-button";
-import { PluginFrame, usePluginTabs } from "@/components/plugin-page";
+import { PluginFrame } from "@/components/plugin-page";
+import {
+  blockId,
+  LayoutErrors,
+  PluginBlock,
+  RegionGrid,
+  textBlock,
+  useLayout,
+} from "@/components/layout";
 import { QueryState } from "@/components/query-state";
 import { RunsTable } from "@/components/runs-table";
 import { Button } from "@/components/ui/button";
@@ -81,7 +89,7 @@ function ExperimentHeader({ experiment: e }: { experiment: ExperimentDetail }) {
   const live = e.runs.filter((r) => isLive(r.status)).length;
   const last = e.runs[0];
   return (
-    <header className="border-b">
+    <header className="border-b" data-ui="experiment.header">
       <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 py-6">
         <Link
           href={`${axisPath(e.axis)}/experiments/`}
@@ -182,66 +190,121 @@ function firstRun(
 function ExperimentTabs({ experiment: e }: { experiment: ExperimentDetail }) {
   const own = useOwnLaunchables(e.name);
   const client = useQueryClient();
-  const plugins = usePluginTabs("experiment");
-  const [tab, setTab] = useQueryState("tab", parseAsString.withDefault("design"));
+  const layout = useLayout(e.name);
+  const plugins = useQuery(q.plugins());
+  const [chosen, setTab] = useQueryState("tab", parseAsString);
+  if (!layout.data) return <QueryState query={layout}>{() => null}</QueryState>;
+  const runs =
+    e.runs.length === 0 ? (
+      <EmptyState
+        icon={Rocket}
+        title="No runs yet"
+        body="Nothing has run under it yet."
+        action={firstRun(e.name, e.axis, own)}
+      />
+    ) : (
+      <RunsTable runs={e.runs} byExperiment={false} />
+    );
+  const design = (
+    <RegionGrid
+      region="experiment.design"
+      blocks={layout.data.regions["experiment.design"]}
+      render={(b) => {
+        switch (b.block) {
+          case "readme":
+            return {
+              body: (
+                <article className="max-w-3xl min-w-0">
+                  <EditableText
+                    name="README.md"
+                    shown={e.readme}
+                    source={() => readme(e.name)}
+                    save={async (text) => {
+                      await saveReadme(e.name, text);
+                      await client.invalidateQueries({ queryKey: ["experiment", e.name] });
+                      await client.invalidateQueries({ queryKey: ["experiments"] });
+                    }}
+                  />
+                </article>
+              ),
+            };
+          case "result":
+            return {
+              title: "Result",
+              body: (
+                <>
+                  <p className="text-sm leading-relaxed">
+                    {e.result ?? "Not written yet. It goes under ## Result in the README."}
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    From <span className="font-mono">experiments/{e.name}/README.md</span>.
+                  </p>
+                </>
+              ),
+            };
+          case "runs":
+            return { title: "Runs", body: runs };
+          case "plugin":
+            return {
+              body: <PluginBlock b={b} page="experiment.html" query={{ experiment: e.name }} />,
+            };
+          default:
+            return null;
+        }
+      }}
+    />
+  );
+  const tabs = layout.data.regions["experiment.tabs"].flatMap((b, at) => {
+    const tab =
+      b.block === "text"
+        ? { value: `t-${at}`, label: "Notes", ...textBlock(b) }
+        : b.block === "design"
+          ? { value: "design", label: "Design and result", body: design }
+          : b.block === "runs"
+            ? { value: "runs", label: "Runs", body: runs, count: e.runs.length }
+            : b.block === "plugin"
+              ? {
+                  value: `x-${b.plugin}`,
+                  label: plugins.data?.find((p) => p.name === b.plugin)?.title ?? b.plugin!,
+                  body: (
+                    <PluginFrame
+                      name={b.plugin!}
+                      page={b.page ?? "experiment.html"}
+                      query={{ experiment: e.name }}
+                    />
+                  ),
+                }
+              : null;
+    return tab ? [{ count: undefined, ...tab, b, at, label: b.title ?? tab.label }] : [];
+  });
+  const tab = chosen && tabs.some((t) => t.value === chosen) ? chosen : tabs[0]?.value;
   return (
-    <Tabs value={tab} onValueChange={(v) => void setTab(v)}>
-      <TabsList>
-        <TabsTrigger value="design">Design and result</TabsTrigger>
-        <TabsTrigger value="runs" aria-label={`Runs (${e.runs.length})`}>
-          Runs
-          <span className="text-muted-foreground ml-1.5 font-mono text-[11px] tabular-nums">
-            {e.runs.length}
-          </span>
-        </TabsTrigger>
-        {plugins.map((p) => (
-          <TabsTrigger key={p.name} value={`x-${p.name}`}>
-            {p.title}
-          </TabsTrigger>
+    <>
+      <LayoutErrors page={layout.data} />
+      <Tabs value={tab} onValueChange={(v) => void setTab(v)}>
+        <TabsList>
+          {tabs.map((t) => (
+            <TabsTrigger
+              key={t.value}
+              value={t.value}
+              data-ui={blockId("experiment.tabs", t.b, t.at)}
+              aria-label={t.count !== undefined ? `${t.label} (${t.count})` : undefined}
+            >
+              {t.label}
+              {t.count !== undefined && (
+                <span className="text-muted-foreground ml-1.5 font-mono text-[11px] tabular-nums">
+                  {t.count}
+                </span>
+              )}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        {tabs.map((t) => (
+          <TabsContent key={t.value} value={t.value}>
+            {t.body}
+          </TabsContent>
         ))}
-      </TabsList>
-      <TabsContent value="design">
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
-          <article className="max-w-3xl min-w-0">
-            <EditableText
-              name="README.md"
-              shown={e.readme}
-              source={() => readme(e.name)}
-              save={async (text) => {
-                await saveReadme(e.name, text);
-                await client.invalidateQueries({ queryKey: ["experiment", e.name] });
-                await client.invalidateQueries({ queryKey: ["experiments"] });
-              }}
-            />
-          </article>
-          <aside className="order-first flex flex-col gap-3 lg:sticky lg:top-6 lg:order-none lg:self-start">
-            <h2 className="text-muted-foreground text-xs font-medium">Result</h2>
-            <p className="text-sm leading-relaxed">
-              {e.result ?? "Not written yet. It goes under ## Result in the README."}
-            </p>
-            <p className="text-muted-foreground text-xs">
-              From <span className="font-mono">experiments/{e.name}/README.md</span>.
-            </p>
-          </aside>
-        </div>
-      </TabsContent>
-      <TabsContent value="runs">
-        {e.runs.length === 0 ? (
-          <EmptyState
-            icon={Rocket}
-            title="No runs yet"
-            body="Nothing has run under it yet."
-            action={firstRun(e.name, e.axis, own)}
-          />
-        ) : (
-          <RunsTable runs={e.runs} byExperiment={false} />
-        )}
-      </TabsContent>
-      {plugins.map((p) => (
-        <TabsContent key={p.name} value={`x-${p.name}`}>
-          <PluginFrame name={p.name} page="experiment.html" query={{ experiment: e.name }} />
-        </TabsContent>
-      ))}
-    </Tabs>
+      </Tabs>
+    </>
   );
 }

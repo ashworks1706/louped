@@ -5,6 +5,7 @@ import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { ThemeTokens } from "@/components/layout";
 import { Notifier } from "@/components/notifier";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -39,6 +40,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={client}>
       <NuqsAdapter>
         <TooltipProvider>
+          <ThemeTokens />
           {children}
           <Notifier />
           <Toaster position="bottom-right" closeButton />

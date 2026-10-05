@@ -21,7 +21,7 @@ from pydantic import BaseModel
 
 from louped import __version__, stores
 from louped.core import Direction, home
-from louped.server import graphs, inspect_view, launch, playground, plugins
+from louped.server import graphs, inspect_view, launch, playground, plugins, ui
 from louped.stores.labels import Label
 from louped.stores.runs import read_artifact
 from louped.stores.types import (
@@ -236,7 +236,11 @@ def create_app(
 
     app.include_router(playground.router(switchable=launching))
     app.include_router(launch.router(launching))
-    plugins.mount(app, launching)
+    pages: dict[str, list[str]] = {}  # the plugins' pages, once plugins.mount has served them
+    app.include_router(ui.router(launching, pages))
+    # louped's look and helpers for plugin pages (louped.server.ui, plugins.mdx)
+    app.mount("/kit", StaticFiles(directory=Path(__file__).parent / "kit"), name="kit")
+    plugins.mount(app, launching, pages)
     graphs.mount(app)
     inspect_view.mount(app)
 

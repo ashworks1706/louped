@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "louped",
-    "version": "0.2.0"
+    "version": "0.3.0"
   },
   "paths": {
     "/api/health": {
@@ -68,6 +68,41 @@
                 "schema": {
                   "$ref": "#/components/schemas/RunDetail"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Run",
+        "operationId": "delete_run_api_runs__run_id__delete",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -768,6 +803,44 @@
       }
     },
     "/api/experiments/{name}": {
+      "delete": {
+        "summary": "Delete Experiment",
+        "description": "Moves its folder to <home>/trash/experiments; says where.",
+        "operationId": "delete_experiment_api_experiments__name__delete",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Text"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "get": {
         "summary": "Experiment",
         "operationId": "experiment_api_experiments__name__get",
@@ -1213,6 +1286,41 @@
             }
           }
         }
+      },
+      "delete": {
+        "summary": "Delete",
+        "operationId": "delete_api_launch_jobs__job_id__delete",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/launch/export": {
@@ -1424,6 +1532,226 @@
         }
       }
     },
+    "/api/ui/layout": {
+      "get": {
+        "summary": "Layout",
+        "operationId": "layout_api_ui_layout_get",
+        "parameters": [
+          {
+            "name": "experiment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Experiment"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Set Region",
+        "description": "Sets one region of the project's or an experiment's layout.json, checked first.",
+        "operationId": "set_region_api_ui_layout_put",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetRegion"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ui/catalog": {
+      "get": {
+        "summary": "Catalog",
+        "operationId": "catalog_api_ui_catalog_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Catalog"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ui/preset": {
+      "put": {
+        "summary": "Set Preset",
+        "operationId": "set_preset_api_ui_preset_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPreset"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ui/theme": {
+      "get": {
+        "summary": "Get Theme",
+        "operationId": "get_theme_api_ui_theme_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Theme"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ui/selection": {
+      "get": {
+        "summary": "Selection",
+        "operationId": "selection_api_ui_selection_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Selection"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Selection Api Ui Selection Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Select",
+        "description": "Keeps the block a person pointed at, until the next; in memory only.",
+        "operationId": "select_api_ui_selection_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Selection"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Selection"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/plugins": {
       "get": {
         "summary": "Plugins",
@@ -1512,6 +1840,140 @@
         "type": "object",
         "required": ["path", "size"],
         "title": "Artifact"
+      },
+      "Block": {
+        "properties": {
+          "block": {
+            "type": "string",
+            "title": "Block"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "about": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "About"
+          },
+          "width": {
+            "type": "string",
+            "enum": ["full", "half", "side"],
+            "title": "Width",
+            "default": "full"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Index"
+          },
+          "plugin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plugin"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": ["block"],
+        "title": "Block",
+        "description": "One piece of a region. Only the fields its kind needs are set."
+      },
+      "Catalog": {
+        "properties": {
+          "regions": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/Kind"
+              },
+              "type": "array"
+            },
+            "propertyNames": {
+              "enum": ["home", "run.tabs", "run.overview", "experiment.tabs", "experiment.design"]
+            },
+            "type": "object",
+            "title": "Regions"
+          },
+          "presets": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Presets"
+          }
+        },
+        "type": "object",
+        "required": ["regions", "presets"],
+        "title": "Catalog"
       },
       "Comparison": {
         "properties": {
@@ -2575,6 +3037,29 @@
         "required": ["id", "title", "argv", "log"],
         "title": "JobDetail"
       },
+      "Kind": {
+        "properties": {
+          "block": {
+            "type": "string",
+            "title": "Block"
+          },
+          "about": {
+            "type": "string",
+            "title": "About"
+          },
+          "needs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Needs",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": ["block", "about"],
+        "title": "Kind"
+      },
       "LabelRequest": {
         "properties": {
           "label": {
@@ -2932,6 +3417,51 @@
         "required": ["flag", "kind", "default"],
         "title": "Option",
         "description": "One flag of a command, as its parser declares it."
+      },
+      "Page": {
+        "properties": {
+          "regions": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/Block"
+              },
+              "type": "array"
+            },
+            "propertyNames": {
+              "enum": ["home", "run.tabs", "run.overview", "experiment.tabs", "experiment.design"]
+            },
+            "type": "object",
+            "title": "Regions"
+          },
+          "sources": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "enum": ["home", "run.tabs", "run.overview", "experiment.tabs", "experiment.design"]
+            },
+            "type": "object",
+            "title": "Sources"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Errors"
+          },
+          "files": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Files"
+          }
+        },
+        "type": "object",
+        "required": ["regions", "sources", "errors", "files"],
+        "title": "Page",
+        "description": "What a page shows, region by region, and where each region came from."
       },
       "PairedScore": {
         "properties": {
@@ -3735,6 +4265,121 @@
         "required": ["name", "value", "raw", "answer", "explanation"],
         "title": "Score"
       },
+      "Selection": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 300,
+            "pattern": "^[a-z.]+(/[^\\s/][^/]*)*$",
+            "title": "Id"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Url"
+          },
+          "run": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run"
+          },
+          "experiment": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Text",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": ["id", "url"],
+        "title": "Selection",
+        "description": "The block a person pointed at in the app, for their agent."
+      },
+      "SetPreset": {
+        "properties": {
+          "experiment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment"
+          },
+          "preset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preset"
+          }
+        },
+        "type": "object",
+        "required": ["preset"],
+        "title": "SetPreset"
+      },
+      "SetRegion": {
+        "properties": {
+          "experiment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment"
+          },
+          "region": {
+            "type": "string",
+            "enum": ["home", "run.tabs", "run.overview", "experiment.tabs", "experiment.design"],
+            "title": "Region"
+          },
+          "blocks": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Block"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocks"
+          }
+        },
+        "type": "object",
+        "required": ["region", "blocks"],
+        "title": "SetRegion"
+      },
       "SpeedRequest": {
         "properties": {
           "interventions": {
@@ -4011,6 +4656,35 @@
         "required": ["text"],
         "title": "Text",
         "description": "A Markdown file's text."
+      },
+      "Theme": {
+        "properties": {
+          "light": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Light"
+          },
+          "dark": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Dark"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "required": ["light", "dark", "errors"],
+        "title": "Theme",
+        "description": "Token values over the defaults, for light and dark mode; errors name what was dropped."
       },
       "TokenRow": {
         "properties": {

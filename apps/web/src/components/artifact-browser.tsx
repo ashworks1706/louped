@@ -210,6 +210,12 @@ function size(bytes: number | null | undefined): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+/** One of a run's files, drawn as the Artifacts tab draws it: a layout's file block or tab. */
+export function RunFile({ run, path }: { run: RunDetail; path: string }) {
+  const artifact = run.artifacts.find((a) => a.path === path);
+  return artifact ? <Preview runId={run.id} artifact={artifact} /> : null;
+}
+
 function Preview({ runId, artifact }: { runId: string; artifact: Artifact }) {
   const kind = kindOf(artifact.path);
   if (kind === "image")
