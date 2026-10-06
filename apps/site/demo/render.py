@@ -22,18 +22,20 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 W, H = 1920, 1080
 FPS = 30
-WIN = (40, 120, 1280, 840)  # x, y, width, height of the left window, its bar included
+WIN = (40, 80, 1280, 840)  # x, y, width, height of the left window, its bar included
 BAR = 40  # the window's title bar; below it the 1440 x 900 page, scaled to 1280 x 800
 CONTENT = (WIN[0], WIN[1] + BAR, WIN[2], WIN[3] - BAR)
-PANEL = (1344, 120, 536, 840)
+PANEL = (1344, 80, 536, 840)
 RADIUS = 14
 EASE_S = 0.9  # how long the camera takes to move
+PACE = 1.25  # how much faster than recorded the whole plays
 FADE_S = 0.45  # the terminal giving way to the app
 END_S = 3.2  # the closing card
 FONTS = Path(__file__).parents[1] / "node_modules/geist/dist/fonts"
-#: Milliseconds per character: the person types, the agent streams.
-TYPE_MS = {"you": 34, "agent": 14, "tool": 0, "note": 0}
-CMD_MS = 45  # typing a terminal command, as record.mjs waits for it
+#: Milliseconds per character, as record.mjs typed and waited: set from its timeline.
+TYPE_MS = {"cmd": 30, "you": 24, "agent": 9, "tool": 0, "note": 0}
+CAPTION_Y = 1000  # the middle of the caption, under the windows
+CLOSE_IN = 1.28  # how far the stage closes in on the agent's panel while the person types
 DARK, RULE, DIM = (24, 24, 27), (39, 39, 42), (113, 113, 122)
 
 
@@ -132,22 +134,23 @@ def camera(keys: list[dict], view: dict):
 
 
 def clock(speed: list[dict], duration: float):
-    """The video's length, and the recording's time at a time in the video: each sped-up span
-    plays at its rate."""
-    spans = sorted(speed, key=lambda s: s["t0"])
-    length = duration - sum((s["t1"] - s["t0"]) * (1 - 1 / s["rate"]) for s in spans)
+    """The video's length, and the recording's time at a time in the video: the whole plays at
+    PACE, and each sped-up span at its own rate."""
+    cuts, t = [], 0.0
+    for s in sorted(speed, key=lambda s: s["t0"]):
+        cuts += [(t, s["t0"], PACE, False), (s["t0"], s["t1"], s["rate"], True)]
+        t = s["t1"]
+    cuts.append((t, duration, PACE, False))
+    length = sum((b - a) / rate for a, b, rate, _ in cuts)
 
     def source(v: float) -> tuple[float, float]:
-        """(recording time, rate) at video time v."""
-        t = v
-        for s in spans:
-            if t <= s["t0"]:
-                break
-            played = (s["t1"] - s["t0"]) / s["rate"]
-            if t < s["t0"] + played:
-                return s["t0"] + (t - s["t0"]) * s["rate"], s["rate"]
-            t += (s["t1"] - s["t0"]) - played
-        return t, 1.0
+        """(recording time, the span's rate or 1) at video time v."""
+        for a, b, rate, marked in cuts:
+            played = (b - a) / rate
+            if v < played:
+                return a + v * rate, rate if marked else 1.0
+            v -= played
+        return duration, 1.0
 
     return length, source
 
@@ -157,7 +160,14 @@ def wrap(text: str, f: ImageFont.FreeTypeFont, width: float) -> list[str]:
     for para in text.split("\n"):
         indent = para[: len(para) - len(para.lstrip(" "))]  # code and JSON keep theirs
         line = indent
-        for word in para.lstrip(" ").split(" "):
+        words = []
+        for word in para.lstrip(" ").split(" "):  # a path too long for a line breaks anywhere
+            while f.getlength(word) > width:
+                cut = max(k for k in range(1, len(word) + 1) if f.getlength(word[:k]) <= width)
+                words.append(word[:cut])
+                word = word[cut:]
+            words.append(word)
+        for word in words:
             test = f"{line} {word}" if line.strip() else line + word
             if f.getlength(test) <= width or not line.strip():
                 line = test
@@ -193,7 +203,7 @@ class Terminal:
             if t < e["t"]:
                 break
             if e["kind"] == "cmd":
-                typed = int((t - e["t"]) * 1000 / CMD_MS)
+                typed = int((t - e["t"]) * 1000 / TYPE_MS["cmd"])
                 lines.append((f"{e['prompt']} $ ", e["text"][:typed], (250, 250, 250), True))
             else:
                 for line in wrap(e["text"], self.text, self.width):
@@ -324,8 +334,45 @@ def end_card() -> Image.Image:
     return img
 
 
+def captioned(frame: Image.Image, captions: Track, t: float) -> None:
+    """The scene's caption under the windows, faded in as it changes."""
+    c = captions.at(t)
+    if c is None:
+        return
+    f = sans(30, "Medium")
+    a = ease((t - c["t"]) / 0.35)
+    ink = tuple(round(232 + (17 - 232) * a) for _ in range(3))
+    width = f.getlength(c["text"])
+    ImageDraw.Draw(frame).text(((W - width) / 2, CAPTION_Y - 20), c["text"], font=f, fill=ink)
+
+
+def stage(chat: list[dict]):
+    """How far the stage closes in on the agent's panel at a time, 1 for not at all: from just
+    before the person starts typing a message until just after they send it."""
+    spans = [(m["t"] - 0.2, m["t"] + 0.35 + len(m["text"]) * TYPE_MS["you"] / 1000 + 0.4)
+             for m in chat if m["who"] == "you"]  # fmt: skip
+
+    def at(t: float) -> float:
+        u = max((min(ease((t - a) / 0.5), ease((b + 0.5 - t) / 0.5)) for a, b in spans), default=0)
+        return 1 + (CLOSE_IN - 1) * max(u, 0)
+
+    return at
+
+
+def closed_in(frame: Image.Image, scale: float) -> Image.Image:
+    """The frame closed in on the lower half of the agent's panel."""
+    if scale <= 1.001:
+        return frame
+    cx, cy = PANEL[0] + PANEL[2] / 2, PANEL[1] + PANEL[3] * 0.62
+    w, h = W / scale, H / scale
+    x0, y0 = min(max(cx - w / 2, 0), W - w), min(max(cy - h / 2, 0), H - h)
+    return frame.resize((W, H), Image.BICUBIC, box=(x0, y0, x0 + w, y0 + h))
+
+
 def main(rec: Path, out: Path) -> None:
     tl = json.loads((rec / "timeline.json").read_text())
+    TYPE_MS.update(tl["typing"])
+    captions, close = Track(tl["captions"]), stage(tl["chat"])
     view, px = tl["view"], tl["scale"]
     full = (view["width"] * px, view["height"] * px)
     win = (CONTENT[2], CONTENT[3])
@@ -342,7 +389,7 @@ def main(rec: Path, out: Path) -> None:
 
     ffmpeg = subprocess.Popen(
         ["ffmpeg", "-loglevel", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24",
-         "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-preset", "slow",
+         "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-preset", "medium",
          "-crf", "22", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(out)],
         stdin=subprocess.PIPE,
     )  # fmt: skip
@@ -400,6 +447,8 @@ def main(rec: Path, out: Path) -> None:
         if rate > 1:
             b = badge(rate)
             frame.paste(b, (CONTENT[0] + 18, CONTENT[1] + win[1] - b.height - 18), b)
+        frame = closed_in(frame, close(t))
+        captioned(frame, captions, t)
         if v > length:
             frame = Image.blend(frame, card, ease((v - length) / 0.6))
         ffmpeg.stdin.write(frame.tobytes())

@@ -48,7 +48,51 @@ const SHOTS = [
       await page.waitForTimeout(600);
     },
   },
+  {
+    name: "column",
+    path: items,
+    async prepare(page) {
+      // the slope column the agent derived and named
+      const column = page.locator('[data-part^="items/column/"]', { hasText: "slope" }).first();
+      await column.evaluate((e) => e.scrollIntoView({ block: "center" }));
+      await page.waitForTimeout(600);
+    },
+  },
+  {
+    name: "chart",
+    path: `/run/?id=${run}&tab=figures`,
+    async prepare(page) {
+      const chart = page.locator('[data-part^="figures/figure/"]', {
+        hasText: "Slope by agreeing answer",
+      });
+      await chart.evaluate((e) => e.scrollIntoView({ block: "center" }));
+      await page.mouse.move(1300, 120); // no other figure's hover
+      await page.waitForTimeout(800);
+    },
+  },
+  {
+    name: "page",
+    path: `/run/?id=${run}&tab=x-labels`,
+    async prepare(page) {
+      await page.frameLocator("iframe").first().locator("[data-label]").first().waitFor();
+      await page.waitForTimeout(600);
+    },
+  },
 ];
+
+// a few labels on the Labels page, as the researcher gives them in the video
+for (const [qid, label] of [
+  ["4", "letter"],
+  ["6", "letter"],
+  ["7", "unclear"],
+]) {
+  const res = await fetch(`${app}/api/x/labels/${run}/${qid}`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ label }),
+  });
+  if (!res.ok) throw new Error(`labels: ${res.status} ${await res.text()}`);
+}
 
 /** The screen position of the Plotly point with the lowest y. */
 async function lowestPoint(page) {

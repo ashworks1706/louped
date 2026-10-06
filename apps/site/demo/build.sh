@@ -14,3 +14,14 @@ cd "$out"
 python experiments/does-caa-steer-every-item/run.py
 louped source add "https://raw.githubusercontent.com/nrimsky/CAA/$commit/README.md" \
   --key caa --title "Steering Llama 2 with Contrastive Activation Addition (code and data)"
+
+# what the agent adds in the video: a column, a chart and a Labels tab on every run
+run=$(python -c "from louped.stores.mlflow_runs import list_runs
+print(next(r.id for r in list_runs() if r.experiment == 'does-caa-steer-every-item'))")
+mkdir -p experiments/does-caa-steer-every-item/derive
+cp "$here/agent/derive/"*.py experiments/does-caa-steer-every-item/derive/
+louped derive "$run" experiments/does-caa-steer-every-item/derive/slope.py --name slope
+louped derive "$run" experiments/does-caa-steer-every-item/derive/slope_by_answer.py --name slope-by-answer
+echo '{"parts": {"items/column/slope.slope": {"label": "slope"}}}' \
+  > experiments/does-caa-steer-every-item/layout.json
+cp -r "$here/agent/plugins" .
