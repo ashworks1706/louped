@@ -16,6 +16,6 @@ trap 'kill "$server"; rm -rf "$tmp"' EXIT
 until curl -sf -o /dev/null "$app/api/runs"; do sleep 1; done
 
 node "$here/capture.mjs" "$app" "$public"
-node "$here/record.mjs" "$app" "$tmp/recording"
+node "$here/record.mjs" "$tmp/recording"
 python "$here/render.py" "$tmp/recording" "$public/demo.mp4"
 ffmpeg -loglevel error -y -ss 1 -i "$public/demo.mp4" -frames:v 1 -q:v 3 "$public/demo-poster.jpg"
