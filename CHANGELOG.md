@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.0](https://github.com/ashworks1706/louped/compare/v0.5.0...v0.6.0) (2026-10-06)
+
+
+### Features
+
+* picks reach the agent with the next message; [@sel](https://github.com/sel) names them ([d0d65f4](https://github.com/ashworks1706/louped/commit/d0d65f4fd05ea740e6e57e743217a6011349995a))
+* picks reach the agent with the next message; [@sel](https://github.com/sel) names them ([df8e097](https://github.com/ashworks1706/louped/commit/df8e0976e4a86efeeaa1d5284ff0a067e61244a4))
+
 ## [0.5.0](https://github.com/ashworks1706/louped/compare/v0.4.0...v0.5.0) (2026-10-05)
 
 
