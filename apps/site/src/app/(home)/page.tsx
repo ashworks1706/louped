@@ -114,9 +114,8 @@ export default function HomePage() {
           controls
         />
         <figcaption className="text-fd-muted-foreground mt-3 text-center text-xs text-balance">
-          From install to result: a researcher and their agent re-read CAA&apos;s released Llama 2
-          7B Chat results. The commands, the app and its numbers are real; the agent&apos;s lines
-          are scripted.
+          a researcher and their agent re-read CAA&apos;s released Llama 2
+          7B Chat results.
         </figcaption>
       </figure>
 
