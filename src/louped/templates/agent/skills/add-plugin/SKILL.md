@@ -36,7 +36,8 @@ description: Add a page, a tab on every run or experiment, API routes, a command
      `l-badge`, `l-muted`, `l-mono`, `l-empty`) and the app's variables (`var(--foreground)`,
      `var(--border)`, ...). Do not add colors, fonts, shadows or CSS frameworks of its own.
    - Keep it to one question per page, with little text, as the rest of the app is.
-5. Restart `louped serve`.
+5. Do not restart `louped serve`. It loads a new or changed `plugin.py` within a few seconds.
+   A change to `tools` needs a restart of `louped mcp`, your MCP server.
 6. Open the plugin's sidebar entry, or its tab on a run or experiment. A load error shows on its
    page.
 7. Test the routes with FastAPI's `TestClient`.

@@ -3,8 +3,8 @@ their panels at /x/<name>/, and the list the UI builds their sidebar entries fro
 
 from __future__ import annotations
 
+import sys
 import traceback
-from types import ModuleType
 
 from fastapi import APIRouter, FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -34,10 +34,13 @@ def mount(app: FastAPI, launching: bool, pages: dict[str, list[str]]) -> None:
     pages, which layouts may place.
 
     A plugin added while the server runs loads the next time the app lists the plugins: its
-    routes and pages go in where the first ones did, ahead of the catch-all mounts. A change to a
-    plugin.py that has loaded needs a restart; its pages are read afresh on each request."""
+    routes and pages go in where the first ones did, ahead of the catch-all mounts. A plugin.py
+    that changed (by content) is imported afresh then too: its old routes come out and its new
+    ones go in at their place; one that now fails shows its error and has no routes. Its pages
+    are read afresh on each request."""
     at = len(app.router.routes)  # where plugins' routes go, ahead of what is mounted after
-    loaded: dict[str, ModuleType | None] = {}
+    loaded: dict[str, bytes | None] = {}  # each plugin's plugin.py as it was loaded
+    routes: dict[str, list[BaseRoute]] = {}
     errors: dict[str, str] = {}
     served: set[str] = set()
 
@@ -46,19 +49,36 @@ def mount(app: FastAPI, launching: bool, pages: dict[str, list[str]]) -> None:
         app.router.routes.insert(at, route)
         at += 1
 
+    def load(plugin: Plugin, code: bytes | None) -> None:
+        """Import plugin.py afresh and put its routes where its old ones were."""
+        nonlocal at
+        reloading = plugin.name in loaded
+        loaded[plugin.name] = code
+        errors.pop(plugin.name, None)
+        old = {id(r) for r in routes.pop(plugin.name, [])}  # by identity: routes compare by path
+        place = next((i for i, r in enumerate(app.router.routes) if id(r) in old), at)
+        app.router.routes[:] = [r for r in app.router.routes if id(r) not in old]
+        at -= len(old)
+        if reloading:
+            print(f"plugin {plugin.name}: plugin.py changed, so it loads again")
+        sys.modules.pop(plugin.module, None)
+        try:
+            module = plugin.load()
+        except Exception:
+            errors[plugin.name] = traceback.format_exc(limit=-3)
+            print(f"plugin {plugin.name} did not load:\n{errors[plugin.name]}")
+            return
+        if module is not None and (router := getattr(module, "router", None)) is not None:
+            wrapper = APIRouter()
+            wrapper.include_router(router, prefix=f"/api/x/{plugin.name}")
+            routes[plugin.name] = new = list(wrapper.routes)
+            app.router.routes[place:place] = new
+            at += len(new)
+
     def info(plugin: Plugin) -> PluginInfo:
-        if plugin.name not in loaded:
-            try:
-                loaded[plugin.name] = module = plugin.load()
-            except Exception:
-                errors[plugin.name] = traceback.format_exc(limit=-3)
-                print(f"plugin {plugin.name} did not load:\n{errors[plugin.name]}")
-                loaded[plugin.name] = module = None
-            if module is not None and (router := getattr(module, "router", None)) is not None:
-                wrapper = APIRouter()
-                wrapper.include_router(router, prefix=f"/api/x/{plugin.name}")
-                for route in wrapper.routes:
-                    insert(route)
+        code = plugin.code.read_bytes() if plugin.code is not None else None
+        if plugin.name not in loaded or loaded[plugin.name] != code:
+            load(plugin, code)
         if plugin.panel is not None and plugin.name not in served:
             insert(Mount(f"/x/{plugin.name}", StaticFiles(directory=plugin.panel, html=True),
                          name=f"plugin-{plugin.name}"))  # fmt: skip

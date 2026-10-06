@@ -94,8 +94,14 @@ Its scripts call the same API the app does, such as `fetch("/api/runs")` or
 - the fonts as `var(--font-geist-sans)` and `var(--font-geist-mono)`
 
 A plugin your agent adds while `louped serve` runs shows in the app within a few seconds. You do
-not restart. A change to a `plugin.py` that has loaded needs a restart; a change to a page shows
-at the next reload.
+not restart. A change to `plugin.py` also loads within a few seconds: louped imports it again and
+replaces its routes. If the changed `plugin.py` fails to load, its page shows the error and its
+routes are removed. A change to a page shows at the next reload.
+
+`plugin.py` loads again only in `louped serve`. `louped <name>` reads it each time it runs, so
+your command is always current. `louped mcp` reads it once, when it starts. After you change
+`tools`, restart `louped mcp` (in Claude Code, `/mcp` reconnects it). A tool that calls the
+plugin's routes gets the new routes without a restart.
 
 A plugin that fails to load shows its error on its page. Plugins run your project's code in
 louped's process. They load only on your own machine. They never load with

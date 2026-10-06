@@ -51,6 +51,9 @@ SOL_GPUS = ["a100", "a30", "h100", "mi200", "1g.20gb", "2g.20gb"]
 EXTRAS = ["interp", "evals", "tracking", "train", "rl", "rag", "sae", "data"]
 #: What a job installs when neither the form nor the experiment says.
 DEFAULT_EXTRAS = ["interp", "evals", "tracking", "train"]
+#: What `uv sync` needs beside src/ to build louped from a checkout: pyproject.toml names the
+#: readme and license, and its wheel's build hook is hatch_build.py.
+BUILD = ("pyproject.toml", "uv.lock", "hatch_build.py", "README.md", "LICENSE", ".python-version")
 #: Files under experiments/ bigger than this stay behind; louped.json lists them.
 MAX_FILE = 50 * 2**20
 SAFE = r"^[\w.:-]+$"
@@ -418,7 +421,7 @@ def _bundle(root: Path, project: Path | None) -> None:
     if project is not None:  # its domains, so its experiments read there
         shutil.copy2(project / FILE, root / FILE)
     if (source := _checkout()) is not None:
-        for name in ("pyproject.toml", "uv.lock", "README.md", "LICENSE", ".python-version"):
+        for name in BUILD:
             if (source / name).exists():
                 shutil.copy2(source / name, root / name)
         shutil.copytree(source / "src", root / "src", ignore=shutil.ignore_patterns("__pycache__"))

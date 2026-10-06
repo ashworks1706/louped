@@ -68,11 +68,16 @@ class Plugin:
         found = self.folder / "panel"
         return [p for p in PAGES if (found / f"{p}.html").is_file()]
 
+    @property
+    def module(self) -> str:
+        """plugin.py's name in sys.modules."""
+        return f"louped_plugin_{self.name.replace('-', '_')}"
+
     def load(self) -> ModuleType | None:
         """plugin.py imported, once; None when the plugin has none. Its errors are raised."""
         if self.code is None:
             return None
-        module_name = f"louped_plugin_{self.name.replace('-', '_')}"
+        module_name = self.module
         if module_name in sys.modules:
             return sys.modules[module_name]
         spec = importlib.util.spec_from_file_location(module_name, self.code)

@@ -29,7 +29,7 @@ from louped.check import Issue, check
 from louped.core import Direction, cohorts, documents, home
 from louped.core.judges import Judge, find_judges, write_judge
 from louped.core.paths import experiments_dir, inside
-from louped.server import graphs, inspect_view, launch, playground, plugins, ui
+from louped.server import graphs, inspect_view, launch, playground, plugins, serving, ui
 from louped.stores import ab
 from louped.stores.catalog import EvalTask, eval_tasks
 from louped.stores.labels import Label
@@ -142,12 +142,16 @@ class Health(BaseModel):
 
 def find_ui(given: Path | None = None) -> Path | None:
     """The UI to serve: the one given; else the export a release carries in louped/web; else a
-    source checkout's apps/web/out. Says which, or that there is none and the API runs alone."""
+    source checkout's apps/web/out, rebuilt first when its sources are newer. Says which, or that
+    there is none and the API runs alone."""
     if given is not None:
         return given
     package = Path(__file__).resolve().parents[1]
-    for found in (package / "web", package.parents[1] / "apps" / "web" / "out"):
+    checkout = package.parents[1] / "apps" / "web"
+    for found in (package / "web", checkout / "out"):
         if (found / "index.html").is_file():
+            if found.parent == checkout:  # a release's build matches its code; a checkout's may not
+                serving.current_ui(checkout)
             print(f"UI: {found}")
             return found
     print("no UI found: the API only. In a checkout, build it with `just web-build`.")
