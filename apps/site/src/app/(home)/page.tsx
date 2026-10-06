@@ -106,7 +106,7 @@ export default function HomePage() {
           className="w-full rounded-xl border shadow-2xl shadow-black/5"
           src="/demo/demo.mp4"
           poster="/demo/demo-poster.jpg"
-          aria-label="A researcher asks their coding agent a question; the agent writes and runs the experiment, points at the results in louped, and answers about the items the researcher picks"
+          aria-label="A researcher installs louped, makes a project and starts the app, then asks their coding agent a question; the agent writes and runs the experiment, points at the results in louped, and answers about the items the researcher picks"
           autoPlay
           muted
           loop
@@ -114,8 +114,9 @@ export default function HomePage() {
           controls
         />
         <figcaption className="text-fd-muted-foreground mt-3 text-center text-xs text-balance">
-          A researcher and their agent re-read CAA&apos;s released Llama 2 7B Chat results. The app
-          and its numbers are real; the agent&apos;s lines are scripted.
+          From install to result: a researcher and their agent re-read CAA&apos;s released Llama 2
+          7B Chat results. The commands, the app and its numbers are real; the agent&apos;s lines
+          are scripted.
         </figcaption>
       </figure>
 
