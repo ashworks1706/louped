@@ -93,6 +93,10 @@ Its scripts call the same API the app does, such as `fetch("/api/runs")` or
 - the colors as CSS variables, such as `var(--foreground)` and `var(--border)`
 - the fonts as `var(--font-geist-sans)` and `var(--font-geist-mono)`
 
+A plugin your agent adds while `louped serve` runs shows in the app within a few seconds. You do
+not restart. A change to a `plugin.py` that has loaded needs a restart; a change to a page shows
+at the next reload.
+
 A plugin that fails to load shows its error on its page. Plugins run your project's code in
 louped's process. They load only on your own machine. They never load with
 `louped serve --expose` or in `louped publish`.

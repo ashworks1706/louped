@@ -103,3 +103,23 @@ def test_a_plugin_adds_a_command_and_agent_tools(
     assert isinstance(result, CallToolResult) and not result.is_error, result
     text = result.content[0]
     assert isinstance(text, TextContent) and json.loads(text.text) == {"1": "right"}
+
+
+def test_a_plugin_added_while_the_server_runs_loads_when_the_app_lists_plugins(
+    project: Path,
+) -> None:
+    api = client()
+    folder = project / "plugins" / "labels"
+    (folder / "panel").mkdir(parents=True)
+    (folder / "plugin.toml").write_text('title = "Labels"\n')
+    (folder / "plugin.py").write_text(
+        "from fastapi import APIRouter\nrouter = APIRouter()\n\n"
+        "@router.get('/left')\ndef left() -> dict:\n    return {'left': 2}\n"
+    )
+    (folder / "panel" / "run.html").write_text("<p>labels</p>")
+    assert api.get("/api/x/labels/left").status_code == 404  # not yet listed
+    names = [p["name"] for p in api.get("/api/plugins").json()]
+    assert names == ["labels", "verdicts"]
+    assert api.get("/api/x/labels/left").json() == {"left": 2}
+    assert api.get("/x/labels/run.html").text == "<p>labels</p>"
+    assert api.get("/api/x/verdicts/verdicts").json() == {"1": "right"}

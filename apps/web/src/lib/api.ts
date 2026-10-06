@@ -286,12 +286,13 @@ export const q = {
     refetchInterval: 2000,
   }),
   health: () => ({ queryKey: ["health"], queryFn: () => get<Health>("/health"), retry: false }),
-  /** The project's plugins: none in a published dashboard, which has no answer for them. */
+  /** The project's plugins: none in a published dashboard, which has no answer for them. Polled,
+   * so a plugin the agent adds shows without a reload. */
   plugins: () => ({
     queryKey: ["plugins"],
     queryFn: () => (isSnapshot() ? Promise.resolve([]) : get<PluginInfo[]>("/plugins")),
     retry: false,
-    staleTime: Infinity,
+    refetchInterval: () => (isSnapshot() ? false : 3000),
   }),
   runs: () => ({
     queryKey: ["runs"],
