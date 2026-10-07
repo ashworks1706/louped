@@ -1,5 +1,5 @@
 <p align="center"><img src="https://louped.vercel.app/wordmark.svg" alt="louped" height="48"></p>
-<p align="center">A local workbench for research on LLM behavior and efficiency.</p>
+<p align="center">An Astute harness for research on LLM behavior and efficiency.</p>
 
 <p align="center">
   <a href="https://louped.vercel.app">Website</a> •
