@@ -25,12 +25,15 @@ prompt's tokens only, or with "at": "chunks" every "chunk"-th generated token (I
 conversation that ends on an assistant message is continued from it (a prefill). Specs that run the
 model to compile (inject, heads with mode mean) are compiled at the first call, under the lock with
 the adapters live. Each output carries its usage, counted with the model's tokenizer, and on CUDA
-the call's peak memory, which louped.inspect_ext.inference scores.
+the call's peak memory, which louped.inspect_ext.inference scores. It also carries what the model
+read (rendered_input): the prompt after the chat template, with any special tokens the tokenizer
+adds around it, its length in tokens, the tokenizer and a hash of its chat template.
 """
 
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import threading
 import time
@@ -197,7 +200,36 @@ class LoupedAPI(ModelAPI):
             output.metadata["ttft_s"] = request.ttft
         if peak is not None:
             output.metadata["peak_cuda_mib"] = peak
+        output.metadata |= self.rendered(prompt)
         return output
+
+    def rendered(self, prompt: str) -> dict[str, Any]:
+        """What the model read for this prompt: the text as it is fed, with any special tokens
+        the tokenizer adds around it (a BOS), its tokens, the special tokens in it longest first,
+        the tokenizer, and the first 12 hex digits of the chat template's sha256."""
+        tok = self.tokenizer
+        # louped.interventions.generate tokenizes with the tokenizer's additions, diffusion without
+        ids = tok(prompt, add_special_tokens=not isinstance(self.lm, Diffusion))["input_ids"]
+        own = tok(prompt, add_special_tokens=False)["input_ids"]
+        at = next((i for i in range(len(ids) - len(own) + 1) if ids[i : i + len(own)] == own), None)
+        if at is None:
+            raise ValueError("the tokenizer changed the prompt's tokens when it added special ones")
+        head = tok.convert_ids_to_tokens(ids[:at])
+        tail = tok.convert_ids_to_tokens(ids[at + len(own) :])
+        text = "".join([*head, prompt, *tail])
+        specials = set(tok.all_special_tokens)
+        specials |= {t.content for t in tok.added_tokens_decoder.values() if t.special}
+        shown = sorted((t for t in specials if t and t in text), key=len, reverse=True)
+        template = tok.chat_template
+        if not isinstance(template, str):  # several named templates
+            template = json.dumps(template, sort_keys=True)
+        return {
+            "rendered_input": text,
+            "rendered_tokens": len(ids),
+            "special_tokens": shown,
+            "tokenizer": tok.name_or_path or self.model_name,
+            "chat_template": hashlib.sha256(template.encode()).hexdigest()[:12],
+        }
 
     def _drain(self, request: _Request) -> None:
         """Generate pending requests a batch at a time until this one is done; a batch shares the

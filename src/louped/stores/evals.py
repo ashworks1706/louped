@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Iterable
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from inspect_ai.event import ModelEvent
 from inspect_ai.log import (
     EvalLog,
     list_eval_logs,
@@ -16,6 +18,7 @@ from inspect_ai.log import (
     read_eval_log_sample_summaries,
     read_eval_log_samples,
 )
+from inspect_ai.scorer import Score as InspectScore
 
 from louped.core import experiments_dir, home, logs_dir
 from louped.core.judges import pair_key, request_text
@@ -23,6 +26,8 @@ from louped.stores import degeneracy
 from louped.stores.types import (
     Degenerate,
     Message,
+    ModelInput,
+    Reading,
     RunDetail,
     RunSummary,
     SampleDetail,
@@ -30,7 +35,7 @@ from louped.stores.types import (
     Score,
     ToolCall,
 )
-from louped.stores.values import flatten, text, to_float
+from louped.stores.values import GRADES, flatten, text, to_float
 
 log = logging.getLogger(__name__)
 
@@ -219,11 +224,14 @@ def list_samples(run_id: str) -> list[SampleSummary] | None:
         return None
     path, log = found
     flags = None if log.status == "started" else _degenerate(str(path), path.stat().st_mtime)
+    summaries = read_eval_log_sample_summaries(str(path))
+    names = readers(s.scores or {} for s in summaries)
     out: list[SampleSummary] = []
-    for s in read_eval_log_sample_summaries(str(path)):
+    for s in summaries:
         scores: dict[str, float | None] = {}
         for name, score in (s.scores or {}).items():
             scores |= flatten(name, score.value)
+        read = {n: _reading(sc) for n, sc in (s.scores or {}).items() if n in names}
         out.append(
             SampleSummary(
                 id=str(s.id),
@@ -233,9 +241,47 @@ def list_samples(run_id: str) -> list[SampleSummary] | None:
                 scores=scores,
                 error=s.error,
                 degenerate=None if flags is None else flags.get((str(s.id), s.epoch), []),
+                readings=read,
+                disagree=len(names) > 1 and disagree([scores.get(n) for n in read]),
             )
         )
     return out
+
+
+def _reads(score: InspectScore) -> bool:
+    """A score that reads a verdict: it records the rule that read it, or grades C/I/P/N."""
+    graded = isinstance(score.value, str) and score.value in GRADES
+    return graded or "read_by" in (score.metadata or {})
+
+
+def readers(samples: Iterable[dict[str, InspectScore]]) -> list[str]:
+    """The scores that read a verdict on any of the samples, by name."""
+    return sorted({n for scores in samples for n, sc in scores.items() if _reads(sc)})
+
+
+def disagree(values: list[float | None]) -> bool:
+    """Readers disagree when two of them give the sample different values; a reader with no
+    value says nothing."""
+    return len({v for v in values if v is not None}) > 1
+
+
+def _reading(score: InspectScore) -> Reading:
+    meta = score.metadata or {}
+    rule, matched = meta.get("read_by"), meta.get("matched")
+    return Reading(read_by=None if rule is None else str(rule),
+                   matched=None if matched is None else str(matched))  # fmt: skip
+
+
+def _input(event: ModelEvent) -> ModelInput:
+    """What a model call read: reported by louped/'s provider, else only its model."""
+    meta = event.output.metadata or {}
+    if "rendered_input" not in meta:
+        return ModelInput(model=event.model)
+    return ModelInput(model=event.model, text=meta["rendered_input"],
+                      tokens=meta.get("rendered_tokens"),
+                      special_tokens=meta.get("special_tokens") or [],
+                      tokenizer=meta.get("tokenizer"),
+                      chat_template=meta.get("chat_template"))  # fmt: skip
 
 
 def _message(m: Any) -> Message:
@@ -268,6 +314,7 @@ def get_sample(run_id: str, sample_id: str, epoch: int) -> SampleDetail | None:
             raw=str(score.value),
             answer=score.answer,
             explanation=score.explanation,
+            **(_reading(score).model_dump() if "read_by" in (score.metadata or {}) else {}),
         )
         for name, score in (s.scores or {}).items()
     ]
@@ -279,4 +326,5 @@ def get_sample(run_id: str, sample_id: str, epoch: int) -> SampleDetail | None:
         scores=scores,
         metadata=_stringify(s.metadata),
         error=s.error.message if s.error else None,
+        inputs=[_input(e) for e in s.events if isinstance(e, ModelEvent)],
     )

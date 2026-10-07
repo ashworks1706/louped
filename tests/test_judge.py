@@ -97,3 +97,21 @@ def test_kappa_is_agreement_beyond_chance(
     pairs: list[tuple[str, str]], expected: float | None
 ) -> None:
     assert kappa(pairs) == expected
+
+
+def test_the_judges_score_records_its_verdict_lines_or_none(tmp_path: Path) -> None:
+    from inspect_ai.log import read_eval_log_samples
+
+    from louped.stores.evals import log_of
+
+    a, b = two_runs(["no"], ["yes"])
+
+    def reading(*replies: str) -> dict | None:
+        found = log_of(judge(a, b, scripted(*replies)))
+        assert found is not None
+        [s] = read_eval_log_samples(str(found[0]))
+        return (s.scores or {})["b_wins"].metadata
+
+    assert reading("Verdict: 2", "Verdict: tie") == {
+        "read_by": "verdict_line", "matched": "A first: 2; B first: tie"}  # fmt: skip
+    assert reading("No verdict.", "None here.") == {"read_by": "none", "matched": None}

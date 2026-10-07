@@ -6099,6 +6099,69 @@
         "required": ["step", "value"],
         "title": "MetricPoint"
       },
+      "ModelInput": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens"
+          },
+          "special_tokens": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Special Tokens"
+          },
+          "tokenizer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokenizer"
+          },
+          "chat_template": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chat Template"
+          }
+        },
+        "type": "object",
+        "required": ["model"],
+        "title": "ModelInput",
+        "description": "What one model call of a sample read."
+      },
       "Option": {
         "properties": {
           "flag": {
@@ -6820,6 +6883,35 @@
         "title": "Read",
         "description": "The agent read the picks at this version."
       },
+      "Reading": {
+        "properties": {
+          "read_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read By"
+          },
+          "matched": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched"
+          }
+        },
+        "type": "object",
+        "title": "Reading",
+        "description": "How a scorer read its verdict from free text."
+      },
       "RemoteState": {
         "properties": {
           "remote": {
@@ -7284,6 +7376,13 @@
               }
             ],
             "title": "Error"
+          },
+          "inputs": {
+            "items": {
+              "$ref": "#/components/schemas/ModelInput"
+            },
+            "type": "array",
+            "title": "Inputs"
           }
         },
         "type": "object",
@@ -7347,6 +7446,18 @@
               }
             ],
             "title": "Degenerate"
+          },
+          "readings": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Reading"
+            },
+            "type": "object",
+            "title": "Readings"
+          },
+          "disagree": {
+            "type": "boolean",
+            "title": "Disagree",
+            "default": false
           }
         },
         "type": "object",
@@ -7627,6 +7738,28 @@
               }
             ],
             "title": "Explanation"
+          },
+          "read_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read By"
+          },
+          "matched": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched"
           }
         },
         "type": "object",

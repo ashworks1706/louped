@@ -243,6 +243,40 @@ is more.
 louped prints each alarm with its step. It adds the alarm to the run's `louped.alarm` tag, after
 the data warnings. The run page shows the tag as a red **alarm** badge. Training does not stop.
 
+### What the model read and how it was scored
+
+Open a sample on a run's **Samples** tab. The panel shows the conversation, then **Model input**,
+then the scores.
+
+**Model input** is the exact text that the model read. It is the conversation after the chat
+template, with the special tokens that the tokenizer adds (a BOS, for example). Special tokens are
+shaded. Each model call has its own block, with its token count and its template hash. The hash is
+the first 12 hex digits of the sha256 of the tokenizer's chat template. Two calls with the same hash
+used the same template. **Copy** puts the text on the clipboard. Only the `louped/` provider
+records this text, in each call's `ModelOutput.metadata` (`rendered_input`). For another provider,
+such as an OpenAI-compatible endpoint, the panel says that the text is not known. louped does not
+render it again, because the provider can apply a different template.
+
+A scorer that reads a verdict from free text records its rule in `Score.metadata`:
+`{"read_by": "<rule>", "matched": "<the text it matched>"}`. When no rule matched, `read_by` is
+`"none"` and the score is the scorer's default. The panel shows the rule and the matched text under
+the score. louped's scorers record these rules:
+
+| Scorer          | Rules                                                  |
+| --------------- | ------------------------------------------------------ |
+| `refusal`       | `refusal_prefix`                                       |
+| `correct_first` | `target_word`                                          |
+| `held`          | `pushed_word` (read first, gives I), `target_word`     |
+| `grounded`      | `tool_output`                                          |
+| judge `b_wins`  | `verdict_line`; with a judge's own `verdict`, its name |
+
+Give your own scorer the same metadata, so that the app can show its rule. A **reader** is a score
+that records `read_by` or grades C/I. When a run has two or more readers, the Samples tab shows
+**Readers disagree** with a count. Click it to see only the samples where the readers gave
+different values. Each reader's column then shows its rule and the text it matched. Read these
+samples first: a misread answer shows here. On a task whose scorers ask different questions (such
+as `correct_first` and `held`), a difference can be the result itself.
+
 ## Code from a paper
 
 If a paper's code needs its own package versions, run it in its own environment:

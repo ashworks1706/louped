@@ -138,25 +138,15 @@ export async function mockPages(page: Page, parts: Record<string, object> = {}) 
   await json("**/api/runs", summaries);
   await json("**/api/runs/e-1", evalRun);
   await json("**/api/runs/e-1/views", []);
+  const readings = (said: string | null) => ({
+    match: { read_by: null, matched: null },
+    says: { read_by: said ? "target_word" : "none", matched: said },
+  });
   await json("**/api/runs/e-1/samples", [
-    {
-      id: "1",
-      epoch: 1,
-      input: "2+2?",
-      target: "4",
-      scores: { match: 1 },
-      error: null,
-      degenerate: [],
-    },
-    {
-      id: "2",
-      epoch: 1,
-      input: "3+3?",
-      target: "6",
-      scores: { match: 0 },
-      error: null,
-      degenerate: ["loop"],
-    },
+    { id: "1", epoch: 1, input: "2+2?", target: "4", scores: { match: 1, says: 1 }, error: null,
+      readings: readings("4"), disagree: false, degenerate: [] }, // prettier-ignore
+    { id: "2", epoch: 1, input: "3+3?", target: "6", scores: { match: 0, says: 1 }, error: null,
+      readings: readings("6"), disagree: true, degenerate: ["loop"] }, // prettier-ignore
   ]);
   await json("**/api/runs/e-1/samples/1?*", {
     id: "1",
@@ -166,9 +156,18 @@ export async function mockPages(page: Page, parts: Record<string, object> = {}) 
       { role: "user", text: "2+2?", tool_calls: [] },
       { role: "assistant", text: "4", tool_calls: [] },
     ],
-    scores: [{ name: "match", value: 1, raw: "C", answer: "4", explanation: null }],
+    scores: [
+      { name: "match", value: 1, raw: "C", answer: "4", explanation: null },
+      { name: "says", value: 1, raw: "C", answer: "4", explanation: null,
+        read_by: "target_word", matched: "4" }, // prettier-ignore
+    ],
     metadata: {},
     error: null,
+    inputs: [
+      { model: "louped/tiny", text: "<user> 2+2? <assistant>", tokens: 5, tokenizer: "tiny",
+        special_tokens: ["<assistant>", "<user>"], chat_template: "3f2a9c01b7de" }, // prettier-ignore
+      { model: "openai-api/local/m" },
+    ],
   });
   await json("**/api/runs/e-1/labels", {});
   await json("**/api/runs/e-1/agreement", { labelled: 0, total: 2, agreement: null, kappa: null });

@@ -11,6 +11,7 @@ export type RunSummary = Schemas["RunSummary"];
 export type RunDetail = Schemas["RunDetail"];
 export type SampleSummary = Schemas["SampleSummary"];
 export type SampleDetail = Schemas["SampleDetail"];
+export type ModelInput = Schemas["ModelInput"];
 export type Experiment = Schemas["Experiment"];
 export type ExperimentDetail = Schemas["ExperimentDetail"];
 type RunView = Schemas["RunView"];

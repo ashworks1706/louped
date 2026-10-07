@@ -70,6 +70,16 @@ class RunDetail(RunSummary):
     code: Code | None = None
 
 
+class Reading(BaseModel):
+    """How a scorer read its verdict from free text."""
+
+    #: The rule that matched ("none": no rule did, so the verdict is the scorer's default); None
+    #: when the scorer does not record its rule.
+    read_by: str | None = None
+    #: The text the rule matched.
+    matched: str | None = None
+
+
 class SampleSummary(BaseModel):
     id: str
     epoch: int
@@ -79,6 +89,11 @@ class SampleSummary(BaseModel):
     error: str | None
     #: The reply's degeneracy flags; null while the eval is still running.
     degenerate: list[Degenerate] | None = None
+    #: Each reader's reading, by score: a reader is a score that records its rule (read_by) or
+    #: grades C/I, on any of the run's samples.
+    readings: dict[str, Reading] = Field(default_factory=dict)
+    #: The run has two or more readers and they gave this sample different values.
+    disagree: bool = False
 
 
 class ToolCall(BaseModel):
@@ -103,6 +118,23 @@ class Score(BaseModel):
     raw: str
     answer: str | None
     explanation: str | None
+    read_by: str | None = None
+    matched: str | None = None
+
+
+class ModelInput(BaseModel):
+    """What one model call of a sample read."""
+
+    model: str
+    #: The prompt as fed, after the chat template and with the special tokens the tokenizer adds;
+    #: None when the provider does not report it (only louped/ does).
+    text: str | None = None
+    tokens: int | None = None
+    #: The special tokens the text holds, longest first.
+    special_tokens: list[str] = Field(default_factory=list)
+    tokenizer: str | None = None
+    #: The first 12 hex digits of the sha256 of the tokenizer's chat template.
+    chat_template: str | None = None
 
 
 class SampleDetail(BaseModel):
@@ -113,6 +145,8 @@ class SampleDetail(BaseModel):
     scores: list[Score]
     metadata: dict[str, str]
     error: str | None
+    #: Each model call's input, in order.
+    inputs: list[ModelInput] = Field(default_factory=list)
 
 
 #: behavior: what models do and why; efficiency: what it costs to run them; checks: louped
