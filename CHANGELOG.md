@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/ashworks1706/louped/compare/v0.7.0...v0.8.0) (2026-10-07)
+
+
+### Features
+
+* pip install louped gives the full app ([#73](https://github.com/ashworks1706/louped/issues/73)) ([93d1b4f](https://github.com/ashworks1706/louped/commit/93d1b4f511bd088f192277d8f1ea32bf8b73bea2))
+
 ## [0.7.0](https://github.com/ashworks1706/louped/compare/v0.6.0...v0.7.0) (2026-10-07)
 
 
