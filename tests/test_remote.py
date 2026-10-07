@@ -379,7 +379,7 @@ def test_an_export_without_a_remote_recommends_one_for_large_results(
     got = client().post("/api/launch/export", json=body)
     assert hint not in got.headers["x-louped-note"]
     script = (unpack(got.content, tmp_path / "near") / "job.sh").read_text()
-    assert hint not in script and "--extra sync" in script  # s3fs comes with the sync extra
+    assert hint not in script and "--extra sync" in script
 
 
 def test_colab_gets_a_notebook_that_clones_the_commit_runs_the_job_and_brings_it_back(

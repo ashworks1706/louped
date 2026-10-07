@@ -73,7 +73,7 @@ class Data:
 @dataclass(frozen=True)
 class Sweep:
     """Run an Inspect task under Steer at every layer and strength; one figure of score and
-    coherence cost. Needs the evals, interp and tracking extras."""
+    coherence cost."""
 
     task: str
     """An Inspect task: file.py@name, or a registered name."""
@@ -90,7 +90,7 @@ class Sweep:
 @dataclass(frozen=True)
 class Grid:
     """Run tasks under conditions over seeds, each condition against a baseline with paired
-    intervals; one figure. Needs the evals and tracking extras, and interp for louped/ models."""
+    intervals; one figure."""
 
     config: tyro.conf.Positional[Path]
     """YAML with model, tasks (name: file.py@task), conditions (name: model args), metric, and
@@ -158,7 +158,7 @@ class Circuit:
 @dataclass(frozen=True)
 class Import:
     """Add a result from another machine to this louped: the louped-result-<id>.tar.gz an exported
-    job wrote (Launch → Export), or the folder it unpacks to. Needs the server extra."""
+    job wrote (Launch → Export), or the folder it unpacks to."""
 
     path: tyro.conf.Positional[Path]
 
@@ -168,7 +168,7 @@ class Push:
     """Push the runs this louped made and has not pushed to the remote, as one new bundle: `remote`
     in louped.toml, or LOUPED_REMOTE. At a terminal it asks for a remote when none is set (a
     private HF bucket of your own by default) and for a Hugging Face token when an hf:// remote
-    needs one. Needs the sync extra."""
+    needs one."""
 
     remote: str | None = None
     """A remote other than the configured one: any fsspec URL, such as hf://buckets/<user>/<name>."""
@@ -179,7 +179,7 @@ class Push:
 @dataclass(frozen=True)
 class Pull:
     """Add the runs in the remote's bundles this louped has not pulled. A job exported from here
-    and pushed from the cluster takes its result. Needs the sync extra."""
+    and pushed from the cluster takes its result."""
 
     remote: str | None = None
     """A remote other than the configured one."""
@@ -189,19 +189,19 @@ class Pull:
 class Gate:
     """Check an experiment's gate (gate: in its README): each requirement against the newest
     finished run of the launch it reads, PASS or FAIL. Exits 0 when all pass, else 1, so it can
-    run as a chain's step on a cluster. Needs the evals and tracking extras."""
+    run as a chain's step on a cluster."""
 
     experiment: tyro.conf.Positional[str]
     pull: bool = False
     """Pull the remote's new runs first: the gate step on a cluster, which reads the runs the
-    steps before it pushed. Needs the sync extra."""
+    steps before it pushed."""
 
 
 @dataclass(frozen=True)
 class Submit:
     """Send a launch to a cluster named in louped.toml ([clusters.<name>]) over ssh: export it,
     copy it there, start it (sbatch, or bash on a VM) and record it as a job. louped serve
-    follows it and brings its result here. Needs the server extra."""
+    follows it and brings its result here."""
 
     what: tyro.conf.Positional[str]
     """A launchable id, such as script:<name>/train.py, or gate (with --experiment); with
@@ -225,7 +225,7 @@ class Submit:
 class Cluster:
     """A cluster named in louped.toml. token copies this machine's Hugging Face token to the
     cluster's ~/.cache/huggingface/token over ssh (mode 600), where gated models read it; it
-    goes on ssh's stdin, never into a command line, job.sh or a log. Needs the sync extra."""
+    goes on ssh's stdin, never into a command line, job.sh or a log."""
 
     action: tyro.conf.Positional[Literal["token"]]
     name: tyro.conf.Positional[str]
@@ -234,8 +234,7 @@ class Cluster:
 @dataclass(frozen=True)
 class Publish:
     """Write this project's dashboard as static, read-only files to put on any static host at a
-    domain's root: an HF static Space, Vercel, or a GitHub Pages user site. Needs the server
-    extra."""
+    domain's root: an HF static Space, Vercel, or a GitHub Pages user site."""
 
     out: tyro.conf.Positional[Path]
     """An empty or new folder."""
@@ -247,7 +246,7 @@ class Publish:
 class Bench:
     """What serving a model costs on this machine, per weight format: throughput and latency as
     requests arrive together, and prefill time and memory as the prompt grows. One run with its
-    figures. Needs the interp and tracking extras; int8 and int4 need CUDA and the train extra."""
+    figures. int8 and int4 need CUDA and the train extra."""
 
     model: str
     """A Hub id, a path, or a name under <home>/models."""
@@ -274,8 +273,7 @@ class Bench:
 class EndpointBench:
     """What a served model costs where it runs: time to first token, latency and throughput as
     requests arrive together, against OpenAI-compatible servers (llama-server, vLLM, Ollama, your
-    own engine). One run, every request recorded so two servers line up on the Items tab. Needs
-    the tracking and agent extras."""
+    own engine). One run, every request recorded so two servers line up on the Items tab."""
 
     urls: tyro.conf.Positional[list[str]]
     """Base URLs ending in /v1, one per server to compare: http://127.0.0.1:8080/v1."""
@@ -293,7 +291,7 @@ class EndpointBench:
 @dataclass(frozen=True)
 class Judge:
     """Two eval runs judged sample by sample by a local model, each pair in both orders: B's win
-    rate over A as an eval run of its own. Needs the evals extra, and interp for louped/ models."""
+    rate over A as an eval run of its own."""
 
     a: tyro.conf.Positional[str]
     """The baseline run's id."""
@@ -410,7 +408,7 @@ class Sources:
 @dataclass(frozen=True)
 class Mcp:
     """An MCP server on stdio for coding agents, over a running louped serve: read experiments,
-    runs, figures and compares; launch, follow and cancel jobs. Needs the agent extra."""
+    runs, figures and compares; launch, follow and cancel jobs."""
 
     url: str = "http://127.0.0.1:8000"
     """The louped serve to drive."""
@@ -420,8 +418,7 @@ class Mcp:
 class Picks:
     """What the person Shift+clicked in the app, as text for an agent, numbered as the tray
     numbers them. With --hook, a Claude Code UserPromptSubmit hook: it adds the picks to the
-    message when they are new to the agent or the message says @sel (or @sel 2, @sel 1,3). Needs
-    the agent extra."""
+    message when they are new to the agent or the message says @sel (or @sel 2, @sel 1,3)."""
 
     hook: bool = False
     """Read the hook's JSON on stdin and print the hook's output."""
@@ -433,7 +430,7 @@ class Picks:
 class Examples:
     """Example runs for every page, from a tiny model trained here on the CPU: a vector, an
     analysis with every figure, a grid of evals, a fine-tune, a benchmark and a circuit. Their
-    numbers check the pipeline, not a claim. Needs every extra."""
+    numbers check the pipeline, not a claim. Needs the train, rl and sae extras."""
 
 
 @dataclass(frozen=True)
@@ -509,15 +506,9 @@ COMMANDS = {
 
 
 def serve(cmd: Serve) -> None:
-    try:
-        import uvicorn
+    import uvicorn
 
-        from louped.server import create_app
-    except ImportError as exc:
-        raise SystemExit(
-            "louped serve needs the server extra: pip install 'louped[server]'"
-        ) from exc
-    from louped.server import serving
+    from louped.server import create_app, serving
     from louped.server.app import LOOPBACK, find_ui
 
     hosts = None
@@ -538,17 +529,12 @@ def serve(cmd: Serve) -> None:
 
 
 def view(cmd: View) -> None:
-    try:
-        import uvicorn
+    import uvicorn
 
-        from louped.server import create_app
-        from louped.server.app import LOOPBACK, find_ui
-        from louped.server.view import prepare
-    except ImportError as exc:
-        raise SystemExit(
-            "louped view needs the server and tracking extras: "
-            "pip install 'louped[server,tracking]'"
-        ) from exc
+    from louped.server import create_app
+    from louped.server.app import LOOPBACK, find_ui
+    from louped.server.view import prepare
+
     if cmd.host not in LOOPBACK:
         raise SystemExit("louped view serves this machine only; use louped serve --expose to share")
     try:
@@ -690,14 +676,10 @@ def _plugin_command() -> bool:
 
 
 def _picks(cmd: Picks) -> None:
-    try:
-        import httpx
+    import httpx
 
-        from louped.picks import current, describe, for_prompt, hook_output, mark_read
-    except ModuleNotFoundError as exc:
-        if exc.name != "httpx":
-            raise
-        raise SystemExit("louped picks needs the agent extra: pip install 'louped[agent]'") from exc
+    from louped.picks import current, describe, for_prompt, hook_output, mark_read
+
     with httpx.Client(base_url=f"{cmd.url.rstrip('/')}/api", timeout=5) as api:
         if cmd.hook:
             prompt = json.load(sys.stdin).get("prompt", "")
@@ -829,13 +811,8 @@ def main() -> None:
                         cmd.new_tokens, cmd.repeats, cmd.experiment, cmd.draft,
                         cmd.profile, cmd.remote_code))  # fmt: skip
         case EndpointBench() as cmd:
-            try:
-                from louped.endpoint_bench import endpoint_bench
-            except ModuleNotFoundError as exc:
-                raise SystemExit(
-                    f"louped endpoint-bench needs the tracking and agent extras ({exc.name} is "
-                    "missing): pip install 'louped[tracking,agent]'"
-                ) from exc
+            from louped.endpoint_bench import endpoint_bench
+
             print(endpoint_bench(cmd.urls, cmd.model, tuple(cmd.levels), cmd.rounds,
                                  cmd.prompt_words, cmd.max_tokens, cmd.experiment))  # fmt: skip
         case Judge() as cmd:
@@ -926,14 +903,8 @@ def main() -> None:
             except (ValueError, FileNotFoundError, KeyError) as exc:
                 raise SystemExit(str(exc)) from exc
         case Mcp() as cmd:
-            try:
-                from louped.agent import server
-            except ModuleNotFoundError as exc:
-                if exc.name not in ("mcp", "mcp_types", "httpx"):
-                    raise
-                raise SystemExit(
-                    "louped mcp needs the agent extra: pip install 'louped[agent]'"
-                ) from exc
+            from louped.agent import server
+
             server(cmd.url).run("stdio")
         case Picks() as cmd:
             _picks(cmd)

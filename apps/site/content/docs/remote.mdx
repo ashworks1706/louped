@@ -108,8 +108,6 @@ To skip the copying, let louped submit the job. See [Clusters](#clusters).
   GitHub.
 - **First run**: run the job's install line once on a login node. The job then reuses the
   downloaded packages. This avoids timeouts and the need for internet on compute nodes.
-- **Smaller installs**: list the extras your experiment needs in its README (`extras: tracking`).
-  The job installs only those.
 - **Sol**: jobs use the `public` partition and QOS. Models and packages are cached under
   `/scratch/$USER`, since home space is small.
 

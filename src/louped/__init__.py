@@ -1,4 +1,4 @@
-"""louped: a local workbench for research on LLM behavior and efficiency."""
+"""louped: a local workbench for LLM behavior and inference research."""
 
 import os
 from importlib.metadata import PackageNotFoundError, version

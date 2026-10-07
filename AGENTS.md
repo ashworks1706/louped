@@ -1,6 +1,6 @@
 # louped: agent guide
 
-louped is a local workbench for research on LLM behavior and efficiency. Each research question is
+louped is a local workbench for LLM behavior and inference research. Each research question is
 an experiment. It is filed under a domain on one of two axes (behavior and alignment, efficiency
 and systems), or under the instrument checks. Read `docs/ARCHITECTURE.md` for the design and the
 tools it runs. Read `docs/ROADMAP.md` for what is next. Do not contradict them; propose an edit to

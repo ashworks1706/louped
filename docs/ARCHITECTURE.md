@@ -139,8 +139,9 @@ folder and how the app finds it.
 
 ## Packages and layers
 
-There is one distribution (`louped`), with the import name `louped`. It has one extra per
-capability, so an install carries only what it uses. A package imports only packages below it.
+There is one distribution (`louped`), with the import name `louped`. `pip install louped` gives
+the app, evals, run tracking, model loading and the agent's tools; extras add training, RL,
+retrieval and SAEs. A package imports only packages below it.
 `import-linter` enforces the contract in `pyproject.toml`.
 
 ```
@@ -202,7 +203,7 @@ core                                     run metadata, paths, the project and it
   (`louped.core.judges`) and imported only by a judging job. Eval tasks are Inspect tasks: the
   project's `@task` functions and inspect_evals' `eval.yaml` metadata (`louped.stores.catalog`).
 - Directions: one safetensors file each under `<LOUPED_HOME>/vectors`, provenance in the header,
-  read without torch so `louped serve` needs no interp extra.
+  read without torch so `louped serve` starts without importing it.
 - SAEs load through SAELens; louped reads the residual at the SAE's hook with nnsight, so the model
   is never swapped for a TransformerLens one.
 - Every run writes `RunMeta`: commit and dirty flag, package versions, seed.

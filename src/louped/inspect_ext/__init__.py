@@ -5,7 +5,7 @@ including scorers over an agent's tool calls and over inference cost.
         -M interventions='{"kind": "ablate", "vector": "refusal.qwen2.5-0.5b-instruct"}'
 
 The provider is registered through the `inspect_ai` entry point, so Inspect finds it once louped
-is installed with the evals and interp extras.
+is installed.
 """
 
 from louped.inspect_ext.cases import cases, expectations

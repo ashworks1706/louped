@@ -2298,96 +2298,6 @@ name = "louped"
 version = "0.7.0"
 source = { editable = "." }
 dependencies = [
-    { name = "pydantic" },
-    { name = "tyro" },
-]
-
-[package.optional-dependencies]
-agent = [
-    { name = "httpx" },
-    { name = "mcp" },
-]
-data = [
-    { name = "httpx" },
-    { name = "pyyaml" },
-    { name = "rich" },
-]
-evals = [
-    { name = "inspect-ai" },
-    { name = "inspect-evals" },
-    { name = "openai" },
-]
-interp = [
-    { name = "nnsight" },
-    { name = "safetensors" },
-    { name = "scikit-learn" },
-    { name = "torch" },
-    { name = "transformers" },
-]
-notebooks = [
-    { name = "alembic" },
-    { name = "httpx" },
-    { name = "ipykernel" },
-    { name = "mlflow-skinny" },
-    { name = "nbconvert" },
-    { name = "nbformat" },
-    { name = "nvidia-ml-py", marker = "sys_platform != 'darwin'" },
-    { name = "papermill" },
-    { name = "psutil" },
-    { name = "pypdfium2" },
-    { name = "python-docx" },
-    { name = "python-pptx" },
-    { name = "sqlalchemy" },
-]
-rag = [
-    { name = "bm25s" },
-    { name = "nnsight" },
-    { name = "safetensors" },
-    { name = "scikit-learn" },
-    { name = "sentence-transformers" },
-    { name = "torch" },
-    { name = "transformers" },
-]
-reports = [
-    { name = "httpx" },
-    { name = "kaleido" },
-    { name = "nbformat" },
-    { name = "plotly" },
-    { name = "pypdfium2" },
-    { name = "python-docx" },
-    { name = "python-pptx" },
-    { name = "vl-convert-python" },
-]
-rl = [
-    { name = "alembic" },
-    { name = "bitsandbytes", marker = "sys_platform != 'darwin'" },
-    { name = "datasets" },
-    { name = "httpx" },
-    { name = "math-verify" },
-    { name = "mlflow-skinny" },
-    { name = "nnsight" },
-    { name = "nvidia-ml-py", marker = "sys_platform != 'darwin'" },
-    { name = "peft" },
-    { name = "psutil" },
-    { name = "pyyaml" },
-    { name = "reasoning-gym" },
-    { name = "rich" },
-    { name = "safetensors" },
-    { name = "scikit-learn" },
-    { name = "sqlalchemy" },
-    { name = "torch" },
-    { name = "transformers" },
-    { name = "trl" },
-]
-sae = [
-    { name = "nnsight" },
-    { name = "sae-lens" },
-    { name = "safetensors" },
-    { name = "scikit-learn" },
-    { name = "torch" },
-    { name = "transformers" },
-]
-server = [
     { name = "alembic" },
     { name = "fastapi" },
     { name = "fsspec" },
@@ -2397,64 +2307,61 @@ server = [
     { name = "inspect-evals" },
     { name = "ipykernel" },
     { name = "kaleido" },
+    { name = "mcp" },
     { name = "mlflow-skinny" },
     { name = "nbconvert" },
     { name = "nbformat" },
+    { name = "nnsight" },
     { name = "nvidia-ml-py", marker = "sys_platform != 'darwin'" },
     { name = "openai" },
     { name = "papermill" },
     { name = "plotly" },
     { name = "psutil" },
+    { name = "pydantic" },
     { name = "pypdfium2" },
     { name = "python-docx" },
     { name = "python-pptx" },
-    { name = "sqlalchemy" },
-    { name = "uvicorn" },
-    { name = "vl-convert-python" },
-]
-sources = [
-    { name = "httpx" },
-    { name = "nbformat" },
-    { name = "pypdfium2" },
-    { name = "python-docx" },
-    { name = "python-pptx" },
-]
-sync = [
-    { name = "alembic" },
-    { name = "fsspec" },
-    { name = "huggingface-hub" },
-    { name = "inspect-ai" },
-    { name = "inspect-evals" },
-    { name = "mlflow-skinny" },
-    { name = "nvidia-ml-py", marker = "sys_platform != 'darwin'" },
-    { name = "openai" },
-    { name = "psutil" },
-    { name = "sqlalchemy" },
-]
-tracking = [
-    { name = "alembic" },
-    { name = "mlflow-skinny" },
-    { name = "nvidia-ml-py", marker = "sys_platform != 'darwin'" },
-    { name = "psutil" },
-    { name = "sqlalchemy" },
-]
-train = [
-    { name = "alembic" },
-    { name = "bitsandbytes", marker = "sys_platform != 'darwin'" },
-    { name = "datasets" },
-    { name = "httpx" },
-    { name = "mlflow-skinny" },
-    { name = "nnsight" },
-    { name = "nvidia-ml-py", marker = "sys_platform != 'darwin'" },
-    { name = "peft" },
-    { name = "psutil" },
-    { name = "pyyaml" },
-    { name = "rich" },
     { name = "safetensors" },
     { name = "scikit-learn" },
     { name = "sqlalchemy" },
     { name = "torch" },
     { name = "transformers" },
+    { name = "tyro" },
+    { name = "uvicorn" },
+    { name = "vl-convert-python" },
+]
+
+[package.optional-dependencies]
+data = [
+    { name = "httpx" },
+    { name = "pyyaml" },
+    { name = "rich" },
+]
+rag = [
+    { name = "bm25s" },
+    { name = "sentence-transformers" },
+]
+rl = [
+    { name = "bitsandbytes", marker = "sys_platform != 'darwin'" },
+    { name = "datasets" },
+    { name = "httpx" },
+    { name = "math-verify" },
+    { name = "peft" },
+    { name = "pyyaml" },
+    { name = "reasoning-gym" },
+    { name = "rich" },
+    { name = "trl" },
+]
+sae = [
+    { name = "sae-lens" },
+]
+train = [
+    { name = "bitsandbytes", marker = "sys_platform != 'darwin'" },
+    { name = "datasets" },
+    { name = "httpx" },
+    { name = "peft" },
+    { name = "pyyaml" },
+    { name = "rich" },
     { name = "trl" },
 ]
 
@@ -2470,60 +2377,53 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "alembic", marker = "extra == 'tracking'", specifier = ">=1.13" },
+    { name = "alembic", specifier = ">=1.13" },
     { name = "bitsandbytes", marker = "sys_platform != 'darwin' and extra == 'train'", specifier = ">=0.46.1" },
     { name = "bm25s", marker = "extra == 'rag'", specifier = ">=0.2" },
     { name = "datasets", marker = "extra == 'train'", specifier = ">=4" },
-    { name = "fastapi", marker = "extra == 'server'", specifier = ">=0.115" },
-    { name = "fsspec", marker = "extra == 'sync'", specifier = ">=2024.6" },
-    { name = "httpx", marker = "extra == 'agent'", specifier = ">=0.28" },
+    { name = "fastapi", specifier = ">=0.115" },
+    { name = "fsspec", specifier = ">=2024.6" },
+    { name = "httpx", specifier = ">=0.28" },
     { name = "httpx", marker = "extra == 'data'", specifier = ">=0.28" },
-    { name = "httpx", marker = "extra == 'sources'", specifier = ">=0.28" },
-    { name = "huggingface-hub", marker = "extra == 'sync'", specifier = ">=1.33" },
-    { name = "inspect-ai", marker = "extra == 'evals'", specifier = ">=0.3.271,<0.4" },
-    { name = "inspect-evals", marker = "extra == 'evals'", specifier = ">=0.22" },
-    { name = "ipykernel", marker = "extra == 'notebooks'", specifier = ">=6.29" },
-    { name = "kaleido", marker = "extra == 'reports'", specifier = ">=1.0" },
-    { name = "louped", extras = ["data", "interp", "tracking"], marker = "extra == 'train'" },
-    { name = "louped", extras = ["evals", "tracking"], marker = "extra == 'sync'" },
-    { name = "louped", extras = ["evals", "tracking", "sync", "sources", "reports", "notebooks"], marker = "extra == 'server'" },
-    { name = "louped", extras = ["interp"], marker = "extra == 'rag'" },
-    { name = "louped", extras = ["interp"], marker = "extra == 'sae'" },
-    { name = "louped", extras = ["sources"], marker = "extra == 'reports'" },
-    { name = "louped", extras = ["sources", "tracking"], marker = "extra == 'notebooks'" },
+    { name = "huggingface-hub", specifier = ">=1.33" },
+    { name = "inspect-ai", specifier = ">=0.3.271,<0.4" },
+    { name = "inspect-evals", specifier = ">=0.22" },
+    { name = "ipykernel", specifier = ">=6.29" },
+    { name = "kaleido", specifier = ">=1.0" },
+    { name = "louped", extras = ["data"], marker = "extra == 'train'" },
     { name = "louped", extras = ["train"], marker = "extra == 'rl'" },
     { name = "math-verify", marker = "extra == 'rl'", specifier = ">=0.9" },
-    { name = "mcp", marker = "extra == 'agent'", specifier = ">=2.3" },
-    { name = "mlflow-skinny", marker = "extra == 'tracking'", specifier = ">=3.0" },
-    { name = "nbconvert", marker = "extra == 'notebooks'", specifier = ">=7.16" },
-    { name = "nbformat", marker = "extra == 'sources'", specifier = ">=5.10" },
-    { name = "nnsight", marker = "extra == 'interp'", specifier = ">=0.4" },
-    { name = "nvidia-ml-py", marker = "sys_platform != 'darwin' and extra == 'tracking'", specifier = ">=12" },
-    { name = "openai", marker = "extra == 'evals'", specifier = ">=1.0" },
-    { name = "papermill", marker = "extra == 'notebooks'", specifier = ">=2.6" },
+    { name = "mcp", specifier = ">=2.3" },
+    { name = "mlflow-skinny", specifier = ">=3.0" },
+    { name = "nbconvert", specifier = ">=7.16" },
+    { name = "nbformat", specifier = ">=5.10" },
+    { name = "nnsight", specifier = ">=0.4" },
+    { name = "nvidia-ml-py", marker = "sys_platform != 'darwin'", specifier = ">=12" },
+    { name = "openai", specifier = ">=1.0" },
+    { name = "papermill", specifier = ">=2.6" },
     { name = "peft", marker = "extra == 'train'", specifier = ">=0.17" },
-    { name = "plotly", marker = "extra == 'reports'", specifier = ">=5.24" },
-    { name = "psutil", marker = "extra == 'tracking'", specifier = ">=5.9" },
+    { name = "plotly", specifier = ">=5.24" },
+    { name = "psutil", specifier = ">=5.9" },
     { name = "pydantic", specifier = ">=2.10" },
-    { name = "pypdfium2", marker = "extra == 'sources'", specifier = ">=4.30" },
-    { name = "python-docx", marker = "extra == 'sources'", specifier = ">=1.1" },
-    { name = "python-pptx", marker = "extra == 'sources'", specifier = ">=1.0" },
+    { name = "pypdfium2", specifier = ">=4.30" },
+    { name = "python-docx", specifier = ">=1.1" },
+    { name = "python-pptx", specifier = ">=1.0" },
     { name = "pyyaml", marker = "extra == 'data'", specifier = ">=6" },
     { name = "reasoning-gym", marker = "extra == 'rl'", specifier = ">=0.1.25" },
     { name = "rich", marker = "extra == 'data'", specifier = ">=14" },
     { name = "sae-lens", marker = "extra == 'sae'", specifier = ">=6" },
-    { name = "safetensors", marker = "extra == 'interp'", specifier = ">=0.4" },
-    { name = "scikit-learn", marker = "extra == 'interp'", specifier = ">=1.5" },
+    { name = "safetensors", specifier = ">=0.4" },
+    { name = "scikit-learn", specifier = ">=1.5" },
     { name = "sentence-transformers", marker = "extra == 'rag'", specifier = ">=5" },
-    { name = "sqlalchemy", marker = "extra == 'tracking'", specifier = ">=2.0" },
-    { name = "torch", marker = "extra == 'interp'", specifier = ">=2.5" },
-    { name = "transformers", marker = "extra == 'interp'", specifier = ">=5" },
+    { name = "sqlalchemy", specifier = ">=2.0" },
+    { name = "torch", specifier = ">=2.5" },
+    { name = "transformers", specifier = ">=5" },
     { name = "trl", marker = "extra == 'train'", specifier = ">=1.14" },
     { name = "tyro", specifier = ">=0.9" },
-    { name = "uvicorn", marker = "extra == 'server'", specifier = ">=0.32" },
-    { name = "vl-convert-python", marker = "extra == 'reports'", specifier = ">=1.7" },
+    { name = "uvicorn", specifier = ">=0.32" },
+    { name = "vl-convert-python", specifier = ">=1.7" },
 ]
-provides-extras = ["server", "sources", "reports", "notebooks", "sync", "evals", "tracking", "interp", "train", "rl", "data", "agent", "rag", "sae"]
+provides-extras = ["server", "sources", "reports", "notebooks", "sync", "evals", "tracking", "interp", "agent", "train", "rl", "data", "rag", "sae"]
 
 [package.metadata.requires-dev]
 dev = [

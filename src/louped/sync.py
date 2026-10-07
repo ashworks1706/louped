@@ -8,7 +8,7 @@ already there.
 
 The remote is any fsspec URL: a folder (one in the repository keeps results with the code), an HF
 Storage Bucket (hf://buckets/<user>/<name>), or S3-compatible storage such as Cloudflare R2
-(s3://..., through s3fs, which the sync extra brings with Inspect). It is set as `remote` in
+(s3://..., through s3fs, which Inspect brings). It is set as `remote` in
 louped.toml, or LOUPED_REMOTE, which wins. Each push is a new folder under it and nothing is
 rewritten, so two machines pushing never conflict. Model weights stay out of bundles: they are not
 runs.

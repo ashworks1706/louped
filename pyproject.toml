@@ -1,7 +1,7 @@
 [project]
 name = "louped"
 version = "0.7.0"
-description = "A local workbench for research on LLM behavior and efficiency: experiments, evals, interventions, training and interpretability in one app"
+description = "A local workbench for LLM behavior and inference research: experiments, evals, interventions, training and interpretability in one app"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
@@ -18,80 +18,74 @@ classifiers = [
 dependencies = [
     "pydantic>=2.10",
     "tyro>=0.9",
+    # The app (louped serve).
+    "fastapi>=0.115",
+    "uvicorn>=0.32",
+    # The project's sources/ (papers, docs, slides, notebooks): their text, read for search and
+    # quoting. PDF through PDFium (pypdfium2, Apache-2.0/BSD-3), not PyMuPDF (AGPL).
+    "httpx>=0.28",
+    "nbformat>=5.10",
+    "pypdfium2>=4.30",
+    "python-docx>=1.1",
+    "python-pptx>=1.0",
+    # reports/: figures exported as SVG, PNG or PDF. Vega-Lite through vl-convert (no browser);
+    # Plotly through Kaleido, which draws in an installed Chrome.
+    "kaleido>=1.0",
+    "plotly>=5.24",
+    "vl-convert-python>=1.7",
+    # Notebooks run as jobs: papermill executes one with its parameters in an IPython kernel,
+    # inside a run; nbconvert draws a notebook as HTML for the app.
+    "ipykernel>=6.29",
+    "nbconvert>=7.16",
+    "papermill>=2.6",
+    # Runs pushed to and pulled from a remote: any fsspec URL, Hugging Face Storage Buckets through
+    # huggingface_hub's hf://; S3 or R2 through s3fs, which inspect-ai installs.
+    "fsspec>=2024.6",
+    "huggingface-hub>=1.33",
+    # Evals. Inspect's openai-api provider reaches any local OpenAI-compatible server
+    # (llama-server, vLLM).
+    "inspect-ai>=0.3.271,<0.4",
+    "inspect-evals>=0.22",
+    "openai>=1.0",
+    # Run tracking: MLflow on a SQLite file; the file store is in maintenance mode in MLflow 3.
+    # MLflow's system metrics: GPU utilisation, memory and power through NVML (BSD), CPU and RAM
+    # through psutil; a run without an NVIDIA GPU records CPU and RAM only.
+    "mlflow-skinny>=3.0",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "nvidia-ml-py>=12; sys_platform != 'darwin'",
+    "psutil>=5.9",
+    # Loading models, interventions and analyses.
+    "nnsight>=0.4",
+    "safetensors>=0.4",
+    "scikit-learn>=1.5",
+    "torch>=2.5",
+    "transformers>=5",
+    # The MCP server coding agents drive louped through: a stdio client of a running louped serve.
+    "mcp>=2.3",
 ]
 
 [project.urls]
 Homepage = "https://louped.vercel.app"
 Documentation = "https://louped.vercel.app/docs"
 
-# One extra per capability. A module imports only its own extra's packages, so an install carries
-# only what it uses.
+# `pip install louped` gives the app, evals, run tracking, model loading and the agent's tools.
+# The extras below add training, RL, retrieval and SAEs. The extras that name a part of the base
+# install are empty: they stay so older install lines and experiment READMEs still resolve.
 [project.optional-dependencies]
-# Reading and serving results. Pulls in the readers for both stores it serves.
-server = [
-    "fastapi>=0.115",
-    "uvicorn>=0.32",
-    "louped[evals,tracking,sync,sources,reports,notebooks]",
-]
-# The project's sources/ (papers, docs, slides, notebooks): their text, read for search and
-# quoting. PDF through PDFium (pypdfium2, Apache-2.0/BSD-3), not PyMuPDF (AGPL).
-sources = [
-    "httpx>=0.28",
-    "nbformat>=5.10",
-    "pypdfium2>=4.30",
-    "python-docx>=1.1",
-    "python-pptx>=1.0",
-]
-# reports/: figures exported as SVG, PNG or PDF. Vega-Lite through vl-convert (no browser);
-# Plotly through Kaleido, which draws in an installed Chrome.
-reports = [
-    "kaleido>=1.0",
-    "plotly>=5.24",
-    "vl-convert-python>=1.7",
-    "louped[sources]",
-]
-# Notebooks run as jobs: papermill executes one with its parameters in an IPython kernel, inside a
-# run; nbconvert draws a notebook as HTML for the app.
-notebooks = [
-    "ipykernel>=6.29",
-    "nbconvert>=7.16",
-    "papermill>=2.6",
-    "louped[sources,tracking]",
-]
-# Runs pushed to and pulled from a remote: any fsspec URL, Hugging Face Storage Buckets through
-# huggingface_hub's hf://; S3 or R2 through s3fs, which inspect-ai (the evals extra) installs.
-sync = [
-    "fsspec>=2024.6",
-    "huggingface-hub>=1.33",
-    "louped[evals,tracking]",
-]
-evals = [
-    "inspect-ai>=0.3.271,<0.4",
-    "inspect-evals>=0.22",
-    # Inspect's openai-api provider: any local OpenAI-compatible server (llama-server, vLLM).
-    "openai>=1.0",
-]
-# MLflow on a SQLite file; the file store is in maintenance mode in MLflow 3.
-tracking = [
-    "mlflow-skinny>=3.0",
-    "sqlalchemy>=2.0",
-    "alembic>=1.13",
-    # MLflow's system metrics: GPU utilisation, memory and power through NVML (BSD), CPU and RAM
-    # through psutil; a run without an NVIDIA GPU records CPU and RAM only.
-    "nvidia-ml-py>=12; sys_platform != 'darwin'",
-    "psutil>=5.9",
-]
-interp = [
-    "nnsight>=0.4",
-    "safetensors>=0.4",
-    "scikit-learn>=1.5",
-    "torch>=2.5",
-    "transformers>=5",
-]
+server = []
+sources = []
+reports = []
+notebooks = []
+sync = []
+evals = []
+tracking = []
+interp = []
+agent = []
 # LoRA SFT on TRL and PEFT, any device. On a CUDA GPU, also `pip install unsloth` for 4-bit
 # QLoRA and GGUF export; louped uses it when present.
 train = [
-    "louped[data,interp,tracking]",
+    "louped[data]",
     # 4-bit QLoRA on a CUDA GPU (load_in_4bit); unused on CPU.
     "bitsandbytes>=0.46.1; sys_platform != 'darwin'",
     "datasets>=4",
@@ -111,14 +105,8 @@ data = [
     "pyyaml>=6",
     "rich>=14",
 ]
-# The MCP server coding agents drive louped through: a stdio client of a running louped serve.
-agent = [
-    "httpx>=0.28",
-    "mcp>=2.3",
-]
 # Retrieval: BM25 and dense search, a cross-encoder reranker, NLI for faithfulness.
 rag = [
-    "louped[interp]",
     "bm25s>=0.2",
     "sentence-transformers>=5",
 ]
@@ -126,7 +114,6 @@ rag = [
 # louped.analysis.sae. Heavy: SAELens pulls in TransformerLens, wandb and plotly, so it is its own
 # extra and nothing else imports it.
 sae = [
-    "louped[interp]",
     "sae-lens>=6",
 ]
 
