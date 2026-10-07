@@ -63,6 +63,7 @@ const PAGES: [string, string][] = [
   ["probe dose", "/behavior/probe/?tab=dose"],
   ["benchmark", "/efficiency/benchmark/"],
   ["vectors", "/behavior/vectors/"],
+  ["training sets", "/behavior/training-sets/?set=%2Fhome%2Fme%2F.louped%2Fdata%2Fpushback.jsonl"],
   ["circuits", "/behavior/circuits/"],
   ["feature", "/behavior/feature/?run=m-1&f=12"],
   ["training", "/efficiency/training/"],

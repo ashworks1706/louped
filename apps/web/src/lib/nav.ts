@@ -2,6 +2,7 @@ import {
   Activity,
   BookOpen,
   Brain,
+  Database,
   Dumbbell,
   FlaskConical,
   FileText,
@@ -111,6 +112,14 @@ export const NAV: NavItem[] = [
     description: "Directions in a model's activations that stand for a concept.",
     icon: Move3d,
     shortcut: "G V",
+    section: "behavior",
+  },
+  {
+    href: "/behavior/training-sets/",
+    title: "Training sets",
+    description: "Is a training set sound? Its pairs side by side, with what is wrong flagged.",
+    icon: Database,
+    shortcut: "G D",
     section: "behavior",
   },
   {

@@ -671,6 +671,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/training-sets": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Training Sets
+     * @description The training sets louped knows, each with its flag counts and warnings.
+     */
+    get: operations["training_sets_api_training_sets_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/training-sets/pairs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Training Set
+     * @description One known set's pairs side by side, flagged ones first.
+     */
+    get: operations["training_set_api_training_sets_pairs_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/graphs": {
     parameters: {
       query?: never;
@@ -2445,6 +2485,23 @@ export interface components {
         [key: string]: components["schemas"]["PartRule"];
       };
     };
+    /** Pair */
+    Pair: {
+      /** Index */
+      index: number;
+      /** Prompt */
+      prompt: {
+        [key: string]: unknown;
+      }[];
+      /** Chosen */
+      chosen: string;
+      /** Rejected */
+      rejected?: string | null;
+      /** Label */
+      label: string;
+      /** Flags */
+      flags: ("chosen_in_prompt" | "length_only")[];
+    };
     /** PairedScore */
     PairedScore: {
       /** Name */
@@ -2879,6 +2936,8 @@ export interface components {
       };
       /** Error */
       error: string | null;
+      /** Degenerate */
+      degenerate?: ("repeat" | "echo" | "loop")[] | null;
     };
     /**
      * SaveRequest
@@ -3011,6 +3070,14 @@ export interface components {
       /** Parts */
       parts: components["schemas"]["Picked"][];
     };
+    /** SetPairs */
+    SetPairs: {
+      /** Path */
+      path: string;
+      report: components["schemas"]["SetReport"];
+      /** Shown */
+      shown: number;
+    };
     /** SetPart */
     SetPart: {
       /** Experiment */
@@ -3037,6 +3104,28 @@ export interface components {
       region: "home" | "run.tabs" | "run.overview" | "experiment.tabs" | "experiment.design";
       /** Blocks */
       blocks: components["schemas"]["Block"][] | null;
+    };
+    /** SetReport */
+    SetReport: {
+      /**
+       * Format
+       * @enum {string}
+       */
+      format: "dpo" | "sft";
+      /** Rows */
+      rows: number;
+      /** Counts */
+      counts: {
+        [key: string]: number;
+      };
+      /** Labels */
+      labels: {
+        [key: string]: number;
+      };
+      /** Warnings */
+      warnings: string[];
+      /** Pairs */
+      pairs: components["schemas"]["Pair"][];
     };
     /**
      * ShowRequest
@@ -3308,6 +3397,31 @@ export interface components {
           [key: string]: unknown;
         };
       } | null;
+    };
+    /** TrainingSet */
+    TrainingSet: {
+      /** Path */
+      path: string;
+      /** Format */
+      format: ("dpo" | "sft") | null;
+      /** Rows */
+      rows: number;
+      /** Counts */
+      counts: {
+        [key: string]: number;
+      };
+      /** Labels */
+      labels: {
+        [key: string]: number;
+      };
+      /** Warnings */
+      warnings: string[];
+      /** Configs */
+      configs: string[];
+      /** Runs */
+      runs: string[];
+      /** Error */
+      error: string | null;
     };
     /** Turn */
     Turn: {
@@ -4579,6 +4693,57 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HeatmapView"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  training_sets_api_training_sets_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TrainingSet"][];
+        };
+      };
+    };
+  };
+  training_set_api_training_sets_pairs_get: {
+    parameters: {
+      query: {
+        path: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SetPairs"];
         };
       };
       /** @description Validation Error */

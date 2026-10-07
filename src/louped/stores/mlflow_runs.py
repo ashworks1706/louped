@@ -329,3 +329,16 @@ def read_artifact(run_id: str, path: str) -> bytes | None:
         if _missing(exc):
             return None
         raise
+
+
+def training_datasets() -> list[tuple[str, str, str]]:
+    """Every training run's id, recipe and dataset file, as its params recorded them."""
+    client = _client()
+    if client is None:
+        return []
+    ids = [e.experiment_id for e in client.search_experiments()]
+    if not ids:
+        return []
+    runs = client.search_runs(ids, "tags.`louped.kind` = 'training'", max_results=50_000)
+    return [(PREFIX + r.info.run_id, r.data.params.get("recipe", ""), r.data.params["dataset"])
+            for r in runs if "dataset" in r.data.params]  # fmt: skip

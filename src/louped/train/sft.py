@@ -13,6 +13,7 @@ from typing import Any
 from pydantic import BaseModel, model_validator
 
 from louped.data import Example, conversation, read_jsonl
+from louped.data.pairs import sft_report
 from louped.train.base import TrainConfig, TrainError, fit
 from louped.train.base import load_config as _load_config
 
@@ -38,6 +39,10 @@ class SftPlan(BaseModel):
     examples: int
     with_tool_calls: int
     epochs: float
+    #: Examples with each flag (louped.data.pairs).
+    flags: dict[str, int]
+    #: What the flags say about the set; the run carries them as its louped.alarm tag.
+    warnings: list[str]
 
 
 def load_config(path: Path) -> SftConfig:
@@ -57,6 +62,7 @@ def _examples(cfg: SftConfig) -> list[Example]:
 def plan(cfg: SftConfig) -> SftPlan:
     """What a run would do, without loading a model."""
     examples = _examples(cfg)
+    sound = sft_report(examples)
     return SftPlan(
         name=cfg.name,
         base_model=cfg.base_model,
@@ -65,6 +71,8 @@ def plan(cfg: SftConfig) -> SftPlan:
         examples=len(examples),
         with_tool_calls=sum(1 for e in examples if e.tool_calls),
         epochs=cfg.train.epochs,
+        flags=sound.counts,
+        warnings=sound.warnings,
     )
 
 
@@ -75,8 +83,10 @@ def train(cfg: SftConfig) -> Path:
     from trl.trainer.sft_trainer import SFTTrainer
 
     examples = _examples(cfg)
+    warnings = sft_report(examples).warnings
     if cfg.masked_diffusion:
-        return fit(cfg, "sft", len(examples), lambda *a: _diffusion_trainer(cfg, examples, *a))
+        return fit(cfg, "sft", len(examples), lambda *a: _diffusion_trainer(cfg, examples, *a),
+                   warnings=warnings)  # fmt: skip
     rows = [{"prompt": e.messages, "completion": conversation(e)[-1:]} for e in examples]
 
     def make(model: Any, tok: Any, peft: Any, args: dict[str, Any]) -> Any:
@@ -84,7 +94,7 @@ def train(cfg: SftConfig) -> Path:
                           train_dataset=Dataset.from_list(rows),
                           args=SFTConfig(**args, max_length=cfg.max_seq_length))  # fmt: skip
 
-    return fit(cfg, "sft", len(rows), make)
+    return fit(cfg, "sft", len(rows), make, warnings=warnings)
 
 
 def _diffusion_trainer(

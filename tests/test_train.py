@@ -122,10 +122,16 @@ def test_dpo_trains_on_preference_pairs(tmp_path: Path) -> None:
                   export={"merge_as": None})  # fmt: skip
     cfg = dpo.load_config(path)
     assert dpo.plan(cfg).pairs == 4
+    assert dpo.plan(cfg).flags == {"chosen_in_prompt": 0, "length_only": 0}
     assert (dpo.train(cfg) / "adapter_config.json").exists()
     (run,) = [r for r in stores.list_runs() if r.kind == "training"]
     detail = stores.get_run(run.id)
     assert detail.params["recipe"] == "dpo" and "loss" in detail.history
+
+    from louped.stores.training_sets import list_training_sets
+
+    (trained_on,) = list_training_sets()
+    assert trained_on.runs == [run.id] and trained_on.format == "dpo"
 
 
 def test_grpo_rewards_come_from_a_plain_check_and_checkpoints_are_kept(tmp_path: Path) -> None:

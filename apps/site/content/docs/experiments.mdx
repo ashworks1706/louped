@@ -169,6 +169,66 @@ When you have picked every pair, **Reveal** locks the picks. It then shows:
 Use this agreement to decide whether you can trust a judge on this question. Picks are kept under
 `.louped/ab/`. Compare's per-sample answers are hidden while Blind A/B is open.
 
+### Degenerate replies
+
+louped checks the reply of every eval sample when it reads the log. The task does not change. The
+reply is the last assistant message with text. louped flags it when it:
+
+- **repeat**: says again what an earlier assistant turn of the same conversation said. That is
+  the same text after lowercasing and collapsing spaces, or a word-level similarity of 0.9 or
+  more (difflib).
+- **echo**: copies the system prompt or the chat template. That is 20 words in a row from a system
+  message (all of a shorter one, from 5 words), a template marker such as `<|start_header_id|>`,
+  `<|im_start|>` or `[INST]`, or `Assistant:` at the start.
+- **loop**: repeats itself. One run of 8 words occurs 3 times or more. A run of punctuation only,
+  such as a table rule, does not count.
+
+The Samples tab shows the share of each flag over the run. Click a share to show only those
+samples. The **degenerate** column shows each sample's flags. A running eval has no flags yet.
+
+## Training
+
+A training config is a YAML file in an experiment that starts `# louped train <recipe>`. Its
+`dataset` names the training set.
+
+### Is the training set sound?
+
+**Training sets** (Behavior) lists every set that louped knows:
+
+- the `dataset` of each SFT or DPO training config
+- the dataset of each SFT or DPO training run
+- the files under `.louped/data/<name>/` that `louped data` writes
+
+Open a set to read its pairs: the prompt, then the chosen and the rejected reply side by side.
+Pairs with a flag come first. Click a count to show only the pairs with that flag. louped flags a
+pair when:
+
+- **chosen_in_prompt**: the chosen reply, lowercased with spaces collapsed, is in the prompt. The
+  prompt is every turn, the system turn too. The model learns to copy its input.
+- **length_only** (DPO): the replies differ mostly in length. The longer reply has 1.5 times the
+  words of the shorter or more. Also, the shorter reply is the start of the longer, or the two
+  share 80% or more of their words (Jaccard).
+
+A flag on 20% or more of the pairs is a warning on the set. `louped train` prints the counts and
+the warnings in its plan before it trains.
+
+Each pair has a **label**: how its chosen reply was picked. louped knows it for the SFT sets it
+builds: the source of the reply (`meta.source`), and the review decision that `curate` recorded.
+louped builds no DPO pairs, so their label is `unknown`.
+
+### Training alarms
+
+`louped train` watches the numbers that the trainer logs. It raises an alarm when the run looks
+degenerate early. The early window is the first 50 steps, or the first 10% of the steps when that
+is more.
+
+- **loss**: the loss falls below 1% of the first logged loss, or below 0.001 when that is higher.
+  A DPO loss starts near 0.69, so the line is 0.0069.
+- **rewards/accuracies** (DPO): the chosen reply wins every pair on 3 logs in a row.
+
+louped prints each alarm with its step. It adds the alarm to the run's `louped.alarm` tag, after
+the data warnings. The run page shows the tag as a red **alarm** badge. Training does not stop.
+
 ## Code from a paper
 
 If a paper's code needs its own package versions, run it in its own environment:

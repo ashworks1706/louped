@@ -75,7 +75,8 @@ KINDS: list[Kind] = [
     # a run's page
     _k(part="run/title", about="The run's name.", rules=PICK),
     _k(part="run/back", about="The link back to Runs.", rules=["hidden"]),
-    _k(part="run/badge/*", about="The run's kind, host, status or cohort.", rules=["hidden"]),
+    _k(part="run/badge/*", about="The run's kind, host, status, cohort or training alarm.",
+       rules=["hidden"]),
     _k(part="run/meta/*", about="The run's model, experiment, created time or id.", rules=LIST),
     _k(part="run/delete", about="Moves the run to the trash.", rules=["hidden"]),
     _k(part="run.overview/metrics/*", about="One metric's card in the metrics block.",
@@ -116,11 +117,20 @@ KINDS: list[Kind] = [
     _k(part="records/filter/*", about="A filter on a column with few values.", rules=PICK),
     _k(part="records/*", about="A records table's search, count and download.", rules=PICK),
     _k(part="record/field/*", about="One field of an open record.", rules=LIST),
+    # the training sets and one set's pairs
+    _k(part="sets/column/*", about="A column of the training sets table.", rules=LIST),
+    _k(part="sets/row/*", about="One training set, by its file's path.", rules=PICK),
+    _k(part="set/stat/*", about="A count over the open set: pairs, or pairs with a flag; a flag's "
+       "shows only those pairs.", rules=["hidden", "label", "about"]),
+    _k(part="set/pair/*", about="One pair of the open set, by its row in the file.", rules=PICK),
+    _k(part="set/*", about="The open set's title, warnings, labels and count.", rules=PICK),
     # an eval's samples
     _k(part="samples/column/*", about="A column of the samples table: #, input, target or a "
        "score.", rules=LIST),
     _k(part="samples/row/*", about="One sample (id, or id@epoch past the first).", rules=PICK),
     _k(part="samples/score/*", about="Shows only the samples that failed a score.", rules=PICK),
+    _k(part="samples/degenerate/*", about="A share of degenerate replies (repeat, echo, loop); "
+       "shows only those samples.", rules=["hidden", "label", "about"]),
     _k(part="samples/*", about="The samples' search, count and judge agreement.", rules=PICK),
     _k(part="sample/*", about="The open sample's title, log link and your pick.", rules=PICK),
     # figures, config, files

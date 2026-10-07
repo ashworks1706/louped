@@ -16,7 +16,7 @@ from typing import Annotated, Literal
 import tyro
 
 from louped.core import experiments_dir, home
-from louped.data import curate, read_jsonl, redact, sources, verify, write_jsonl
+from louped.data import curate, pairs, read_jsonl, redact, sources, verify, write_jsonl
 
 
 def _dir(name: str) -> Path:
@@ -79,7 +79,9 @@ class Overlap:
 
 @dataclass(frozen=True)
 class Verify:
-    """Drop malformed examples and duplicates; write verified.jsonl."""
+    """Drop malformed examples and duplicates; write verified.jsonl. Then flag what is unsound
+    (louped.data.pairs): replies already in their prompt and, for a DPO pairs file given as
+    --src, pairs that differ mostly in length. A DPO file is only flagged, not rewritten."""
 
     name: str
     src: Path | None = None
@@ -125,6 +127,13 @@ Command = (
 )
 
 
+def _flags(found: pairs.SetReport) -> None:
+    for flag, n in found.counts.items():
+        print(f"  flagged {n} of {found.rows}: {flag}")
+    for warning in found.warnings:
+        print(f"WARNING: {warning}")
+
+
 def run(cmd: Command) -> None:
     match cmd:
         case Export():
@@ -163,12 +172,18 @@ def run(cmd: Command) -> None:
             hit = overlap(texts, evals, cmd.n)
             print(json.dumps({"items": len(evals), "contaminated": len(hit), "ids": hit}))
         case Verify():
-            kept, reasons = verify.verify(read_jsonl(cmd.src or _dir(cmd.name) / "raw.jsonl"))
+            src = cmd.src or _dir(cmd.name) / "raw.jsonl"
+            if src.exists() and pairs.detect(src) == "dpo":
+                print(f"{src} holds DPO pairs: flagged only, nothing written")
+                _flags(pairs.check(src, "dpo"))
+                return
+            kept, reasons = verify.verify(read_jsonl(src))
             out = cmd.out or _dir(cmd.name) / "verified.jsonl"
             write_jsonl(out, kept)
             print(f"kept {len(kept)} -> {out}")
             for reason, n in sorted(reasons.items()):
                 print(f"  dropped {n}: {reason}")
+            _flags(pairs.sft_report(kept))
         case Review():
             from louped.data.review import loop
 

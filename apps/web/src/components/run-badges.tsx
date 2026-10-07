@@ -32,6 +32,22 @@ export function CohortBadge({ tags }: { tags: Record<string, string> }) {
   );
 }
 
+/** What looked degenerate in a training run: its data's flags and its early numbers
+ * (louped.train.alarms), each with its step. */
+export function AlarmBadge({ tags }: { tags: Record<string, string> }) {
+  const text = tags["louped.alarm"];
+  if (!text) return null;
+  return (
+    <Badge
+      variant="outline"
+      className="border-negative/50 text-negative max-w-xl truncate"
+      title={text.split("; ").join("\n")}
+    >
+      alarm · {text}
+    </Badge>
+  );
+}
+
 /** A run's status; a live one pulses and shows how many samples are done. */
 export function StatusDot({
   status,

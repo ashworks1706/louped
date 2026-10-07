@@ -198,6 +198,7 @@ def test_ledger_keeps_fixes_drops_and_catches_stale(tmp_path: Path) -> None:
 
     accepted, counts = curate.apply([a, b, c, d, stale], ledger)
     assert [(e.id, e.reply) for e in accepted] == [("a", "1"), ("b", "better")]
+    assert [e.meta["review"] for e in accepted] == ["kept by ash", "fixed by ash"]
     assert counts == {"kept": 1, "fixed": 1, "dropped": 1, "unreviewed": 1, "stale": 1}
     assert [e.id for e in curate.pending([a, d, stale], ledger)] == ["d", "e"]
 

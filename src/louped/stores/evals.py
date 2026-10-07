@@ -19,7 +19,9 @@ from inspect_ai.log import (
 
 from louped.core import experiments_dir, home, logs_dir
 from louped.core.judges import pair_key, request_text
+from louped.stores import degeneracy
 from louped.stores.types import (
+    Degenerate,
     Message,
     RunDetail,
     RunSummary,
@@ -199,11 +201,24 @@ def get_run(run_id: str) -> RunDetail | None:
     )
 
 
+@lru_cache(maxsize=16)
+def _degenerate(path: str, mtime: float) -> dict[tuple[str, int], list[Degenerate]]:
+    """Each finished log's samples' degeneracy flags, by id and epoch, read once per change."""
+    samples = read_eval_log_samples(
+        path, all_samples_required=False, resolve_attachments=True, exclude_fields={"events"}
+    )
+    return {
+        (str(s.id), s.epoch): degeneracy.flags([(m.role, m.text) for m in s.messages])
+        for s in samples
+    }
+
+
 def list_samples(run_id: str) -> list[SampleSummary] | None:
     found = _find(run_id)
     if found is None:
         return None
-    path, _ = found
+    path, log = found
+    flags = None if log.status == "started" else _degenerate(str(path), path.stat().st_mtime)
     out: list[SampleSummary] = []
     for s in read_eval_log_sample_summaries(str(path)):
         scores: dict[str, float | None] = {}
@@ -217,6 +232,7 @@ def list_samples(run_id: str) -> list[SampleSummary] | None:
                 target=text(s.target, 120),
                 scores=scores,
                 error=s.error,
+                degenerate=None if flags is None else flags.get((str(s.id), s.epoch), []),
             )
         )
     return out

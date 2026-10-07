@@ -11,13 +11,13 @@ import shlex
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from louped.data.example import Example, Verdict
+from louped.data.example import Example, Verdict, text_of
 
 Answer = Verdict | Literal["skip", "quit"]
 
@@ -45,19 +45,9 @@ def _clip(text: str) -> str:
     return text if len(text) <= WIDTH else f"{text[:WIDTH]}\n... {len(text) - WIDTH} more chars"
 
 
-def _content(message: dict[str, Any]) -> str:
-    """The text of one wire message, whether it is a string or a content array."""
-    content = message.get("content")
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        return " ".join(part.get("text", "") for part in content if isinstance(part, dict))
-    return ""
-
-
 def question(example: Example) -> str:
     """The last user turn before the reply. Empty when there is none."""
-    asked = [_content(m) for m in example.messages if m.get("role") == "user"]
+    asked = [text_of(m) for m in example.messages if m.get("role") == "user"]
     return asked[-1] if asked else ""
 
 

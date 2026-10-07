@@ -41,7 +41,7 @@
   },
   {
     "part": "run/badge/*",
-    "about": "The run's kind, host, status or cohort.",
+    "about": "The run's kind, host, status, cohort or training alarm.",
     "rules": ["hidden"]
   },
   {
@@ -180,6 +180,31 @@
     "rules": ["hidden", "label", "about", "order"]
   },
   {
+    "part": "sets/column/*",
+    "about": "A column of the training sets table.",
+    "rules": ["hidden", "label", "about", "order"]
+  },
+  {
+    "part": "sets/row/*",
+    "about": "One training set, by its file's path.",
+    "rules": []
+  },
+  {
+    "part": "set/stat/*",
+    "about": "A count over the open set: pairs, or pairs with a flag; a flag's shows only those pairs.",
+    "rules": ["hidden", "label", "about"]
+  },
+  {
+    "part": "set/pair/*",
+    "about": "One pair of the open set, by its row in the file.",
+    "rules": []
+  },
+  {
+    "part": "set/*",
+    "about": "The open set's title, warnings, labels and count.",
+    "rules": []
+  },
+  {
     "part": "samples/column/*",
     "about": "A column of the samples table: #, input, target or a score.",
     "rules": ["hidden", "label", "about", "order"]
@@ -193,6 +218,11 @@
     "part": "samples/score/*",
     "about": "Shows only the samples that failed a score.",
     "rules": []
+  },
+  {
+    "part": "samples/degenerate/*",
+    "about": "A share of degenerate replies (repeat, echo, loop); shows only those samples.",
+    "rules": ["hidden", "label", "about"]
   },
   {
     "part": "samples/*",
