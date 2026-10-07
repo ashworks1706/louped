@@ -327,8 +327,8 @@ def end_card() -> Image.Image:
     d = ImageDraw.Draw(img)
     for f, text, y, ink in (
         (sans(84, "SemiBold"), "louped", 400, (17, 17, 17)),
-        (sans(32), "A workbench for LLM behavior and efficiency.", 520, (82, 82, 91)),
-        (mono(28), "uv tool install louped", 610, (17, 17, 17)),
+        (sans(32), "An astute harness for LLM behavior and inference research.", 520, (82, 82, 91)),
+        (mono(28), "pip install louped", 610, (17, 17, 17)),
     ):
         d.text(((W - f.getlength(text)) / 2, y), text, font=f, fill=ink)
     return img

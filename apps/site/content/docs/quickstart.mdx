@@ -6,7 +6,7 @@ description: Install louped, make a project and run the example.
 You need Python 3.12 or newer.
 
 ```sh
-pip install 'louped[server,tracking,interp,agent]'
+pip install louped
 louped init my-research
 cd my-research
 louped serve
@@ -30,24 +30,17 @@ it and read the **Items** tab.
 
 ## Extras
 
-Install only what you use.
+`pip install louped` gives the app, evals, run tracking, model loading (torch, nnsight), push and
+pull, sources, reports, notebooks and the MCP server your coding agent uses. Extras add the rest:
+`pip install 'louped[train]'`.
 
-| Extra       | Adds                                                                                                     |
-| ----------- | -------------------------------------------------------------------------------------------------------- |
-| `server`    | The app (`louped serve`). It includes `tracking`, `evals`, `sync`, `sources`, `reports` and `notebooks`. |
-| `tracking`  | Run records, and GPU, CPU and memory use during each run                                                 |
-| `interp`    | Loading models, interventions and analyses (torch, nnsight)                                              |
-| `agent`     | The MCP server your coding agent uses (`louped mcp`)                                                     |
-| `evals`     | Inspect evals                                                                                            |
-| `train`     | Fine-tuning (TRL, PEFT)                                                                                  |
-| `rl`        | Tasks with checkable answers, for GRPO                                                                   |
-| `rag`       | Retrieval (bm25s, sentence-transformers)                                                                 |
-| `sae`       | Sparse autoencoders (SAELens)                                                                            |
-| `data`      | Building training sets from logged model calls                                                           |
-| `sync`      | `louped push` and `louped pull` to a remote                                                              |
-| `sources`   | Reading papers, slides, documents and notebooks in `sources/`                                            |
-| `reports`   | Exporting figures as SVG, PNG or PDF                                                                     |
-| `notebooks` | Running notebooks as jobs, and showing them as Jupyter does                                              |
+| Extra   | Adds                                           |
+| ------- | ---------------------------------------------- |
+| `train` | Fine-tuning (TRL, PEFT)                        |
+| `rl`    | Tasks with checkable answers, for GRPO         |
+| `rag`   | Retrieval (bm25s, sentence-transformers)       |
+| `sae`   | Sparse autoencoders (SAELens)                  |
+| `data`  | Building training sets from logged model calls |
 
 ## Results you already have
 

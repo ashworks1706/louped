@@ -10,7 +10,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: { default: "louped", template: "%s · louped" },
-  description: "A local testbed for research on LLM behavior and efficiency.",
+  description: "A local workbench for LLM behavior and inference research.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

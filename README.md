@@ -19,7 +19,7 @@ your cluster, with open-weight models.
 ## Start
 
 ```sh
-pip install 'louped[server,tracking,interp,agent]'
+pip install louped
 louped init my-research && cd my-research
 louped serve
 ```

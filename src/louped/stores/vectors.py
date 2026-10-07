@@ -1,7 +1,7 @@
 """Saved directions, read from the safetensors headers without loading torch.
 
 The format is an 8-byte little-endian header length, then a JSON header whose __metadata__ holds
-the Direction under "louped". Reading it directly keeps the server free of the interp extra.
+the Direction under "louped". Reading it directly keeps torch out of the server.
 """
 
 from __future__ import annotations

@@ -11,7 +11,7 @@ Loaded with a bank of adapters, each request names the adapters live for it. A m
 model takes no interventions: generate sends its reply once denoised, and inspect returns its
 denoising trajectory.
 
-The only routes that compute rather than read, and the only ones that need the interp extra. Until
+The only routes that compute rather than read, and the only ones that load torch. Until
 a model is loaded the routes answer that none is and import no torch; the UI loads one here, or
 unloads it to free the GPU, on a server that launches jobs (not one started with --expose).
 """

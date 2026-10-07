@@ -4,7 +4,7 @@ figures an agent adds to a run or an experiment, and for
 deleting an experiment or a run, which moves it to the trash rather than removing it.
 
 Each view is empty until its tool has written something, so the server answers with whatever
-exists. Needs the server extra, which installs both readers.
+exists.
 """
 
 from louped.stores.compare import compare

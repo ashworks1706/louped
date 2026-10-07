@@ -1,7 +1,6 @@
 """The text of PDFs, slide decks, Word documents and notebooks, read the same way wherever louped
 reads one: sources/ for search and pins, reports/ for previews and louped check. Each reader
-imports its library when called; they come with the sources extra, and notebook_html with the
-notebooks extra."""
+imports its library when called."""
 
 from __future__ import annotations
 

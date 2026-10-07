@@ -25,7 +25,7 @@ import pageLight from "../../../public/demo/page-light.png";
 import picksDark from "../../../public/demo/picks-dark.png";
 import picksLight from "../../../public/demo/picks-light.png";
 
-const INSTALL = "pip install 'louped[server,tracking,interp,agent]'";
+const INSTALL = "pip install louped";
 
 type Shot = [StaticImageData, StaticImageData];
 
@@ -111,7 +111,7 @@ function Screenshot({ shot: [light, dark], alt }: { shot: Shot; alt: string }) {
 export default function HomePage() {
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center px-6 pt-24 pb-16 md:pt-32">
-      <h1 className="max-w-2xl text-center text-4xl font-semibold tracking-tight text-balance md:text-6xl">
+      <h1 className="max-w-4xl text-center text-4xl font-semibold tracking-tight text-balance md:text-6xl">
         {tagline}
       </h1>
       <p className="text-fd-muted-foreground mt-5 max-w-lg text-center text-balance">
