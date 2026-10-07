@@ -10,7 +10,10 @@ results.
 - `louped mcp`, registered in `.mcp.json`, drives the running app. Start `louped serve` first.
   Work started through it shows in the app.
   - To read: `experiments`, `runs`, `run`, `samples`, `figures`, `compare`.
-  - To act: `new_experiment`, `launch`, `job`, `export_job`, `import_result`, `push`, `pull`.
+  - To act: `new_experiment`, `launch`, `job`, `submit_job`, `export_job`, `import_result`,
+    `push`, `pull`.
+  - `experiment` shows an experiment's gate. A launch that the gate guards is refused until the
+    gate passes. Do not edit a gate to get past it. Tell the person.
   - `ui_page`, `set_part`, `set_layout` and `set_preset` change what the app's pages show.
   - The person Shift+clicks any part of a page. `ui_selection` gives you those parts with their
     data, numbered as the app's tray numbers them. Call it when they say "this", "these" or

@@ -43,8 +43,13 @@ over the run's files (new columns on its items); then ui_show. Evals are Inspect
 lists the project's and inspect_evals' to launch with "eval". Judging two eval runs is launch
 "judge" with --judge one of judges; a new criterion or prompt is new_judge. The person's own
 blind picks of two runs (Compare's Blind A/B) are ab_results; check a judge against them there.
-A run too large for this machine goes to a cluster, a VM or Colab with export_job; its result
-comes back with pull or import_result. A run's code (run, trace) links its script at its commit.
+A run too large for this machine goes to a cluster: submit_job when louped.toml names it under
+[clusters] (louped follows it and brings its result back; after= chains jobs there), else
+export_job (a cluster, a VM or Colab) for the person to run, its result back with pull or
+import_result. A run's code (run, trace) links its script at its commit. An experiment's
+gate (gate: in its README, shown by experiment) holds back the launches it guards until its
+requirements pass; a refused launch says which one fails and by how much. Do not edit a gate to
+get past it: tell the person.
 Report a difference only with its paired interval from compare (or cohort, for a run's items),
 and name the run ids you used. Items the person picks can be saved as a cohort and run again.
 Jobs run one at a time on this machine's GPU, so do not queue more than the question needs.
@@ -104,7 +109,9 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
 
     @mcp.tool(annotations=READ)
     async def experiment(name: str) -> dict[str, Any]:
-        """One question: its README without the front matter, and the ids of its runs."""
+        """One question: its README without the front matter, the ids of its runs, and its gate
+        (when the README declares one): each requirement with the value in the run it reads,
+        passed or not, and the launches it guards."""
         e = await get(f"/experiments/{name}")
         return {**e, "runs": [r["id"] for r in e["runs"]]}
 
@@ -476,6 +483,24 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         path.write_bytes(response.content)
         return {"path": str(path), "bytes": len(response.content),
                 "note": response.headers.get("x-louped-note", "")}  # fmt: skip
+
+    @mcp.tool(annotations=WRITE)
+    async def submit_job(
+        id: str,
+        cluster: str,
+        options: dict[str, str | bool | list[str]] | None = None,
+        target: dict[str, Any] | None = None,
+        after: str | None = None,
+    ) -> dict[str, Any]:
+        """Send a launch to a cluster louped.toml names ([clusters.<name>]) over ssh and start it
+        there (sbatch, or bash on a VM); returns its job, which louped follows to its result. id,
+        options and target are as for export_job (target's provider comes from the cluster).
+        after is an earlier job on the same Slurm cluster this one waits for and needs to
+        succeed. A gate step is id "gate" with options {"experiment": <name>}; the launch it
+        guards may then follow it with after. Refused (409) when a gate holds the launch back."""
+        body = {"id": id, "cluster": cluster, "options": options or {}, "after": after,
+                "target": target or {}}  # fmt: skip
+        return await post("/launch/submit", body)
 
     @mcp.tool(annotations=WRITE)
     async def import_result(path: str) -> dict[str, Any]:

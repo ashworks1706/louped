@@ -95,11 +95,15 @@ before `sbatch`.
 
 Pulled and imported runs show like local ones, marked with where they ran.
 
+To skip the copying, let louped submit the job. See [Clusters](#clusters).
+
 ### Tips
 
 - **Hugging Face token**: gated models (such as Llama) and `hf://` remotes need one on the
-  cluster. Run `hf auth login` there once, or export `HF_TOKEN` before `sbatch`. A job that pushes
-  to an `hf://` remote checks for the token before it runs, not after.
+  cluster. Run `louped cluster token <name>` here once (see [Clusters](#clusters)). Or run
+  `hf auth login` there, or export `HF_TOKEN` before `sbatch`. A job with no token prints one
+  warning before it installs: gated models then fail with HTTP 401. A job that pushes to an
+  `hf://` remote stops before it runs if it finds no token.
 - **Private repositories**: the cluster needs access to clone the repository, such as an SSH key on
   GitHub.
 - **First run**: run the job's install line once on a login node. The job then reuses the
@@ -132,6 +136,89 @@ Use Google Colab when you have no cluster. Colab gives a free GPU for a few hour
 
 The notebook writes the same one-file `job.sh` as a cluster export and runs it with `bash`. Thus
 it installs uv and louped the same way.
+
+## Clusters
+
+louped can submit a job to a cluster over ssh and follow it to its result.
+
+1. Set up ssh to the cluster. Add a `Host` to `~/.ssh/config` with your user and key. louped never
+   asks for a password and never stores one. On Sol, a `ControlMaster` lets one Duo login serve
+   many commands:
+
+   ```txt
+   Host sol
+     HostName sol.asu.edu
+     User <asurite>
+     ControlMaster auto
+     ControlPath ~/.ssh/cm-%r@%h:%p
+     ControlPersist 8h
+   ```
+
+2. Name the cluster in `louped.toml`:
+
+   ```toml
+   [clusters.sol]
+   ssh = "sol"                   # the Host from ~/.ssh/config
+   provider = "sol"              # sol, slurm or shell (a VM: nohup bash)
+   dir = "/scratch/$USER/louped" # where jobs are copied; the cluster expands $USER
+   ```
+
+3. Copy your Hugging Face token to the cluster once:
+
+   ```sh
+   louped cluster token sol
+   ```
+
+   The token goes to `~/.cache/huggingface/token` there, readable only by you. It goes over ssh's
+   input. It is never in a command line, in `job.sh` or in a log.
+
+4. Submit a job. In the app, open **Launch**, choose the cluster's kind in **Run on**, and press
+   **Submit to sol**. Or:
+
+   ```sh
+   louped submit script:my-question/train.py --on sol --hours 6
+   ```
+
+louped exports the job as **Export** does. It copies the job to `dir` and runs `sbatch` there
+(`nohup bash` for `shell`). The job page shows the cluster, the Slurm job id and the log. While
+`louped serve` runs, it asks the cluster every minute how the job is (`sacct`). When the job ends,
+louped gets the result:
+
+- With a remote, louped pulls the results that the job pushed.
+- Without a remote, louped copies `louped-result-<id>.tar.gz` here with `scp`, imports it and
+  deletes the copy.
+- If no result comes back, the job page shows the state that Slurm gives (such as `TIMEOUT`) and
+  the end of the job's output.
+
+A failed ssh, scp or `sbatch` call marks the job failed and shows the error on its page.
+**Stop** on the job page runs `scancel`.
+
+### Chains
+
+`--after <job>` makes a job wait on the cluster until an earlier job succeeds
+(`--dependency=afterok`). Thus a chain runs in order while your laptop is off. In the app, choose
+the earlier job in **After**.
+
+A chain can include the experiment's [gate](/docs/experiments#gate) as a step of its own:
+
+```sh
+louped submit gate --experiment my-question --on sol --after <train job>
+```
+
+The gate step runs `louped gate my-question --pull` on the cluster. It pulls the earlier steps'
+runs from the remote. Thus a gate step needs a remote that
+the cluster can reach, and louped refuses it without one. If the gate fails, the step fails, and
+Slurm cancels the steps after it. A launch that the gate guards can be submitted after the gate
+step, even before the gate passes here.
+
+To submit a whole chain, list its steps in the README (`chain: [sample.py, train.py, gate,
+test.py]`), then run:
+
+```sh
+louped submit my-question --chain --on sol
+```
+
+louped checks every step before it sends the first. The gate step asks for no GPU and one hour.
 
 ## Publish a read-only dashboard
 

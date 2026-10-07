@@ -133,7 +133,8 @@ KINDS: list[Kind] = [
        "shows only those samples.", rules=["hidden", "label", "about"]),
     _k(part="samples/*", about="The samples' search, count, judge agreement and the readers "
        "disagree filter.", rules=PICK),
-    _k(part="sample/*", about="The open sample's title, log link, model input heading and your pick.", rules=PICK),
+    _k(part="sample/*", about="The open sample's title, log link, model input heading and your "
+       "pick.", rules=PICK),
     _k(part="sample/input/*", about="What one model call of the open sample read, by call number, "
        "special tokens included.", rules=PICK),
     _k(part="sample/score/*", about="One score of the open sample, with the rule that read it.",
@@ -159,6 +160,8 @@ KINDS: list[Kind] = [
     _k(part="experiment/view/*", about="A figure an agent added to the experiment's page, by "
        "its file (views/<name>.json).", rules=["hidden", "note", "order"]),
     _k(part="experiment/delete", about="Moves the experiment to the trash.", rules=["hidden"]),
+    _k(part="experiment/gate/*", about="One requirement of the experiment's gate, by its metric, "
+       "with its value and PASS or FAIL.", rules=PICK),
     _k(part="experiment/*", about="The experiment's name, status, question and back link.",
        rules=PICK),
     _k(part="experiments/row/*", about="One experiment in a list.", rules=PICK),
@@ -277,6 +280,8 @@ KINDS: list[Kind] = [
        rules=["note"]),
     _k(part="launch/where", about="Where it runs: here, Sol, a Slurm cluster, a VM or Colab.",
        rules=["note"]),
+    _k(part="launch/submit/*", about="Submits it to a cluster louped.toml names, by name.",
+       rules=["hidden"]),
     _k(part="launch/*", about="The picker, title, command and Launch button.", rules=PICK),
     # a job
     _k(part="job/log", about="The job's log.", rules=["note"]),

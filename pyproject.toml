@@ -195,7 +195,7 @@ layers = [
     "louped.examples",
     "louped.check",
     "louped.reports",
-    "louped.train | louped.sweep | louped.grid | louped.sync | louped.features | louped.circuits | louped.judge | louped.derive | louped.bench | louped.endpoint_bench | louped.sources | louped.notebooks",
+    "louped.train | louped.sweep | louped.grid | louped.sync | louped.clusters | louped.features | louped.circuits | louped.judge | louped.derive | louped.bench | louped.endpoint_bench | louped.sources | louped.notebooks",
     "louped.stores | louped.tracking | louped.analysis | louped.inspect_ext",
     "louped.interventions",
     "louped.vectors",

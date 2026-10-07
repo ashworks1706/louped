@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Rocket } from "lucide-react";
+import { Download, Rocket, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { parseAsString, useQueryState, useQueryStates } from "nuqs";
 import { useState } from "react";
@@ -22,8 +22,10 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ApiError,
   exportJob,
+  isLive,
   launch,
   q,
+  submitJob,
   type Job,
   type Target,
   type LaunchOption,
@@ -202,6 +204,27 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
       toast(`${name} downloaded`, { description: note });
     },
   });
+  // the clusters louped.toml names for where the form says, to submit to over ssh
+  const clusters = useQuery({ ...q.clusters(), enabled: place !== "here" });
+  const mine = (clusters.data ?? []).filter((c) => c.provider === place);
+  const [chosen, setChosen] = useState<string | null>(null);
+  const cluster = mine.find((c) => c.name === chosen) ?? mine[0];
+  const jobs = useQuery({ ...q.jobs(), enabled: cluster != null });
+  const waiting = (jobs.data ?? []).filter(
+    (j) => j.cluster === cluster?.name && j.scheduler_id && isLive(j.status),
+  );
+  const [after, setAfter] = useState("");
+  const sub = useMutation({
+    mutationFn: submitJob,
+    meta: { action: "Submit" },
+    onSuccess: (job) => {
+      void client.invalidateQueries({ queryKey: ["jobs"] });
+      onLaunched(job);
+      toast(`${job.title} submitted`, {
+        description: `Job ${job.scheduler_id} there; this page follows it while louped serve runs.`,
+      });
+    },
+  });
   const go = useMutation({
     mutationFn: launch,
     meta: { action: "Launch" },
@@ -228,6 +251,15 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
     ...(item.config != null ? { config } : {}),
     ...(item.recipe != null ? { recipe } : {}),
   };
+  const send = () =>
+    cluster &&
+    sub.mutate({
+      ...request,
+      target: { ...target, provider: place as Target["provider"] },
+      cluster: cluster.name,
+      after: waiting.some((j) => j.id === after) ? after : null,
+    });
+  const busy = !options.isSuccess || go.isPending || out.isPending || sub.isPending;
   const submit = () => {
     if (place !== "here") {
       // Colab's GPU is the runtime picked there, not a field here
@@ -317,10 +349,35 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
         <CopyButton text={command} />
       </div>
       <Where place={place} setPlace={setPlace} target={target} setTarget={setTarget} />
-      <div className="flex items-center gap-3" {...part("launch/submit")}>
+      <div className="flex flex-wrap items-center gap-3" {...part("launch/submit")}>
+        {cluster && (
+          <>
+            {mine.length > 1 && (
+              <NativeSelect
+                aria-label="Cluster"
+                value={cluster.name}
+                onChange={(e) => setChosen(e.target.value)}
+                className="font-mono text-xs"
+                {...part("launch/cluster")}
+              >
+                {mine.map((c) => (
+                  <option key={c.name}>{c.name}</option>
+                ))}
+              </NativeSelect>
+            )}
+            <Button
+              onClick={send}
+              disabled={busy || missing.length > 0}
+              {...part(partId("launch/submit", cluster.name))}
+            >
+              <Send /> Submit to {cluster.name}
+            </Button>
+          </>
+        )}
         <Button
           onClick={submit}
-          disabled={!options.isSuccess || go.isPending || out.isPending || missing.length > 0}
+          variant={cluster ? "outline" : "default"}
+          disabled={busy || missing.length > 0}
         >
           {place === "here" ? (
             <>
@@ -332,12 +389,38 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
             </>
           )}
         </Button>
+        {cluster && place !== "shell" && waiting.length > 0 && (
+          <div className="flex items-center gap-2" {...part("launch/after")}>
+            <label htmlFor="after" className="text-muted-foreground text-xs">
+              After
+            </label>
+            <NativeSelect
+              id="after"
+              value={after}
+              onChange={(e) => setAfter(e.target.value)}
+              className="max-w-64 font-mono text-xs"
+            >
+              <option value="">nothing</option>
+              {waiting.map((j) => (
+                <option key={j.id} value={j.id}>
+                  {j.title} ({j.scheduler_id})
+                </option>
+              ))}
+            </NativeSelect>
+          </div>
+        )}
         {missing.length > 0 && (
           <span className="text-muted-foreground text-xs">
             Needs {missing.map((m) => m.flag).join(", ")}
           </span>
         )}
       </div>
+      {place !== "here" && clusters.isSuccess && !cluster && (
+        <p className="text-muted-foreground max-w-2xl text-xs">
+          To submit from here, name the cluster in louped.toml: [clusters.&lt;name&gt;] with ssh (a
+          Host in ~/.ssh/config), provider ({place}) and dir.
+        </p>
+      )}
     </section>
   );
 }
@@ -380,7 +463,9 @@ function Where({
             Export downloads job.sh: one file when the project is a pushed git commit, else a folder
             with what it needs. Run it there (sbatch on a cluster, bash on a VM). It installs louped
             with uv and runs this command. With a remote set, it pushes the results and Pull on Runs
-            brings them here; else import the louped-result-….tar.gz it packs.
+            brings them here; else import the louped-result-….tar.gz it packs. Submit does all of
+            this over ssh for a cluster louped.toml names, and follows the job to its result; After
+            makes it wait there for an earlier job to succeed.
           </Help>
         )}
       </div>

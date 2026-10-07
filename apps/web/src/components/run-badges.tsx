@@ -71,7 +71,7 @@ export function StatusDot({
   return (
     <span className="text-muted-foreground inline-flex items-center gap-1.5 text-xs whitespace-nowrap">
       <span className={`size-1.5 rounded-full ${tone}`} />
-      {live && status !== "queued"
+      {live && status !== "queued" && status !== "submitted"
         ? "running"
         : status === "exported"
           ? "awaiting result"

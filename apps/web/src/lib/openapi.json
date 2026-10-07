@@ -3015,6 +3015,66 @@
         }
       }
     },
+    "/api/launch/clusters": {
+      "get": {
+        "summary": "Cluster List",
+        "operationId": "cluster_list_api_launch_clusters_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ClusterInfo"
+                  },
+                  "type": "array",
+                  "title": "Response Cluster List Api Launch Clusters Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/launch/submit": {
+      "post": {
+        "summary": "Submit Job",
+        "operationId": "submit_job_api_launch_submit_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/launch/jobs/{job_id}/cancel": {
       "post": {
         "summary": "Cancel",
@@ -3975,6 +4035,30 @@
         "required": ["regions", "presets", "parts"],
         "title": "Catalog"
       },
+      "ClusterInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "ssh": {
+            "type": "string",
+            "title": "Ssh"
+          },
+          "provider": {
+            "type": "string",
+            "enum": ["sol", "slurm", "shell"],
+            "title": "Provider"
+          },
+          "dir": {
+            "type": "string",
+            "title": "Dir"
+          }
+        },
+        "type": "object",
+        "required": ["name", "ssh", "provider", "dir"],
+        "title": "ClusterInfo"
+      },
       "Code": {
         "properties": {
           "commit": {
@@ -4704,6 +4788,16 @@
           "readme": {
             "type": "string",
             "title": "Readme"
+          },
+          "gate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GateStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -4931,6 +5025,98 @@
         "type": "object",
         "required": ["ref"],
         "title": "FigureRequest"
+      },
+      "GateCheck": {
+        "properties": {
+          "requirement": {
+            "type": "string",
+            "title": "Requirement"
+          },
+          "metric": {
+            "type": "string",
+            "title": "Metric"
+          },
+          "op": {
+            "type": "string",
+            "enum": ["<", "<=", ">", ">=", "==", "!="],
+            "title": "Op"
+          },
+          "threshold": {
+            "type": "number",
+            "title": "Threshold"
+          },
+          "actual": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          }
+        },
+        "type": "object",
+        "required": ["requirement", "metric", "op", "threshold", "actual", "passed"],
+        "title": "GateCheck",
+        "description": "One requirement of a gate, as written, with the value it was checked against."
+      },
+      "GateStatus": {
+        "properties": {
+          "launch": {
+            "type": "string",
+            "title": "Launch"
+          },
+          "run": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run"
+          },
+          "guards": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Guards"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/GateCheck"
+            },
+            "type": "array",
+            "title": "Checks"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": ["launch", "run", "guards", "checks", "passed"],
+        "title": "GateStatus",
+        "description": "An experiment's gate (`gate:` in its README) and whether it passes now."
       },
       "GenerateRequest": {
         "properties": {
@@ -5474,7 +5660,15 @@
           },
           "status": {
             "type": "string",
-            "enum": ["queued", "running", "succeeded", "failed", "cancelled", "exported"],
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed",
+              "cancelled",
+              "exported",
+              "submitted"
+            ],
             "title": "Status",
             "default": "queued"
           },
@@ -5517,6 +5711,61 @@
               }
             ],
             "title": "Exit Code"
+          },
+          "launch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Launch"
+          },
+          "cluster": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cluster"
+          },
+          "scheduler_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduler Id"
+          },
+          "remote_dir": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remote Dir"
+          },
+          "after": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After"
           }
         },
         "type": "object",
@@ -5542,7 +5791,15 @@
           },
           "status": {
             "type": "string",
-            "enum": ["queued", "running", "succeeded", "failed", "cancelled", "exported"],
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed",
+              "cancelled",
+              "exported",
+              "submitted"
+            ],
             "title": "Status",
             "default": "queued"
           },
@@ -5585,6 +5842,61 @@
               }
             ],
             "title": "Exit Code"
+          },
+          "launch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Launch"
+          },
+          "cluster": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cluster"
+          },
+          "scheduler_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduler Id"
+          },
+          "remote_dir": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remote Dir"
+          },
+          "after": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After"
           },
           "log": {
             "type": "string",
@@ -7082,6 +7394,17 @@
             ],
             "title": "Host"
           },
+          "launch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Launch"
+          },
           "params": {
             "additionalProperties": {
               "type": "string"
@@ -7265,6 +7588,17 @@
               }
             ],
             "title": "Host"
+          },
+          "launch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Launch"
           }
         },
         "type": "object",
@@ -8170,6 +8504,79 @@
         "required": ["prompt"],
         "title": "SpeedRequest",
         "description": "The prompt timed base and, with interventions or adapters, changed."
+      },
+      "SubmitRequest": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "options": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Options",
+            "default": {}
+          },
+          "config": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "recipe": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe"
+          },
+          "target": {
+            "$ref": "#/components/schemas/Target"
+          },
+          "cluster": {
+            "type": "string",
+            "title": "Cluster"
+          },
+          "after": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[\\w-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After"
+          }
+        },
+        "type": "object",
+        "required": ["id", "cluster"],
+        "title": "SubmitRequest"
       },
       "TableView": {
         "properties": {

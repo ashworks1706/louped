@@ -207,6 +207,11 @@ CATALOG: dict[Region, list[Kind]] = {
     ],
     "experiment.design": [
         Kind(block="readme", about="The README, rendered and editable."),
+        Kind(
+            block="gate",
+            about="The README's gate: each requirement with its value now, and "
+            "the launches it holds back; absent without one.",
+        ),
         Kind(block="result", about="The README's Result section."),
         Kind(block="runs", about="The experiment's runs."),
         REPORTS,
@@ -238,6 +243,7 @@ DEFAULT: dict[Region, list[Block]] = {
     "experiment.tabs": [_b(block="design"), _b(block="runs")],
     "experiment.design": [
         _b(block="readme"),
+        _b(block="gate", width="side"),
         _b(block="result", width="side"),
         _b(block="reports", width="side"),
         _b(block="views"),

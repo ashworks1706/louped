@@ -285,9 +285,24 @@ function JobFacts({ job, step }: { job: Job; step?: string }) {
       className="text-muted-foreground flex flex-wrap gap-x-6 gap-y-1 text-sm"
       {...part("job/facts")}
     >
+      {job.cluster && (
+        <div className="flex gap-1.5">
+          <dt>On</dt>
+          <dd className="text-foreground font-mono" title={job.remote_dir ?? undefined}>
+            {job.cluster} · {job.scheduler_id ?? "not started"}
+            {job.after && ` · after ${job.after}`}
+          </dd>
+        </div>
+      )}
       <div className="flex gap-1.5">
         <dt>Started</dt>
-        <dd className="text-foreground">{job.started ? ago(job.started) : "waiting in queue"}</dd>
+        <dd className="text-foreground">
+          {job.started
+            ? ago(job.started)
+            : job.status === "submitted"
+              ? `waiting on ${job.cluster}`
+              : "waiting in queue"}
+        </dd>
       </div>
       {elapsed && (
         <div className="flex gap-1.5">

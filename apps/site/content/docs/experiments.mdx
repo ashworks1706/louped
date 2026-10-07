@@ -43,6 +43,37 @@ extras: tracking, interp
   for good. An experiment's folder, an eval's log and a job move to `.louped/trash/`. MLflow keeps
   a deleted run until `mlflow gc`. Stop a run or job that is still running before you delete it.
 
+### Gate
+
+A gate is the README's **Stop if** as a check that louped enforces. Declare it in the front
+matter:
+
+```md
+---
+domain: honesty
+status: active
+gate:
+  run: train.py # the launch whose newest finished run gives the metrics
+  require:
+    - heldout/caving < 0.954
+  guards: [test.py] # refused until every requirement passes
+chain: [sample.py, train.py, gate, test.py] # optional: the order for louped submit --chain
+---
+```
+
+- `run` and `guards` name a file in the experiment (`train.py`, `sft.yaml`, `explore.ipynb`) or a
+  launchable id (`script:other/run.py`).
+- A requirement is `<metric> <op> <number>`. The op is one of `<`, `<=`, `>`, `>=`, `==`, `!=`.
+  louped does not evaluate the text. A requirement that does not match this form is an error
+  that names the README.
+- The metric is read from the newest finished run of the `run` launch. A run belongs to a launch
+  when a job started it, or when the experiment script ran from a shell. louped records this as
+  the run's `louped.launch` tag. Only runs that `louped.tracking.start_run` makes have it.
+- The experiment's page shows the gate: each requirement with its value, PASS or FAIL.
+- While the gate fails, louped refuses the guarded launches: Launch, Export and Submit. The
+  refusal names the failing requirement and its value. To change the condition, edit the README.
+- `louped gate <experiment>` prints each requirement and exits 1 when one fails.
+
 ### Domains
 
 A domain groups questions on the Experiments page. louped has eight by default:

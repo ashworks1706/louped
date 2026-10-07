@@ -33,11 +33,12 @@ import {
   readme,
   saveReadme,
   type ExperimentDetail,
+  type GateStatus,
   type Launchable,
 } from "@/lib/api";
-import { ago } from "@/lib/format";
+import { ago, num } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { axisPath, experimentHref } from "@/lib/href";
+import { axisPath, experimentHref, runHref } from "@/lib/href";
 
 const AXIS_TITLE: Record<ExperimentDetail["axis"], string> = {
   behavior: "Behavior & alignment",
@@ -223,6 +224,65 @@ function firstRun(
   return { href: experimentHref(name, axis, "design"), label: "How it runs" };
 }
 
+/** A gate's requirements, each with its value now and whether it holds; open when all do. */
+function Gate({ gate }: { gate: GateStatus }) {
+  if (gate.error) return <p className="text-negative text-sm">{gate.error}</p>;
+  const short = (id: string) => id.replace(/^\w+:/, "");
+  return (
+    <div className="flex flex-col gap-2">
+      <p className={cn("text-sm font-medium", gate.passed ? "text-positive" : "text-negative")}>
+        {gate.passed ? "Open" : "Closed"}
+        {gate.guards.length > 0 && (
+          <span className="text-muted-foreground font-normal">
+            {" "}
+            · {gate.passed ? "runs" : "holds back"}{" "}
+            <span className="font-mono">{gate.guards.map(short).join(", ")}</span>
+          </span>
+        )}
+      </p>
+      <ul className="divide-y rounded-lg border">
+        {gate.checks.map((c) => (
+          <li
+            key={c.requirement}
+            {...part(partId("experiment/gate", c.metric))}
+            className="flex items-center gap-2 px-3 py-1.5"
+          >
+            <span className="min-w-0 flex-1 truncate font-mono text-xs" title={c.requirement}>
+              {c.requirement}
+            </span>
+            <span className="w-16 text-right font-mono text-xs tabular-nums">
+              {c.actual == null ? "none" : num(c.actual, 4)}
+            </span>
+            <span
+              className={cn(
+                "w-9 text-right font-mono text-[11px]",
+                c.passed ? "text-positive" : "text-negative",
+              )}
+            >
+              {c.passed ? "PASS" : "FAIL"}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="text-muted-foreground text-xs">
+        {gate.run ? (
+          <>
+            From run{" "}
+            <Link href={runHref(gate.run)} className="hover:text-foreground font-mono underline">
+              {gate.run}
+            </Link>{" "}
+            of <span className="font-mono">{short(gate.launch)}</span>.
+          </>
+        ) : (
+          <>
+            No finished run of <span className="font-mono">{short(gate.launch)}</span> yet.
+          </>
+        )}
+      </p>
+    </div>
+  );
+}
+
 function ExperimentTabs({ experiment: e }: { experiment: ExperimentDetail }) {
   const own = useOwnLaunchables(e.name);
   const client = useQueryClient();
@@ -297,6 +357,17 @@ function ExperimentTabs({ experiment: e }: { experiment: ExperimentDetail }) {
                 </article>
               ),
             };
+          case "gate":
+            return e.gate
+              ? {
+                  title: "Gate",
+                  about:
+                    "The stop condition the README declares under gate:. Each requirement is " +
+                    "checked against the newest finished run of the launch it reads; until all " +
+                    "pass, the launches it guards are refused, here and on a cluster.",
+                  body: <Gate gate={e.gate} />,
+                }
+              : null;
           case "result":
             return {
               title: "Result",
