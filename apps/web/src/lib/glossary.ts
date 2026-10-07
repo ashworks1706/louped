@@ -19,6 +19,13 @@ export const GLOSSARY = {
   interval:
     "95% paired bootstrap interval of B − A. When it excludes zero, the difference is unlikely to be noise.",
   moved: "Samples where B scored higher or lower than A. Click a count to read them.",
+  // samples
+  modelInput:
+    "The exact text the model read: the conversation after the tokenizer's chat template, with the special tokens the tokenizer adds. Special tokens are shaded. The template hash is the first 12 hex digits of the template's sha256: two calls with the same hash used the same template. Only louped/ models report it; for another provider louped does not guess.",
+  readBy:
+    "The rule that read the verdict from the reply's text, and the text it matched. none: no rule matched, so the score is the scorer's default. Check it when a score looks wrong.",
+  disagree:
+    "Samples where two scorers that read a verdict (they record their rule, or grade C/I) gave different values. A misread answer shows up here; on a task whose scorers ask different questions, a difference can be the result itself.",
   // items
   wilson:
     "95% Wilson interval of a rate k/n. Unlike k/n ± 1.96·SE it stays inside 0–100% and holds up at small n and extreme rates, so a pilot's uncertainty reads honestly.",

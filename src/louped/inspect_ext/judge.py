@@ -20,6 +20,7 @@ from inspect_ai.scorer import Score, Target, mean, scorer, stderr
 from inspect_ai.solver import Generate, TaskState, solver
 
 from louped.core.judges import CRITERION, POINTS, PROMPT, pair_key, request_text
+from louped.inspect_ext.scorers import reading
 
 VERDICT = re.compile(r"verdict\s*:\s*\**\s*(1|2|tie)\b", re.I)
 
@@ -52,6 +53,7 @@ def _judge(criterion: str, prompt: str, parse: Callable[[str], str | None]):
         judge = get_model()
         state.messages = []  # the transcript is the judge's two exchanges; the request is in each
         winners: list[str | None] = []
+        picks: list[str] = []
         for first, second in (("a", "b"), ("b", "a")):
             ask = prompt.format(request=state.input_text, first=state.metadata[first],
                                 second=state.metadata[second], criterion=criterion)  # fmt: skip
@@ -61,7 +63,11 @@ def _judge(criterion: str, prompt: str, parse: Callable[[str], str | None]):
             if pick not in ("1", "2", "tie", None):
                 raise ValueError(f"the judge's verdict() gave {pick!r}: 1, 2, tie or None")
             winners.append({"1": first, "2": second, "tie": "tie"}.get(pick or ""))
+            picks.append(f"{first.upper()} first: {pick or 'none'}")
         state.metadata["winners"] = winners
+        rule = "verdict_line" if parse is verdict else parse.__name__
+        read = "; ".join(picks) if any(w is not None for w in winners) else None
+        state.metadata["reading"] = reading(rule, read)
         return state
 
     return solve
@@ -74,7 +80,8 @@ def b_wins():
     async def score(state: TaskState, target: Target) -> Score:
         winners = state.metadata["winners"]
         value = sum(POINTS[w or "tie"] for w in winners) / len(winners)
-        return Score(value=value, explanation=f"A first: {winners[0]}; B first: {winners[1]}")
+        return Score(value=value, explanation=f"A first: {winners[0]}; B first: {winners[1]}",
+                     metadata=state.metadata["reading"])  # fmt: skip
 
     return score
 

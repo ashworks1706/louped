@@ -25,6 +25,12 @@ description: Read a louped run's results and report them honestly. Use after a r
      `louped data verify --src <set.jsonl>` flags a training set's pairs.
 5. Read examples, not only rates. From the records, name at least one item where the behavior
    happened and one where it did not. Check the scoring on them.
+   - A score's `read_by` and `matched` say which rule read the verdict from the reply. `none`
+     means no rule matched. Check that the rule read the reply as a person would.
+   - In `samples`, `disagree` marks the samples where two readers gave different values. Read
+     those first: a misread answer shows there.
+   - A `louped/` model's `sample` has `inputs`: the exact text the model read, special tokens
+     included. Check the chat template there before you blame the model.
 6. Separate what the result shows from what it suggests. Do not call a pilot result a finding.
    Do not infer intent from an answer.
 7. Point the person to the run page (Items tab) for the rest. Write any report with

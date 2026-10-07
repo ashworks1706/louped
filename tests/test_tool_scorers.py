@@ -63,3 +63,14 @@ def test_an_answer_without_the_tool_is_ungrounded(tmp_path, monkeypatch) -> None
     monkeypatch.chdir(tmp_path)
     scores = run([("submit", {"answer": "The answer is 7."})])
     assert scores == {"tool_calls": 0, "tool_errors": 0, "called": 0, "grounded": 0}
+
+
+def test_grounded_records_the_tool_output_it_matched(tmp_path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    task = Task(dataset=[Sample(input="What is the answer?", target="42")],
+                solver=react(tools=[lookup()], attempts=1), scorer=grounded("lookup"))  # fmt: skip
+    calls = [("lookup", {"key": "answer"}), ("submit", {"answer": "It is 42."})]
+    [log] = eval(task, model=get_model("mockllm/model", custom_outputs=scripted(calls)),
+                 display="none", log_dir="logs-unused")  # fmt: skip
+    assert log.samples and log.samples[0].scores
+    assert log.samples[0].scores["grounded"].metadata == {"read_by": "tool_output", "matched": "42"}

@@ -2497,6 +2497,24 @@ export interface components {
       timestamp?: number | null;
     };
     /**
+     * ModelInput
+     * @description What one model call of a sample read.
+     */
+    ModelInput: {
+      /** Model */
+      model: string;
+      /** Text */
+      text?: string | null;
+      /** Tokens */
+      tokens?: number | null;
+      /** Special Tokens */
+      special_tokens?: string[];
+      /** Tokenizer */
+      tokenizer?: string | null;
+      /** Chat Template */
+      chat_template?: string | null;
+    };
+    /**
      * Option
      * @description One flag of a command, as its parser declares it.
      */
@@ -2843,6 +2861,16 @@ export interface components {
       /** Version */
       version: number;
     };
+    /**
+     * Reading
+     * @description How a scorer read its verdict from free text.
+     */
+    Reading: {
+      /** Read By */
+      read_by?: string | null;
+      /** Matched */
+      matched?: string | null;
+    };
     /** RemoteState */
     RemoteState: {
       /** Remote */
@@ -2992,6 +3020,8 @@ export interface components {
       };
       /** Error */
       error: string | null;
+      /** Inputs */
+      inputs?: components["schemas"]["ModelInput"][];
     };
     /** SampleSummary */
     SampleSummary: {
@@ -3011,6 +3041,15 @@ export interface components {
       error: string | null;
       /** Degenerate */
       degenerate?: ("repeat" | "echo" | "loop")[] | null;
+      /** Readings */
+      readings?: {
+        [key: string]: components["schemas"]["Reading"];
+      };
+      /**
+       * Disagree
+       * @default false
+       */
+      disagree: boolean;
     };
     /**
      * SaveRequest
@@ -3121,6 +3160,10 @@ export interface components {
       answer: string | null;
       /** Explanation */
       explanation: string | null;
+      /** Read By */
+      read_by?: string | null;
+      /** Matched */
+      matched?: string | null;
     };
     /** Seen */
     Seen: {

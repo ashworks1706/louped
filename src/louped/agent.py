@@ -317,12 +317,14 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
 
     @mcp.tool(annotations=READ)
     async def samples(run_id: str, limit: int = 20, offset: int = 0) -> list[dict[str, Any]]:
-        """An eval's samples: id, input, target, the model's answer and its scores."""
+        """An eval's samples: id, input, target, its scores, how each reader read its verdict
+        and whether the readers disagree."""
         return (await get(f"/runs/{run_id}/samples"))[offset : offset + limit]
 
     @mcp.tool(annotations=READ)
     async def sample(run_id: str, sample_id: str, epoch: int = 1) -> dict[str, Any]:
-        """One sample's whole transcript, with every score and its explanation."""
+        """One sample's whole transcript, with every score, its explanation and the rule that
+        read it, and what each model call read (inputs; only for louped/ models)."""
         return await get(f"/runs/{run_id}/samples/{sample_id}", epoch=epoch)
 
     @mcp.tool(annotations=READ)

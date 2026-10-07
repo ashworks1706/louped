@@ -131,8 +131,13 @@ KINDS: list[Kind] = [
     _k(part="samples/score/*", about="Shows only the samples that failed a score.", rules=PICK),
     _k(part="samples/degenerate/*", about="A share of degenerate replies (repeat, echo, loop); "
        "shows only those samples.", rules=["hidden", "label", "about"]),
-    _k(part="samples/*", about="The samples' search, count and judge agreement.", rules=PICK),
-    _k(part="sample/*", about="The open sample's title, log link and your pick.", rules=PICK),
+    _k(part="samples/*", about="The samples' search, count, judge agreement and the readers "
+       "disagree filter.", rules=PICK),
+    _k(part="sample/*", about="The open sample's title, log link, model input heading and your pick.", rules=PICK),
+    _k(part="sample/input/*", about="What one model call of the open sample read, by call number, "
+       "special tokens included.", rules=PICK),
+    _k(part="sample/score/*", about="One score of the open sample, with the rule that read it.",
+       rules=PICK),
     # figures, config, files
     _k(part="figures/figure/*", about="One figure, by its file.", rules=["hidden", "note"]),
     _k(part="figures/export/*", about="Exports one figure to reports/ as SVG, PNG or PDF.",

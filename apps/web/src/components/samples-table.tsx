@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PanelsTopLeft } from "lucide-react";
-import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
+import { parseAsBoolean, parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 
 import { Help } from "@/components/help";
@@ -44,6 +44,7 @@ export function SamplesTable({
   const [epoch, setEpoch] = useQueryState("epoch", parseAsInteger);
   const [failing, setFailing] = useQueryState("fails", parseAsString);
   const [degenerate, setDegenerate] = useQueryState("degenerate", parseAsString);
+  const [disagreeing, setDisagreeing] = useQueryState("disagree", parseAsBoolean);
   const [filter, setFilter] = useState("");
 
   const scoreNames = useMemo(
@@ -53,6 +54,13 @@ export function SamplesTable({
   const judged = scoreNames.includes("b_wins");
   // null while the eval runs: its replies are not checked yet
   const checked = samples.filter((s) => s.degenerate != null);
+  // readers: scores that read a verdict from text; with two or more, they can disagree
+  const readers = useMemo(
+    () => [...new Set(samples.flatMap((s) => Object.keys(s.readings ?? {})))],
+    [samples],
+  );
+  const disagreements = samples.filter((s) => s.disagree).length;
+  const showDisagree = readers.length > 1 && disagreeing === true;
   const rule = useRules();
   const col = (id: string) => partId("samples/column", id);
   const rowId = (s: SampleSummary) =>
@@ -88,6 +96,7 @@ export function SamplesTable({
     (s) =>
       (!failing || s.scores[failing] === 0) &&
       (!degenerate || s.degenerate?.includes(degenerate as Degenerate)) &&
+      (!showDisagree || s.disagree) &&
       `${s.id} ${s.input} ${s.target}`.toLowerCase().includes(filter.toLowerCase()),
   );
 
@@ -99,7 +108,8 @@ export function SamplesTable({
           const found = samples.find((s) => rowId(s) === id);
           return found ? { id: found.id, epoch: found.epoch, input: found.input,
                            target: found.target, scores: found.scores,
-                           degenerate: found.degenerate } : null; // prettier-ignore
+                           degenerate: found.degenerate,
+                           readings: found.readings, disagree: found.disagree } : null; // prettier-ignore
         }}
       />
       {judged && <JudgeAgreement runId={runId} />}
@@ -132,6 +142,20 @@ export function SamplesTable({
             </Button>
           );
         })}
+        {readers.length > 1 && (
+          <span className="inline-flex items-center gap-1" {...part("samples/disagree")}>
+            <Button
+              size="sm"
+              variant={showDisagree ? "default" : "outline"}
+              onClick={() => void setDisagreeing(showDisagree ? null : true)}
+              title={`Show only samples where ${readers.join(", ")} disagree`}
+            >
+              Readers disagree
+              <span className="font-mono text-xs tabular-nums opacity-70">{disagreements}</span>
+            </Button>
+            <Help label="What is readers disagree?">{GLOSSARY.disagree}</Help>
+          </span>
+        )}
         <span className="text-muted-foreground ml-auto text-xs" {...part("samples/count")}>
           {rows.length} of {samples.length}
         </span>
@@ -194,7 +218,19 @@ export function SamplesTable({
             >
               {columns.map((c) => (
                 <TableCell key={c.id} className={c.cell}>
-                  {"score" in c ? <ScoreCell value={s.scores[c.id]} /> : value(s, c.id)}
+                  {"score" in c ? (
+                    <>
+                      <ScoreCell value={s.scores[c.id]} />
+                      {showDisagree && s.readings?.[c.id] && (
+                        <div className="text-muted-foreground mx-auto max-w-40 truncate font-mono text-[11px]">
+                          {s.readings[c.id].read_by ?? "no rule"}
+                          {s.readings[c.id].matched != null && ` “${s.readings[c.id].matched}”`}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    value(s, c.id)
+                  )}
                 </TableCell>
               ))}
             </TableRow>
