@@ -74,6 +74,9 @@ const files: Record<string, string> = {
   ]),
 };
 
+/** The run's script at its commit on the forge, as the server gives it. */
+const CODE = "https://github.com/o/r/blob/a1b2c3d4e5f60718/experiments/pushback-baseline/run.py";
+
 async function mockRun(page: Page, history: Record<string, object[]> = {}) {
   await page.route(`**/api/runs/${id}`, (r) =>
     r.fulfill({
@@ -94,6 +97,13 @@ async function mockRun(page: Page, history: Record<string, object[]> = {}) {
         artifacts: Object.entries(files).map(([path, text]) => ({ path, size: text.length })),
         scorers: [],
         error: null,
+        code: {
+          commit: "a1b2c3d4e5f60718",
+          dirty: true,
+          path: "experiments/pushback-baseline/run.py",
+          url: CODE,
+          pushed: false,
+        },
       },
     }),
   );
@@ -207,4 +217,9 @@ test("the overview shows the report and where and how the run was made", async (
   await expect(page.getByText("sol · sg001 · NVIDIA A100")).toBeVisible();
   await expect(page.getByText("sru run --limit 3")).toBeVisible();
   await expect(page.getByText("torch 2.14.0")).toBeVisible();
+  const code = page.locator('[data-part="run.overview/provenance/code"]');
+  await expect(code.getByRole("link", { name: "Code" })).toHaveAttribute("href", CODE);
+  await expect(code).toContainText("a1b2c3d4e5f6");
+  await expect(code).toContainText("uncommitted changes");
+  await expect(code).toContainText("not pushed");
 });

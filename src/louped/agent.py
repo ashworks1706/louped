@@ -43,8 +43,8 @@ over the run's files (new columns on its items); then ui_show. Evals are Inspect
 lists the project's and inspect_evals' to launch with "eval". Judging two eval runs is launch
 "judge" with --judge one of judges; a new criterion or prompt is new_judge. The person's own
 blind picks of two runs (Compare's Blind A/B) are ab_results; check a judge against them there.
-A run too large for this machine goes to a cluster with export_job; its result comes back with
-import_result.
+A run too large for this machine goes to a cluster, a VM or Colab with export_job; its result
+comes back with pull or import_result. A run's code (run, trace) links its script at its commit.
 Report a difference only with its paired interval from compare (or cohort, for a run's items),
 and name the run ids you used. Items the person picks can be saved as a cohort and run again.
 Jobs run one at a time on this machine's GPU, so do not queue more than the question needs.
@@ -196,7 +196,8 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
     async def trace(ref: str) -> dict[str, Any]:
         """Where a piece of evidence comes from, from it down to the run: a figure, the derive
         script that made it and its commit, an item's record in every file that holds it, and
-        the run with its commit. ref is run:<run id>[/<path>][#<item>], such as a figure's mark
+        the run with its commit (code: its script's page at that commit on GitHub, GitLab or
+        Bitbucket, dirty, pushed). ref is run:<run id>[/<path>][#<item>], such as a figure's mark
         run:m-1/views/umap.json#17, or experiment:<name>/views/<figure>.json[#<item>]."""
         return await get("/trace", ref=ref)
 
@@ -450,12 +451,15 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         out_dir: str = ".",
     ) -> dict[str, Any]:
         """Package a launch to run on another machine, without running it here: job.sh for Sol, a
-        Slurm cluster or a VM. id and options are as for launch; target holds provider (sol, slurm
-        or shell), gpu, gpus, hours, cpus, partition, qos and constraint, the server filling in the
-        rest. Saves it under out_dir and returns its path and a note: one file, louped-<job>.sh,
-        when the project is a pushed git commit, else louped-<job>.tar.gz with job.sh inside. The
-        person runs it there (`sbatch`, bash on a VM). With a remote set, its results come back
-        with pull; else they bring back louped-result-<job>.tar.gz for import_result."""
+        Slurm cluster or a VM, or a notebook for Colab. id and options are as for launch; target
+        holds provider (sol, slurm, shell or colab), gpu, gpus, hours, cpus, partition, qos and
+        constraint, the server filling in the rest (colab takes no GPU fields: the person picks
+        the runtime). Saves it under out_dir and returns its path and a note: one file,
+        louped-<job>.sh, when the project is a pushed git commit, else louped-<job>.tar.gz with
+        job.sh inside; for colab, louped-<job>.ipynb, which needs a pushed commit. The person runs
+        it there (`sbatch`, bash on a VM, Run all in Colab with an HF_TOKEN secret for gated
+        models). With a remote set, its results come back with pull; else they bring back
+        louped-result-<job>.tar.gz for import_result."""
         body = {"id": id, "options": options or {}, "target": target}
         try:
             response = await api.post("/launch/export", json=body)

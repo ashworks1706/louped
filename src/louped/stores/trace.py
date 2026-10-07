@@ -4,21 +4,34 @@ at, the item's record in every file that holds it, and the run with its commit.
 A figure's marks stand for items when the figure says which (its `items`): then a mark's ref,
 run:<run>/views/<figure>.json#<item>, traces to that item's rows. A figure or derived file that
 `louped derive` made traces to its script (derived/<name>.py) and the commit in
-derived/<name>.meta.json; one the run logged itself traces to the run's commit.
+derived/<name>.meta.json; one the run logged itself traces to the run's commit. A script's and a
+run's step carry their code: the file at that commit on the forge the project's git remote names.
 """
 
 from __future__ import annotations
 
 import json
+import re
 from pathlib import PurePosixPath
 
 from pydantic import TypeAdapter, ValidationError
 
+from louped.core.git import pushed_to, remote_url, top, web_url
 from louped.core.paths import experiment_folder, inside
+from louped.core.project import base
 from louped.core.refs import parse, ref
 from louped.stores.items import folders, join_key, key_text, read_rows
 from louped.stores.runs import NotFound, get_run, read_artifact
-from louped.stores.types import ItemSource, PlotlyView, Trace, TraceStep, VegaView, View
+from louped.stores.types import (
+    Code,
+    ItemSource,
+    PlotlyView,
+    RunDetail,
+    Trace,
+    TraceStep,
+    VegaView,
+    View,
+)
 
 _VIEW: TypeAdapter[View] = TypeAdapter(View)
 DERIVED = "derived"
@@ -117,7 +130,8 @@ def _made_by(run_id: str, path: str | None, artifacts: list[str]) -> list[TraceS
         return []
     git = meta.get("git") or {}
     return [TraceStep(ref=ref("run", run_id, script), what="script", title=script,
-                      commit=git.get("sha"), dirty=git.get("dirty"))]  # fmt: skip
+                      commit=git.get("sha"), dirty=git.get("dirty"),
+                      code=code(git.get("sha"), git.get("dirty"), meta.get("script")))]  # fmt: skip
 
 
 def _folder_of(path: str | None) -> str | None:
@@ -159,8 +173,31 @@ def _item(run_id: str, folder: str | None, item: str) -> TraceStep:
 
 def _run(run_id: str) -> TraceStep:
     run = get_run(run_id)
-    sha = run.tags.get("louped.git_sha") or None
-    dirty = run.tags.get("louped.git_dirty")
+    found = run_code(run)
     return TraceStep(ref=ref("run", run_id), what="run",
                      title=f"{run.name}{f' in {run.experiment}' if run.experiment else ''}",
-                     commit=sha, dirty=None if dirty is None else dirty == "true")  # fmt: skip
+                     commit=found.commit if found else None, dirty=found.dirty if found else None,
+                     code=found)  # fmt: skip
+
+
+def run_code(run: RunDetail) -> Code | None:
+    """The code a run ran, from its tags; None when it recorded no commit."""
+    dirty = run.tags.get("louped.git_dirty")
+    return code(run.tags.get("louped.git_sha"), None if dirty is None else dirty == "true",
+                run.tags.get("louped.script"))  # fmt: skip
+
+
+def code(commit: str | None, dirty: bool | None, path: str | None) -> Code | None:
+    """A commit and file with their page on the forge of the project's git remote, and whether
+    the commit is pushed there; None without a commit."""
+    if not commit:
+        return None
+    root = top(base())
+    # outside a git repository, or a tag that is no sha: the commit is all there is
+    if root is None or not re.fullmatch(r"[0-9a-f]{7,64}", commit):
+        return Code(commit=commit, dirty=dirty, path=path)
+    branches = pushed_to(root, commit)
+    remote = remote_url(root, branches)
+    url = web_url(remote, commit, path) if remote else None
+    return Code(commit=commit, dirty=dirty, path=path, url=url,
+                pushed=None if branches is None else bool(branches))  # fmt: skip

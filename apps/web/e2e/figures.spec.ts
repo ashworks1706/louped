@@ -13,6 +13,8 @@ const cloud = {
     { name: "1", data: [{ x: [1, 0] }] },
   ],
 };
+/** Where a figure's derive script is on the forge, as trace gives it. */
+const CODE = "https://github.com/o/r/blob/a1b2c3d4e5f6/derive/claims.py";
 
 test("a Plotly figure an agent added shows on the run, with its frames", async ({ page }, info) => {
   await mock(page);
@@ -111,6 +113,7 @@ test("a figure's point says which item it is and where it comes from, and opens 
             title: "derived/claims.py",
             commit: "a1b2c3d4e5f6",
             dirty: false,
+            code: { commit: "a1b2c3d4e5f6", dirty: false, path: "derive/claims.py", url: CODE },
           },
           {
             ref: `run:m-1/raw/baseline.jsonl#${item}`,
@@ -127,6 +130,9 @@ test("a figure's point says which item it is and where it comes from, and opens 
   const figure = page.locator('[data-part="figures/figure/views%2Fclaims.json"]');
   const readout = figure.getByTestId("mark-trace");
   await expect(readout).toContainText("Hover a point");
+  // the script that made the figure, at its commit on the forge
+  await expect(readout.getByRole("link", { name: "Code" })).toHaveAttribute("href", CODE);
+  expect(asked).toContain("run:m-1/views/claims.json");
   const point = figure.locator(".scatterlayer .point").first();
   await expect(point).toBeVisible();
   const box = (await point.boundingBox())!;

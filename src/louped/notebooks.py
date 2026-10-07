@@ -89,7 +89,8 @@ def run_notebook(path: Path, given: dict[str, str] | None = None) -> str:
     experiment = path.relative_to(root).parts[0]
     params = values(path, given or {})
     logged = {p.name: p.shown for p in parameters(path)} | (given or {})
-    with (start_run(experiment, name=path.stem, params=logged or None, kind="notebook") as run,
+    with (start_run(experiment, name=path.stem, params=logged or None, kind="notebook",
+                    script=path) as run,
           tempfile.TemporaryDirectory() as tmp):  # fmt: skip
         executed = Path(tmp) / path.name
         env = {"MLFLOW_RUN_ID": run.info.run_id, "MLFLOW_TRACKING_URI": mlflow.get_tracking_uri()}

@@ -1,6 +1,6 @@
 ---
 name: run-elsewhere
-description: Run a louped experiment on a Slurm cluster (such as ASU Sol) or a VM and bring the result back. Use when a model is too large for this machine or the person asks for a real run.
+description: Run a louped experiment on a Slurm cluster (such as ASU Sol), a VM or Google Colab and bring the result back. Use when a model is too large for this machine or the person asks for a real run.
 ---
 
 1. Run the experiment here first on a small setting (a tiny model or `--limit`). Thus the cluster's
@@ -9,8 +9,10 @@ description: Run a louped experiment on a Slurm cluster (such as ASU Sol) or a V
    - A project that is a pushed git commit exports as one file, `louped-<id>.sh`. This file clones
      that commit on the cluster.
    - Otherwise the export is a `louped-<id>.tar.gz`, and the note returned with it says why.
-3. Export it with the `export_job` MCP tool. (In the app: Launch, then "Run on" Sol / Slurm / VM,
-   then Export.)
+   - Colab needs a pushed commit. Without one, the export stops and says why.
+3. Export it with the `export_job` MCP tool. (In the app: Launch, then "Run on" Sol / Slurm / VM /
+   Colab, then Export.)
+   - Use the provider `colab` for a person without cluster access. Colab takes no GPU fields.
    - Pass the launchable id, the options and a target.
    - Ask for one GPU, unless the model needs more.
    - Ask for the hours the work needs plus 1 hour for the first installs and downloads.
@@ -22,6 +24,13 @@ description: Run a louped experiment on a Slurm cluster (such as ASU Sol) or a V
    3. Run `sbatch louped-<id>.sh`, or `bash` on a VM. For a tarball, unpack it and run its
       `job.sh` the same way.
    4. Follow the `.out` file.
+   - **For Colab**, tell the person to do these steps:
+     1. Upload `louped-<id>.ipynb` to Colab (File > Upload notebook).
+     2. Pick a GPU runtime (Runtime > Change runtime type).
+     3. For gated models or an `hf://` remote, add the secret `HF_TOKEN` (the key icon), and let
+        the notebook read it.
+     4. Run all. The output shows as the job runs. Without a remote, the last cell downloads
+        `louped-result-<id>.tar.gz`.
 5. Bring the result back:
    - **With a remote** (`remote` in louped.toml): the job pushes its own results. Call `pull` (or
      press Pull on Runs). Its runs then read like local ones, marked with the host. Artifact

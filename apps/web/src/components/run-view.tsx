@@ -9,6 +9,7 @@ import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { useEffect, useRef, useState } from "react";
 
 import { ArtifactBrowser, RunFile } from "@/components/artifact-browser";
+import { CodeLink } from "@/components/code-link";
 import { CopyButton } from "@/components/copy-button";
 import { EmptyState } from "@/components/empty-state";
 import { hasItems, ItemsView } from "@/components/items-view";
@@ -486,11 +487,15 @@ function Provenance({ run }: { run: RunDetail }) {
     ],
     [
       "Code",
-      sha
-        ? `${sha.slice(0, 12)}${dirty ? " (uncommitted changes)" : ""}`
-        : unreadable
-          ? "unknown: meta.json does not parse"
-          : "not a git checkout",
+      run.code ? (
+        <CodeLink key="code" code={run.code} />
+      ) : sha ? (
+        `${sha.slice(0, 12)}${dirty ? " (uncommitted changes)" : ""}`
+      ) : unreadable ? (
+        "unknown: meta.json does not parse"
+      ) : (
+        "not a git checkout"
+      ),
     ],
   ];
   // files changed in the app after the run wrote them: its results are no longer only its own

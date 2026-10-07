@@ -22,6 +22,7 @@ export type TokensView = Schemas["TokensView"];
 export type VegaView = Schemas["VegaView"];
 export type PlotlyView = Schemas["PlotlyView"];
 export type Trace = Schemas["Trace"];
+export type Code = Schemas["Code"];
 export type Source = Schemas["Source"];
 export type SourceHit = Schemas["Hit"];
 export type Pin = Schemas["Pin"];

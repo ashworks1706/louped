@@ -52,7 +52,9 @@ def derive(run_id: str, script: Path, name: str | None = None) -> str:
         (f"derived/{name}.py", script.read_text(encoding="utf-8")),
         (
             f"derived/{name}.meta.json",
-            json.dumps({**capture().model_dump(mode="json"), "output": path}, indent=2),
+            json.dumps(
+                {**capture(script=script).model_dump(mode="json"), "output": path}, indent=2
+            ),
         ),
     ):
         if not mlflow_runs.add_text(run_id, where, what):

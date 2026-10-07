@@ -380,3 +380,65 @@ def test_an_export_without_a_remote_recommends_one_for_large_results(
     assert hint not in got.headers["x-louped-note"]
     script = (unpack(got.content, tmp_path / "near") / "job.sh").read_text()
     assert hint not in script and "--extra sync" in script  # s3fs comes with the sync extra
+
+
+def test_colab_gets_a_notebook_that_clones_the_commit_runs_the_job_and_brings_it_back(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import nbformat
+
+    project = tmp_path / "project"
+    monkeypatch.setenv("LOUPED_EXPERIMENTS", str(project / "experiments"))
+    monkeypatch.setenv("HF_TOKEN", "hf_never_in_the_notebook")
+    monkeypatch.delenv("LOUPED_REMOTE", raising=False)
+    experiment(project)
+    (project / "louped.toml").write_text("")
+    (project / ".gitignore").write_text(".louped/\n")
+    git(tmp_path, "init", "-q", "--bare", "origin.git")
+    git(project, "init", "-q", "-b", "main")
+    git(project, "add", ".")
+    git(project, "commit", "-q", "-m", "x")
+    monkeypatch.chdir(project)
+    monkeypatch.setattr(remote_module, "_checkout", lambda: None)  # louped as a release
+    api = client()
+    body = {"id": "script:hello/run.py", "options": {"--name": "sol"},
+            "target": {"provider": "colab"}}  # fmt: skip
+    refused = api.post("/api/launch/export", json=body)
+    assert refused.status_code == 400 and "pushed commit: this commit is not pushed" in refused.text
+    git(project, "remote", "add", "origin", str(tmp_path / "origin.git"))
+    git(project, "push", "-q", "origin", "main")
+    sha = subprocess.run(["git", "-C", str(project), "rev-parse", "HEAD"], capture_output=True,
+                         text=True, check=True).stdout.strip()  # fmt: skip
+
+    def notebook() -> tuple[str, nbformat.NotebookNode, str]:
+        got = api.post("/api/launch/export", json=body)
+        assert got.status_code == 200, got.text
+        name = got.headers["content-disposition"].split("filename=")[1].strip('"')
+        assert "hf_never" not in got.text
+        nb = nbformat.reads(got.text, as_version=4)
+        nbformat.validate(nb)
+        return name, nb, got.headers["x-louped-note"]
+
+    name, nb, note = notebook()
+    job = name.removeprefix("louped-").removesuffix(".ipynb")
+    assert name.endswith(".ipynb") and "run all" in note
+    intro, token, script, run, result = nb.cells
+    assert intro.cell_type == "markdown" and "GPU runtime" in intro.source
+    assert 'userdata.get("HF_TOKEN")' in token.source and "print(" in token.source
+    assert script.source.startswith("%%writefile job.sh\n#!/bin/bash")
+    for line in ("git clone --quiet", f"checkout --quiet --detach {sha}",
+                 "python experiments/hello/run.py --name sol", "uv pip install"):  # fmt: skip
+        assert line in script.source
+    assert "#SBATCH" not in script.source and "louped push" not in script.source
+    assert '["bash", "job.sh"]' in run.source
+    assert f'files.download("louped-{job}/louped-result-{job}.tar.gz")' in result.source
+    [listed] = [j for j in api.get("/api/launch/jobs").json() if j["id"] == job]
+    assert listed["title"].endswith("· colab")
+
+    # with a remote, the job pushes its result; the last cell downloads it only if that failed
+    monkeypatch.setenv("LOUPED_REMOTE", "hf://buckets/ash/runs")
+    _, nb, note = notebook()
+    _, token, script, _, result = nb.cells
+    assert "louped push --result out/result.json" in script.source and "sync]==" in script.source
+    assert "raise RuntimeError(" in token.source and "HF_TOKEN secret in Colab" in note
+    assert "archive.exists()" in result.source and "hf://buckets/ash/runs" in result.source

@@ -108,6 +108,20 @@ over a point to see its item, the files that hold it, and the script and commit 
 figure. Click the point to open the item in **Items**. Your agent follows the same chain with
 `trace`.
 
+### Where the code is
+
+A run records the commit it ran at and the script that ran it. On the run's **Overview**, the
+**Code** row shows the commit. Its **Code** link opens the script at that commit on GitHub, GitLab
+or Bitbucket. louped makes the link from the project's git remote. A figure's line under its
+points has the same link, for the script that made the figure.
+
+- **uncommitted changes**: the tree had changes when the run started. The code at that commit is
+  not exactly what ran.
+- **not pushed**: no remote branch holds the commit. The link opens nothing until you push it.
+- For another host, or with no remote, the row shows the commit with a copy button.
+
+A run made before louped recorded scripts links to the whole tree at its commit.
+
 ## Notebooks
 
 A notebook in the experiment's folder runs as a job. Tag one cell `parameters` (in Jupyter, use the

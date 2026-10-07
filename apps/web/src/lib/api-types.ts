@@ -1668,6 +1668,22 @@ export interface components {
       parts: components["schemas"]["louped__server__parts__Kind"][];
     };
     /**
+     * Code
+     * @description Where the code a run (or a script) ran from is: its commit, its file, and their page.
+     */
+    Code: {
+      /** Commit */
+      commit: string;
+      /** Dirty */
+      dirty?: boolean | null;
+      /** Path */
+      path?: string | null;
+      /** Url */
+      url?: string | null;
+      /** Pushed */
+      pushed?: boolean | null;
+    };
+    /**
      * Cohort
      * @description Items by id, and where they were picked.
      */
@@ -2909,6 +2925,7 @@ export interface components {
       error: string | null;
       /** Log */
       log?: string | null;
+      code?: components["schemas"]["Code"] | null;
     };
     /** RunSummary */
     RunSummary: {
@@ -3316,7 +3333,7 @@ export interface components {
        * @default sol
        * @enum {string}
        */
-      provider: "sol" | "slurm" | "shell";
+      provider: "sol" | "slurm" | "shell" | "colab";
       /**
        * Gpu
        * @default a100
@@ -3447,6 +3464,7 @@ export interface components {
       commit?: string | null;
       /** Dirty */
       dirty?: boolean | null;
+      code?: components["schemas"]["Code"] | null;
       /** Rows */
       rows?: {
         [key: string]: {

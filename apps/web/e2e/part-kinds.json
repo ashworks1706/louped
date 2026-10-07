@@ -245,6 +245,11 @@
     "rules": []
   },
   {
+    "part": "figures/code/*",
+    "about": "Opens the script that made one figure, at its commit, on the forge.",
+    "rules": []
+  },
+  {
     "part": "config/param/*",
     "about": "One parameter.",
     "rules": ["hidden", "about", "order"]
@@ -641,7 +646,7 @@
   },
   {
     "part": "launch/where",
-    "about": "Where it runs: here, Sol, a Slurm cluster or a VM.",
+    "about": "Where it runs: here, Sol, a Slurm cluster, a VM or Colab.",
     "rules": ["note"]
   },
   {

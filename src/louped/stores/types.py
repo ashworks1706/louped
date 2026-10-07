@@ -13,6 +13,22 @@ RunKind = Literal["eval", "analysis", "training"]
 Degenerate = Literal["repeat", "echo", "loop"]
 
 
+class Code(BaseModel):
+    """Where the code a run (or a script) ran from is: its commit, its file, and their page."""
+
+    commit: str
+    #: Whether the tree had uncommitted changes: then the commit is not exactly what ran.
+    dirty: bool | None = None
+    #: The file that ran, relative to the repository's root; None when it is not known.
+    path: str | None = None
+    #: The file (else the commit's tree) at that commit on GitHub, GitLab or Bitbucket, from
+    #: the project's git remote; None for another host or no remote.
+    url: str | None = None
+    #: Whether a remote branch holds the commit (else the page is not there yet); None when this
+    #: repository does not have the commit, so cannot say.
+    pushed: bool | None = None
+
+
 class RunSummary(BaseModel):
     id: str
     kind: RunKind
@@ -50,6 +66,8 @@ class RunDetail(RunSummary):
     error: str | None
     #: An eval run's log, relative to the log directory, as Inspect View addresses it.
     log: str | None = None
+    #: The code it ran: its commit, script and their page on the forge.
+    code: Code | None = None
 
 
 class SampleSummary(BaseModel):
@@ -331,6 +349,8 @@ class TraceStep(BaseModel):
     #: For a script or a run: the commit it ran at, and whether the tree had changes then.
     commit: str | None = None
     dirty: bool | None = None
+    #: For a script or a run: its code at that commit, with its page on the forge.
+    code: Code | None = None
     #: For an item: its record in each file that holds it, by the file's path.
     rows: dict[str, dict[str, Any]] | None = None
 
