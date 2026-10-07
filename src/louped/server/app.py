@@ -35,6 +35,7 @@ from louped.stores.catalog import EvalTask, eval_tasks
 from louped.stores.labels import Label
 from louped.stores.mlflow_runs import Unreachable
 from louped.stores.runs import read_artifact
+from louped.stores.trace import run_code
 from louped.stores.training_sets import (
     SetPairs,
     TrainingSet,
@@ -222,7 +223,8 @@ def create_app(
 
     @app.get("/api/runs/{run_id}")
     def run(run_id: str) -> RunDetail:
-        return stores.get_run(run_id)
+        found = stores.get_run(run_id)
+        return found.model_copy(update={"code": run_code(found)})
 
     @app.get("/api/runs/{run_id}/samples")
     def samples(run_id: str) -> list[SampleSummary]:

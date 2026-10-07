@@ -1,6 +1,6 @@
 ---
 title: Share and run elsewhere
-description: Keep runs in a remote everyone can pull from, send jobs to a cluster, and publish a read-only dashboard.
+description: Keep runs in a remote everyone can pull from, send jobs to a cluster or Colab, and publish a read-only dashboard.
 ---
 
 ## A remote for runs
@@ -108,6 +108,30 @@ Pulled and imported runs show like local ones, marked with where they ran.
   The job installs only those.
 - **Sol**: jobs use the `public` partition and QOS. Models and packages are cached under
   `/scratch/$USER`, since home space is small.
+
+## Run on Colab
+
+Use Google Colab when you have no cluster. Colab gives a free GPU for a few hours.
+
+1. Commit and push the project. The notebook clones it at that commit. If the commit is not
+   pushed, the export stops and says why.
+2. In the app, open **Launch** and set the options.
+3. In **Run on**, choose **Google Colab**. Colab has no GPU fields: you pick the GPU in Colab.
+4. Press **Export**. The app downloads `louped-<id>.ipynb`.
+5. Open [Colab](https://colab.research.google.com) and upload the notebook (**File → Upload
+   notebook**).
+6. Pick a GPU runtime: **Runtime → Change runtime type**.
+7. For gated models, or to push to an `hf://` remote, add a Hugging Face token as the secret
+   `HF_TOKEN` (the key icon on the left). Let the notebook read it. The notebook never holds the
+   token.
+8. Run all: **Runtime → Run all**. The job's output shows as it runs.
+9. Get the results back:
+   - With a remote set, the job pushes its results. Press **Pull** on **Runs**.
+   - Without a remote, the last cell downloads `louped-result-<id>.tar.gz`. Open **Runs → Import
+     result** and pick it.
+
+The notebook writes the same one-file `job.sh` as a cluster export and runs it with `bash`. Thus
+it installs uv and louped the same way.
 
 ## Publish a read-only dashboard
 

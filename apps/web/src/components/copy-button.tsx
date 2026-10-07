@@ -5,7 +5,13 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
-export function CopyButton({ text }: { text: string }) {
+export function CopyButton({
+  text,
+  label: what = "Copy command",
+}: {
+  text: string;
+  label?: string;
+}) {
   const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
   const copy = async () => {
     try {
@@ -16,7 +22,7 @@ export function CopyButton({ text }: { text: string }) {
     }
     setTimeout(() => setState("idle"), 1500);
   };
-  const label = state === "failed" ? "Copy failed: select the text instead" : "Copy command";
+  const label = state === "failed" ? "Copy failed: select the text instead" : what;
   return (
     <Button variant="ghost" size="icon-sm" onClick={copy} aria-label={label} title={label}>
       {state === "copied" ? <Check /> : state === "failed" ? <X /> : <Copy />}

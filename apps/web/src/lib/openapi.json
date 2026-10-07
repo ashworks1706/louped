@@ -3975,6 +3975,62 @@
         "required": ["regions", "presets", "parts"],
         "title": "Catalog"
       },
+      "Code": {
+        "properties": {
+          "commit": {
+            "type": "string",
+            "title": "Commit"
+          },
+          "dirty": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dirty"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "pushed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pushed"
+          }
+        },
+        "type": "object",
+        "required": ["commit"],
+        "title": "Code",
+        "description": "Where the code a run (or a script) ran from is: its commit, its file, and their page."
+      },
       "Cohort": {
         "properties": {
           "ids": {
@@ -6993,6 +7049,16 @@
               }
             ],
             "title": "Log"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Code"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -8083,7 +8149,7 @@
         "properties": {
           "provider": {
             "type": "string",
-            "enum": ["sol", "slurm", "shell"],
+            "enum": ["sol", "slurm", "shell", "colab"],
             "title": "Provider",
             "default": "sol"
           },
@@ -8404,6 +8470,16 @@
               }
             ],
             "title": "Dirty"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Code"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "rows": {
             "anyOf": [

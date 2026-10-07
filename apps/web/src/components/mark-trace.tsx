@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
 
+import { CodeLink } from "@/components/code-link";
+import { part, partId } from "@/components/parts";
 import { q, type Trace } from "@/lib/api";
 import { itemHref } from "@/lib/href";
 
@@ -35,8 +37,14 @@ export function useOpenMark(source: string | undefined) {
   );
 }
 
+/** The code that made a figure: its derive script, else the run that logged it. */
+function madeBy(trace: Trace | undefined) {
+  const steps = trace?.steps ?? [];
+  return steps.find((s) => s.what === "script") ?? steps.find((s) => s.what === "run");
+}
+
 /** What a hovered mark stands for: its item, the files holding it, and the script and commit
- * that made the figure. */
+ * that made the figure; while no mark is hovered, a link to that code. */
 export function MarkTrace({
   source,
   mark,
@@ -48,22 +56,28 @@ export function MarkTrace({
   failed?: string | null;
 }) {
   const trace = useQuery({ ...q.trace(`${source}#${mark}`), enabled: mark !== null });
+  const figure = useQuery(q.trace(source)); // the figure's own trace, for its code
+  const code = madeBy(figure.data)?.code;
   if (failed) return <span className="text-negative">{failed}</span>;
   if (mark === null)
     return (
-      <span className="text-muted-foreground">Hover a point for its item; click to open it.</span>
+      <span className="text-muted-foreground inline-flex flex-wrap items-center gap-x-2">
+        Hover a point for its item; click to open it.
+        {code && (
+          <span {...part(partId("figures/code", source.split("/").pop() ?? source))}>
+            <CodeLink code={code} short />
+          </span>
+        )}
+      </span>
     );
   if (trace.error) return <span className="text-negative">{String(trace.error)}</span>;
-  const steps = trace.data?.steps ?? [];
-  const item = steps.find((s) => s.what === "item");
-  const script = steps.find((s) => s.what === "script");
-  const run = steps.find((s) => s.what === "run");
-  const made = script ?? run;
+  const item = trace.data?.steps.find((s) => s.what === "item");
+  const made = madeBy(trace.data);
   return (
     <span className="font-mono">
       item {mark}
       {item?.rows && ` · ${Object.keys(item.rows).length} files`}
-      {made && ` · ${script ? script.title : "logged by the run"}`}
+      {made && ` · ${made.what === "script" ? made.title : "logged by the run"}`}
       {made?.commit &&
         ` at ${made.commit.slice(0, 7)}${made.dirty ? " (uncommitted changes)" : ""}`}
     </span>

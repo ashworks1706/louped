@@ -138,3 +138,41 @@ def test_a_figure_drawn_on_another_runs_items_traces_to_both_runs(
     with pytest.raises(ValueError, match="name one"):
         trace(f"run:{two}#28")
     assert trace(f"run:{two}/other/a.jsonl#28").steps[0].title == "item 28 in other"
+
+
+def test_a_runs_code_links_to_its_script_at_its_commit_on_the_forge(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from test_git import git
+
+    project = tmp_path / "project"
+    (project / "experiments" / "q").mkdir(parents=True)
+    script = project / "experiments" / "q" / "run.py"
+    script.write_text("print(1)\n")
+    git(tmp_path, "init", "-q", "--bare", "origin.git")
+    git(project, "init", "-q", "-b", "main")
+    git(project, "add", ".")
+    git(project, "commit", "-q", "-m", "x")
+    sha = git(project, "rev-parse", "HEAD")
+    monkeypatch.chdir(project)
+    with start_run("q", name="r", script=script) as r:
+        pass
+    run = f"m-{r.info.run_id}"
+    code = trace(f"run:{run}").steps[-1].code
+    assert code is not None and code.path == "experiments/q/run.py" and code.url is None
+    assert (code.commit, code.dirty, code.pushed) == (sha, False, False)  # no remote yet
+    git(project, "remote", "add", "origin", str(tmp_path / "origin.git"))
+    git(project, "push", "-q", "origin", "main")
+    git(project, "remote", "set-url", "origin", "git@github.com:o/r.git")
+    page = f"https://github.com/o/r/blob/{sha}/experiments/q/run.py"
+    code = trace(f"run:{run}").steps[-1].code
+    assert code is not None and code.url == page and code.pushed
+    api = TestClient(create_app(), base_url="http://localhost")
+    got = api.get(f"/api/runs/{run}").json()["code"]
+    assert got["url"] == page and got["dirty"] is False
+    # a change not committed: the run says the commit is not exactly what ran
+    script.write_text("print(2)\n")
+    with start_run("q", name="dirty", script=script) as r2:
+        pass
+    code = trace(f"run:m-{r2.info.run_id}").steps[-1].code
+    assert code is not None and code.dirty and code.url == page

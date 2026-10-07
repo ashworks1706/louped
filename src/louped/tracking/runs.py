@@ -15,6 +15,7 @@ import json
 import os
 from collections.abc import Iterator
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Any
 
 import mlflow
@@ -45,15 +46,17 @@ def start_run(
     params: dict[str, Any] | None = None,
     seed: int | None = None,
     kind: str = "analysis",
+    script: Path | None = None,
 ) -> Iterator[Run]:
     """An active MLflow run in louped's store, tagged with its kind and the environment it ran
-    in."""
+    in; script is the file that runs it, by default the one Python started on."""
     mlflow.set_tracking_uri(tracking_uri())
-    meta = capture(seed=seed)
+    meta = capture(seed=seed, script=script)
     tags = {
         "louped.kind": kind,
         "louped.git_sha": meta.git.sha or "",
         "louped.git_dirty": str(meta.git.dirty).lower(),
+        **({"louped.script": meta.script} if meta.script else {}),
     }
     system = os.environ.get("LOUPED_SYSTEM_METRICS", "1") != "0"
     if system:

@@ -35,12 +35,13 @@ import { cn } from "@/lib/utils";
 
 const RECIPES = ["sft", "dpo", "grpo", "classify", "reft"];
 
-/** Where a launch runs: here, or exported as a script for another machine. */
+/** Where a launch runs: here, or exported as a script (a notebook for Colab) for another machine. */
 const PLACES = {
   here: "This machine",
   sol: "ASU Sol",
   slurm: "A Slurm cluster",
   shell: "Another machine (VM)",
+  colab: "Google Colab",
 } as const;
 type Place = keyof typeof PLACES;
 /** Sol's GPUs as its docs name them; MI200 is AMD (ROCm), the slices are A100 MIG. */
@@ -229,7 +230,9 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
   };
   const submit = () => {
     if (place !== "here") {
-      out.mutate({ ...request, target: { ...target, provider: place } });
+      // Colab's GPU is the runtime picked there, not a field here
+      const where = place === "colab" ? { provider: place } : { ...target, provider: place };
+      out.mutate({ ...request, target: where });
       return;
     }
     // Permission can only be asked from the click itself, not after the request returns.
@@ -339,7 +342,7 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
   );
 }
 
-/** Run here, or export for Sol, a Slurm cluster or a VM, with what the job asks for there. */
+/** Run here, or export for Sol, a Slurm cluster, a VM or Colab, with what the job asks for there. */
 function Where({
   place,
   setPlace,
@@ -372,7 +375,7 @@ function Where({
             </option>
           ))}
         </NativeSelect>
-        {place !== "here" && (
+        {place !== "here" && place !== "colab" && (
           <Help label="How does running elsewhere work?">
             Export downloads job.sh: one file when the project is a pushed git commit, else a folder
             with what it needs. Run it there (sbatch on a cluster, bash on a VM). It installs louped
@@ -381,6 +384,12 @@ function Where({
           </Help>
         )}
       </div>
+      {place === "colab" && (
+        <p className="text-muted-foreground text-xs">
+          Export downloads a notebook: upload it to Colab, pick a GPU runtime and run all. It needs
+          the project as a pushed git commit, and gated models need an HF_TOKEN secret there.
+        </p>
+      )}
       {slurm && (
         <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
           <div className="flex flex-col gap-1.5">

@@ -137,6 +137,8 @@ KINDS: list[Kind] = [
     _k(part="figures/figure/*", about="One figure, by its file.", rules=["hidden", "note"]),
     _k(part="figures/export/*", about="Exports one figure to reports/ as SVG, PNG or PDF.",
        rules=PICK),
+    _k(part="figures/code/*", about="Opens the script that made one figure, at its commit, on "
+       "the forge.", rules=PICK),
     _k(part="config/param/*", about="One parameter.", rules=["hidden", "about", "order"]),
     _k(part="config/tag/*", about="One tag.", rules=["hidden", "about", "order"]),
     _k(part="config/*", about="The parameters' or tags' heading (params, tags).", rules=PICK),
@@ -268,7 +270,7 @@ KINDS: list[Kind] = [
     _k(part="launch/eval/*", about="One Inspect task in that list, by task.", rules=["hidden"]),
     _k(part="launch/config", about="The training or grid config, edited in place.",
        rules=["note"]),
-    _k(part="launch/where", about="Where it runs: here, Sol, a Slurm cluster or a VM.",
+    _k(part="launch/where", about="Where it runs: here, Sol, a Slurm cluster, a VM or Colab.",
        rules=["note"]),
     _k(part="launch/*", about="The picker, title, command and Launch button.", rules=PICK),
     # a job
