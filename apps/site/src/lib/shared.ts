@@ -1,7 +1,7 @@
 import { createGetUrl } from "fumadocs-core/source";
 
 export const appName = "louped";
-export const tagline = "An astute harness for LLM behavior and efficiency.";
+export const tagline = "An astute harness for LLM behavior and inference research.";
 export const docsRoute = "/docs";
 export const docsContentRoute = "/llms.mdx/docs";
 export const repoUrl = "https://github.com/ashworks1706/louped";
