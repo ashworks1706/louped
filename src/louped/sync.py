@@ -8,9 +8,15 @@ already there.
 
 The remote is any fsspec URL: a folder (one in the repository keeps results with the code), an HF
 Storage Bucket (hf://buckets/<user>/<name>), or S3-compatible storage such as Cloudflare R2
-(s3://..., with s3fs installed). It is set as `remote` in louped.toml, or LOUPED_REMOTE, which
-wins. Each push is a new folder under it and nothing is rewritten, so two machines pushing never
-conflict. Model weights stay out of bundles: they are not runs.
+(s3://..., through s3fs, which the sync extra brings with Inspect). It is set as `remote` in
+louped.toml, or LOUPED_REMOTE, which wins. Each push is a new folder under it and nothing is
+rewritten, so two machines pushing never conflict. Model weights stay out of bundles: they are not
+runs.
+
+Bundles are written, pulled and unpacked under <home>/staging, on the stores' disk, never in the
+system's temporary folder, and moved into the stores from there. A pulled artifact file bigger
+than `large_artifact_mb` in louped.toml (LARGE_MB by default) stays in the remote: the run keeps a
+pointer to it (mlflow_runs.REMOTE), lists it, and fetches it when it is opened.
 """
 
 from __future__ import annotations
@@ -21,19 +27,43 @@ import re
 import secrets
 import shutil
 import socket
-import tempfile
 import tomllib
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from louped.core import home, logs_dir, tracking_uri
+from louped.core import home, logs_dir, require_space, tracking_uri
 from louped.core.project import FILE, base, config, root
+from louped.stores.mlflow_runs import REMOTE
 
 #: What a bundle's result.json must hold for import; the rest is provenance.
 RESULT = "result.json"
+#: Pulled artifact files bigger than this many MB stay in the remote; louped.toml's
+#: large_artifact_mb changes it.
+LARGE_MB = 100
+
+
+def large() -> int:
+    """The size in bytes above which a pulled artifact file stays in the remote."""
+    mb = config().get("large_artifact_mb", LARGE_MB)
+    if isinstance(mb, bool) or not isinstance(mb, int | float) or mb < 0:
+        raise ValueError(f"large_artifact_mb in louped.toml is a number of MB, not {mb!r}")
+    return int(mb * 2**20)
+
+
+@contextmanager
+def staging() -> Iterator[Path]:
+    """A new empty folder under <home>/staging, removed after: where bundles are unpacked, pulled
+    and written, on the stores' own disk rather than in a small /tmp."""
+    folder = home() / "staging" / f"{datetime.now(UTC):%Y%m%d-%H%M%S}-{secrets.token_hex(3)}"
+    folder.mkdir(parents=True)
+    try:
+        yield folder
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
 
 
 @dataclass
@@ -186,19 +216,24 @@ def _save_state(state: dict[str, list[str]]) -> None:
 # --- adding a bundle's runs to this home ---------------------------------------------------------
 
 
-def add_bundle(out: Path) -> Added:
-    """Add the runs of a bundle folder to the local stores; runs already here are skipped."""
+def add_bundle(
+    out: Path, move: bool = False, left: dict[str, dict[str, Any]] | None = None
+) -> Added:
+    """Add the runs of a bundle folder to the local stores; runs already here are skipped. With
+    move, its files are moved in, not copied: out is a staging copy. left names the artifact files
+    that stayed in the remote ({bundle path: {"url", "size"}}), recorded on their runs."""
     result = json.loads((out / RESULT).read_text(encoding="utf-8"))
     added = Added(result)
-    runs, skipped = _add_evals(out, added.host)
+    runs, skipped = _add_evals(out, added.host, move)
     # the node and GPUs it ran on, for the run page's provenance
     where = {f"louped.{k}": str(result[k]) for k in ("node", "gpu") if result.get(k)}
-    more, again = _add_mlflow(out, added.host, str(result.get("home", "")), where)
+    more, again = _add_mlflow(out, added.host, str(result.get("home", "")), where, move,
+                              left or {})  # fmt: skip
     added.runs, added.skipped = runs + more, skipped + again
     return added
 
 
-def _add_evals(out: Path, host: str) -> tuple[list[str], list[str]]:
+def _add_evals(out: Path, host: str, move: bool) -> tuple[list[str], list[str]]:
     from inspect_ai.log import read_eval_log
 
     added: list[str] = []
@@ -210,7 +245,7 @@ def _add_evals(out: Path, host: str) -> tuple[list[str], list[str]]:
         if (logs_dir() / log.name).exists():
             skipped.append(run_id)
             continue
-        shutil.copy2(log, logs_dir() / log.name)
+        (shutil.move if move else shutil.copy2)(log, logs_dir() / log.name)
         added.append(run_id)
     _record_hosts(dict.fromkeys(added, host))
     return added, skipped
@@ -227,8 +262,9 @@ def _record_hosts(hosts: dict[str, str]) -> None:
 
 
 def _add_mlflow(
-    out: Path, host: str, remote_home: str, where: dict[str, str]
-) -> tuple[list[str], list[str]]:
+    out: Path, host: str, remote_home: str, where: dict[str, str], move: bool,
+    left: dict[str, dict[str, Any]],
+) -> tuple[list[str], list[str]]:  # fmt: skip
     db = out / "mlflow.db"
     if not db.exists():
         return [], []
@@ -248,8 +284,11 @@ def _add_mlflow(
                 skipped.append(f"m-{here}")
                 continue
             tags = {**run.data.tags, **where, "louped.host": host, "louped.imported_from": origin}
-            new = _copy_run(theirs, run, ours, experiment_id(experiment.name), tags,
-                            _artifacts(out, run.info.artifact_uri or "", remote_home))  # fmt: skip
+            local = _artifacts(out, run.info.artifact_uri or "", remote_home)
+            at = f"{local.relative_to(out).as_posix()}/" if local is not None else None
+            remote = {k[len(at) :]: v for k, v in left.items() if k.startswith(at)} if at else {}
+            new = _copy_run(theirs, run, ours, experiment_id(experiment.name), tags, local, move,
+                            remote)  # fmt: skip
             added.append(f"m-{new}")
     return added, skipped
 
@@ -271,10 +310,13 @@ def _local(client: Any, run_id: str, origin: str) -> str | None:
 
 
 def _copy_run(
-    theirs: Any, run: Any, ours: Any, experiment: str, tags: dict[str, str], local: Path | None
-) -> str:
-    """One run copied between MLflow stores with its params, metric histories and artifacts."""
+    theirs: Any, run: Any, ours: Any, experiment: str, tags: dict[str, str], local: Path | None,
+    move: bool = False, remote: dict[str, dict[str, Any]] | None = None,
+) -> str:  # fmt: skip
+    """One run copied between MLflow stores with its params, metric histories and artifacts: moved
+    with move when both are folders here, and the files left in the remote recorded as pointers."""
     from mlflow.entities import Metric, Param
+    from mlflow.utils.file_utils import local_file_uri_to_path
 
     new = ours.create_run(experiment, start_time=run.info.start_time, tags=tags,
                           run_name=run.info.run_name)  # fmt: skip
@@ -285,8 +327,16 @@ def _copy_run(
                for m in theirs.get_metric_history(run.info.run_id, key)]  # fmt: skip
     for i in range(0, len(metrics), 1000):
         ours.log_batch(new.info.run_id, metrics=metrics[i : i + 1000])
-    if local is not None and local.is_dir():
+    uri = new.info.artifact_uri or ""
+    if local is not None and local.is_dir() and move and uri.startswith("file:"):
+        target = Path(local_file_uri_to_path(uri))
+        target.mkdir(parents=True, exist_ok=True)
+        for child in local.iterdir():
+            shutil.move(child, target / child.name)
+    elif local is not None and local.is_dir():
         ours.log_artifacts(new.info.run_id, str(local))
+    if remote:
+        ours.log_dict(new.info.run_id, remote, REMOTE)
     ours.set_terminated(new.info.run_id, run.info.status, end_time=run.info.end_time)
     return new.info.run_id
 
@@ -379,8 +429,8 @@ def push(url: str | None = None, result: Path | None = None) -> Pushed:
     meta = json.loads(result.read_text(encoding="utf-8")) if result else None
     host = (meta or {}).get("host") or os.environ.get("LOUPED_HOST") or socket.gethostname()
     name = f"{datetime.now(UTC):%Y%m%d-%H%M%S}-{_slug(str(host))}-{secrets.token_hex(2)}"
-    with tempfile.TemporaryDirectory() as tmp:
-        bundle = Path(tmp, name)
+    with staging() as tmp:
+        bundle = tmp / name
         runs = write_bundle(bundle, meta)
         if not runs and meta is None:
             return Pushed(remote, None, [])
@@ -407,7 +457,7 @@ def pull(
     url: str | None = None, finish: Callable[[Added, Path], None] | None = None
 ) -> list[tuple[str, Added]]:
     """Add every bundle in the remote this home has not pulled. finish sees each bundle's folder
-    before it is deleted (a job's log)."""
+    before it is deleted (a job's log). Artifact files bigger than large() stay in the remote."""
     remote = remote_url(url)
     ready(remote, create=False)
     fs, top = _fs(remote)
@@ -417,18 +467,28 @@ def pull(
         raise ValueError(f"{remote} does not exist: nothing has been pushed there yet") from exc
     state = _state()
     seen = set(state.get("pulled", []))
+    limit = large()
     out: list[tuple[str, Added]] = []
     for entry in entries:
         name = entry.rstrip("/").rsplit("/", 1)[-1]
         if name in seen or not fs.exists(f"{entry}/{RESULT}"):
             continue
-        with tempfile.TemporaryDirectory() as tmp:
-            local = Path(tmp, name)
-            for path in fs.find(entry):
-                target = local / path[len(entry.rstrip("/")) + 1 :]
+        found: dict[str, dict[str, Any]] = fs.find(entry, detail=True)
+        files = {path[len(entry.rstrip("/")) + 1 :]: info for path, info in found.items()}
+        left = {rel: {"url": fs.unstrip_protocol(info["name"]), "size": int(info["size"])}
+                for rel, info in files.items()
+                if rel.startswith("artifacts/") and int(info.get("size") or 0) > limit}  # fmt: skip
+        with staging() as tmp:
+            local = tmp / name
+            require_space(sum(int(i.get("size") or 0) for r, i in files.items() if r not in left),
+                          tmp)  # fmt: skip
+            for rel, info in files.items():
+                if rel in left:
+                    continue
+                target = local / rel
                 target.parent.mkdir(parents=True, exist_ok=True)
-                fs.get_file(path, str(target))
-            added = add_bundle(local)
+                fs.get_file(info["name"], str(target))
+            added = add_bundle(local, move=True, left=left)
             if finish is not None:
                 finish(added, local)
         out.append((name, added))

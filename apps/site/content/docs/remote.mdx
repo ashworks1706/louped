@@ -18,7 +18,7 @@ Either way, the remote is saved to `louped.toml`. You can also set it there by h
 ```toml
 remote = "hf://buckets/<user>/<name>"   # a Hugging Face Storage Bucket
 # remote = "runs"                        # or a folder, such as one in the repository
-# remote = "s3://<bucket>/runs"          # or S3-compatible storage such as Cloudflare R2 (pip install s3fs)
+# remote = "s3://<bucket>/runs"          # or S3-compatible storage such as Cloudflare R2
 ```
 
 `LOUPED_REMOTE` overrides it. Then:
@@ -32,6 +32,42 @@ louped pull   # every bundle this louped has not pulled
 Connect to ask for one. Each push writes a new folder and rewrites nothing. Thus two people or two
 machines never conflict. A bundle holds Inspect logs, an MLflow store with its artifacts, and
 `result.json`, which tells where it ran. Model weights stay out.
+
+### Large results
+
+Big files stay in the remote. On a pull, louped copies metrics, params, tags and small artifacts,
+such as figures and records. An artifact file over 100 MB stays in the remote. The run lists it
+with its size. When you or an agent open it, louped fetches it once into `.louped/remote-cache/`
+and serves it from there. If the remote cannot be reached, the error says so. To change the limit,
+set it in `louped.toml`:
+
+```toml
+large_artifact_mb = 500
+```
+
+louped unpacks, pulls and writes bundles in `.louped/staging/`, not in `/tmp`. Before it unpacks an
+archive, it checks that the disk has space for it. If not, the error gives the bytes needed, the
+bytes free and the folder. To use a bigger disk, set `LOUPED_HOME`. An unpacked folder is imported
+from where it is.
+
+### Hugging Face bucket
+
+1. Run `hf auth login` with a token that has write access.
+2. Press **Runs → Connect**, or run `louped push`. louped creates a private bucket
+   `hf://buckets/<you>/<project>` and saves it to `louped.toml`.
+
+### S3 or Cloudflare R2
+
+The `sync` extra includes `s3fs`. Credentials come from the usual AWS variables:
+
+```sh
+export AWS_ACCESS_KEY_ID=<key id>
+export AWS_SECRET_ACCESS_KEY=<secret>
+export AWS_ENDPOINT_URL=https://<account id>.r2.cloudflarestorage.com   # R2 only
+```
+
+Then set `remote = "s3://<bucket>/runs"`. A cluster job needs the same variables. Export them
+before `sbatch`.
 
 ## Run on a cluster
 
@@ -54,7 +90,8 @@ machines never conflict. A bundle holds Inspect logs, an MLflow store with its a
    - With a remote set, the job pushes its results itself. Press **Pull** on **Runs**, or run
      `louped pull`.
    - Without a remote, copy `louped-result-<id>.tar.gz` back. Then open **Runs → Import result**
-     (or run `louped import louped-result-<id>.tar.gz`).
+     (or run `louped import louped-result-<id>.tar.gz`). For large results, set a remote
+     instead. The job then pushes them straight to storage.
 
 Pulled and imported runs show like local ones, marked with where they ran.
 

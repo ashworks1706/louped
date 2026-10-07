@@ -33,6 +33,7 @@ from louped.server import graphs, inspect_view, launch, playground, plugins, ser
 from louped.stores import ab
 from louped.stores.catalog import EvalTask, eval_tasks
 from louped.stores.labels import Label
+from louped.stores.mlflow_runs import Unreachable
 from louped.stores.runs import read_artifact
 from louped.stores.types import (
     AbResult,
@@ -194,6 +195,10 @@ def create_app(
     async def not_found(_: Request, exc: stores.NotFound) -> JSONResponse:
         return JSONResponse({"detail": f"not found: {exc}"}, status_code=404)
 
+    @app.exception_handler(Unreachable)
+    async def unreachable(_: Request, exc: Unreachable) -> JSONResponse:
+        return JSONResponse({"detail": str(exc)}, status_code=502)
+
     @app.exception_handler(stores.BadExperiment)
     async def bad_experiment(_: Request, exc: stores.BadExperiment) -> JSONResponse:
         return JSONResponse({"detail": str(exc)}, status_code=500)
@@ -226,6 +231,8 @@ def create_app(
         if ".." in Path(path).parts:
             raise HTTPException(400, "bad path")
         media = mimetypes.guess_type(path)[0] or "application/octet-stream"
+        if (kept := stores.remote_artifact(run_id, path)) is not None:  # big: left in the remote
+            return FileResponse(kept, media_type=media)
         return Response(read_artifact(run_id, path), media_type=media)
 
     @app.get("/api/runs/{run_id}/notebook/{path:path}")

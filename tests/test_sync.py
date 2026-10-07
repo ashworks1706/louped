@@ -129,3 +129,49 @@ def test_an_hf_bucket_remote_asks_for_a_token_and_connect_sets_one_up(
     assert signed == ["hf_y"] and sync.configured() == "hf://buckets/ash/proj"
     _connect(None)  # set up: nothing asked again
     assert signed == ["hf_y"]
+
+
+def test_a_big_artifact_stays_in_the_remote_and_is_fetched_once_when_opened(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import shutil
+
+    import mlflow
+
+    from louped.analysis import table
+    from louped.tracking import log_json, start_run
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "louped.toml").write_text("large_artifact_mb = 0.01\n")  # 10 KiB
+    remote = tmp_path / "remote"
+    monkeypatch.setenv("LOUPED_REMOTE", str(remote))
+    (tmp_path / "weights.bin").write_bytes(b"x" * 50_000)
+    with start_run("hello", name="big"):
+        log_json(table("t", ["a"], [[1]]), "views/00-t.json")
+        mlflow.log_artifact(str(tmp_path / "weights.bin"), "out")
+    sync.push()
+
+    other = tmp_path / "other"
+    monkeypatch.setenv("LOUPED_HOME", str(other))
+    monkeypatch.delenv("MLFLOW_TRACKING_URI", raising=False)
+    [(_, added)] = sync.pull()
+    [run_id] = added.runs
+    files = {a.path: a.size for a in stores.get_run(run_id).artifacts}
+    assert files["out/weights.bin"] == 50_000 and "louped.remote.json" not in files
+    assert not list(other.rglob("weights.bin"))  # listed, not copied
+    assert [v.view.title for v in stores.list_views(run_id)] == ["t"]  # small files came
+    assert not list((other / "staging").iterdir())  # pulled through staging, cleaned after
+
+    api = TestClient(create_app(), base_url="http://localhost")
+    url = f"/api/runs/{run_id}/artifacts/out/weights.bin"
+    got = api.get(url)
+    assert got.status_code == 200 and got.content == b"x" * 50_000
+    [cached] = list((other / "remote-cache").rglob("weights.bin"))
+    shutil.rmtree(remote)  # fetched once: the cached copy serves without the remote
+    assert api.get(url).content == b"x" * 50_000
+    cached.unlink()
+    gone = api.get(url)
+    assert gone.status_code == 502 and "could not be read" in gone.json()["detail"]
+    (tmp_path / "louped.toml").write_text('large_artifact_mb = "big"\n')
+    with pytest.raises(ValueError, match="number of MB"):
+        sync.large()

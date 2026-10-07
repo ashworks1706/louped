@@ -9,7 +9,9 @@ out/result.json and out/log.txt, and packs out/ as louped-result-<id>.tar.gz.
 Import reads that archive, or the folder it unpacks to: eval logs are copied into the local logs,
 MLflow runs re-logged into the local store with their metrics, params, tags and artifacts, every run
 recorded with the host it ran on, and the exported job takes the result's exit code and log. A run
-imported twice is skipped the second time.
+imported twice is skipped the second time. An archive is unpacked under <home>/staging, on the
+stores' disk and not in /tmp, once its unpacked size is known to fit, and moved in from there; a
+folder is read where it is.
 """
 
 from __future__ import annotations
@@ -38,7 +40,7 @@ from starlette.background import BackgroundTask
 
 import louped
 from louped import __version__, sync
-from louped.core import experiments_dir
+from louped.core import experiments_dir, home, require_space
 from louped.core.project import FILE
 from louped.core.project import root as root_of_project
 from louped.server.launch import Job, Jobs, Launchable, LaunchRequest, argv, require_json
@@ -168,7 +170,7 @@ PY
 {push}tar -czf "louped-result-{job_id}.tar.gz" --exclude=out/vendor out  # vendor: tool environments
 echo "Done ($code). Bring $ROOT/louped-result-{job_id}.tar.gz back and import it from louped's"
 echo "Runs page, or run: louped import louped-result-{job_id}.tar.gz"
-exit "$code"
+{hint}exit "$code"
 """
 
 #: With a remote, the job pushes its results there and packs them only if that fails.
@@ -178,6 +180,9 @@ PUSH = """if louped push --result out/result.json; then
 fi
 echo "Pushing failed (above), so the result is packed to bring back by hand."
 """
+
+#: Without a remote: big results belong in storage, not on a laptop.
+LARGE = "For large results, set a remote in louped.toml so the job pushes them straight to storage."
 
 #: An hf:// remote: say a missing token before the run, not after it.
 TOKEN = """python -c 'import huggingface_hub as h, sys; sys.exit(h.get_token() is None)' || {
@@ -331,13 +336,14 @@ def export(req: ExportRequest, jobs: Jobs, title: str) -> tuple[Path, str]:
              "shell": "the machine"}[target.provider]  # fmt: skip
     back = (f"Its results are pushed to {remote}: Pull on louped's Runs page." if remote else
             f"When it ends, bring back louped-result-{job_id}.tar.gz and import it on louped's "
-            "Runs page (or `louped import` it).")  # fmt: skip
+            f"Runs page (or `louped import` it). {LARGE}")  # fmt: skip
     if remote and sync.bucket(remote):
         back += " Pushing there needs a Hugging Face token: run hf auth login once on that machine."
     parts = {"header": "\n".join(header), "job_id": job_id, "title": title, "run": run,
              "cache": scratch if sol else "", "command": shlex.join(command), "host": host,
              "remote": f'export LOUPED_REMOTE="${{LOUPED_REMOTE:-{remote}}}"\n' if remote else "",
              "push": PUSH if remote else "", "install": install,
+             "hint": "" if remote else f'echo "{LARGE}"\n',
              "token": TOKEN if remote and sync.bucket(remote) else ""}  # fmt: skip
     if isinstance(clone, Clone) or (clone is None and source is None):
         fetch = FETCH.format(url=shlex.quote(clone.url), commit=clone.commit) if clone else ""
@@ -444,17 +450,22 @@ def _out(folder: Path) -> Path:
 
 
 def import_result(path: Path, jobs: Jobs | None) -> Imported:
-    """Add a result archive's (or unpacked folder's) runs to the local stores."""
-    with tempfile.TemporaryDirectory() as tmp:
-        if path.is_dir():
-            out = _out(path)
-        elif tarfile.is_tarfile(path):
-            with tarfile.open(path) as tar:
-                tar.extractall(tmp, filter="data")  # refuses absolute paths and ../
-            out = _out(Path(tmp))
-        else:
-            raise ValueError(f"{path} is not a louped result archive or folder")
+    """Add a result archive's (or unpacked folder's) runs to the local stores. A folder is copied
+    in from where it is; an archive is unpacked under <home>/staging and moved in."""
+    if path.is_dir():
+        out = _out(path)
+        require_space(sum(p.stat().st_size for p in out.rglob("*") if p.is_file()), home())
         added = add_bundle(out)
+        job = _finish(jobs, added.result, out) if jobs is not None else None
+        return _imported_as(added, job)
+    if not tarfile.is_tarfile(path):
+        raise ValueError(f"{path} is not a louped result archive or folder")
+    with sync.staging() as tmp, tarfile.open(path) as tar:
+        # its unpacked size from the members' headers, before anything is written
+        require_space(sum(m.size for m in tar if m.isfile()), tmp)
+        tar.extractall(tmp, filter="data")  # refuses absolute paths and ../
+        out = _out(tmp)
+        added = add_bundle(out, move=True)
         job = _finish(jobs, added.result, out) if jobs is not None else None
     return _imported_as(added, job)
 
@@ -535,8 +546,13 @@ def routes(api: APIRouter, queue: Callable[[], Jobs], known: Callable[[str], Lau
         kind = request.headers.get("content-type", "").split(";")[0].strip().lower()
         if kind not in ("application/gzip", "application/x-gzip"):
             raise HTTPException(415, "send the result archive as application/gzip")
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp, "result.tar.gz")
+        with sync.staging() as tmp:  # on the stores' disk: a result can be bigger than /tmp
+            path = tmp / "result.tar.gz"
+            if size := request.headers.get("content-length", "").strip():
+                try:
+                    require_space(int(size), tmp)
+                except ValueError as exc:
+                    raise HTTPException(400, str(exc)) from exc
             with path.open("wb") as out:
                 async for chunk in request.stream():
                     out.write(chunk)
@@ -590,5 +606,7 @@ def _remote[T](call: Callable[[], T]) -> T:
 def _imported(path: Path, jobs: Jobs) -> Imported:
     try:
         return import_result(path, jobs)
-    except (ValueError, tarfile.TarError, KeyError) as exc:
+    except (tarfile.TarError, KeyError) as exc:
         raise HTTPException(400, f"not a louped result: {exc}") from exc
+    except ValueError as exc:  # not a result, or no room for it: each says which
+        raise HTTPException(400, str(exc)) from exc

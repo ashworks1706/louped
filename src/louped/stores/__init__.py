@@ -29,6 +29,7 @@ from louped.stores.runs import (
     list_runs,
     list_samples,
     list_views,
+    remote_artifact,
     write_text,
 )
 from louped.stores.trace import read_view, trace
@@ -60,6 +61,7 @@ __all__ = [
     "list_views",
     "read_readme",
     "read_view",
+    "remote_artifact",
     "save_experiment_view",
     "set_label",
     "trace",

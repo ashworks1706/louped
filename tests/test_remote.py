@@ -317,3 +317,66 @@ def test_a_git_url_with_credentials_never_goes_into_job_sh(tmp_path: Path) -> No
     assert str(remote_module._clone([project / "experiments"])).startswith(
         "experiments/hello/main.py is not committed (and 1 more)"
     )
+
+
+def result_archive(where: Path, size: int) -> Path:
+    """A louped result with one file of size bytes and no runs."""
+    path = where / "louped-result-x.tar.gz"
+    with tarfile.open(path, "w:gz") as tar:
+        for name, data in (("out/result.json", b'{"exit_code": 0, "host": "vm"}'),
+                           ("out/big.bin", b"\0" * size)):  # fmt: skip
+            info = tarfile.TarInfo(name)
+            info.size = len(data)
+            tar.addfile(info, io.BytesIO(data))
+    return path
+
+
+def test_a_result_unpacks_under_louped_home_once_it_is_known_to_fit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, isolated_home: Path
+) -> None:
+    import shutil
+    import tempfile
+
+    archive = result_archive(tmp_path, 300_000)
+    monkeypatch.setattr(tempfile, "TemporaryDirectory", None)  # /tmp is not used at all
+    seen: list[Path] = []
+    usage = shutil.disk_usage
+
+    def small(path: Path) -> object:
+        seen.append(Path(path))
+        return usage(path)._replace(free=100_000)
+
+    monkeypatch.setattr(shutil, "disk_usage", small)
+    with pytest.raises(ValueError, match=r"100,000 bytes .* free, and this needs 300,\d{3} bytes"):
+        remote_module.import_result(archive, None)
+    assert seen[0].parent == isolated_home / "staging"
+    assert not list((isolated_home / "staging").iterdir())  # nothing unpacked, nothing left
+    got = client().post("/api/launch/import-path", json={"path": str(archive)})
+    assert got.status_code == 400 and "LOUPED_HOME" in got.json()["detail"]
+
+    monkeypatch.setattr(shutil, "disk_usage", usage)
+    done = remote_module.import_result(archive, None)
+    assert done.host == "vm" and done.runs == []
+    assert not list((isolated_home / "staging").iterdir())
+    folder = tmp_path / "unpacked"
+    with tarfile.open(archive) as tar:
+        tar.extractall(folder, filter="data")
+    assert remote_module.import_result(folder, None).host == "vm"  # read where it is
+    assert not list((isolated_home / "staging").iterdir())
+
+
+def test_an_export_without_a_remote_recommends_one_for_large_results(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    experiment(tmp_path)
+    monkeypatch.delenv("LOUPED_REMOTE", raising=False)
+    body = {"id": "script:hello/run.py", "target": {"provider": "sol"}}
+    got = client().post("/api/launch/export", json=body)
+    hint = "set a remote in louped.toml so the job pushes them straight to storage"
+    assert hint in got.headers["x-louped-note"]
+    assert hint in (unpack(got.content, tmp_path / "far") / "job.sh").read_text()
+    monkeypatch.setenv("LOUPED_REMOTE", "s3://bucket/runs")
+    got = client().post("/api/launch/export", json=body)
+    assert hint not in got.headers["x-louped-note"]
+    script = (unpack(got.content, tmp_path / "near") / "job.sh").read_text()
+    assert hint not in script and "--extra sync" in script  # s3fs comes with the sync extra

@@ -95,3 +95,16 @@ def experiment_folder(experiment: str) -> Path:
     ):
         raise FileNotFoundError(f"no experiment {experiment!r} under {experiments_dir()}")
     return folder
+
+
+def require_space(needed: int, folder: Path) -> None:
+    """Refuse, before writing, what would not fit on folder's disk: a result unpacked or fetched
+    there. The error names both sizes and the folder."""
+    import shutil
+
+    folder.mkdir(parents=True, exist_ok=True)
+    free = shutil.disk_usage(folder).free
+    if needed > free:
+        raise ValueError(f"{folder} has {free:,} bytes ({free / 1e9:.1f} GB) free, and this needs "
+                         f"{needed:,} bytes ({needed / 1e9:.1f} GB). Free space there, or set "
+                         "LOUPED_HOME to a folder on a bigger disk.")  # fmt: skip
