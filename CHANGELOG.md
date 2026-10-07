@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.7.0](https://github.com/ashworks1706/louped/compare/v0.6.0...v0.7.0) (2026-10-07)
+
+
+### Features
+
+* a run's Code link opens its script at its commit; Colab as an export target ([#68](https://github.com/ashworks1706/louped/issues/68)) ([569980e](https://github.com/ashworks1706/louped/commit/569980e70e4b0ce7d59cff524c570a31a012c633))
+* big results skip /tmp and large pulled artifacts stay in the remote ([#65](https://github.com/ashworks1706/louped/issues/65)) ([30c12b3](https://github.com/ashworks1706/louped/commit/30c12b341f6d1d5aba0c8333312d55a04054730a))
+* catch bad training data and broken training early ([#66](https://github.com/ashworks1706/louped/issues/66)) ([8d2b1a9](https://github.com/ashworks1706/louped/commit/8d2b1a9ea093b067cc0e12a18e3939c2844c1807))
+* experiment gates, and cluster jobs submitted, followed and chained over ssh ([#70](https://github.com/ashworks1706/louped/issues/70)) ([0d576f2](https://github.com/ashworks1706/louped/commit/0d576f23311e827b42b7aba0651946538b363fba))
+* plugins load while the app runs; demo tour shows a column, a chart and a page the agent builds ([cfaf3a2](https://github.com/ashworks1706/louped/commit/cfaf3a289734065508ac0944edf19e4daba45619))
+* plugins load while the app runs; demo tour shows a column, a chart and a page the agent builds ([4ddd1de](https://github.com/ashworks1706/louped/commit/4ddd1de0b7f30c22daa258485568acccffebe59e))
+* reports grouped by experiment, and live numbers and figures in Markdown ([#67](https://github.com/ashworks1706/louped/issues/67)) ([9426fbd](https://github.com/ashworks1706/louped/commit/9426fbd8670c1a5db7cbd51fe4c3879953a525ec))
+* show what the model read and which rule read each score ([#69](https://github.com/ashworks1706/louped/issues/69)) ([474fff4](https://github.com/ashworks1706/louped/commit/474fff497dd306bdd57c6fe36802dad9c6906f98))
+
+
+### Bug Fixes
+
+* cluster exports build, serve rebuilds a stale UI and restarts itself, plugins reload ([#64](https://github.com/ashworks1706/louped/issues/64)) ([1b4cb75](https://github.com/ashworks1706/louped/commit/1b4cb75d4adc6812f2546fd077bbf269a67f7b9b))
+
 ## [0.6.0](https://github.com/ashworks1706/louped/compare/v0.5.0...v0.6.0) (2026-10-06)
 
 
