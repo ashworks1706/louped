@@ -203,7 +203,10 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
     @mcp.tool(annotations=READ)
     async def reports() -> list[dict[str, Any]]:
         """The files in the project's reports/: Markdown write-ups, decks (.pptx), documents
-        (.docx), PDFs and exported figures, each figure with the ref it was exported from."""
+        (.docx), PDFs and exported figures, each figure with the ref it was exported from.
+        Each has the experiment it reports on (its front matter's experiment:, else its first
+        folder when that is an experiment, else the one experiment its refs point to; null when
+        none) and the runs its refs cite."""
         return await get("/reports")
 
     @mcp.tool(annotations=WRITE)

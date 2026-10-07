@@ -22,6 +22,7 @@ import {
 } from "@/components/layout";
 import { QueryState } from "@/components/query-state";
 import { Figure } from "@/components/run-views";
+import { ExperimentReports } from "@/components/reports-view";
 import { RunsTable } from "@/components/runs-table";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -312,6 +313,8 @@ function ExperimentTabs({ experiment: e }: { experiment: ExperimentDetail }) {
             };
           case "runs":
             return { title: "Runs", body: runs };
+          case "reports":
+            return { title: "Reports", body: <ExperimentReports name={e.name} /> };
           case "views":
             return shownViews.length ? { body: views } : null;
           case "view":
@@ -334,27 +337,29 @@ function ExperimentTabs({ experiment: e }: { experiment: ExperimentDetail }) {
           ? { value: "design", label: "Design and result", body: design }
           : b.block === "runs"
             ? { value: "runs", label: "Runs", body: runs, count: e.runs.length }
-            : b.block === "views"
-              ? { value: "views", label: "Figures", body: views, count: shownViews.length }
-              : b.block === "view"
-                ? {
-                    value: `v-${b.path}`,
-                    label: figures.data?.find((f) => f.path === b.path)?.view.title ?? b.path!,
-                    body: one(b.path!),
-                  }
-                : b.block === "plugin"
+            : b.block === "reports"
+              ? { value: "reports", label: "Reports", body: <ExperimentReports name={e.name} /> }
+              : b.block === "views"
+                ? { value: "views", label: "Figures", body: views, count: shownViews.length }
+                : b.block === "view"
                   ? {
-                      value: `x-${b.plugin}`,
-                      label: plugins.data?.find((p) => p.name === b.plugin)?.title ?? b.plugin!,
-                      body: (
-                        <PluginFrame
-                          name={b.plugin!}
-                          page={b.page ?? "experiment.html"}
-                          query={{ experiment: e.name }}
-                        />
-                      ),
+                      value: `v-${b.path}`,
+                      label: figures.data?.find((f) => f.path === b.path)?.view.title ?? b.path!,
+                      body: one(b.path!),
                     }
-                  : null;
+                  : b.block === "plugin"
+                    ? {
+                        value: `x-${b.plugin}`,
+                        label: plugins.data?.find((p) => p.name === b.plugin)?.title ?? b.plugin!,
+                        body: (
+                          <PluginFrame
+                            name={b.plugin!}
+                            page={b.page ?? "experiment.html"}
+                            query={{ experiment: e.name }}
+                          />
+                        ),
+                      }
+                    : null;
     return tab ? [{ count: undefined, ...tab, b, at, label: b.title ?? tab.label }] : [];
   });
   const tab = chosen && tabs.some((t) => t.value === chosen) ? chosen : tabs[0]?.value;

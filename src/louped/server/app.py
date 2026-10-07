@@ -12,10 +12,10 @@ from __future__ import annotations
 
 import mimetypes
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
 import httpx
-from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
@@ -374,6 +374,12 @@ def create_app(
             return reporting.list_reports()
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
+
+    @app.get("/api/live")
+    def live(ref: Annotated[list[str], Query(max_length=500)]) -> list[reporting.Live]:
+        """Live refs in Markdown, each as written between its braces (run:<id> <metric>
+        [:<format>], or a figure's ref): a metric's value or the figure, else why not."""
+        return reporting.resolve(ref)
 
     def _report_error(exc: Exception) -> HTTPException:
         if isinstance(exc, FileNotFoundError):

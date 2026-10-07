@@ -19,6 +19,9 @@ from pydantic import BaseModel
 
 Scheme = Literal["run", "experiment"]
 _REF = re.compile(r"^(run|experiment):([^/#\s]+)(?:/([^#]+))?(?:#(.+))?$", re.S)
+#: A ref where it stands in prose: up to a space, quote, bracket, brace or list punctuation.
+#: Trailing . and : end the sentence, not the ref; strip them.
+IN_TEXT = re.compile(r"(?<![\w-])(?:run|experiment):[^\s`'\"()<>\[\]{},;]+")
 
 
 class Ref(BaseModel):

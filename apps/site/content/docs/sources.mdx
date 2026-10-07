@@ -64,10 +64,12 @@ chip says so.
 in them (or the files you name). It lists what is not grounded, by file and line:
 
 - A result number (a decimal such as 0.92, a percentage, or a fraction such as 12/40) with no ref
-  (`run:<id>`, `run:<id>/<file>`) or citation in its paragraph, list item or table. A table counts
-  with the paragraph above it.
+  (`run:<id>`, `run:<id>/<file>`), live ref (`{{run:<id> <metric>}}`) or citation in its
+  paragraph, list item or table. A table counts with the paragraph above it.
 - A citation that names no source, no page, or a page with nothing pinned on it.
 - A ref that does not resolve.
+- A live ref that does not resolve: no run, no metric of that name, no figure, or a bad format.
+  See [Reports](/docs/reports#live-numbers-and-figures).
 - A pin whose words are no longer on its page, because the source file changed.
 
 It exits 1 when it finds anything, so it can run in CI. Your agent runs it as `check` before it

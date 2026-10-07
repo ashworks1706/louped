@@ -312,6 +312,27 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/live": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Live
+     * @description Live refs in Markdown, each as written between its braces (run:<id> <metric>
+     *     [:<format>], or a figure's ref): a metric's value or the figure, else why not.
+     */
+    get: operations["live_api_live_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/reports/file": {
     parameters: {
       query?: never;
@@ -2375,6 +2396,34 @@ export interface components {
       about?: string | null;
     };
     /**
+     * Live
+     * @description A live ref resolved: a run's metric as text, or a figure; else why it does not resolve.
+     */
+    Live: {
+      /** Text */
+      text: string;
+      /** Ref */
+      ref: string;
+      /** Metric */
+      metric?: string | null;
+      /** Value */
+      value?: string | null;
+      /** View */
+      view?:
+        | (
+            | components["schemas"]["HeatmapView"]
+            | components["schemas"]["LineView"]
+            | components["schemas"]["ScatterView"]
+            | components["schemas"]["TableView"]
+            | components["schemas"]["TokensView"]
+            | components["schemas"]["VegaView"]
+            | components["schemas"]["PlotlyView"]
+          )
+        | null;
+      /** Error */
+      error?: string | null;
+    };
+    /**
      * LoadRequest
      * @description A model for the Playground: a Hub id, a path or a name under <home>/models; adapters to load
      *     beside it from <home>/adapters; whether it is a masked diffusion model; its attention kernel
@@ -2803,6 +2852,13 @@ export interface components {
       modified: string;
       /** Ref */
       ref?: string | null;
+      /** Experiment */
+      experiment?: string | null;
+      /**
+       * Runs
+       * @default []
+       */
+      runs: string[];
     };
     /** RunDetail */
     RunDetail: {
@@ -4094,6 +4150,37 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Report"][];
+        };
+      };
+    };
+  };
+  live_api_live_get: {
+    parameters: {
+      query: {
+        ref: string[];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Live"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

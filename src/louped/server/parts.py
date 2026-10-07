@@ -245,6 +245,14 @@ KINDS: list[Kind] = [
     _k(part="reports/heading", about="The count of files in reports/.", rules=PICK),
     _k(part="reports/table", about="The files in reports/.", rules=["note"]),
     _k(part="reports/report/*", about="One file in reports/, by its path there.", rules=PICK),
+    _k(part="reports/group/*", about="The reports on one experiment, in one folder of "
+       "reports/, or other, by name.", rules=PICK),
+    _k(part="experiment/report/*", about="One report on the experiment, by its path in "
+       "reports/.", rules=PICK),
+    _k(part="live/value/*", about="A run's metric a live ref in Markdown shows, by the ref as "
+       "written.", rules=PICK),
+    _k(part="live/figure/*", about="A figure a live ref in Markdown draws, by its ref.",
+       rules=PICK),
     _k(part="report/*", about="A report's viewer: its header, page controls, the page, the "
        "figure, the note on why a deck shows as text.", rules=PICK),
     _k(part="report/block/*", about="One slide or paragraph of a deck or document's text.",

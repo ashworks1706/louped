@@ -26,6 +26,7 @@ export type Source = Schemas["Source"];
 export type SourceHit = Schemas["Hit"];
 export type Pin = Schemas["Pin"];
 export type Report = Schemas["Report"];
+export type Live = Schemas["Live"];
 export type SourcePage = Schemas["SourcePage"];
 export type Pushed = Schemas["Pushed"];
 export type RemoteState = Schemas["RemoteState"];
@@ -362,6 +363,12 @@ export const q = {
       return new Uint8Array(await res.arrayBuffer());
     },
     retry: false,
+  }),
+  /** Live refs in Markdown, each as written between its braces, resolved in one request. */
+  live: (refs: string[]) => ({
+    queryKey: ["live", refs],
+    queryFn: () =>
+      get<Live[]>(`/live?${refs.map((r) => `ref=${encodeURIComponent(r)}`).join("&")}`),
   }),
   trace: (ref: string) => ({
     queryKey: ["trace", ref],

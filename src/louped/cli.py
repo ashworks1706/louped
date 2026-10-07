@@ -292,6 +292,14 @@ class Check:
 
 
 @dataclass(frozen=True)
+class Render:
+    """Print a Markdown file with each live ref's metric ({{run:<id> <metric>}}) replaced by its
+    value. Figures stay as written. Exits 1, naming them, when any live ref does not resolve."""
+
+    file: tyro.conf.Positional[Path]
+
+
+@dataclass(frozen=True)
 class Derive:
     """A script over a run's files, kept with the run: its derive(files) returns rows (new
     columns on the run's Items, as derived/<name>.jsonl) or a figure (views/<name>.json)."""
@@ -408,6 +416,7 @@ Command = (
     | Annotated[Derive, tyro.conf.subcommand("derive")]
     | Annotated[Notebook, tyro.conf.subcommand("notebook")]
     | Annotated[Check, tyro.conf.subcommand("check")]
+    | Annotated[Render, tyro.conf.subcommand("render")]
     | Annotated[Export, tyro.conf.subcommand("export")]
     | Annotated[Sources, tyro.conf.subcommand("source")]
     | Annotated[Mcp, tyro.conf.subcommand("mcp")]
@@ -438,6 +447,7 @@ COMMANDS = {
     "derive",
     "notebook",
     "check",
+    "render",
     "export",
     "source",
     "mcp",
@@ -723,6 +733,17 @@ def main() -> None:
                     print(f"{i.where()}: {i.message}")
                 print(f"{len(issues)} issue{'' if len(issues) == 1 else 's'}")
             raise SystemExit(1 if issues else 0)
+        case Render() as cmd:
+            from louped.reports import render
+
+            try:
+                text, broken = render(cmd.file.read_text(encoding="utf-8"))
+            except (OSError, UnicodeDecodeError) as exc:
+                raise SystemExit(f"cannot read {cmd.file}: {exc}") from exc
+            print(text, end="")
+            for live in broken:
+                print(f"{{{{{live.text}}}}} does not resolve: {live.error}", file=sys.stderr)
+            raise SystemExit(1 if broken else 0)
         case Derive() as cmd:
             import json
 
