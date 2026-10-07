@@ -70,3 +70,16 @@ this order:
 
 `louped serve --host` needs `--expose`. An exposed server is read-only: no launching or model
 loading.
+
+`louped serve --restart` stops the server that runs on the same port, then starts. Each
+`louped serve` records its process in `.louped/serve/<port>.json`. `--restart` stops only that
+process, and only if its command line is still `louped serve`. It sends SIGTERM and waits up to 30
+seconds for the port to become free. If no server is recorded, it starts. If another program has
+the port, it stops with an error and does not touch that program. Without `--restart`, a second
+`louped serve` on a recorded port stops with an error.
+
+From a source checkout, `louped serve` shows the UI in `apps/web/out`. If a file in `apps/web`
+(`src/`, `public/`, `package.json`, `pnpm-lock.yaml`, the Next config) is newer than that build,
+for example after `git pull`, it rebuilds the UI with `pnpm build` first. This needs pnpm and
+`apps/web/node_modules` (`just bootstrap`). Without them, it shows a warning and serves the old
+build; run `just web-build`. An installed release carries its own UI and never rebuilds.

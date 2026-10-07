@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import signal
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -32,6 +33,9 @@ class Serve:
     """Allow a host other than this machine. There is no auth: whoever reaches the port reads
     every run, log and transcript. Launching and loading a model from the UI are off when
     exposed."""
+    restart: bool = False
+    """Stop the louped serve this project recorded on this port (only that process), then start.
+    Each serve records itself under <home>/serve/<port>.json."""
 
 
 @dataclass(frozen=True)
@@ -451,6 +455,7 @@ def serve(cmd: Serve) -> None:
         raise SystemExit(
             "louped serve needs the server extra: pip install 'louped[server]'"
         ) from exc
+    from louped.server import serving
     from louped.server.app import LOOPBACK, find_ui
 
     hosts = None
@@ -458,11 +463,16 @@ def serve(cmd: Serve) -> None:
         if not cmd.expose:
             raise SystemExit(f"--host {cmd.host} serves every log without auth; add --expose")
         hosts = ["*"] if cmd.host in ("0.0.0.0", "::") else [*LOOPBACK, cmd.host]
-    uvicorn.run(
-        create_app(find_ui(cmd.web_dir), hosts, launching=hosts is None),
-        host=cmd.host,
-        port=cmd.port,
-    )
+    app = create_app(find_ui(cmd.web_dir), hosts, launching=hosts is None)
+    serving.claim(cmd.host, cmd.port, restart=cmd.restart)
+    serving.record(cmd.host, cmd.port)
+    # uvicorn shuts down on SIGTERM, then raises it again under the handler it found: this one
+    # exits through the finally below, where the default would end the process before it
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(128 + signal.SIGTERM))
+    try:
+        uvicorn.run(app, host=cmd.host, port=cmd.port)
+    finally:
+        serving.forget(cmd.port)
 
 
 def view(cmd: View) -> None:

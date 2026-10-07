@@ -3,10 +3,12 @@
 import io
 import json
 import os
+import shutil
 import socket
 import subprocess
 import sys
 import tarfile
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -91,6 +93,22 @@ def test_a_sol_bundle_asks_sol_for_its_gpu_and_runs_the_launch_command(tmp_path:
     assert (root / "experiments/hello/run.py").exists() and (root / "uv.lock").exists()
     [listed] = [j for j in api.get("/api/launch/jobs").json() if j["id"] == job]
     assert listed["status"] == "exported" and listed["title"].endswith("· sol")
+
+
+@pytest.mark.skipif(shutil.which("uv") is None, reason="needs uv")
+def test_a_folder_export_carries_what_builds_louped_on_the_cluster(tmp_path: Path) -> None:
+    experiment(tmp_path)
+    root = unpack(export(client(), {"provider": "sol"})[1], tmp_path / "far")
+    sdist = tomllib.loads((Path(__file__).parents[1] / "pyproject.toml").read_text())["tool"][
+        "hatch"
+    ]["build"]["targets"]
+    for name in sdist["sdist"]["include"]:  # what builds the wheel, but its tests and the UI
+        if name not in ("/tests", "/apps/web/out"):
+            assert (root / name.lstrip("/")).exists(), name
+    built = subprocess.run(["uv", "build", "--wheel", "-o", str(tmp_path / "dist")], cwd=root,
+                           capture_output=True, text=True)  # fmt: skip
+    assert built.returncode == 0, built.stderr
+    assert list((tmp_path / "dist").glob("louped-*.whl"))
 
 
 def test_a_sol_job_pushing_to_an_hf_bucket_finds_the_login_token_before_it_runs(

@@ -123,3 +123,27 @@ def test_a_plugin_added_while_the_server_runs_loads_when_the_app_lists_plugins(
     assert api.get("/api/x/labels/left").json() == {"left": 2}
     assert api.get("/x/labels/run.html").text == "<p>labels</p>"
     assert api.get("/api/x/verdicts/verdicts").json() == {"1": "right"}
+
+
+def test_a_changed_plugin_py_loads_again_when_the_app_lists_plugins(project: Path) -> None:
+    api = client()
+    before = len(api.app.router.routes)  # type: ignore[attr-defined]
+    code = project / "plugins" / "verdicts" / "plugin.py"
+    assert api.get("/api/x/verdicts/verdicts").json() == {"1": "right"}
+    code.write_text(CODE.replace('"right"', '"wrong"').replace('get("/verdicts")', 'get("/all")'))
+    assert api.get("/api/x/verdicts/verdicts").json() == {"1": "right"}  # not yet listed
+    [plugin] = api.get("/api/plugins").json()
+    assert plugin["error"] is None
+    assert api.get("/api/x/verdicts/all").json() == {"1": "wrong"}
+    assert api.get("/api/x/verdicts/verdicts").status_code == 404  # its old route is gone
+    assert api.get("/x/verdicts/").text == "<p>verdicts</p>"  # its panel stays
+
+    code.write_text("raise RuntimeError('typo')\n")
+    [plugin] = api.get("/api/plugins").json()
+    assert "RuntimeError: typo" in plugin["error"]
+    assert api.get("/api/x/verdicts/all").status_code == 404
+    code.write_text(CODE)
+    [plugin] = api.get("/api/plugins").json()
+    assert plugin["error"] is None
+    assert api.get("/api/x/verdicts/verdicts").json() == {"1": "right"}
+    assert len(api.app.router.routes) == before  # type: ignore[attr-defined]  # none left over
