@@ -827,6 +827,54 @@
         }
       }
     },
+    "/api/live": {
+      "get": {
+        "summary": "Live",
+        "description": "Live refs in Markdown, each as written between its braces (run:<id> <metric>\n[:<format>], or a figure's ref): a metric's value or the figure, else why not.",
+        "operationId": "live_api_live_get",
+        "parameters": [
+          {
+            "name": "ref",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 500,
+              "title": "Ref"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Live"
+                  },
+                  "title": "Response Live Api Live Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/reports/file": {
       "get": {
         "summary": "Report File",
@@ -5771,6 +5819,100 @@
         "required": ["kind", "title", "x", "series", "x_label", "y_label"],
         "title": "LineView"
       },
+      "Live": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "ref": {
+            "type": "string",
+            "title": "Ref"
+          },
+          "metric": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "view": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/HeatmapView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LineView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ScatterView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/TableView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/TokensView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/VegaView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PlotlyView"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "kind",
+                  "mapping": {
+                    "heatmap": "#/components/schemas/HeatmapView",
+                    "line": "#/components/schemas/LineView",
+                    "plotly": "#/components/schemas/PlotlyView",
+                    "scatter": "#/components/schemas/ScatterView",
+                    "table": "#/components/schemas/TableView",
+                    "tokens": "#/components/schemas/TokensView",
+                    "vega": "#/components/schemas/VegaView"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "View"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": ["text", "ref"],
+        "title": "Live",
+        "description": "A live ref resolved: a run's metric as text, or a figure; else why it does not resolve."
+      },
       "LoadRequest": {
         "properties": {
           "model": {
@@ -6674,6 +6816,25 @@
               }
             ],
             "title": "Ref"
+          },
+          "experiment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment"
+          },
+          "runs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Runs",
+            "default": []
           }
         },
         "type": "object",

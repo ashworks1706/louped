@@ -98,6 +98,10 @@
         "width": "side"
       },
       {
+        "block": "reports",
+        "width": "side"
+      },
+      {
         "block": "views",
         "width": "full"
       }

@@ -6,8 +6,9 @@ pin is still on its page.
 What counts as a result number is exact so the check never guesses: a decimal (0.92), a
 percentage (78%) or a fraction (12/40). Whole numbers (3 conditions, 2024) are not checked. A
 number is sourced when its paragraph or list item (a table: with the paragraph above it) also
-holds a ref (run:…, experiment:…) or a citation ([@key p4]). In a deck the unit is the slide with
-its speaker notes; in a Word document, the paragraph (a table: with the paragraph above it).
+holds a ref (run:…, experiment:…), a live ref ({{run:<id> <metric>}}, louped.reports) or a
+citation ([@key p4]). In a deck the unit is the slide with its speaker notes; in a Word document,
+the paragraph (a table: with the paragraph above it).
 """
 
 from __future__ import annotations
@@ -21,14 +22,13 @@ from pydantic import BaseModel
 from louped import reports, sources
 from louped.core import documents
 from louped.core.paths import experiment_folder, experiments_dir
-from louped.core.refs import parse
+from louped.core.refs import IN_TEXT, parse
 from louped.stores import trace
 from louped.stores.runs import NotFound
 
 #: A citation, as the app renders one: [@key] or [@key p4]. Anything else in [@…] is malformed.
 CITE = re.compile(r"\[@([a-z0-9][a-z0-9-]{0,63})(?: p(\d+))?\]")
 LOOSE = re.compile(r"\[@[^\]\s][^\]]*\]")
-REF = re.compile(r"(?<![\w-])(?:run|experiment):[^\s`'\"()<>\[\],;]+")
 #: A result number, signed or not, with thousands separators; not a part of a name (Llama-3.1-8B,
 #: v0.2), a path, a URL or a longer number.
 NUMBER = re.compile(r"(?<![\w./:#@,])(?<!\w-)[-\u2212+]?(?:\d+/\d+|(?:\d{1,3}(?:,\d{3})+|\d+)"
@@ -85,13 +85,16 @@ def check(paths: list[Path] | None = None) -> list[Issue]:
                     issues.append(Issue(file=name, line=1, kind="ref", message=why))
                 continue
             units = _file_units(f)
+            lives = {m.group(1) for u in units for _, raw in u
+                     for m in reports.LIVE.finditer(raw)}  # fmt: skip
+            live = {r.text: r for r in reports.resolve(sorted(lives))}
         except (
             Exception
         ) as exc:  # a file louped cannot read is an issue in it, not the end of the check
             issues.append(Issue(file=name, line=1, kind="file", message=f"cannot be read: {exc}"))
             continue
         for unit in units:
-            issues += _check_unit(name, unit, found, pinned)
+            issues += _check_unit(name, unit, found, pinned, live)
     return issues + _stale_pins(found)
 
 
@@ -177,16 +180,25 @@ def _units(text: str) -> list[list[tuple[int, str]]]:
 
 
 def _check_unit(name: str, unit: list[tuple[int, str]], found: dict[str, sources.Source],
-                pinned: set[tuple[str, int]]) -> list[Issue]:  # fmt: skip
+                pinned: set[tuple[str, int]],
+                live: dict[str, reports.Live]) -> list[Issue]:  # fmt: skip
     issues: list[Issue] = []
     whole = "\n".join(raw for _, raw in unit)
+    lives = list(reports.LIVE.finditer(whole))
+    for m in lives:
+        if why := live[m.group(1)].error:
+            line = unit[whole.count("\n", 0, m.start())][0]
+            why = f"{m.group(0)} does not resolve: {why}"
+            issues.append(Issue(file=name, line=line, kind="ref", message=why))
+    # a live ref is checked whole, so the ref inside it is not checked again
+    whole = reports.LIVE.sub(lambda m: " " * len(m.group(0)), whole)
     cites = list(CITE.finditer(whole))
     for m in LOOSE.finditer(whole):
         if not CITE.fullmatch(m.group(0)):
             why = f"{m.group(0)} is not a citation: write [@<key> p<page>], key in sources/"
             issues.append(Issue(file=name, line=unit[whole.count("\n", 0, m.start())][0],
                                 kind="citation", message=why))  # fmt: skip
-    refs = [(m.group(0).rstrip(".:"), m.start()) for m in REF.finditer(whole)]
+    refs = [(m.group(0).rstrip(".:"), m.start()) for m in IN_TEXT.finditer(whole)]
     at = lambda pos: unit[whole.count("\n", 0, pos)][0]  # noqa: E731
     for m in cites:
         key, page = m.group(1), m.group(2)
@@ -207,7 +219,7 @@ def _check_unit(name: str, unit: list[tuple[int, str]], found: dict[str, sources
         if why := _unresolved(ref):
             issues.append(Issue(file=name, line=at(pos), kind="ref",
                                 message=f"{ref} does not resolve: {why}"))  # fmt: skip
-    if not cites and not refs:
+    if not cites and not refs and not lives:
         for m in NUMBER.finditer(CODE.sub(lambda c: " " * len(c.group(0)), whole)):
             issues.append(Issue(file=name, line=at(m.start()), kind="number",
                                 message=f"{m.group(0)} has no source beside it: add the ref of "

@@ -183,7 +183,10 @@ core                                     run metadata, paths, the project and it
   as citation chips.
   `louped.reports` lists reports/. It previews decks and documents through LibreOffice when
   installed. It exports Vega-Lite (vl-convert) and Plotly (Kaleido, with Chrome) figures with a
-  `<file>.refs.json` sidecar that holds the ref and its trace. `louped.core.documents` reads PDFs,
+  `<file>.refs.json` sidecar that holds the ref and its trace. It files each report under the
+  experiment it reports on, and resolves the live refs in Markdown (`{{run:<id> <metric>}}`, a
+  figure's ref) for the app's renderer (`GET /api/live`), so a write-up's numbers are read from
+  its runs. `louped.core.documents` reads PDFs,
   decks, documents and notebooks for both. It draws a notebook as HTML (nbconvert) for a frame
   with no scripts.
 - Notebooks: `louped.notebooks` runs an experiment's `.ipynb` with papermill inside a run; the

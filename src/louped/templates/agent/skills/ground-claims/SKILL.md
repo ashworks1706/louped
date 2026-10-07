@@ -25,6 +25,11 @@ run or file it came from, and each citation points at a pinned passage.
 
 ## Put the ref beside the number
 
+- In Markdown, do not copy a run's metric. Write a live ref, and the app shows the value read
+  from the run: `{{run:<id> <metric>}}` (three significant decimals) or
+  `{{run:<id> <metric> :.1%}}` (a Python format spec). Write `{{run:<id>/views/<name>.json}}` on
+  a line of its own to draw a figure. A live ref is the number's source, so it needs no other
+  ref. `louped render <file.md>` prints the file with the values in place.
 - Put the ref of a result number (0.92, 78%, 12/40) in the same paragraph, list item or table
   (a table counts with the paragraph above it). The ref is where the number came from:
   `run:<id>`, `run:<id>/<file>`, or a figure's `run:<id>/views/<name>.json`. For a number taken
@@ -36,5 +41,6 @@ run or file it came from, and each citation points at a pinned passage.
 ## Check before handing over
 
 Run `check` (or `louped check`) on what you wrote. Fix every issue: add the ref, pin the passage,
-or correct the ref. If you cannot source a number, remove it, or tell the person which numbers
+or correct the ref. A live ref that does not resolve is an issue of kind `ref`: fix the run id,
+the metric's name (as `run` lists it) or the format. If you cannot source a number, remove it, or tell the person which numbers
 you could not source. Do not reword a number to get past the check.

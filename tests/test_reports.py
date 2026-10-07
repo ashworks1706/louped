@@ -17,7 +17,17 @@ from test_agent import call, tools
 from test_views import CLOUD, run_id  # noqa: F401  (the fixture)
 
 from louped.check import check
-from louped.reports import Format, MissingTool, export_figure, list_reports, outline, preview_pdf
+from louped.reports import (
+    Format,
+    MissingTool,
+    export_figure,
+    list_reports,
+    number,
+    outline,
+    preview_pdf,
+    render,
+    resolve,
+)
 from louped.server import create_app
 from louped.stores import add_view
 from louped.stores.types import PlotlyView, VegaView
@@ -219,3 +229,113 @@ def test_reports_through_the_api_and_mcp(
     assert again.status_code == 409
     readonly = TestClient(create_app(launching=False), base_url="http://localhost")
     assert readonly.post("/api/reports/figures", json={"ref": "x"}).status_code == 403
+
+
+@pytest.fixture
+def caving() -> str:
+    """A run under experiment 1b with a metric logged twice and a figure."""
+    import mlflow
+
+    from louped.tracking import log_json, start_run
+
+    with start_run("1b", name="caving") as r:
+        mlflow.log_metric("pressure/r_uy", 0.5, step=0)
+        mlflow.log_metric("pressure/r_uy", 0.91234, step=1)
+        mlflow.log_metric("n", 40)
+        log_json(BARS, "views/bars.json")
+    return f"m-{r.info.run_id}"
+
+
+def test_live_refs_resolve_to_latest_values_and_figures_or_say_why(caving: str) -> None:
+    run = f"run:{caving}"
+    got = {r.text: r for r in resolve([
+        f"{run} pressure/r_uy", f"{run} pressure/r_uy :.1%", f"{run} n",
+        f"{run}/views/bars.json", f"{run} nope", "run:m-404 n", f"{run} n :q",
+        f"{run}/views/bars.json :.1%", f"{run}/views/none.json", f"{run} a b",
+        "experiment:1b n",
+    ])}  # fmt: skip
+    assert [got[f"{run} {m}"].value for m in ("pressure/r_uy", "pressure/r_uy :.1%", "n")] == [
+        "0.912",
+        "91.2%",
+        "40",
+    ]
+    figure = got[f"{run}/views/bars.json"]
+    assert figure.view is not None and figure.view.title == "Caving by condition"
+    assert figure.error is None and figure.value is None
+    errors = {t: r.error or "" for t, r in got.items() if r.error}
+    assert len(errors) == 7
+    assert errors[f"{run} nope"].startswith(f"run {caving} has no metric nope; it has n, ")
+    assert errors["run:m-404 n"] == "not found: m-404"
+    assert "'q' is not a format" in errors[f"{run} n :q"]
+    assert "a format is for a metric" in errors[f"{run}/views/bars.json :.1%"]
+    assert "not found" in errors[f"{run}/views/none.json"]
+    assert "a live ref is" in errors[f"{run} a b"]
+    assert "is not a run" in errors["experiment:1b n"]
+
+
+def test_numbers_keep_three_significant_decimals_unless_given_a_format() -> None:
+    assert [number(v) for v in (0.91234, 0.0912345, 1234.5678, 3.0, 0.000123456, -0.5)] == [
+        "0.912",
+        "0.0912",
+        "1234.568",
+        "3",
+        "0.000123",
+        "-0.5",
+    ]
+    assert (number(0.873, ".1%"), number(0.873, ".2f"), number(float("nan"))) == (
+        "87.3%",
+        "0.87",
+        "nan",
+    )
+
+
+def test_live_refs_render_check_and_resolve_over_the_api(caving: str, tmp_path: Path) -> None:
+    text = (
+        f"Caving rose to {{{{run:{caving} pressure/r_uy :.0%}}}} from 0.5.\n\n"
+        f"{{{{run:{caving}/views/bars.json}}}}\n\n"
+        f"Broken: {{{{run:{caving} gone}}}} and 0.3.\n"
+    )
+    rendered, broken = render(text)
+    assert rendered.splitlines()[0] == "Caving rose to 91% from 0.5."
+    assert f"{{{{run:{caving}/views/bars.json}}}}" in rendered  # a figure stays as written
+    assert [b.text for b in broken] == [f"run:{caving} gone"]
+    (tmp_path / "reports").mkdir()
+    (tmp_path / "reports" / "1b.md").write_text(text)
+    # a live ref sources its paragraph; one that does not resolve is one ref issue, not two
+    issues = [(i.line, i.kind, i.message.split(" does")[0]) for i in check()]
+    assert issues == [(5, "ref", f"{{{{run:{caving} gone}}}}")]
+    api = TestClient(create_app(launching=False), base_url="http://localhost")
+    got = api.get("/api/live", params={"ref": [f"run:{caving} n", "run:m-404 n"]}).json()
+    assert [(g["value"], g["error"]) for g in got] == [("40", None), (None, "not found: m-404")]
+
+
+def test_reports_group_by_experiment_from_front_matter_folder_or_refs(
+    caving: str, tmp_path: Path
+) -> None:
+    from test_stores import write_experiment
+
+    for name in ("1b", "1c"):
+        write_experiment(tmp_path, name, "honesty", "active")
+    root = tmp_path / "reports"
+    (root / "1c").mkdir(parents=True)
+    (root / "paper-notes").mkdir()
+    (root / "front.md").write_text(f"---\nexperiment: 1c\n---\n\nSee run:{caving}.\n")
+    (root / "1c" / "notes.md").write_text(f"Cites run:{caving} and run:{caving}/raw/x.jsonl.\n")
+    (root / "paper-notes" / "related.md").write_text("No refs here.\n")
+    (root / "mixed.md").write_text(f"run:{caving} and experiment:1c/views/a.json\n")
+    (root / "agree.md").write_text(f"{{{{run:{caving} n}}}}, experiment:1b/views/a.json.\n")
+    deck(root / "lab.pptx", caving)
+    figure = export_figure(f"run:{caving}/views/bars.json").path
+    got = {r.path: (r.experiment, r.runs) for r in list_reports()}
+    assert got == {
+        "agree.md": ("1b", [caving]),
+        figure: ("1b", [caving]),
+        "front.md": ("1c", [caving]),
+        "1c/notes.md": ("1c", [caving]),
+        "lab.pptx": ("1b", [caving]),
+        "mixed.md": (None, [caving]),
+        "paper-notes/related.md": (None, []),
+    }
+    # read again once it changes
+    (root / "paper-notes" / "related.md").write_text(f"Now run:{caving}, a longer text.\n")
+    assert [r.experiment for r in list_reports() if r.path.startswith("paper")] == ["1b"]

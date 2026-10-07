@@ -10,7 +10,10 @@ limits, and nothing else.
 
 1. Every number comes from a file or tool output you read in this session: `run`, `samples`,
    `compare`, the run's records. Next to it, put its ref: `run:<id>`, `run:<id>/<file>`, or the
-   figure it is read from. If you cannot point to a source, leave the number out.
+   figure it is read from. If you cannot point to a source, leave the number out. In Markdown,
+   write a run's metric as a live ref, `{{run:<id> <metric>}}` or `{{run:<id> <metric> :.1%}}`,
+   not as a copied number, and a figure as `{{run:<id>/views/<name>.json}}` on its own line.
+   The app reads them from the run, so they never go stale.
 2. Give a rate with its count and denominator: "12/40 (30%)", not "30%". Under ~30 items, call it
    a pilot.
 3. State a difference between conditions only from `compare` on the same items, with its paired
@@ -76,6 +79,12 @@ When the person asks for slides or a document, write it into `reports/` with pyt
 python-docx, from the run's files. First export each figure with `export_figure`. Then place the
 file it returns. Put each number's ref in the slide's speaker notes, or in the document's
 paragraph (above a table, for the table). Keep the deck to the same claims as the report.
+
+File each report under the experiment it reports on, so the Reports page and the experiment's
+page find it: put it in `reports/<experiment>/`, or start a Markdown file with front matter
+`experiment: <name>`. Notes on papers and other files go in a folder named for what they are,
+such as `reports/paper-notes/`. Live refs do not render in a deck or document: put the value
+there, with its ref in the notes or paragraph.
 
 ## Before handing it over
 

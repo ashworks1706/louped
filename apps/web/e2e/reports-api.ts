@@ -2,19 +2,30 @@ import type { Page } from "@playwright/test";
 
 import { pdf } from "./sources-api";
 
-// reports/ over a mocked API: a Markdown write-up that cites a source, a PDF, a deck and an
-// exported figure.
+// reports/ over a mocked API: a Markdown write-up that cites a source and shows a live number,
+// a deck on experiment hello, a PDF, and an exported figure filed by its folder.
 const at = "2026-10-05T12:00:00Z";
+const on = { experiment: "hello", runs: ["m-1"] };
 export const reports = [
-  { path: "1b.md", kind: "md", size: 120, modified: at, ref: null },
-  { path: "lab.pptx", kind: "pptx", size: 30000, modified: at, ref: null },
-  { path: "paper.pdf", kind: "pdf", size: 900, modified: at, ref: null },
+  { path: "1b.md", kind: "md", size: 120, modified: at, ref: null, ...on },
+  { path: "lab.pptx", kind: "pptx", size: 30000, modified: at, ref: null, ...on },
+  {
+    path: "paper.pdf",
+    kind: "pdf",
+    size: 900,
+    modified: at,
+    ref: null,
+    experiment: null,
+    runs: [],
+  },
   {
     path: "figures/bars.svg",
     kind: "svg",
     size: 2048,
     modified: at,
     ref: "run:m-1/views/bars.json",
+    experiment: null,
+    runs: ["m-1", "m-2", "m-3"],
   },
 ];
 const svg =
@@ -29,10 +40,37 @@ export async function mockReports(page: Page, preview = false) {
     return r.fulfill({
       json:
         path === "1b.md"
-          ? ["# 1B\n\nModels cave [@pushback p1], 0.92 in `run:m-1`.\n"]
+          ? [
+              "# 1B\n\nModels cave [@pushback p1], 0.92 in `run:m-1`.\n\n" +
+                "Accuracy {{run:m-1 accuracy :.0%}}, then {{run:m-1 gone}}.\n\n" +
+                "{{run:m-1/views/bars.json}}\n",
+            ]
           : ["Caving rate 0.92\nSource: run:m-1", "", "Evidence helps"],
     });
   });
+  await page.route("**/api/live?*", (r) =>
+    r.fulfill({
+      json: [
+        { text: "run:m-1 accuracy :.0%", ref: "run:m-1", metric: "accuracy", value: "92%" },
+        {
+          text: "run:m-1 gone",
+          ref: "run:m-1",
+          metric: "gone",
+          error: "run m-1 has no metric gone",
+        },
+        {
+          text: "run:m-1/views/bars.json",
+          ref: "run:m-1/views/bars.json",
+          view: {
+            kind: "table",
+            title: "Caving by condition",
+            columns: ["condition", "caved"],
+            rows: [["pressure", 0.92]],
+          },
+        },
+      ],
+    }),
+  );
   await page.route("**/api/reports/preview?*", (r) =>
     preview
       ? r.fulfill({ body: pdf("Caving rate", "Evidence helps"), contentType: "application/pdf" })

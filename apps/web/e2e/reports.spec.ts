@@ -5,18 +5,50 @@ import { mockSources } from "./sources-api";
 
 // reports/: listed, read as they will be read, and filled by exporting figures.
 
-test("reports are listed and a write-up renders with its citations", async ({ page }, info) => {
+test("reports are grouped and a write-up renders its citations and live numbers", async ({
+  page,
+}, info) => {
   await mock(page);
   await mockSources(page);
   await mockReports(page);
   await page.goto("/reports/");
-  const figure = page.locator('[data-part="reports/report/figures%2Fbars.svg"]');
-  await expect(figure).toContainText("run:m-1/views/bars.json");
-  await expect(page.locator('[data-part="reports/heading"]')).toHaveText("4 files");
+  await expect(page.locator('[data-part="reports/heading"]')).toContainText("4 files");
+  const hello = page.locator('[data-part="reports/group/hello"]');
+  await expect(hello.getByRole("link", { name: "hello" })).toHaveAttribute(
+    "href",
+    /experiment\/\?name=hello/,
+  );
+  await expect(hello.locator('[data-part^="reports/report/"]')).toHaveCount(2);
+  const figure = page.locator(
+    '[data-part="reports/group/figures%2F"] [data-part="reports/report/figures%2Fbars.svg"]',
+  );
+  await expect(figure).toContainText("m-1");
+  await expect(figure).toContainText("+1");
+  await expect(page.locator('[data-part="reports/group/other"]')).toContainText("paper.pdf");
   await page.screenshot({ path: info.outputPath("reports.png") });
   await page.getByRole("link", { name: "1b.md" }).click();
   await expect(page).toHaveURL(/\/report\/\?path=1b\.md/);
   await expect(page.locator('[data-cite="pushback"]')).toHaveText("pushback p1");
+  const value = page.locator('[data-live="run:m-1 accuracy :.0%"]');
+  await expect(value).toHaveText("92%");
+  await expect(value).toHaveAttribute("href", /\/run\/\?id=m-1/);
+  await expect(page.locator('[data-live-error="run:m-1 gone"]')).toHaveText("{{run:m-1 gone}}");
+  const drawn = page.locator('[data-part="live/figure/run%3Am-1%2Fviews%2Fbars.json"]');
+  await expect(drawn).toContainText("Caving by condition");
+  await expect(drawn).toContainText("pressure");
+  await page.screenshot({ path: info.outputPath("report-live.png") });
+});
+
+test("an experiment's page lists the reports on it", async ({ page }) => {
+  await mock(page);
+  await mockReports(page);
+  await page.goto("/behavior/experiment/?name=hello");
+  const block = page.locator('[data-part="experiment/report/lab.pptx"]');
+  await expect(block).toContainText("pptx");
+  await expect(block.getByRole("link", { name: "lab.pptx" })).toHaveAttribute(
+    "href",
+    /report\/\?path=lab\.pptx/,
+  );
 });
 
 test("a PDF report turns its pages and a figure shows as it is", async ({ page }) => {

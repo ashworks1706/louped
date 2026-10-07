@@ -13,6 +13,61 @@ description: Write-ups, decks, documents and figures, each number traced to the 
 
 The Reports page (G O) lists them and shows each one as it will be read.
 
+## Find the reports on an experiment
+
+The Reports page groups the files by the experiment that each one reports on. louped finds the
+experiment with the first rule that applies:
+
+1. The front matter of a Markdown file names it:
+
+   ```markdown
+   ---
+   experiment: 1b-pushback
+   ---
+   ```
+
+2. The file is in a folder of `reports/` that has the experiment's name, such as
+   `reports/1b-pushback/memo.docx`.
+3. All the refs in the file point to the same experiment: its own files, or runs filed under it.
+   This includes the refs in a deck's speaker notes and an exported figure's ref.
+
+A file that no rule applies to goes in a group for its folder, such as `paper-notes/`, else in
+Other. Each row shows the runs that the file cites. The experiment's name links to its page. The
+experiment's page has a Reports block that lists the same files. The MCP `reports` tool gives each
+file's `experiment` and `runs`.
+
+## Live numbers and figures
+
+Do not copy a number from a run into a Markdown report. Write a live ref. The app reads the value
+from the run each time it shows the file. The file in git stays plain Markdown.
+
+| Write                                     | The app shows                                             |
+| ----------------------------------------- | --------------------------------------------------------- |
+| `{{run:<id> <metric>}}`                   | The latest value of the metric, to 3 significant decimals |
+| `{{run:<id> <metric> :.1%}}`              | The value in a Python format spec (`.1%`, `.2f`)          |
+| `{{run:<id>/views/<name>.json}}`          | The figure, drawn in place                                |
+| `{{experiment:<name>/views/<name>.json}}` | The experiment's figure, drawn in place                   |
+
+For example:
+
+```markdown
+Pressure moved the answer on {{run:m-c1fe pressure/r_uy :.0%}} of items.
+
+{{run:m-c1fe/views/caving.json}}
+```
+
+Each value links to its run. Hover it to see its ref. Put a figure on a line of its own. A live
+ref that does not resolve shows as a marked chip with the ref as written. Hover it to see why.
+`louped check` names it too.
+
+To print a file with the values in place of its live metrics, use:
+
+```bash
+louped render reports/1b-pushback/notes.md
+```
+
+Figures stay as written. The command exits 1 and names each live ref that does not resolve.
+
 ## Export a figure
 
 On a run's Figures tab, click SVG, PNG or PDF beside a figure's title. From a terminal or your
@@ -49,6 +104,7 @@ Without LibreOffice, it shows the text of each slide or paragraph and says why.
 
 `louped check` reads decks and documents in `reports/` as well as Markdown. For a deck it names
 the slide, and for a document the paragraph. It also checks that each exported figure's ref still
-resolves. A file that it cannot read, such as a damaged deck, is an issue of kind `file`. It
+resolves, and that each live ref resolves. A live ref is a source for its paragraph, as a ref
+is. A file that it cannot read, such as a damaged deck, is an issue of kind `file`. It
 does not stop the check. Office's lock files (`~$deck.pptx`) are skipped. See
 [Sources](/docs/sources#check-a-write-up) for what it looks for.

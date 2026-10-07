@@ -580,6 +580,26 @@
     "rules": []
   },
   {
+    "part": "reports/group/*",
+    "about": "The reports on one experiment, in one folder of reports/, or other, by name.",
+    "rules": []
+  },
+  {
+    "part": "experiment/report/*",
+    "about": "One report on the experiment, by its path in reports/.",
+    "rules": []
+  },
+  {
+    "part": "live/value/*",
+    "about": "A run's metric a live ref in Markdown shows, by the ref as written.",
+    "rules": []
+  },
+  {
+    "part": "live/figure/*",
+    "about": "A figure a live ref in Markdown draws, by its ref.",
+    "rules": []
+  },
+  {
     "part": "report/*",
     "about": "A report's viewer: its header, page controls, the page, the figure, the note on why a deck shows as text.",
     "rules": []

@@ -155,6 +155,7 @@ class SetPart(BaseModel):
 
 PLUGIN = Kind(block="plugin", about="A plugin's page from its panel/.", needs=["plugin"])
 TEXT = Kind(block="text", about="Markdown written in the layout: a note, a link.", needs=["text"])
+REPORTS = Kind(block="reports", about="The files in reports/ that report on the experiment.")
 
 CATALOG: dict[Region, list[Kind]] = {
     "home": [
@@ -194,6 +195,7 @@ CATALOG: dict[Region, list[Kind]] = {
     "experiment.tabs": [
         Kind(block="design", about="The experiment's design region (experiment.design)."),
         Kind(block="runs", about="The experiment's runs."),
+        REPORTS,
         Kind(block="views", about="The experiment's own figures (experiments/<name>/views/)."),
         Kind(
             block="view",
@@ -207,6 +209,7 @@ CATALOG: dict[Region, list[Kind]] = {
         Kind(block="readme", about="The README, rendered and editable."),
         Kind(block="result", about="The README's Result section."),
         Kind(block="runs", about="The experiment's runs."),
+        REPORTS,
         Kind(
             block="views",
             about="The experiment's own figures (experiments/<name>/views/); "
@@ -236,6 +239,7 @@ DEFAULT: dict[Region, list[Block]] = {
     "experiment.design": [
         _b(block="readme"),
         _b(block="result", width="side"),
+        _b(block="reports", width="side"),
         _b(block="views"),
     ],
 }
