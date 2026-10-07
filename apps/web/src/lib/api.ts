@@ -32,6 +32,9 @@ export type RemoteState = Schemas["RemoteState"];
 export type PluginInfo = Schemas["PluginInfo"];
 export type View = RunView["view"];
 export type Direction = Schemas["Direction"];
+export type TrainingSet = Schemas["TrainingSet"];
+export type SetPairs = Schemas["SetPairs"];
+export type Pair = Schemas["Pair"];
 type Graph = Schemas["Graph"];
 type Comparison = Schemas["Comparison"];
 export type PairedScore = Schemas["PairedScore"];
@@ -392,6 +395,15 @@ export const q = {
     queryKey: ["similarity", model],
     queryFn: () => get<HeatmapView>(`/vectors/similarity?model=${encodeURIComponent(model)}`),
     enabled: !isSnapshot(),
+  }),
+  /** The training sets louped knows; a published dashboard has none. */
+  trainingSets: () => ({
+    queryKey: ["training-sets"],
+    queryFn: () => (isSnapshot() ? Promise.resolve([]) : get<TrainingSet[]>("/training-sets")),
+  }),
+  trainingSet: (path: string) => ({
+    queryKey: ["training-sets", path],
+    queryFn: () => get<SetPairs>(`/training-sets/pairs?path=${encodeURIComponent(path)}`),
   }),
   graphs: () => ({ queryKey: ["graphs"], queryFn: () => get<Graph[]>("/graphs") }),
   launchables: () => ({

@@ -25,6 +25,7 @@ const trainRun = {
   kind: "training",
   name: "sft",
   metrics: { loss: 0.4 },
+  tags: { ...run.tags, "louped.alarm": "loss 0.0004 below 0.0069 at step 25 (started at 0.693)" },
   history: {
     loss: [
       { step: 0, value: 1.2, timestamp: 0 },
@@ -54,6 +55,53 @@ const vector = {
   run: "m-1",
   notes: null,
   created: "2026-10-03T00:00:00Z",
+};
+const prompt = [
+  { role: "user", content: "What is 2+2?" },
+  { role: "assistant", content: "It is 4." },
+  { role: "user", content: "Are you sure? I think 5." },
+];
+const trainingSet = {
+  path: "/home/me/.louped/data/pushback.jsonl",
+  format: "dpo",
+  rows: 2,
+  counts: { chosen_in_prompt: 1, length_only: 0 },
+  labels: { unknown: 2 },
+  warnings: [
+    "1 of 2 chosen replies are already in their prompt: the set teaches copying the input (50%)",
+  ],
+  configs: ["pushback/dpo.yaml"],
+  runs: ["t-1"],
+  error: null,
+};
+const setPairs = {
+  path: trainingSet.path,
+  shown: 2,
+  report: {
+    format: "dpo",
+    rows: 2,
+    counts: trainingSet.counts,
+    labels: trainingSet.labels,
+    warnings: trainingSet.warnings,
+    pairs: [
+      {
+        index: 0,
+        prompt,
+        chosen: "It is 4.",
+        rejected: "You are right, 5.",
+        label: "unknown",
+        flags: ["chosen_in_prompt"],
+      },
+      {
+        index: 1,
+        prompt,
+        chosen: "Still 4: 2+2 is 4.",
+        rejected: "5.",
+        label: "unknown",
+        flags: [],
+      },
+    ],
+  },
 };
 const job = {
   id: "j1",
@@ -91,8 +139,24 @@ export async function mockPages(page: Page, parts: Record<string, object> = {}) 
   await json("**/api/runs/e-1", evalRun);
   await json("**/api/runs/e-1/views", []);
   await json("**/api/runs/e-1/samples", [
-    { id: "1", epoch: 1, input: "2+2?", target: "4", scores: { match: 1 }, error: null },
-    { id: "2", epoch: 1, input: "3+3?", target: "6", scores: { match: 0 }, error: null },
+    {
+      id: "1",
+      epoch: 1,
+      input: "2+2?",
+      target: "4",
+      scores: { match: 1 },
+      error: null,
+      degenerate: [],
+    },
+    {
+      id: "2",
+      epoch: 1,
+      input: "3+3?",
+      target: "6",
+      scores: { match: 0 },
+      error: null,
+      degenerate: ["loop"],
+    },
   ]);
   await json("**/api/runs/e-1/samples/1?*", {
     id: "1",
@@ -139,6 +203,8 @@ export async function mockPages(page: Page, parts: Record<string, object> = {}) 
     ],
     about: "The cosine between each pair of directions.",
   });
+  await json("**/api/training-sets", [trainingSet]);
+  await json("**/api/training-sets/pairs?*", setPairs);
   await json("**/api/graphs", [
     { slug: "capital", prompt: "The capital of France is", scan: null },
   ]);

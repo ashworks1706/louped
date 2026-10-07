@@ -24,6 +24,18 @@ export const GLOSSARY = {
     "95% Wilson interval of a rate k/n. Unlike k/n ± 1.96·SE it stays inside 0–100% and holds up at small n and extreme rates, so a pilot's uncertainty reads honestly.",
   transition:
     "Items that changed from the reference: 1→0 counts items right in the reference and wrong here, out of those right in the reference; 0→1 the reverse. The reference fixes both denominators, so every condition is read on the same items.",
+  // training sets
+  chosen_in_prompt:
+    "The chosen reply, lowercased with spaces collapsed, is already in the prompt (any turn, the system turn too). Training on it teaches the model to copy its input. 20% or more of a set warns.",
+  length_only:
+    "The two replies differ mostly in length: the longer has 1.5 times the words or more, and the shorter is its start or shares 80% or more of its words. The model learns length, not content. DPO only.",
+  provenance:
+    "How the chosen reply was picked: the source and review louped recorded when it built the set. unknown: louped did not build the set (louped builds no DPO pairs).",
+  // degenerate replies
+  repeat:
+    "Share of replies that say again what an earlier assistant turn of the same conversation said: the same text, or 90% the same words.",
+  echo: "Share of replies that copy the system prompt (20 words in a row, or all of a short one) or chat-template text (<|im_start|>, [INST], or Assistant: at the start).",
+  loop: "Share of replies that repeat themselves: one run of 8 words occurs 3 times or more.",
 } as const;
 
 export type Term = keyof typeof GLOSSARY;

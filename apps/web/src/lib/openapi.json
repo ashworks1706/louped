@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "louped",
-    "version": "0.5.0"
+    "version": "0.6.0"
   },
   "paths": {
     "/api/health": {
@@ -1691,6 +1691,69 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HeatmapView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/training-sets": {
+      "get": {
+        "summary": "Training Sets",
+        "description": "The training sets louped knows, each with its flag counts and warnings.",
+        "operationId": "training_sets_api_training_sets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TrainingSet"
+                  },
+                  "type": "array",
+                  "title": "Response Training Sets Api Training Sets Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/training-sets/pairs": {
+      "get": {
+        "summary": "Training Set",
+        "description": "One known set's pairs side by side, flagged ones first.",
+        "operationId": "training_set_api_training_sets_pairs_get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetPairs"
                 }
               }
             }
@@ -5948,6 +6011,52 @@
         "title": "Page",
         "description": "What a page shows, region by region, and where each region came from."
       },
+      "Pair": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "prompt": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Prompt"
+          },
+          "chosen": {
+            "type": "string",
+            "title": "Chosen"
+          },
+          "rejected": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejected"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "flags": {
+            "items": {
+              "type": "string",
+              "enum": ["chosen_in_prompt", "length_only"]
+            },
+            "type": "array",
+            "title": "Flags"
+          }
+        },
+        "type": "object",
+        "required": ["index", "prompt", "chosen", "label", "flags"],
+        "title": "Pair"
+      },
       "PairedScore": {
         "properties": {
           "name": {
@@ -6996,6 +7105,21 @@
               }
             ],
             "title": "Error"
+          },
+          "degenerate": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "enum": ["repeat", "echo", "loop"]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Degenerate"
           }
         },
         "type": "object",
@@ -7318,6 +7442,24 @@
         "title": "Selection",
         "description": "What a person picked in the app, in the order they picked it, for their agent."
       },
+      "SetPairs": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "report": {
+            "$ref": "#/components/schemas/SetReport"
+          },
+          "shown": {
+            "type": "integer",
+            "title": "Shown"
+          }
+        },
+        "type": "object",
+        "required": ["path", "report", "shown"],
+        "title": "SetPairs"
+      },
       "SetPart": {
         "properties": {
           "experiment": {
@@ -7416,6 +7558,50 @@
         "type": "object",
         "required": ["region", "blocks"],
         "title": "SetRegion"
+      },
+      "SetReport": {
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": ["dpo", "sft"],
+            "title": "Format"
+          },
+          "rows": {
+            "type": "integer",
+            "title": "Rows"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Counts"
+          },
+          "labels": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Labels"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "pairs": {
+            "items": {
+              "$ref": "#/components/schemas/Pair"
+            },
+            "type": "array",
+            "title": "Pairs"
+          }
+        },
+        "type": "object",
+        "required": ["format", "rows", "counts", "labels", "warnings", "pairs"],
+        "title": "SetReport"
       },
       "ShowRequest": {
         "properties": {
@@ -8078,6 +8264,89 @@
         "required": ["ref", "what", "title"],
         "title": "TraceStep",
         "description": "One link of a trace, from what was asked about down to the run it came from."
+      },
+      "TrainingSet": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "format": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["dpo", "sft"]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Format"
+          },
+          "rows": {
+            "type": "integer",
+            "title": "Rows"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Counts"
+          },
+          "labels": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Labels"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "configs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Configs"
+          },
+          "runs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Runs"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "format",
+          "rows",
+          "counts",
+          "labels",
+          "warnings",
+          "configs",
+          "runs",
+          "error"
+        ],
+        "title": "TrainingSet"
       },
       "Turn": {
         "properties": {

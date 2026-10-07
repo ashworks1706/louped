@@ -60,13 +60,19 @@ this order:
 | --------- | ----------------------------------------------------------------------------- |
 | `export`  | Reads logged calls (trace files or Phoenix spans) and removes secrets         |
 | `collect` | Asks a teacher model each prompt, when there are no logs                      |
-| `verify`  | Removes malformed examples and duplicates                                     |
+| `verify`  | Removes malformed examples and duplicates, then flags unsound ones            |
 | `review`  | Shows each example in the terminal; you keep, fix (in your editor) or drop it |
 | `curate`  | Builds the training set from the kept and fixed examples                      |
 | `overlap` | Finds evaluation items that share an n-gram with the training set             |
 | `stats`   | Shows what the set holds and how much is not reviewed                         |
 
 `review` records who decided with `--by`, or your `USER` name. It runs in a terminal only.
+`curate` records the decision in each example's `meta.review` ("kept by ana", "fixed by ana").
+
+`verify` also counts the examples whose reply is already in their prompt (`chosen_in_prompt`).
+Give it a DPO pairs file with `--src` to flag that file. It then also counts the pairs that differ
+mostly in length (`length_only`). It writes nothing for a DPO file. A flag on 20% or more of a set
+prints a `WARNING` line. The Training sets page shows the same flags pair by pair.
 
 `louped serve --host` needs `--expose`. An exposed server is read-only: no launching or model
 loading.

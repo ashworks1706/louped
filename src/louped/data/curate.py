@@ -77,6 +77,8 @@ def apply(examples: Sequence[Example], ledger: Ledger) -> tuple[list[Example], d
     """The accepted examples with fixed replies applied, and a count of the rest.
 
     An example with no decision is not training data, and neither is one whose decision is stale.
+    Each accepted example's meta gets review ("kept by ana", "fixed by ana"): how its reply was
+    picked, which the Training sets page shows (louped.data.pairs.sft_label).
     """
     accepted: list[Example] = []
     counts = {"kept": 0, "fixed": 0, "dropped": 0, "unreviewed": 0, "stale": 0}
@@ -94,9 +96,11 @@ def apply(examples: Sequence[Example], ledger: Ledger) -> tuple[list[Example], d
         if decision.verdict == "fix":
             if decision.reply is None:
                 raise ValueError(f"{example.id}: a fix decision without the fixed reply")
-            accepted.append(example.model_copy(update={"reply": decision.reply}))
+            meta = {**example.meta, "review": f"fixed by {decision.by}"}
+            accepted.append(example.model_copy(update={"reply": decision.reply, "meta": meta}))
             counts["fixed"] += 1
             continue
-        accepted.append(example)
+        meta = {**example.meta, "review": f"kept by {decision.by}"}
+        accepted.append(example.model_copy(update={"meta": meta}))
         counts["kept"] += 1
     return accepted, counts

@@ -17,6 +17,12 @@ description: Read a louped run's results and report them honestly. Use after a r
    - Within one run, `cohort` gives each condition's paired difference from the reference on any
      items. These can be the items the person picked (`ui_selection`'s `items/row/<id>` parts).
    - A run tagged `louped.cohort` ran on a cohort, not on every item. Say which.
+   - An eval sample's `degenerate` lists what is wrong with its reply: `repeat` (an earlier
+     assistant turn said again), `echo` (system prompt or template text), `loop`. Report the
+     share of each before a score: a degenerate model can score well by chance.
+   - A training run tagged `louped.alarm` looked degenerate: its data's flags, or a loss or DPO
+     accuracy that was done too early. Say so before any eval of the model it trained.
+     `louped data verify --src <set.jsonl>` flags a training set's pairs.
 5. Read examples, not only rates. From the records, name at least one item where the behavior
    happened and one where it did not. Check the scoring on them.
 6. Separate what the result shows from what it suggests. Do not call a pilot result a finding.

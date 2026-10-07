@@ -35,6 +35,12 @@ from louped.stores.catalog import EvalTask, eval_tasks
 from louped.stores.labels import Label
 from louped.stores.mlflow_runs import Unreachable
 from louped.stores.runs import read_artifact
+from louped.stores.training_sets import (
+    SetPairs,
+    TrainingSet,
+    list_training_sets,
+    training_set_pairs,
+)
 from louped.stores.types import (
     AbResult,
     AbSession,
@@ -540,6 +546,19 @@ def create_app(
             "-1 opposite. Two vectors near 1 steer the same thing; a new one near 0 to all the "
             "others is new. — marks vectors of different sizes.",
         )
+
+    @app.get("/api/training-sets")
+    def training_sets() -> list[TrainingSet]:
+        """The training sets louped knows, each with its flag counts and warnings."""
+        return list_training_sets()
+
+    @app.get("/api/training-sets/pairs")
+    def training_set(path: str) -> SetPairs:
+        """One known set's pairs side by side, flagged ones first."""
+        try:
+            return training_set_pairs(path)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
 
     @app.get("/api/graphs")
     def graph_list() -> list[Graph]:

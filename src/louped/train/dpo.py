@@ -11,6 +11,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from louped.data.pairs import UNKNOWN, Preference, SetReport, pair, report
 from louped.train.base import TrainConfig, fit, read_rows
 from louped.train.base import load_config as _load_config
 
@@ -19,12 +20,6 @@ class DpoConfig(TrainConfig):
     """A dpo YAML file."""
 
     beta: float = 0.1
-
-
-class Preference(BaseModel):
-    prompt: list[dict[str, Any]]
-    chosen: str
-    rejected: str
 
 
 def load_config(path: Path) -> DpoConfig:
@@ -36,12 +31,23 @@ class DpoPlan(BaseModel):
     base_model: str
     pairs: int
     beta: float
+    #: Pairs with each flag (louped.data.pairs).
+    flags: dict[str, int]
+    #: What the flags say about the set; the run carries them as its louped.alarm tag.
+    warnings: list[str]
+
+
+def _soundness(pairs: list[Preference]) -> SetReport:
+    return report([pair(i, p.prompt, p.chosen, p.rejected, UNKNOWN) for i, p in enumerate(pairs)],
+                  "dpo")  # fmt: skip
 
 
 def plan(cfg: DpoConfig) -> DpoPlan:
     """What a run would do, without loading a model."""
-    pairs = len(read_rows(cfg, Preference))
-    return DpoPlan(name=cfg.name, base_model=cfg.base_model, pairs=pairs, beta=cfg.beta)
+    pairs: list[Preference] = read_rows(cfg, Preference)
+    sound = _soundness(pairs)
+    return DpoPlan(name=cfg.name, base_model=cfg.base_model, pairs=len(pairs), beta=cfg.beta,
+                   flags=sound.counts, warnings=sound.warnings)  # fmt: skip
 
 
 def train(cfg: DpoConfig) -> Path:
@@ -63,4 +69,4 @@ def train(cfg: DpoConfig) -> Path:
                           args=DPOConfig(**args, beta=cfg.beta,
                                          max_length=cfg.max_seq_length))  # fmt: skip
 
-    return fit(cfg, "dpo", len(rows), make)
+    return fit(cfg, "dpo", len(rows), make, warnings=_soundness(pairs).warnings)

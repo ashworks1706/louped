@@ -21,8 +21,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { q, setLabel, type Label, type SampleSummary } from "@/lib/api";
 import { num, pct } from "@/lib/format";
+import { GLOSSARY } from "@/lib/glossary";
+
+type Degenerate = NonNullable<SampleSummary["degenerate"]>[number];
+/** What louped checks every eval's replies for (louped.stores.degeneracy). */
+const DEGENERATE: Degenerate[] = ["repeat", "echo", "loop"];
 
 /** Every sample of an eval run, one column per score; a row opens its transcript. */
 export function SamplesTable({
@@ -37,6 +43,7 @@ export function SamplesTable({
   const [open, setOpen] = useQueryState("sample", parseAsString);
   const [epoch, setEpoch] = useQueryState("epoch", parseAsInteger);
   const [failing, setFailing] = useQueryState("fails", parseAsString);
+  const [degenerate, setDegenerate] = useQueryState("degenerate", parseAsString);
   const [filter, setFilter] = useState("");
 
   const scoreNames = useMemo(
@@ -44,6 +51,8 @@ export function SamplesTable({
     [samples],
   );
   const judged = scoreNames.includes("b_wins");
+  // null while the eval runs: its replies are not checked yet
+  const checked = samples.filter((s) => s.degenerate != null);
   const rule = useRules();
   const col = (id: string) => partId("samples/column", id);
   const rowId = (s: SampleSummary) =>
@@ -54,15 +63,31 @@ export function SamplesTable({
       { id: "input", head: "", cell: "max-w-md truncate" },
       { id: "target", head: "", cell: "max-w-40 truncate font-mono text-xs" },
       ...scoreNames.map((n) => ({ id: n, head: "text-center", cell: "text-center", score: true })),
+      ...(checked.length ? [{ id: "degenerate", head: "", cell: "whitespace-nowrap" }] : []),
     ],
     (c) => col(c.id),
     rule,
   );
   const value = (s: SampleSummary, id: string): React.ReactNode =>
-    id === "#" ? s.id : id === "input" ? s.input : id === "target" ? s.target : null;
+    id === "#" ? (
+      s.id
+    ) : id === "input" ? (
+      s.input
+    ) : id === "target" ? (
+      s.target
+    ) : id === "degenerate" ? (
+      <span className="inline-flex gap-1">
+        {s.degenerate?.map((f) => (
+          <Badge key={f} className="border-negative/50 text-negative">
+            {f}
+          </Badge>
+        ))}
+      </span>
+    ) : null;
   const rows = samples.filter(
     (s) =>
       (!failing || s.scores[failing] === 0) &&
+      (!degenerate || s.degenerate?.includes(degenerate as Degenerate)) &&
       `${s.id} ${s.input} ${s.target}`.toLowerCase().includes(filter.toLowerCase()),
   );
 
@@ -73,7 +98,8 @@ export function SamplesTable({
         resolve={(id) => {
           const found = samples.find((s) => rowId(s) === id);
           return found ? { id: found.id, epoch: found.epoch, input: found.input,
-                           target: found.target, scores: found.scores } : null; // prettier-ignore
+                           target: found.target, scores: found.scores,
+                           degenerate: found.degenerate } : null; // prettier-ignore
         }}
       />
       {judged && <JudgeAgreement runId={runId} />}
@@ -110,6 +136,34 @@ export function SamplesTable({
           {rows.length} of {samples.length}
         </span>
       </div>
+      {checked.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-muted-foreground text-xs">Degenerate replies</span>
+          {DEGENERATE.map((flag) => {
+            const id = partId("samples/degenerate", flag);
+            const r = rule(id);
+            if (r.hidden) return null;
+            const n = checked.filter((s) => s.degenerate!.includes(flag)).length;
+            const active = degenerate === flag;
+            return (
+              <span key={flag} className="inline-flex items-center gap-1" {...part(id)}>
+                <Button
+                  size="sm"
+                  variant={active ? "default" : "outline"}
+                  onClick={() => setDegenerate(active ? null : flag)}
+                  title={`Show only samples whose reply is flagged ${flag}`}
+                >
+                  {r.label ?? flag}
+                  <span className="font-mono text-xs tabular-nums opacity-70">
+                    {pct(n / checked.length)}
+                  </span>
+                </Button>
+                <Help label={`What is ${flag}?`}>{r.about ?? GLOSSARY[flag]}</Help>
+              </span>
+            );
+          })}
+        </div>
+      )}
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">

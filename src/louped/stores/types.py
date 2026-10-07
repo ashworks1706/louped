@@ -9,6 +9,8 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, Field, model_validator
 
 RunKind = Literal["eval", "analysis", "training"]
+#: What is degenerate about a sample's reply (louped.stores.degeneracy).
+Degenerate = Literal["repeat", "echo", "loop"]
 
 
 class RunSummary(BaseModel):
@@ -57,6 +59,8 @@ class SampleSummary(BaseModel):
     target: str
     scores: dict[str, float | None]
     error: str | None
+    #: The reply's degeneracy flags; null while the eval is still running.
+    degenerate: list[Degenerate] | None = None
 
 
 class ToolCall(BaseModel):

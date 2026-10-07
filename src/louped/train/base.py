@@ -214,13 +214,17 @@ def fit(
     rows: int,
     make: MakeTrainer,
     after: Callable[[TrainConfig], None] | None = None,
+    warnings: list[str] | None = None,
 ) -> Path:
     """Run a recipe's trainer inside an MLflow training run; returns the adapter directory.
 
     Checkpoints a previous run left in output_dir are removed first, so every checkpoint there
     belongs to this run. `after` runs inside the run once training is done, to log more to it.
+    `warnings` are what the data's flags say (louped.data.pairs): printed, and the first alarms
+    in the run's louped.alarm tag, beside those the trainer's logs raise (louped.train.alarms).
     """
     from louped.tracking import start_run
+    from louped.train import alarms
 
     for old in cfg.output_dir.glob("checkpoint-*"):
         shutil.rmtree(old)
@@ -239,9 +243,14 @@ def fit(
         if kind == "unsloth":
             quant = "unsloth-4bit" if cfg.load_in_4bit else "none"
         mlflow.set_tag("louped.quantization", quant)
+        for text in warnings or []:
+            print(f"alarm: {text}")
+        if warnings:
+            mlflow.set_tag(alarms.TAG, "; ".join(warnings))
         if tok.pad_token is None:
             tok.pad_token = tok.eos_token
         trainer = make(model, tok, peft, trainer_args(cfg))
+        trainer.add_callback(alarms.callback(warnings or []))
         trainer.train()
         adapter = cfg.output_dir / "adapter"
         tuned: Any = trainer.model

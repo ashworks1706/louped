@@ -56,6 +56,16 @@ def tool_call(call: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def text_of(message: dict[str, Any]) -> str:
+    """The text of one wire message, whether it is a string or a content array."""
+    content = message.get("content")
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return " ".join(part.get("text", "") for part in content if isinstance(part, dict))
+    return ""
+
+
 def conversation(example: Example) -> list[dict[str, Any]]:
     """The messages plus the reply, ready for a chat template."""
     reply: dict[str, Any] = {"role": "assistant", "content": example.reply}
