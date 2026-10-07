@@ -59,7 +59,7 @@ notebooks = [
     "louped[sources,tracking]",
 ]
 # Runs pushed to and pulled from a remote: any fsspec URL, Hugging Face Storage Buckets through
-# huggingface_hub's hf://; S3 or R2 also needs s3fs.
+# huggingface_hub's hf://; S3 or R2 through s3fs, which inspect-ai (the evals extra) installs.
 sync = [
     "fsspec>=2024.6",
     "huggingface-hub>=1.33",

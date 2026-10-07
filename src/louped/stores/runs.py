@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from pathlib import Path
 
 from pydantic import ValidationError
 
@@ -58,9 +59,17 @@ def read_artifact(run_id: str, path: str) -> bytes:
     data = (
         mlflow_runs.read_artifact(run_id, path) if run_id.startswith(mlflow_runs.PREFIX) else None
     )
+    if data is None and (kept := remote_artifact(run_id, path)) is not None:
+        data = kept.read_bytes()
     if data is None:
         raise NotFound(f"{run_id}/{path}")
     return data
+
+
+def remote_artifact(run_id: str, path: str) -> Path | None:
+    """A file the run left in the remote for its size, fetched once into the local cache; None
+    for any other file. mlflow_runs.Unreachable when the remote cannot be read."""
+    return mlflow_runs.remote_file(run_id, path) if run_id.startswith(mlflow_runs.PREFIX) else None
 
 
 def write_text(run_id: str, path: str, text: str) -> None:

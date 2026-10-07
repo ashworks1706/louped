@@ -2,20 +2,31 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import tempfile
 import tomllib
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from mlflow import MlflowClient
 from mlflow.entities import Run
 
-from louped.core import tracking_uri
+from louped.core import home, require_space, tracking_uri
 from louped.stores.types import Artifact, MetricPoint, RunDetail, RunSummary
 
 PREFIX = "m-"
+#: A pulled run's artifact files that stayed in the remote for their size (louped.sync), as
+#: {path: {"url": the file in the remote, "size": bytes}}: listed with the run's files, fetched into
+#: <home>/remote-cache when opened.
+REMOTE = "louped.remote.json"
+
+
+class Unreachable(OSError):
+    """An artifact that stayed in the remote could not be fetched from it."""
+
 
 # The server reads artifacts per request; MLflow's download progress bars would fill its log.
 os.environ.setdefault("MLFLOW_ENABLE_ARTIFACTS_PROGRESS_BAR", "false")
@@ -90,7 +101,7 @@ def get_run(run_id: str) -> RunDetail | None:
         ]
         for key in run.data.metrics
     }
-    artifacts = _walk(client, run.info.run_id, None)
+    artifacts = _files(client, run.info.run_id, None)
     return RunDetail(
         **_summary(run, experiment).model_dump(),
         params=dict(run.data.params),
@@ -111,6 +122,60 @@ def _walk(client: MlflowClient, run_id: str, path: str | None) -> list[Artifact]
     return out
 
 
+def _files(client: MlflowClient, run_id: str, path: str | None) -> list[Artifact]:
+    """Every file under path: the run's own, and those it left in the remote."""
+    left = _left(client, run_id)
+    under = f"{path.rstrip('/')}/" if path else ""
+    return [a for a in _walk(client, run_id, path) if a.path != REMOTE] + [
+        Artifact(path=p, size=int(v["size"])) for p, v in left.items() if p.startswith(under)
+    ]
+
+
+def _left(client: MlflowClient, run_id: str) -> dict[str, dict[str, Any]]:
+    """The run's files that stayed in the remote, from its REMOTE pointer file; {} for most runs."""
+    if not any(a.path == REMOTE for a in client.list_artifacts(run_id)):
+        return {}
+    with tempfile.TemporaryDirectory() as tmp:  # a few hundred bytes
+        return json.loads(Path(client.download_artifacts(run_id, REMOTE, tmp)).read_text())
+
+
+def remote_file(run_id: str, path: str) -> Path | None:
+    """The local copy of a file the run left in the remote, fetched once into <home>/remote-cache
+    and kept there; None when the file is not one left in the remote. Unreachable when the remote
+    cannot be read."""
+    client = _client()
+    if client is None:
+        return None
+    try:
+        pointer = _left(client, run_id.removeprefix(PREFIX)).get(path)
+    except Exception as exc:
+        if _missing(exc):
+            return None
+        raise
+    if pointer is None:
+        return None
+    url, size = str(pointer["url"]), int(pointer["size"])
+    # a bundle is never rewritten, so its URL names one content
+    cached = (
+        home() / "remote-cache" / hashlib.sha256(url.encode()).hexdigest()[:16] / Path(path).name
+    )
+    if cached.is_file() and cached.stat().st_size == size:
+        return cached
+    require_space(size, cached.parent)
+    partial = cached.with_name(cached.name + ".part")
+    try:
+        from fsspec.core import url_to_fs
+
+        fs, at = url_to_fs(url)
+        fs.get_file(at, str(partial))  # streams to disk in blocks
+    except Exception as exc:  # any filesystem's own errors: say which remote and why
+        partial.unlink(missing_ok=True)
+        raise Unreachable(f"{path} is kept in the remote ({url}), which could not be read here: "
+                          f"{type(exc).__name__}: {exc}") from exc  # fmt: skip
+    partial.replace(cached)
+    return cached
+
+
 def list_artifact_paths(run_id: str, path: str) -> list[str] | None:
     """Every file under path, recursively; None when the run does not exist."""
     client = _client()
@@ -123,7 +188,7 @@ def list_artifact_paths(run_id: str, path: str) -> list[str] | None:
         if _missing(exc):
             return None
         raise
-    return [a.path for a in _walk(client, run_id, path)]
+    return [a.path for a in _files(client, run_id, path)]
 
 
 def delete_run(run_id: str) -> bool:
@@ -208,7 +273,8 @@ def add_text(run_id: str, path: str, text: str) -> bool:
 
 
 def download_all(run_id: str, dest: Path) -> bool:
-    """Copy every file a run logged into dest; False when there is no such run."""
+    """Copy every file a run logged into dest; False when there is no such run. Files it left in
+    the remote are not fetched (it prints which), and its pointer to them is not copied."""
     client = _client()
     if client is None:
         return False
@@ -219,6 +285,12 @@ def download_all(run_id: str, dest: Path) -> bool:
             return False
         raise
     client.download_artifacts(run_id.removeprefix(PREFIX), "", str(dest))
+    pointer = dest / REMOTE
+    if pointer.is_file():
+        left = sorted(json.loads(pointer.read_text(encoding="utf-8")))
+        print(f"{run_id}: {len(left)} large file(s) stay in the remote and are not here: "
+              f"{', '.join(left)}")  # fmt: skip
+        pointer.unlink()
     return True
 
 

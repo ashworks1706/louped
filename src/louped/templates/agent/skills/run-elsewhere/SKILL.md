@@ -24,11 +24,13 @@ description: Run a louped experiment on a Slurm cluster (such as ASU Sol) or a V
    4. Follow the `.out` file.
 5. Bring the result back:
    - **With a remote** (`remote` in louped.toml): the job pushes its own results. Call `pull` (or
-     press Pull on Runs). Its runs then read like local ones, marked with the host.
+     press Pull on Runs). Its runs then read like local ones, marked with the host. Artifact
+     files over `large_artifact_mb` (100 MB by default) stay in the remote. They are listed, and
+     louped fetches one the first time it is opened.
    - **To set up a remote** (if none is set): ask the person to press Connect on Runs, or to run `louped push` in a
      terminal. Either one sets up a private HF bucket and asks for their token. Never ask for the
      token in chat.
    - **Without a remote**: the person brings back `louped-result-<id>.tar.gz`. Import it with
-     `import_result <path>`.
+     `import_result <path>`. For large results, recommend a remote instead.
 6. Read the result with `read-results`.
 7. Write it up with `write-report`.
