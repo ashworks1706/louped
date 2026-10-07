@@ -59,6 +59,10 @@ export type Target = Schemas["Target"];
 export type ExportRequest = LaunchRequest & {
   target: Partial<Target> & Pick<Target, "provider">;
 };
+/** A launch sent to a cluster louped.toml names, after an earlier job there or not. */
+export type SubmitRequest = ExportRequest & { cluster: string; after?: string | null };
+export type Cluster = Schemas["ClusterInfo"];
+export type GateStatus = Schemas["GateStatus"];
 export type Imported = Schemas["Imported"];
 export type Agreement = Schemas["Agreement"];
 export type Label = "a" | "b" | "tie";
@@ -216,6 +220,9 @@ export async function exportJob(req: ExportRequest): Promise<{ name: string; not
   return { name, note: res.headers.get("x-louped-note") ?? "" };
 }
 
+/** Sends a launch to a cluster over ssh and starts it there; louped follows it to its result. */
+export const submitJob = (req: SubmitRequest) => post<Job>("/launch/submit", req);
+
 /** Hands the person's agent the parts they picked (ui_selection). */
 export const pick = (s: Selection) => post<Picks>("/ui/selection", s);
 /** What the person's agent asked the app to show them, after the last one the app has. */
@@ -272,9 +279,10 @@ export const loadModel = (req: Schemas["LoadRequest"]) =>
 export const cancelJob = (id: string) =>
   post<Job>(`/launch/jobs/${encodeURIComponent(id)}/cancel`, {});
 
-/** A run still writing (Inspect says started, MLflow running), or a job not yet ended. */
+/** A run still writing (Inspect says started, MLflow running), or a job not yet ended: queued
+ * here, or submitted to a cluster's scheduler. */
 export const isLive = (status: string) =>
-  status === "started" || status === "running" || status === "queued";
+  status === "started" || status === "running" || status === "queued" || status === "submitted";
 
 /** How often a page refetches a run that is still writing. */
 const LIVE_MS = 3000;
@@ -424,6 +432,12 @@ export const q = {
     queryKey: ["options", id],
     queryFn: () => get<LaunchOption[]>(`/launch/options?id=${encodeURIComponent(id)}`),
     staleTime: Infinity,
+  }),
+  /** The clusters louped.toml names, to submit to. */
+  clusters: () => ({
+    queryKey: ["clusters"],
+    queryFn: () => get<Cluster[]>("/launch/clusters"),
+    staleTime: 30_000,
   }),
   jobs: () => ({
     queryKey: ["jobs"],

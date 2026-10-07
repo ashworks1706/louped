@@ -16,6 +16,9 @@ project by looking for `louped.toml` in the current folder and its parents.
 | `louped picks`                    | Prints what you Shift+clicked in the app; `--hook` is Claude Code's prompt hook   |
 | `louped import <file or folder>`  | Adds results from a cluster job: its archive, or the archive unpacked             |
 | `louped push` / `louped pull`     | Shares runs through the project's remote; sets one up first                       |
+| `louped submit <id> --on <name>`  | Sends a launch to a cluster over ssh; `--after <job>`, `--chain` (see below)      |
+| `louped cluster token <name>`     | Copies your Hugging Face token to the cluster's `~/.cache/huggingface/token`      |
+| `louped gate <experiment>`        | Checks an experiment's gate: each requirement, PASS or FAIL; exits 1 on a FAIL    |
 | `louped publish <dir>`            | Writes a read-only dashboard as static files                                      |
 | `louped grid <yaml>`              | Compares conditions against a baseline                                            |
 | `louped train <recipe> <yaml>`    | Fine-tunes: `sft`, `dpo`, `grpo`, `classify`, `reft`                              |

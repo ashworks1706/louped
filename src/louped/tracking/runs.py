@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -22,7 +23,7 @@ import mlflow
 from mlflow import MlflowClient
 from mlflow.entities import Run
 
-from louped.core import artifacts_dir, capture, cohorts, tracking_uri
+from louped.core import artifacts_dir, capture, cohorts, experiments_dir, tracking_uri
 
 #: Seconds between samples of the machine while a run is open.
 SAMPLE_SECONDS = 2
@@ -37,6 +38,19 @@ def experiment_id(name: str) -> str:
         return found.experiment_id
     location = (artifacts_dir() / name).as_uri()
     return client.create_experiment(name, artifact_location=location)
+
+
+def launch() -> str | None:
+    """The launch a run belongs to, which an experiment's gate reads: LOUPED_LAUNCH, which a job
+    sets (here or in job.sh), else the experiment script this process runs, as
+    script:<name>/<file>.py, so a script started from a shell counts too."""
+    if found := os.environ.get("LOUPED_LAUNCH"):
+        return found
+    script = Path(sys.argv[0]).resolve() if sys.argv and sys.argv[0].endswith(".py") else None
+    root = experiments_dir().resolve()
+    if script is not None and script.is_relative_to(root):
+        return "script:" + script.relative_to(root).as_posix()
+    return None
 
 
 @contextmanager
@@ -58,6 +72,8 @@ def start_run(
         "louped.git_dirty": str(meta.git.dirty).lower(),
         **({"louped.script": meta.script} if meta.script else {}),
     }
+    if (made_by := launch()) is not None:
+        tags["louped.launch"] = made_by
     system = os.environ.get("LOUPED_SYSTEM_METRICS", "1") != "0"
     if system:
         mlflow.set_system_metrics_sampling_interval(SAMPLE_SECONDS)

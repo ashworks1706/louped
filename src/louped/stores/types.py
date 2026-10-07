@@ -43,6 +43,9 @@ class RunSummary(BaseModel):
     total: int | None = None
     #: Where it ran, for a run imported from another machine (sol, slurm, vm); None for here.
     host: str | None = None
+    #: The launch that made it (script:<name>/train.py), for a run started with start_run from a
+    #: job or an experiment script; what an experiment's gate reads.
+    launch: str | None = None
 
 
 class MetricPoint(BaseModel):
@@ -172,9 +175,42 @@ class Experiment(BaseModel):
     runs: list[RunSummary]
 
 
+#: A gate requirement's comparison.
+Op = Literal["<", "<=", ">", ">=", "==", "!="]
+
+
+class GateCheck(BaseModel):
+    """One requirement of a gate, as written, with the value it was checked against."""
+
+    requirement: str
+    metric: str
+    op: Op
+    threshold: float
+    #: The metric in the run the gate reads; None when there is no run or no such metric.
+    actual: float | None
+    passed: bool
+
+
+class GateStatus(BaseModel):
+    """An experiment's gate (`gate:` in its README) and whether it passes now."""
+
+    #: The launch whose latest finished run supplies the metrics.
+    launch: str
+    #: That run's id; None when the launch has no finished run yet.
+    run: str | None
+    #: The launches refused until it passes.
+    guards: list[str]
+    checks: list[GateCheck]
+    passed: bool
+    #: Why the gate as written does not parse; the rest is then empty.
+    error: str | None = None
+
+
 class ExperimentDetail(Experiment):
     #: The README as Markdown, without its front matter or the Question and Result sections.
     readme: str
+    #: Its gate, when the README declares one.
+    gate: GateStatus | None = None
 
 
 class HeatmapView(BaseModel):

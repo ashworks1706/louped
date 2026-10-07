@@ -37,7 +37,10 @@ from louped.core.judges import find_judges
 log = logging.getLogger(__name__)
 
 #: exported: written out to run on another machine, waiting for its results to be imported.
-Status = Literal["queued", "running", "succeeded", "failed", "cancelled", "exported"]
+#: submitted: sent to a cluster's scheduler, waiting there to start (louped.server.submit).
+Status = Literal["queued", "running", "succeeded", "failed", "cancelled", "exported", "submitted"]
+#: A job not yet ended, here or on a cluster.
+LIVE = ("queued", "running", "submitted")
 
 
 class Option(BaseModel):
@@ -80,6 +83,14 @@ class Job(BaseModel):
     started: datetime | None = None
     ended: datetime | None = None
     exit_code: int | None = None
+    #: The launchable it runs (script:<name>/run.py), which its runs are tagged with.
+    launch: str | None = None
+    #: A job submitted to a cluster: its name in louped.toml, the scheduler's id for it, the
+    #: folder there it was copied to, and the louped job it waits for.
+    cluster: str | None = None
+    scheduler_id: str | None = None
+    remote_dir: str | None = None
+    after: str | None = None
 
 
 class JobDetail(Job):
@@ -103,6 +114,11 @@ COMMANDS = {
         "Time to first token, latency and throughput of OpenAI-compatible servers by concurrency.",
     ),
     "judge": ("Judge", "Two eval runs judged pairwise by a local model: B's win rate over A."),
+    "gate": (
+        "Gate",
+        "Check an experiment's gate: each requirement with its value, PASS or FAIL. On a cluster "
+        "it is the chain's step between training and the test.",
+    ),
     "derive": (
         "Derive",
         "A script over a run's files: new columns on its Items, or a figure, kept with the run.",
@@ -417,7 +433,7 @@ class Jobs:
         job_id = datetime.now(UTC).strftime("%Y%m%d-%H%M%S-") + secrets.token_hex(2)
         job_dir = self.dir / job_id
         job_dir.mkdir(parents=True)
-        job = Job(id=job_id, title=title, argv=argv(req, job_dir))
+        job = Job(id=job_id, title=title, argv=argv(req, job_dir), launch=req.id)
         with self.lock:
             self.save(job)
             self.lock.notify()
@@ -432,13 +448,22 @@ class Jobs:
             elif job.status == "running" and (proc := self.procs.get(job_id)):
                 self.cancelled.add(job_id)
                 os.killpg(proc.pid, signal.SIGTERM)  # the worker records it when it exits
+            elif job.cluster and job.scheduler_id and job.status in LIVE:
+                from louped import clusters
+
+                try:
+                    clusters.cancel(clusters.get(job.cluster), job.scheduler_id)
+                except (ValueError, clusters.SshError) as exc:
+                    raise HTTPException(502, f"cancelling it on {job.cluster}: {exc}") from exc
+                job = job.model_copy(update={"status": "cancelled", "ended": datetime.now(UTC)})
+                self.save(job)
             return job
 
     def delete(self, job_id: str) -> None:
         """Move a job that has ended, with its output, to <home>/trash/jobs; its runs stay."""
         with self.lock:
             job = self.get(job_id)
-            if job.status in ("queued", "running"):
+            if job.status in LIVE:
                 raise HTTPException(409, f"job {job_id} is {job.status}: cancel it first")
             # The folder is the one listed, not one built from the request's id.
             trash(next(d for d in self.dir.iterdir() if d.name == job.id), "jobs")
@@ -455,7 +480,7 @@ class Jobs:
                 except OSError:
                     threading.Event().wait(5)
             for job in self.list():  # a server that stopped mid-job left it without a process
-                if job.status == "running":
+                if job.status == "running" and job.cluster is None:
                     self.save(job.model_copy(update={"status": "failed", "ended": job.started}))
             while True:
                 try:
@@ -478,7 +503,9 @@ class Jobs:
         try:
             with (self.dir / job.id / "log.txt").open("wb") as out:
                 try:
-                    proc = subprocess.Popen(job.argv, cwd=_root(), env=os.environ | self.env,
+                    launch = {"LOUPED_LAUNCH": job.launch} if job.launch else {}
+                    proc = subprocess.Popen(job.argv, cwd=_root(),
+                                            env=os.environ | self.env | launch,
                                             stdout=out, stderr=subprocess.STDOUT,
                                             start_new_session=True)  # fmt: skip
                 except OSError as exc:
@@ -511,6 +538,19 @@ def editing_guard(launching: bool) -> Callable[[], None]:
             raise HTTPException(403, "editing is off: this server was started with --expose")
 
     return editing
+
+
+def gated(launch: str, chained_after: str | None = None) -> None:
+    """Refuse a launch an experiment's gate holds back: 409 with the failing requirement and its
+    value, 400 when a gate does not parse."""
+    from louped.stores.gates import BadGate, GateClosed, guard
+
+    try:
+        guard(launch, chained_after)
+    except GateClosed as exc:
+        raise HTTPException(409, str(exc)) from exc
+    except BadGate as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 def require_json(request: Request) -> None:
@@ -552,7 +592,9 @@ def router(enabled: bool) -> APIRouter:
 
     @api.post("", dependencies=[Depends(require_json)])
     def launch(req: LaunchRequest) -> Job:
-        return queue().submit(req, known(req.id).title)
+        jobs, title = queue(), known(req.id).title
+        gated(req.id)
+        return jobs.submit(req, title)
 
     @api.get("/jobs")
     def job_list() -> list[Job]:
@@ -562,9 +604,12 @@ def router(enabled: bool) -> APIRouter:
     def job(job_id: str) -> JobDetail:
         return queue().detail(job_id)
 
-    from louped.server import remote  # it builds on this module
+    from louped.server import remote, submit  # they build on this module
 
     remote.routes(api, queue, known)
+    submit.routes(api, queue, known)
+    if jobs is not None:
+        submit.follower(jobs)
 
     @api.delete("/jobs/{job_id}", dependencies=[Depends(require_json)])
     def delete(job_id: str) -> None:

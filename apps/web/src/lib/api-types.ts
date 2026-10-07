@@ -1258,6 +1258,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/launch/clusters": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Cluster List */
+    get: operations["cluster_list_api_launch_clusters_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/launch/submit": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Submit Job */
+    post: operations["submit_job_api_launch_submit_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/launch/jobs/{job_id}/cancel": {
     parameters: {
       query?: never;
@@ -1667,6 +1701,20 @@ export interface components {
       /** Parts */
       parts: components["schemas"]["louped__server__parts__Kind"][];
     };
+    /** ClusterInfo */
+    ClusterInfo: {
+      /** Name */
+      name: string;
+      /** Ssh */
+      ssh: string;
+      /**
+       * Provider
+       * @enum {string}
+       */
+      provider: "sol" | "slurm" | "shell";
+      /** Dir */
+      dir: string;
+    };
     /**
      * Code
      * @description Where the code a run (or a script) ran from is: its commit, its file, and their page.
@@ -1954,6 +2002,7 @@ export interface components {
       runs: components["schemas"]["RunSummary"][];
       /** Readme */
       readme: string;
+      gate?: components["schemas"]["GateStatus"] | null;
     };
     /** ExportRequest */
     ExportRequest: {
@@ -2019,6 +2068,45 @@ export interface components {
        * @default false
        */
       replace: boolean;
+    };
+    /**
+     * GateCheck
+     * @description One requirement of a gate, as written, with the value it was checked against.
+     */
+    GateCheck: {
+      /** Requirement */
+      requirement: string;
+      /** Metric */
+      metric: string;
+      /**
+       * Op
+       * @enum {string}
+       */
+      op: "<" | "<=" | ">" | ">=" | "==" | "!=";
+      /** Threshold */
+      threshold: number;
+      /** Actual */
+      actual: number | null;
+      /** Passed */
+      passed: boolean;
+    };
+    /**
+     * GateStatus
+     * @description An experiment's gate (`gate:` in its README) and whether it passes now.
+     */
+    GateStatus: {
+      /** Launch */
+      launch: string;
+      /** Run */
+      run: string | null;
+      /** Guards */
+      guards: string[];
+      /** Checks */
+      checks: components["schemas"]["GateCheck"][];
+      /** Passed */
+      passed: boolean;
+      /** Error */
+      error?: string | null;
     };
     /** GenerateRequest */
     GenerateRequest: {
@@ -2258,7 +2346,8 @@ export interface components {
        * @default queued
        * @enum {string}
        */
-      status: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "exported";
+      status:
+        "queued" | "running" | "succeeded" | "failed" | "cancelled" | "exported" | "submitted";
       /**
        * Created
        * Format: date-time
@@ -2270,6 +2359,16 @@ export interface components {
       ended?: string | null;
       /** Exit Code */
       exit_code?: number | null;
+      /** Launch */
+      launch?: string | null;
+      /** Cluster */
+      cluster?: string | null;
+      /** Scheduler Id */
+      scheduler_id?: string | null;
+      /** Remote Dir */
+      remote_dir?: string | null;
+      /** After */
+      after?: string | null;
     };
     /** JobDetail */
     JobDetail: {
@@ -2284,7 +2383,8 @@ export interface components {
        * @default queued
        * @enum {string}
        */
-      status: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "exported";
+      status:
+        "queued" | "running" | "succeeded" | "failed" | "cancelled" | "exported" | "submitted";
       /**
        * Created
        * Format: date-time
@@ -2296,6 +2396,16 @@ export interface components {
       ended?: string | null;
       /** Exit Code */
       exit_code?: number | null;
+      /** Launch */
+      launch?: string | null;
+      /** Cluster */
+      cluster?: string | null;
+      /** Scheduler Id */
+      scheduler_id?: string | null;
+      /** Remote Dir */
+      remote_dir?: string | null;
+      /** After */
+      after?: string | null;
       /** Log */
       log: string;
     };
@@ -2933,6 +3043,8 @@ export interface components {
       total?: number | null;
       /** Host */
       host?: string | null;
+      /** Launch */
+      launch?: string | null;
       /** Params */
       params: {
         [key: string]: string;
@@ -2984,6 +3096,8 @@ export interface components {
       total?: number | null;
       /** Host */
       host?: string | null;
+      /** Launch */
+      launch?: string | null;
     };
     /**
      * RunView
@@ -3343,6 +3457,27 @@ export interface components {
        * @default 3
        */
       repeats: number;
+    };
+    /** SubmitRequest */
+    SubmitRequest: {
+      /** Id */
+      id: string;
+      /**
+       * Options
+       * @default {}
+       */
+      options: {
+        [key: string]: string | boolean | string[];
+      };
+      /** Config */
+      config?: string | null;
+      /** Recipe */
+      recipe?: string | null;
+      target?: components["schemas"]["Target"];
+      /** Cluster */
+      cluster: string;
+      /** After */
+      after?: string | null;
     };
     /** TableView */
     TableView: {
@@ -5852,6 +5987,59 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Imported"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  cluster_list_api_launch_clusters_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ClusterInfo"][];
+        };
+      };
+    };
+  };
+  submit_job_api_launch_submit_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SubmitRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Job"];
         };
       };
       /** @description Validation Error */

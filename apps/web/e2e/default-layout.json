@@ -94,6 +94,10 @@
         "width": "full"
       },
       {
+        "block": "gate",
+        "width": "side"
+      },
+      {
         "block": "result",
         "width": "side"
       },

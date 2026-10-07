@@ -231,6 +231,13 @@ Three parts compute: the Probe and Benchmark tools, job launch, and model load.
 - A job can also be exported (server/remote.py) as a bundle. Its job.sh runs it on Sol, another
   Slurm cluster or a VM. When the project is a pushed git commit, the bundle is one file that
   clones it. The results come back through the remote, or as an archive that is imported.
+- A job can also be submitted (server/submit.py) to a cluster that louped.toml names. louped
+  copies the export there over ssh and starts it with sbatch (`louped.clusters`, every call with a
+  timeout). While the server runs, it follows the job with sacct and brings the result back.
+  `--after` chains jobs on the cluster with Slurm's afterok.
+- An experiment's README can declare a gate (stores/gates.py): requirements on the newest
+  finished run of one launch. Launch, export and submit refuse the launches it guards until it
+  passes. `louped gate` checks it, also as a chain's step on the cluster.
 
 Launching and loading run code on this machine. Thus both are on only for a loopback server, never
 with `--expose`.

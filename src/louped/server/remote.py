@@ -46,7 +46,15 @@ from louped.core.git import git, pushed_to
 from louped.core.git import top as repo_top
 from louped.core.project import FILE
 from louped.core.project import root as root_of_project
-from louped.server.launch import Job, Jobs, Launchable, LaunchRequest, argv, require_json
+from louped.server.launch import (
+    Job,
+    Jobs,
+    Launchable,
+    LaunchRequest,
+    argv,
+    gated,
+    require_json,
+)
 from louped.stores.experiments import declared_extras
 from louped.sync import Added, add_bundle
 
@@ -145,10 +153,17 @@ cd "$ROOT"
 mkdir -p out
 export LOUPED_HOME="$ROOT/out" INSPECT_LOG_DIR="$ROOT/out/logs"
 export LOUPED_EXPERIMENTS="$ROOT/experiments"
-export PYTHONUNBUFFERED=1
+export PYTHONUNBUFFERED=1 LOUPED_LAUNCH={launch}
 # uv's 30 s default times out on torch's and CUDA's wheels over a busy cluster link
 export UV_HTTP_TIMEOUT="${{UV_HTTP_TIMEOUT:-300}}"
 {cache}{remote}
+# gated models (Llama, Gemma) answer 401 without a token: say so before the install, not after
+hf_token="${{HF_TOKEN_PATH:-${{HF_HOME:-$HOME/.cache/huggingface}}/token}}"
+if [ -z "${{HF_TOKEN:-}}" ] && [ ! -s "$hf_token" ]; then
+  echo "louped: no Hugging Face token here (HF_TOKEN is unset and $hf_token is missing)," \
+    "so gated models will fail with 401. Fix: run louped cluster token <cluster> on your" \
+    "machine, or hf auth login here." >&2
+fi
 command -v uv >/dev/null || {{ curl -LsSf https://astral.sh/uv/install.sh | sh; }}
 export PATH="$HOME/.local/bin:$PATH"
 {fetch}{install}
@@ -205,9 +220,10 @@ README = """louped job {job_id}: {title}
 2. Run: {run}
 3. {back}
 
-The job installs its environment with uv{cache_note}. Gated Hugging Face models need HF_TOKEN set
-before you run it. If compute nodes have no internet, run the install and model download
-once on a login node first: the same commands as job.sh up to `source .venv/bin/activate`.
+The job installs its environment with uv{cache_note}. Gated Hugging Face models need a token
+there: HF_TOKEN, or `hf auth login` once (louped cluster token <name> copies this machine's).
+If compute nodes have no internet, run the install and model download once on a login node
+first: the same commands as job.sh up to `source .venv/bin/activate`.
 """
 
 #: What a remote URL may hold to go into job.sh as it is.
@@ -283,9 +299,9 @@ def _extras(launchable: str) -> list[str]:
     return declared
 
 
-def export(req: ExportRequest, jobs: Jobs, title: str) -> tuple[Path, str]:
+def export(req: ExportRequest, jobs: Jobs, title: str) -> tuple[Path, str, Job]:
     """What runs req on another machine, in a temporary folder, with a line saying what it does,
-    and its job recorded as exported. One file, job.sh, when the project is a pushed git commit
+    and its job, recorded as exported. One file, job.sh, when the project is a pushed git commit
     and louped is a release or in that repository; else a .tar.gz of job.sh and what it needs.
     For Colab, a notebook running that one file; ValueError when the project is not pushed."""
     job_id = datetime.now(UTC).strftime("%Y%m%d-%H%M%S-") + secrets.token_hex(2)
@@ -349,6 +365,7 @@ def export(req: ExportRequest, jobs: Jobs, title: str) -> tuple[Path, str]:
                  "machine.")  # fmt: skip
     parts = {"header": "\n".join(header), "job_id": job_id, "title": title, "run": run,
              "cache": scratch if sol else "", "command": shlex.join(command), "host": host,
+             "launch": shlex.quote(req.id),
              "remote": f'export LOUPED_REMOTE="${{LOUPED_REMOTE:-{remote}}}"\n' if remote else "",
              "push": PUSH if remote else "", "install": install,
              "hint": "" if remote else f'echo "{LARGE}"\n',
@@ -400,8 +417,10 @@ def export(req: ExportRequest, jobs: Jobs, title: str) -> tuple[Path, str]:
         note = f"A folder, not one file{why}: copy it there and run {run}. " + back
     if local:
         note += f" The remote {local} is a folder here, which the job cannot reach."
-    jobs.record(Job(id=job_id, title=f"{title} · {host}", argv=command, status="exported"))
-    return job, note
+    recorded = Job(id=job_id, title=f"{title} · {host}", argv=command, status="exported",
+                   launch=req.id)  # fmt: skip
+    jobs.record(recorded)
+    return job, note, recorded
 
 
 COLAB_INTRO = """# louped job {job_id}: {title}
@@ -631,8 +650,10 @@ def routes(api: APIRouter, queue: Callable[[], Jobs], known: Callable[[str], Lau
 
     @api.post("/export", dependencies=[Depends(require_json)])
     def export_job(req: ExportRequest) -> FileResponse:
+        jobs, title = queue(), known(req.id).title
+        gated(req.id)
         try:
-            job, note = export(req, queue(), known(req.id).title)
+            job, note, _ = export(req, jobs, title)
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
         kind = {".gz": "application/gzip", ".ipynb": "application/x-ipynb+json"}.get(

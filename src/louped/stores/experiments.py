@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import get_args
+from typing import Any, get_args
 
 from louped.core import experiments_dir, trash
 from louped.core.project import config
@@ -125,6 +125,27 @@ def declared_extras(name: str) -> list[str] | None:
         return None
     value = (_fields(readme.read_text(encoding="utf-8")) or {}).get("extras")
     return [e.strip() for e in value.split(",") if e.strip()] if value else None
+
+
+def declared(name: str, key: str) -> Any:
+    """A key of an experiment's front matter read as YAML, for the ones that nest (`gate:`,
+    `chain:`); None when it is absent or the experiment is not found. Front matter that is not
+    YAML is an error naming the README."""
+    readme = experiments_dir() / name / "README.md"
+    if not readme.is_file():
+        return None
+    text = readme.read_text(encoding="utf-8")
+    if key not in (_fields(text) or {}):
+        return None
+    import yaml
+
+    try:
+        found = yaml.safe_load(_FRONT.match(text).group(1))  # type: ignore[union-attr]
+    except yaml.YAMLError as exc:
+        raise BadExperiment(
+            f"experiments/{name}/README.md: front matter is not YAML: {exc}"
+        ) from exc
+    return found.get(key) if isinstance(found, dict) else None
 
 
 def front_matter(readme: str, name: str) -> tuple[Domain, Status]:

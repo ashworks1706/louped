@@ -30,7 +30,7 @@ from louped.core import Direction, cohorts, documents, home
 from louped.core.judges import Judge, find_judges, write_judge
 from louped.core.paths import experiments_dir, inside
 from louped.server import graphs, inspect_view, launch, playground, plugins, serving, ui
-from louped.stores import ab
+from louped.stores import ab, gates
 from louped.stores.catalog import EvalTask, eval_tasks
 from louped.stores.labels import Label
 from louped.stores.mlflow_runs import Unreachable
@@ -658,7 +658,8 @@ def create_app(
 
     @app.get("/api/experiments/{name}")
     def experiment(name: str) -> ExperimentDetail:
-        return stores.get_experiment(name)
+        found = stores.get_experiment(name)
+        return found.model_copy(update={"gate": gates.status(name)})
 
     app.include_router(playground.router(switchable=launching))
     app.include_router(launch.router(launching))

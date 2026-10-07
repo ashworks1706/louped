@@ -315,6 +315,11 @@
     "rules": ["hidden"]
   },
   {
+    "part": "experiment/gate/*",
+    "about": "One requirement of the experiment's gate, by its metric, with its value and PASS or FAIL.",
+    "rules": []
+  },
+  {
     "part": "experiment/*",
     "about": "The experiment's name, status, question and back link.",
     "rules": []
@@ -658,6 +663,11 @@
     "part": "launch/where",
     "about": "Where it runs: here, Sol, a Slurm cluster, a VM or Colab.",
     "rules": ["note"]
+  },
+  {
+    "part": "launch/submit/*",
+    "about": "Submits it to a cluster louped.toml names, by name.",
+    "rules": ["hidden"]
   },
   {
     "part": "launch/*",

@@ -63,6 +63,7 @@ def _summary(run: Run, experiment: str | None) -> RunSummary:
         metrics=dict(run.data.metrics),
         samples=None,
         host=tags.get("louped.host"),
+        launch=tags.get("louped.launch"),
     )
 
 

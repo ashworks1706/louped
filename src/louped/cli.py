@@ -186,6 +186,52 @@ class Pull:
 
 
 @dataclass(frozen=True)
+class Gate:
+    """Check an experiment's gate (gate: in its README): each requirement against the newest
+    finished run of the launch it reads, PASS or FAIL. Exits 0 when all pass, else 1, so it can
+    run as a chain's step on a cluster. Needs the evals and tracking extras."""
+
+    experiment: tyro.conf.Positional[str]
+    pull: bool = False
+    """Pull the remote's new runs first: the gate step on a cluster, which reads the runs the
+    steps before it pushed. Needs the sync extra."""
+
+
+@dataclass(frozen=True)
+class Submit:
+    """Send a launch to a cluster named in louped.toml ([clusters.<name>]) over ssh: export it,
+    copy it there, start it (sbatch, or bash on a VM) and record it as a job. louped serve
+    follows it and brings its result here. Needs the server extra."""
+
+    what: tyro.conf.Positional[str]
+    """A launchable id, such as script:<name>/train.py, or gate (with --experiment); with
+    --chain, an experiment."""
+    on: str
+    """The cluster."""
+    after: str | None = None
+    """A louped job on that cluster this one waits for and needs to succeed (Slurm only)."""
+    chain: bool = False
+    """Submit the experiment's chain: steps in order, each after the one before."""
+    experiment: str | None = None
+    """For gate: the experiment whose gate the step checks."""
+    gpu: str | None = None
+    """The GPU type: on Sol a100 (the default), a30, h100, mi200, 1g.20gb or 2g.20gb; on Slurm a
+    gres type, any when empty."""
+    gpus: int = 1
+    hours: int = 4
+
+
+@dataclass(frozen=True)
+class Cluster:
+    """A cluster named in louped.toml. token copies this machine's Hugging Face token to the
+    cluster's ~/.cache/huggingface/token over ssh (mode 600), where gated models read it; it
+    goes on ssh's stdin, never into a command line, job.sh or a log. Needs the sync extra."""
+
+    action: tyro.conf.Positional[Literal["token"]]
+    name: tyro.conf.Positional[str]
+
+
+@dataclass(frozen=True)
 class Publish:
     """Write this project's dashboard as static, read-only files to put on any static host at a
     domain's root: an HF static Space, Vercel, or a GitHub Pages user site. Needs the server
@@ -409,6 +455,9 @@ Command = (
     | Annotated[Import, tyro.conf.subcommand("import")]
     | Annotated[Push, tyro.conf.subcommand("push")]
     | Annotated[Pull, tyro.conf.subcommand("pull")]
+    | Annotated[Gate, tyro.conf.subcommand("gate")]
+    | Annotated[Submit, tyro.conf.subcommand("submit")]
+    | Annotated[Cluster, tyro.conf.subcommand("cluster")]
     | Annotated[Publish, tyro.conf.subcommand("publish")]
     | Annotated[Bench, tyro.conf.subcommand("bench")]
     | Annotated[EndpointBench, tyro.conf.subcommand("endpoint-bench")]
@@ -440,6 +489,9 @@ COMMANDS = {
     "import",
     "push",
     "pull",
+    "gate",
+    "submit",
+    "cluster",
     "publish",
     "bench",
     "endpoint-bench",
@@ -534,6 +586,89 @@ def _connect(given: str | None) -> None:
     if given is None and sync.configured() is None:
         sync.set_remote(url)
         print(f"remote = {url} (louped.toml)")
+
+
+def _gate(cmd: Gate) -> None:
+    from louped.core import experiments_dir
+    from louped.stores import gates
+
+    if not (experiments_dir() / cmd.experiment / "README.md").is_file():
+        raise SystemExit(f"no experiment {cmd.experiment} in {experiments_dir()}")
+    if cmd.pull:
+        from louped.sync import pull
+
+        try:
+            print(f"pulled {len(pull())} new bundles")
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+    gate = gates.status(cmd.experiment)
+    if gate is None:
+        raise SystemExit(f"experiments/{cmd.experiment}/README.md declares no gate")
+    if gate.error:
+        raise SystemExit(gate.error)
+    print(f"{cmd.experiment}'s gate reads {gate.launch}: "
+          f"{f'run {gate.run}' if gate.run else 'no finished run yet'}")  # fmt: skip
+    width = max(len(c.requirement) for c in gate.checks)
+    for c in gate.checks:
+        value = "missing" if c.actual is None else f"{c.actual:g}"
+        print(f"  {'PASS' if c.passed else 'FAIL'}  {c.requirement:<{width}}  {value:>10}")
+    guarded = ", ".join(gate.guards) or "nothing"
+    print(f"PASS: {guarded} may run." if gate.passed else f"FAIL: {guarded} waits.")
+    raise SystemExit(0 if gate.passed else 1)
+
+
+def _submit(cmd: Submit) -> None:
+    from fastapi import HTTPException
+
+    from louped import clusters
+    from louped.server.launch import Jobs, catalogue
+    from louped.server.remote import Target
+    from louped.server.submit import SubmitFailed, SubmitRequest, chain, submit
+    from louped.stores.gates import GateClosed
+
+    titles = {x.id: x.title for x in catalogue()}
+    try:
+        provider = clusters.get(cmd.on).provider
+        target = Target(provider=provider, gpus=cmd.gpus, hours=cmd.hours)
+        if cmd.gpu or provider != "sol":  # Sol's default is a100; elsewhere any GPU
+            target = Target(provider=provider, gpus=cmd.gpus, hours=cmd.hours, gpu=cmd.gpu)
+        jobs = Jobs(work=False)
+        if cmd.chain:
+            if cmd.after:
+                raise ValueError("--chain starts a chain of its own; it takes no --after")
+            done = chain(cmd.what, cmd.on, jobs, titles, target)
+        elif cmd.what not in titles:
+            raise ValueError(f"{cmd.what!r} is not something louped can launch: Launch lists "
+                             "the ids, such as script:<name>/train.py")  # fmt: skip
+        elif (cmd.what == "gate") != (cmd.experiment is not None):
+            raise ValueError(
+                "a gate step names its experiment, and only it: gate --experiment <name>"
+            )
+        else:
+            options: dict[str, str | bool | list[str]] = (
+                {"experiment": cmd.experiment} if cmd.experiment else {}
+            )
+            req = SubmitRequest(id=cmd.what, cluster=cmd.on, after=cmd.after, target=target,
+                                options=options)  # fmt: skip
+            done = [submit(req, jobs, titles[cmd.what])]
+    except HTTPException as exc:
+        raise SystemExit(str(exc.detail)) from exc
+    except (ValueError, GateClosed, SubmitFailed) as exc:
+        raise SystemExit(str(exc)) from exc
+    for job in done:
+        after = f", after {job.after}" if job.after else ""
+        print(f"{job.id}  {job.title}: {cmd.on} job {job.scheduler_id}{after}")
+    print("louped serve follows it and brings its result here (louped pull, with a remote).")
+
+
+def _cluster(cmd: Cluster) -> None:
+    from louped import clusters
+
+    try:
+        where = clusters.send_token(clusters.get(cmd.name))
+    except (ValueError, clusters.SshError) as exc:
+        raise SystemExit(str(exc)) from exc
+    print(f"Hugging Face token copied to {where} (only you can read it)")
 
 
 def _plugin_command() -> bool:
@@ -668,6 +803,12 @@ def main() -> None:
                 print(_imported(done))
             if not pulled:
                 print("nothing new to pull")
+        case Gate() as cmd:
+            _gate(cmd)
+        case Submit() as cmd:
+            _submit(cmd)
+        case Cluster() as cmd:
+            _cluster(cmd)
         case Publish() as cmd:
             from louped.server.app import find_ui
             from louped.server.publish import describe, publish
