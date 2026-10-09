@@ -19,7 +19,7 @@ dependencies = [
     "pydantic>=2.10",
     "tyro>=0.9",
     # The app (louped serve).
-    "fastapi>=0.115",
+    "fastapi>=0.142.2",
     "uvicorn>=0.32",
     # The project's sources/ (papers, docs, slides, notebooks): their text, read for search and
     # quoting. PDF through PDFium (pypdfium2, Apache-2.0/BSD-3), not PyMuPDF (AGPL).
@@ -44,14 +44,14 @@ dependencies = [
     "huggingface-hub>=1.33",
     # Evals. Inspect's openai-api provider reaches any local OpenAI-compatible server
     # (llama-server, vLLM).
-    "inspect-ai>=0.3.271,<0.4",
-    "inspect-evals>=0.22",
-    "openai>=1.0",
+    "inspect-ai>=0.3.276,<0.4",
+    "inspect-evals>=0.23.0",
+    "openai>=3.24.0",
     # Run tracking: MLflow on a SQLite file; the file store is in maintenance mode in MLflow 3.
     # MLflow's system metrics: GPU utilisation, memory and power through NVML (BSD), CPU and RAM
     # through psutil; a run without an NVIDIA GPU records CPU and RAM only.
     "mlflow-skinny>=3.0",
-    "sqlalchemy>=2.0",
+    "sqlalchemy>=2.1.3",
     "alembic>=1.13",
     "nvidia-ml-py>=12; sys_platform != 'darwin'",
     "psutil>=5.9",
@@ -59,8 +59,8 @@ dependencies = [
     "nnsight>=0.4",
     "safetensors>=0.4",
     "scikit-learn>=1.5",
-    "torch>=2.5",
-    "transformers>=5",
+    "torch>=2.14.1",
+    "transformers>=5.18.0",
     # The MCP server coding agents drive louped through: a stdio client of a running louped serve.
     "mcp>=2.3",
 ]
@@ -89,8 +89,8 @@ train = [
     # 4-bit QLoRA on a CUDA GPU (load_in_4bit); unused on CPU.
     "bitsandbytes>=0.46.1; sys_platform != 'darwin'",
     "datasets>=4",
-    "peft>=0.17",
-    "trl>=1.14",
+    "peft>=0.21.2",
+    "trl>=1.14.1",
 ]
 # Verifiable RL tasks and answer checks for GRPO: procedural tasks with their own scorers, and
 # symbolic comparison of maths answers.
@@ -107,14 +107,14 @@ data = [
 ]
 # Retrieval: BM25 and dense search, a cross-encoder reranker, NLI for faithfulness.
 rag = [
-    "bm25s>=0.2",
+    "bm25s>=0.3.12",
     "sentence-transformers>=5",
 ]
 # Pretrained sparse autoencoders (Gemma Scope and the rest of SAELens's registry) for
 # louped.analysis.sae. Heavy: SAELens pulls in TransformerLens, wandb and plotly, so it is its own
 # extra and nothing else imports it.
 sae = [
-    "sae-lens>=6",
+    "sae-lens>=6.54.0",
 ]
 
 [project.scripts]
@@ -130,11 +130,11 @@ dev = [
     "pre-commit>=4.0",
     "pyright>=1.1.390",
     "pytest>=8.3",
-    "ruff>=0.8",
+    "ruff>=0.16.10",
 ]
 
 [build-system]
-requires = ["hatchling>=1.26"]
+requires = ["hatchling>=1.32.4"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
