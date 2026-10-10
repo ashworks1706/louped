@@ -67,6 +67,7 @@ const PAGES: [string, string][] = [
   ["circuits", "/behavior/circuits/"],
   ["feature", "/behavior/feature/?run=m-1&f=12"],
   ["training", "/efficiency/training/"],
+  ["behavior training", "/behavior/training/"],
   ["compare", "/compare/?a=e-1&b=e-1"],
   ["compare curves", "/compare/?a=t-1&b=t-2"],
   ["compare sample", "/compare/?a=e-1&b=e-1&changed=false&sample=1"],

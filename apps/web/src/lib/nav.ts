@@ -123,6 +123,14 @@ export const NAV: NavItem[] = [
     section: "behavior",
   },
   {
+    href: "/behavior/training/",
+    title: "Training",
+    description: "Fine-tuning runs that change what a model does: SFT, DPO, GRPO.",
+    icon: Dumbbell,
+    shortcut: "G N",
+    section: "behavior",
+  },
+  {
     href: "/behavior/circuits/",
     title: "Circuits",
     description: "Which internal features produce an answer.",
