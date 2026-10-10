@@ -100,7 +100,13 @@ def publish(out: Path, web: Path) -> Published:
         evaled = run["id"].startswith("e-")
         for sample in save(f"/runs/{rid}/samples", expected=evaled) or []:
             save(f"/runs/{rid}/samples/{_enc(sample['id'])}?epoch={sample['epoch']}")
-        save(f"/runs/{rid}/views")
+        for figure in save(f"/runs/{rid}/views") or []:
+            # a board reads its tables when shown: each ref's answer goes in beside it
+            for table in (
+                figure["view"].get("data", {}).values() if figure["view"]["kind"] == "board" else []
+            ):
+                if table.get("ref"):
+                    save(f"/board/table?ref={_enc(table['ref'])}")
         save(f"/runs/{rid}/labels", expected=evaled)
         save(f"/runs/{rid}/agreement", expected=False)  # a judge run's only
         for feature in save(f"/runs/{rid}/features", expected=False) or []:

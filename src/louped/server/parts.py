@@ -141,6 +141,10 @@ KINDS: list[Kind] = [
        rules=PICK),
     # figures, config, files
     _k(part="figures/figure/*", about="One figure, by its file.", rules=["hidden", "note"]),
+    _k(part="board/*", about="A board shown as a page of its own, by its name.", rules=PICK),
+    _k(part="board/*/panel/*", about="One panel of a board, by the board's name and the "
+       "panel's id: its rows as drawn.", rules=PICK),
+    _k(part="board/*/control/*", about="One control of a board, by its param.", rules=PICK),
     _k(part="figures/export/*", about="Exports one figure to reports/ as SVG, PNG or PDF.",
        rules=PICK),
     _k(part="figures/code/*", about="Opens the script that made one figure, at its commit, on "

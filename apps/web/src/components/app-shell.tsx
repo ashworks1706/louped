@@ -27,6 +27,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { q } from "@/lib/api";
 import {
   activeHref,
+  boardItem,
+  boardPath,
   DOMAINS,
   NAV,
   pluginItem,
@@ -238,10 +240,32 @@ function SidebarNav({ folded = false, onNavigate }: { folded?: boolean; onNaviga
         />
       ))}
       <Suspense>
+        <BoardLinks folded={folded} onNavigate={onNavigate} />
         <PluginLinks folded={folded} onNavigate={onNavigate} />
       </Suspense>
     </nav>
   );
+}
+
+/** The project's boards shown as pages in this section: boards/<name>.json, one entry each. */
+function BoardLinks({ folded, onNavigate }: { folded: boolean; onNavigate?: () => void }) {
+  const pathname = usePathname();
+  const name = useSearchParams().get("name");
+  const section = sectionOf(pathname);
+  const boards = useQuery(q.boards());
+  const here = pathname.replace(/\/?$/, "/") === boardPath(section);
+  return (boards.data ?? [])
+    .map(boardItem)
+    .filter((b) => b.section === section)
+    .map((b) => (
+      <NavLink
+        key={b.href}
+        item={b}
+        active={here && b.href.endsWith(`?name=${encodeURIComponent(name ?? "")}`)}
+        folded={folded}
+        onNavigate={onNavigate}
+      />
+    ));
 }
 
 /** The project's plugins in this section: louped.core.plugins, one entry each. */

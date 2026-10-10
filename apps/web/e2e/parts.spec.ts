@@ -79,6 +79,7 @@ const PAGES: [string, string][] = [
   ["reports", "/reports/"],
   ["markdown report", "/report/?path=1b.md"],
   ["deck report", "/report/?path=lab.pptx"],
+  ["board", "/behavior/b/?name=scores"],
 ];
 
 for (const [name, url] of PAGES) {

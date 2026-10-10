@@ -94,7 +94,7 @@ RL environment without a rewrite.
 | Probes | scikit-learn | library |
 | Retrieval, reranking, NLI | bm25s, sentence-transformers | library |
 | Tracking | MLflow on SQLite, Inspect logs | library |
-| API and UI | FastAPI; Next.js static export, shadcn/ui, TanStack Query, nuqs, Recharts, Plotly (3D, animation; loaded when shown) | |
+| API and UI | FastAPI; Next.js static export, shadcn/ui, TanStack Query, nuqs, Recharts, Plotly (3D, animation; loaded when shown), dagre (a board's diagrams) | |
 
 Rejected:
 

@@ -882,6 +882,88 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/board/table": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Board Table
+     * @description The rows a board's table reads: run:<id>/<path>, experiment:<name>/<path>,
+     *     metrics:<run id>, runs: or runs:<experiment> (louped.stores.boards).
+     */
+    get: operations["board_table_api_board_table_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/board/check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Board Check
+     * @description A board's tables read and its panels tried, before it is shown: what the agent fixes.
+     */
+    post: operations["board_check_api_board_check_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/boards": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Boards
+     * @description The boards shown as pages of their own: boards/<name>.json at the project's root.
+     */
+    get: operations["list_boards_api_boards_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/boards/{name}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Board */
+    get: operations["get_board_api_boards__name__get"];
+    /**
+     * Save Board
+     * @description Writes boards/<name>.json, replacing one of that name: a page in the sidebar.
+     */
+    put: operations["save_board_api_boards__name__put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/judges": {
     parameters: {
       query?: never;
@@ -1688,6 +1770,235 @@ export interface components {
       /** Text */
       text?: string | null;
     };
+    /**
+     * BoardCheck
+     * @description What a board reads and draws, before anyone sees it: each table's rows and fields, and
+     *     each panel's rows and the fields it names that its table does not have.
+     */
+    BoardCheck: {
+      /** Ok */
+      ok: boolean;
+      /** Tables */
+      tables: components["schemas"]["TableCheck"][];
+      /** Panels */
+      panels: components["schemas"]["PanelCheck"][];
+    };
+    /**
+     * BoardControl
+     * @description An input over the panels: it sets the param named by its id.
+     */
+    BoardControl: {
+      /** Id */
+      id: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "select" | "multi" | "range" | "search" | "toggle";
+      /** Label */
+      label?: string | null;
+      /** About */
+      about?: string | null;
+      /** Data */
+      data?: string | null;
+      /** Field */
+      field?: string | null;
+      /** Options */
+      options?: (string | number | boolean)[] | null;
+      /** Default */
+      default?: string | number | boolean | (string | number | boolean)[] | null;
+      /** Min */
+      min?: number | null;
+      /** Max */
+      max?: number | null;
+      /** Step */
+      step?: number | null;
+    };
+    /**
+     * BoardData
+     * @description One of a board's tables: its rows inline, or read from what louped already keeps.
+     */
+    BoardData: {
+      /** Rows */
+      rows?:
+        | {
+            [key: string]: unknown;
+          }[]
+        | null;
+      /** Ref */
+      ref?: string | null;
+      /** Live */
+      live?: number | null;
+    };
+    /**
+     * BoardFilter
+     * @description Keeps the rows whose field passes op against a param (or a fixed value). A param that
+     *     is not set keeps every row.
+     */
+    BoardFilter: {
+      /** Field */
+      field: string;
+      /**
+       * Op
+       * @default ==
+       * @enum {string}
+       */
+      op: "==" | "!=" | "<" | "<=" | ">" | ">=" | "in" | "contains";
+      /** Param */
+      param?: string | null;
+      /** Value */
+      value?: string | number | boolean | (string | number | boolean)[] | null;
+    };
+    /** BoardPage */
+    BoardPage: {
+      /** Name */
+      name: string;
+      /** Title */
+      title: string;
+      /** About */
+      about: string | null;
+      /** Section */
+      section: string;
+    };
+    /**
+     * BoardPanel
+     * @description One panel of a board. Only the fields its kind reads are set.
+     */
+    BoardPanel: {
+      /** Id */
+      id: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "vega" | "plotly" | "table" | "stat" | "text" | "detail" | "diagram";
+      /** Title */
+      title?: string | null;
+      /** About */
+      about?: string | null;
+      /** Data */
+      data?: string | null;
+      /**
+       * Where
+       * @default []
+       */
+      where: components["schemas"]["BoardFilter"][];
+      select?: components["schemas"]["BoardSelect"] | null;
+      /**
+       * Span
+       * @default 2
+       */
+      span: number;
+      /** Height */
+      height?: number | null;
+      /** Spec */
+      spec?: {
+        [key: string]: unknown;
+      } | null;
+      /** Trace */
+      trace?: string | null;
+      /** X */
+      x?: string | null;
+      /** Y */
+      y?: string | null;
+      /** Z */
+      z?: string | null;
+      /** Color */
+      color?: string | null;
+      /** Text */
+      text?: string | null;
+      /** Size */
+      size?: string | null;
+      /** Frame */
+      frame?: string | null;
+      /** Layout */
+      layout?: {
+        [key: string]: unknown;
+      } | null;
+      /** Columns */
+      columns?: string[] | null;
+      /** Sort */
+      sort?: string | null;
+      /**
+       * Desc
+       * @default false
+       */
+      desc: boolean;
+      /** Op */
+      op?: ("count" | "mean" | "sum" | "min" | "max" | "distinct") | null;
+      /** Field */
+      field?: string | null;
+      /**
+       * Format
+       * @default number
+       * @enum {string}
+       */
+      format: "number" | "percent";
+      /** Markdown */
+      markdown?: string | null;
+      /** Edges */
+      edges?: string | null;
+      /** Node */
+      node?: string | null;
+      /** Label */
+      label?: string | null;
+      /** Source */
+      source?: string | null;
+      /** Target */
+      target?: string | null;
+      /**
+       * Direction
+       * @default LR
+       * @enum {string}
+       */
+      direction: "LR" | "TB";
+    };
+    /**
+     * BoardSelect
+     * @description What a click on a mark, a row or a node does: param takes that row's field.
+     */
+    BoardSelect: {
+      /** Param */
+      param: string;
+      /** Field */
+      field: string;
+    };
+    /**
+     * BoardView
+     * @description A dashboard: tables, controls and linked panels. A control or a click on a panel sets a
+     *     param; every panel whose filters name it redraws. No code runs and nothing is fetched but
+     *     louped's own data, so a board is safe to show and to commit.
+     */
+    BoardView: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      kind: "board";
+      /** Title */
+      title: string;
+      /** Note */
+      note?: string | null;
+      /** About */
+      about?: string | null;
+      /** Data */
+      data: {
+        [key: string]: components["schemas"]["BoardData"];
+      };
+      /**
+       * Controls
+       * @default []
+       */
+      controls: components["schemas"]["BoardControl"][];
+      /** Panels */
+      panels: components["schemas"]["BoardPanel"][];
+      /**
+       * Section
+       * @default workspace
+       * @enum {string}
+       */
+      section: "workspace" | "behavior" | "efficiency";
+    };
     /** Catalog */
     Catalog: {
       /** Regions */
@@ -2303,6 +2614,7 @@ export interface components {
         | components["schemas"]["TokensView"]
         | components["schemas"]["VegaView"]
         | components["schemas"]["PlotlyView"]
+        | components["schemas"]["BoardView"]
       )[];
     };
     /** Issue */
@@ -2544,6 +2856,7 @@ export interface components {
             | components["schemas"]["TokensView"]
             | components["schemas"]["VegaView"]
             | components["schemas"]["PlotlyView"]
+            | components["schemas"]["BoardView"]
           )
         | null;
       /** Error */
@@ -2724,6 +3037,15 @@ export interface components {
       up: number;
       /** Down */
       down: number;
+    };
+    /** PanelCheck */
+    PanelCheck: {
+      /** Id */
+      id: string;
+      /** Rows */
+      rows: number | null;
+      /** Problems */
+      problems: string[];
     };
     /**
      * PartRule
@@ -3114,7 +3436,8 @@ export interface components {
         | components["schemas"]["TableView"]
         | components["schemas"]["TokensView"]
         | components["schemas"]["VegaView"]
-        | components["schemas"]["PlotlyView"];
+        | components["schemas"]["PlotlyView"]
+        | components["schemas"]["BoardView"];
     };
     /** SampleDetail */
     SampleDetail: {
@@ -3200,6 +3523,7 @@ export interface components {
         | components["schemas"]["TokensView"]
         | components["schemas"]["VegaView"]
         | components["schemas"]["PlotlyView"]
+        | components["schemas"]["BoardView"]
       )[];
     };
     /** Saved */
@@ -3478,6 +3802,31 @@ export interface components {
       cluster: string;
       /** After */
       after?: string | null;
+    };
+    /** Table */
+    Table: {
+      /** Rows */
+      rows: {
+        [key: string]: unknown;
+      }[];
+      /** Columns */
+      columns: string[];
+      /**
+       * Truncated
+       * @default false
+       */
+      truncated: boolean;
+    };
+    /** TableCheck */
+    TableCheck: {
+      /** Name */
+      name: string;
+      /** Rows */
+      rows: number;
+      /** Columns */
+      columns: string[];
+      /** Error */
+      error?: string | null;
     };
     /** TableView */
     TableView: {
@@ -4620,7 +4969,8 @@ export interface operations {
           | components["schemas"]["TableView"]
           | components["schemas"]["TokensView"]
           | components["schemas"]["VegaView"]
-          | components["schemas"]["PlotlyView"];
+          | components["schemas"]["PlotlyView"]
+          | components["schemas"]["BoardView"];
       };
     };
     responses: {
@@ -5325,7 +5675,8 @@ export interface operations {
           | components["schemas"]["TableView"]
           | components["schemas"]["TokensView"]
           | components["schemas"]["VegaView"]
-          | components["schemas"]["PlotlyView"];
+          | components["schemas"]["PlotlyView"]
+          | components["schemas"]["BoardView"];
       };
     };
     responses: {
@@ -5336,6 +5687,172 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["RunView"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  board_table_api_board_table_get: {
+    parameters: {
+      query: {
+        ref: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Table"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  board_check_api_board_check_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json":
+          | components["schemas"]["HeatmapView"]
+          | components["schemas"]["LineView"]
+          | components["schemas"]["ScatterView"]
+          | components["schemas"]["TableView"]
+          | components["schemas"]["TokensView"]
+          | components["schemas"]["VegaView"]
+          | components["schemas"]["PlotlyView"]
+          | components["schemas"]["BoardView"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BoardCheck"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_boards_api_boards_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BoardPage"][];
+        };
+      };
+    };
+  };
+  get_board_api_boards__name__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BoardView"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  save_board_api_boards__name__put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json":
+          | components["schemas"]["HeatmapView"]
+          | components["schemas"]["LineView"]
+          | components["schemas"]["ScatterView"]
+          | components["schemas"]["TableView"]
+          | components["schemas"]["TokensView"]
+          | components["schemas"]["VegaView"]
+          | components["schemas"]["PlotlyView"]
+          | components["schemas"]["BoardView"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BoardPage"];
         };
       };
       /** @description Validation Error */

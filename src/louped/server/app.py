@@ -30,7 +30,7 @@ from louped.core import Direction, cohorts, documents, home
 from louped.core.judges import Judge, find_judges, write_judge
 from louped.core.paths import experiments_dir, inside
 from louped.server import graphs, inspect_view, launch, playground, plugins, serving, ui
-from louped.stores import ab, gates
+from louped.stores import ab, boards, gates
 from louped.stores.catalog import EvalTask, eval_tasks
 from louped.stores.labels import Label
 from louped.stores.mlflow_runs import Unreachable
@@ -46,6 +46,7 @@ from louped.stores.types import (
     AbResult,
     AbSession,
     Agreement,
+    BoardView,
     Comparison,
     Experiment,
     ExperimentDetail,
@@ -629,6 +630,45 @@ def create_app(
         try:
             return stores.save_experiment_view(name, view, req)
         except (ValueError, FileNotFoundError) as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.get("/api/board/table")
+    def board_table(ref: str) -> boards.Table:
+        """The rows a board's table reads: run:<id>/<path>, experiment:<name>/<path>,
+        metrics:<run id>, runs: or runs:<experiment> (louped.stores.boards)."""
+        try:
+            return boards.read_table(ref)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.post("/api/board/check", dependencies=[Depends(launch.require_json)])
+    def board_check(req: View) -> boards.BoardCheck:
+        """A board's tables read and its panels tried, before it is shown: what the agent fixes."""
+        if not isinstance(req, BoardView):
+            raise HTTPException(400, f"a {req.kind} figure is not a board")
+        return boards.check(req)
+
+    @app.get("/api/boards")
+    def list_boards() -> list[boards.BoardPage]:
+        """The boards shown as pages of their own: boards/<name>.json at the project's root."""
+        return boards.list_boards()
+
+    @app.get("/api/boards/{name}")
+    def get_board(name: str) -> BoardView:
+        try:
+            return boards.get_board(name)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.put("/api/boards/{name}", dependencies=[Depends(launch.require_json)])
+    def save_board(name: str, req: View) -> boards.BoardPage:
+        """Writes boards/<name>.json, replacing one of that name: a page in the sidebar."""
+        editing()
+        if not isinstance(req, BoardView):
+            raise HTTPException(400, f"a page is a board; this is a {req.kind} figure")
+        try:
+            return boards.save_board(name, req)
+        except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
 
     @app.get("/api/judges")

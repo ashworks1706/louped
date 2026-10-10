@@ -22,6 +22,12 @@ export type ScatterView = Schemas["ScatterView"];
 export type TokensView = Schemas["TokensView"];
 export type VegaView = Schemas["VegaView"];
 export type PlotlyView = Schemas["PlotlyView"];
+export type BoardView = Schemas["BoardView"];
+export type BoardPanel = Schemas["BoardPanel"];
+export type BoardControl = Schemas["BoardControl"];
+export type BoardFilter = Schemas["BoardFilter"];
+export type BoardTable = Schemas["Table"];
+export type BoardPage = Schemas["BoardPage"];
 export type Trace = Schemas["Trace"];
 export type Code = Schemas["Code"];
 export type Source = Schemas["Source"];
@@ -474,6 +480,26 @@ export const q = {
       isSnapshot()
         ? Promise.resolve([] as SavedCohort[])
         : get<SavedCohort[]>(`/experiments/${encodeURIComponent(experiment)}/cohorts`),
+  }),
+  /** A board's table read from louped: a run's or experiment's file, metrics:<id> or runs:.
+   * live is seconds between reads. */
+  boardTable: (ref: string, live?: number | null) => ({
+    queryKey: ["board-table", ref],
+    queryFn: () => get<BoardTable>(`/board/table?ref=${encodeURIComponent(ref)}`),
+    refetchInterval: () => (live && !isSnapshot() ? live * 1000 : false),
+  }),
+  /** The boards shown as their own pages; a published dashboard has none. Polled, so a page an
+   * agent adds shows in the sidebar. */
+  boards: () => ({
+    queryKey: ["boards"],
+    queryFn: () => (isSnapshot() ? Promise.resolve([]) : get<BoardPage[]>("/boards")),
+    retry: false,
+    refetchInterval: () => (isSnapshot() ? false : 3000),
+  }),
+  board: (name: string) => ({
+    queryKey: ["boards", name],
+    queryFn: () => get<BoardView>(`/boards/${encodeURIComponent(name)}`),
+    refetchInterval: () => (isSnapshot() ? false : 3000),
   }),
   /** An experiment's own figures; a published dashboard has none. */
   experimentViews: (experiment: string) => ({

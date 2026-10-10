@@ -39,7 +39,9 @@ mark or a record comes from (its rows, script and commit). Papers and docs the p
 on are its sources: search_sources and source_page before the web, add_source to keep one.
 A figure the person asks for (a chart of a file, points in 3D, an animation) is add_view, or
 derive when it needs a script
-over the run's files (new columns on its items); then ui_show. Evals are Inspect tasks: eval_tasks
+over the run's files (new columns on its items); then ui_show. A dashboard whose panels follow
+each other (a click or a control filters the rest, live tables, diagrams) is a board: check_view,
+then add_view, or add_page for a page of its own. Evals are Inspect tasks: eval_tasks
 lists the project's and inspect_evals' to launch with "eval". Judging two eval runs is launch
 "judge" with --judge one of judges; a new criterion or prompt is new_judge. The person's own
 blind picks of two runs (Compare's Blind A/B) are ab_results; check a judge against them there.
@@ -258,12 +260,46 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         folder}, the ids of each plotly trace (or, for vega, items.field: the data field) being
         the items' keys; then a mark opens its item and trace follows it. Then point the
         person at it with ui_show: the part is figures/figure/<path> on the run's figures tab,
-        experiment/view/<path> on the experiment's page."""
+        experiment/view/<path> on the experiment's page.
+        A dashboard (linked panels, controls, live tables, diagrams) is a board: see check_view."""
         if (run_id is None) == (experiment is None):
             raise ToolError("give run_id or experiment, one of them")
         where = (f"/runs/{quote(run_id, safe='')}" if run_id
                  else f"/experiments/{quote(experiment or '', safe='')}")  # fmt: skip
         return await send("PUT", f"{where}/views/{quote(name, safe='')}", json=view)
+
+    @mcp.tool(annotations=READ)
+    async def check_view(board: dict[str, Any]) -> dict[str, Any]:
+        """Try a board before keeping it: reads each table and returns its rows and fields, and
+        each panel's rows (every control at its default) and the fields it names that its table
+        lacks. Fix every problem, then add_view or add_page.
+        A board is {"kind": "board", "title", "about", "data": {<table>: {"rows": [...]} or
+        {"ref": ..., "live": seconds}}, "controls": [...], "panels": [...]}. A table's ref is
+        run:<id>/<path> or experiment:<name>/<path> (JSONL, CSV, TSV, JSON), metrics:<run id>
+        (key, step, value, timestamp) or runs: / runs:<experiment> (id, name, status, model and
+        each metric). A control {"id", "kind": select|multi|range|search|toggle, "label",
+        "data"+"field" or "options", "default", range "min"/"max"/"step"} sets the param named
+        by its id. A panel {"id", "kind", "title", "about", "data": <table>, "span": 1-4 of 4
+        columns, "height", "where": [{"field", "op": ==|!=|<|<=|>|>=|in|contains, "param" or
+        "value"}], "select": {"param", "field"}} redraws when a param it filters by changes, and
+        select sets a param from the row, mark or node clicked. Kinds: vega ("spec" without data:
+        the rows are its data and the params its params, so a condition can test
+        datum.model == model), plotly ("trace" type and fields "x", "y", "z", "color" one trace
+        per value, "text", "size", "frame" an animation over a field, "layout"), table
+        ("columns", "sort", "desc"), stat ("op": count|mean|sum|min|max|distinct, "field",
+        "format": number|percent), text ("markdown" with {{param}}), detail (the first row left:
+        filter it to the selected one), diagram (data is its nodes: "node" names one, "label";
+        "edges" another table with "source" and "target"; "direction" LR or TB). Every panel and
+        control gets an about."""
+        return await post("/board/check", board)
+
+    @mcp.tool(annotations=WRITE)
+    async def add_page(name: str, board: dict[str, Any]) -> dict[str, Any]:
+        """Keep a board as a page of its own, listed in the sidebar (boards/<name>.json at the
+        project's root, to commit; "section": workspace, behavior or efficiency picks which
+        sidebar). The same name replaces it. Check it first with check_view; then ui_show the
+        person to it: the page is /b/?name=<name> (/behavior/b/, /efficiency/b/)."""
+        return await send("PUT", f"/boards/{quote(name, safe='')}", json=board)
 
     @mcp.tool(annotations=WRITE)
     async def derive(run_id: str, script: str, name: str | None = None) -> dict[str, Any]:

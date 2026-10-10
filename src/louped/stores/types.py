@@ -6,7 +6,7 @@ import re
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 RunKind = Literal["eval", "analysis", "training"]
 #: What is degenerate about a sample's reply (louped.stores.degeneracy).
@@ -372,8 +372,225 @@ def _fetches(obj: Any) -> bool:
     return isinstance(obj, list) and any(_fetches(v) for v in obj)
 
 
+#: A value a board's control or filter holds: text, a number, a yes/no, or a list of them.
+Scalar = str | int | float | bool
+#: A table's name or a panel's id: lowercase letters, digits, - and _.
+_ID = r"^[a-z][a-z0-9_-]{0,63}$"
+#: A param's name, which a Vega condition reads as a variable: lowercase letters, digits and _.
+_PARAM = r"^[a-z][a-z0-9_]{0,63}$"
+#: The ops a board's filter tests a row's field with.
+FilterOp = Literal["==", "!=", "<", "<=", ">", ">=", "in", "contains"]
+
+
+class BoardData(BaseModel):
+    """One of a board's tables: its rows inline, or read from what louped already keeps."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    rows: list[dict[str, Any]] | None = None
+    #: run:<id>/<path> or experiment:<name>/<path> (a JSONL, CSV or JSON file), metrics:<run id>
+    #: (its metric history: key, step, value, timestamp), or runs: / runs:<experiment> (each run
+    #: with its status and metrics).
+    ref: str | None = None
+    #: Seconds between reads, for a run that is still going; none reads it once.
+    live: int | None = Field(None, ge=2, le=3600)
+
+    @model_validator(mode="after")
+    def _one(self) -> BoardData:
+        if (self.rows is None) == (self.ref is None):
+            raise ValueError("a table has rows or ref, one of them")
+        if self.live is not None and self.ref is None:
+            raise ValueError("live reads a table again: it needs a ref")
+        return self
+
+
+class BoardControl(BaseModel):
+    """An input over the panels: it sets the param named by its id."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(pattern=_PARAM)
+    kind: Literal["select", "multi", "range", "search", "toggle"]
+    label: str | None = None
+    about: str | None = None
+    #: select and multi: their options are the distinct values of this table's field.
+    data: str | None = None
+    field: str | None = None
+    #: select and multi: the options, when not read from a table.
+    options: list[Scalar] | None = None
+    #: The value before anyone sets one; none filters nothing.
+    default: Scalar | list[Scalar] | None = None
+    #: range: its bounds and step.
+    min: float | None = None
+    max: float | None = None
+    step: float | None = None
+
+    @model_validator(mode="after")
+    def _shape(self) -> BoardControl:
+        if (
+            self.kind in ("select", "multi")
+            and self.options is None
+            and not (self.data and self.field)
+        ):
+            raise ValueError(f"control {self.id}: a {self.kind} needs options, or data and field")
+        if self.kind == "range" and (self.min is None or self.max is None):
+            raise ValueError(f"control {self.id}: a range needs min and max")
+        return self
+
+
+class BoardFilter(BaseModel):
+    """Keeps the rows whose field passes op against a param (or a fixed value). A param that
+    is not set keeps every row."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    field: str
+    op: FilterOp = "=="
+    param: str | None = None
+    value: Scalar | list[Scalar] | None = None
+
+    @model_validator(mode="after")
+    def _one(self) -> BoardFilter:
+        if (self.param is None) == (self.value is None):
+            raise ValueError(f"filter on {self.field}: give param or value, one of them")
+        return self
+
+
+class BoardSelect(BaseModel):
+    """What a click on a mark, a row or a node does: param takes that row's field."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    param: str = Field(pattern=_PARAM)
+    field: str
+
+
+class BoardPanel(BaseModel):
+    """One panel of a board. Only the fields its kind reads are set."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(pattern=_ID)
+    kind: Literal["vega", "plotly", "table", "stat", "text", "detail", "diagram"]
+    title: str | None = None
+    #: How to read it, behind its ?.
+    about: str | None = None
+    #: The table it draws; text needs none.
+    data: str | None = None
+    where: list[BoardFilter] = []
+    select: BoardSelect | None = None
+    #: Columns it takes of the board's (default 2 of 4); the board wraps them in rows.
+    span: int = Field(2, ge=1, le=4)
+    height: int | None = Field(None, ge=80, le=1200)
+    #: vega: a Vega-Lite spec without data; the table's rows are its data, the board's params
+    #: its params (so a condition can test datum.model == model).
+    spec: dict[str, Any] | None = None
+    #: plotly: a trace type (scatter, scatter3d, bar, line, surface, heatmap, histogram, ...)
+    #: and the fields for its axes. color splits it into one trace per value; frame plays it
+    #: through the field's values, an animation; size sizes markers by a field.
+    trace: str | None = None
+    x: str | None = None
+    y: str | None = None
+    z: str | None = None
+    color: str | None = None
+    text: str | None = None
+    size: str | None = None
+    frame: str | None = None
+    layout: dict[str, Any] | None = None
+    #: table: its columns, in order (default all); sort by a field, highest first with desc.
+    columns: list[str] | None = None
+    sort: str | None = None
+    desc: bool = False
+    #: stat: what it computes over the field (count needs none).
+    op: Literal["count", "mean", "sum", "min", "max", "distinct"] | None = None
+    field: str | None = None
+    format: Literal["number", "percent"] = "number"
+    #: text: Markdown, with {{param}} for a param's value.
+    markdown: str | None = None
+    #: diagram: the data table is its nodes, edges the table of its edges; node is the field
+    #: naming a node, label what it shows, source and target the edge's ends; direction LR or TB.
+    edges: str | None = None
+    node: str | None = None
+    label: str | None = None
+    source: str | None = None
+    target: str | None = None
+    direction: Literal["LR", "TB"] = "LR"
+
+    @model_validator(mode="after")
+    def _needs(self) -> BoardPanel:
+        need: dict[str, list[str]] = {
+            "vega": ["data", "spec"],
+            "plotly": ["data", "trace"],
+            "table": ["data"],
+            "stat": ["data", "op"],
+            "text": ["markdown"],
+            "detail": ["data"],
+            "diagram": ["data", "edges", "node", "source", "target"],
+        }
+        if missing := [f for f in need[self.kind] if getattr(self, f) is None]:
+            raise ValueError(f"panel {self.id}: a {self.kind} panel needs {', '.join(missing)}")
+        if self.kind == "stat" and self.op != "count" and self.field is None:
+            raise ValueError(f"panel {self.id}: a stat's {self.op} needs a field")
+        if self.spec is not None and "data" in self.spec:
+            raise ValueError(f"panel {self.id}: leave data out of the spec; the board gives it")
+        if _fetches([self.spec, self.layout]):
+            raise ValueError(f"panel {self.id}: no urls; the board's tables are its data")
+        if self.trace is not None and _MAP.match(self.trace):
+            raise ValueError(f"panel {self.id}: {self.trace} fetches map tiles from the web")
+        return self
+
+
+class BoardView(BaseModel):
+    """A dashboard: tables, controls and linked panels. A control or a click on a panel sets a
+    param; every panel whose filters name it redraws. No code runs and nothing is fetched but
+    louped's own data, so a board is safe to show and to commit."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["board"]
+    title: str
+    note: str | None = None
+    about: str | None = None
+    data: dict[str, BoardData] = Field(min_length=1)
+    controls: list[BoardControl] = []
+    panels: list[BoardPanel] = Field(min_length=1)
+    #: As its own page (boards/<name>.json): the sidebar it is listed in.
+    section: Literal["workspace", "behavior", "efficiency"] = "workspace"
+
+    @model_validator(mode="after")
+    def _linked(self) -> BoardView:
+        problems = []
+        if bad := [t for t in self.data if not re.match(_ID, t)]:
+            problems.append(f"table names {bad}: lowercase letters, digits, - and _")
+        ids = [p.id for p in self.panels]
+        if dup := sorted({i for i in ids if ids.count(i) > 1}):
+            problems.append(f"panel ids {dup} are used twice")
+        params = {c.id for c in self.controls} | {p.select.param for p in self.panels if p.select}
+        for c in self.controls:
+            if c.data is not None and c.data not in self.data:
+                problems.append(f"control {c.id} reads table {c.data}, which data does not have")
+        for p in self.panels:
+            for t in (p.data, p.edges):
+                if t is not None and t not in self.data:
+                    problems.append(f"panel {p.id} reads table {t}, which data does not have")
+            for f in p.where:
+                if f.param is not None and f.param not in params:
+                    problems.append(f"panel {p.id} filters by param {f.param}, which no control "
+                                    "or select sets")  # fmt: skip
+        if problems:
+            raise ValueError("; ".join(problems))
+        return self
+
+
 View = Annotated[
-    HeatmapView | LineView | ScatterView | TableView | TokensView | VegaView | PlotlyView,
+    HeatmapView
+    | LineView
+    | ScatterView
+    | TableView
+    | TokensView
+    | VegaView
+    | PlotlyView
+    | BoardView,
     Field(discriminator="kind"),
 ]
 

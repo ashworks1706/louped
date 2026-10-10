@@ -50,7 +50,12 @@ description: Change what louped's pages show (reorder, hide, rename or explain a
      - A figure across runs of a question: `add_view` with `experiment`; it is kept in
        `experiments/<name>/views/` and shows on the experiment's page
        (`experiment/view/views%2F<name>.json`).
-     - A page of its own only when it is a tool, not a figure: a plugin (below).
+     - Panels that follow each other (a control or a click filters the rest, a live table, a
+       diagram): a `board`. Its tables are inline rows or refs to a run's files, its metrics or
+       its runs. Try it with `check_view` and fix every problem it names. Keep it with
+       `add_view` (on a run or an experiment), or with `add_page` as a page in the sidebar
+       (`/b/?name=<name>`). A panel is `board/<name>/panel/<id>`.
+     - A page of its own only when it is a tool, not a figure or a board: a plugin (below).
      To change it later, call `add_view` or `derive` again with the same name. Then `ui_show` the
      person to it with a one-line note. Keep data inline (no URLs). Give every figure an `about`.
    - Only when nothing built in shows it, a `plugin` block (`plugin`, and `page` for a file in

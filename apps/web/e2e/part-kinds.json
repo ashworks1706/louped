@@ -250,6 +250,21 @@
     "rules": ["hidden", "note"]
   },
   {
+    "part": "board/*",
+    "about": "A board shown as a page of its own, by its name.",
+    "rules": []
+  },
+  {
+    "part": "board/*/panel/*",
+    "about": "One panel of a board, by the board's name and the panel's id: its rows as drawn.",
+    "rules": []
+  },
+  {
+    "part": "board/*/control/*",
+    "about": "One control of a board, by its param.",
+    "rules": []
+  },
+  {
     "part": "figures/export/*",
     "about": "Exports one figure to reports/ as SVG, PNG or PDF.",
     "rules": []
