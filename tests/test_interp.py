@@ -646,6 +646,33 @@ def test_inspect_route_returns_views_under_interventions(lm) -> None:
     assert client.post("/api/playground/inspect", json=wrong).status_code == 400
     long = {"prompt": "poem " * 400}
     assert client.post("/api/playground/inspect", json=long).status_code == 400
+    read = client.post("/api/playground/inspect", json={**ask, "target": " poem"}).json()
+    first = lm.tokenizer(" poem", add_special_tokens=False)["input_ids"][0]
+    assert read["readout"]["target"] == first
+    assert len(read["readout"]["layers"]) == n_layers(lm) + 1
+
+
+def test_a_readout_follows_one_token_through_the_layers(lm) -> None:
+    """The lens ends on the model's answer; direct logit attribution adds up to the answer's logit,
+    and each layer's heads add up to its attention."""
+    from louped.analysis import attention_patterns
+    from louped.analysis.readout import readout
+
+    prompt = "the cat sat on the"
+    pattern, _ = attention_patterns(lm, prompt)
+    r = readout(lm, prompt, pattern=pattern)
+    last = len(r["tokens"]) - 1
+    assert r["target_rank"][-1][last] == 0 and r["top_ids"][-1][last][0] == r["target"]
+    assert all(k == 0 for k in r["kl"][-1])
+    parts = r["dla_embed"][last] + sum(a[last] for a in r["dla_attn"])
+    parts += sum(m[last] for m in r["dla_mlp"])
+    assert parts == pytest.approx(r["target_logit"][last], abs=1e-2)
+    for heads, attn in zip(r["dla_heads"], r["dla_attn"], strict=True):
+        assert sum(h[last] for h in heads) == pytest.approx(attn[last], abs=1e-2)
+    assert r["head_positions"] == list(range(last + 1))
+    assert len(r["head_prev"]) == n_layers(lm) and 0 <= r["head_prev"][0][0] <= 1
+    other = readout(lm, prompt, target=" mat")
+    assert other["target"] == lm.tokenizer(" mat", add_special_tokens=False)["input_ids"][0]
 
 
 def test_patch_and_dose_routes_read_the_next_token(lm) -> None:

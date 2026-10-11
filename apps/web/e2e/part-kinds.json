@@ -470,6 +470,41 @@
     "rules": ["hidden", "note", "order"]
   },
   {
+    "part": "playground/readout",
+    "about": "Inspect's readout: every panel at the picked token.",
+    "rules": []
+  },
+  {
+    "part": "playground/readout/tokens",
+    "about": "The prompt's tokens: pick the position to read.",
+    "rules": []
+  },
+  {
+    "part": "playground/readout/target",
+    "about": "The token every panel follows, and its probability and rank at the output.",
+    "rules": []
+  },
+  {
+    "part": "playground/readout/panel/*",
+    "about": "A readout panel: lens, target, certainty, dla, heads.",
+    "rules": ["hidden", "note"]
+  },
+  {
+    "part": "playground/readout/cell",
+    "about": "The lens cell under the cursor: its top tokens.",
+    "rules": []
+  },
+  {
+    "part": "playground/readout/heads-metric",
+    "about": "What the heads grid scores.",
+    "rules": []
+  },
+  {
+    "part": "playground/readout/head",
+    "about": "The picked head: what the token reads through it.",
+    "rules": []
+  },
+  {
     "part": "vectors/model/*",
     "about": "A model's heading over its vectors.",
     "rules": []

@@ -3,6 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { parseAsStringLiteral, useQueryStates } from "nuqs";
 
+import { InspectReadout, useReadoutState } from "@/components/inspect-readout";
 import { type Setup, ViewList } from "@/components/playground-fields";
 import { part } from "@/components/parts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,21 +15,29 @@ const SIDES = ["base", "intervention"] as const;
 export function useInspectTab(setup: Setup) {
   const { info, vectors, interventions, live, intervened, gen, label } = setup;
   const [s, set] = useQueryStates({ side: parseAsStringLiteral(SIDES).withDefault("base") });
+  const [read, setRead] = useReadoutState();
   // Their errors show in the result pane they fill, so no toast.
   const looked = useMutation({ mutationFn: inspect, meta: { quiet: true } });
   const lookedEdited = useMutation({ mutationFn: inspect, meta: { quiet: true } });
+  const run = (prompt: string, target = read.target) => {
+    const ask = {
+      prompt,
+      vectors: info.diffusion ? [] : vectors.map((v) => v.name),
+      chat: true,
+      target: target || null,
+    };
+    looked.mutate({ ...ask, ...gen, interventions: [], adapters: [] });
+    if (intervened) lookedEdited.mutate({ ...ask, ...gen, interventions, adapters: live });
+    else lookedEdited.reset();
+  };
   return {
     ready: true,
     busy: looked.isPending || lookedEdited.isPending,
-    run: (prompt: string) => {
-      const read = {
-        prompt,
-        vectors: info.diffusion ? [] : vectors.map((v) => v.name),
-        chat: true,
-      };
-      looked.mutate({ ...read, ...gen, interventions: [], adapters: [] });
-      if (intervened) lookedEdited.mutate({ ...read, ...gen, interventions, adapters: live });
-      else lookedEdited.reset();
+    run,
+    /** Follows another token: every panel reads it, from a new pass. */
+    follow: (target: string) => {
+      void setRead({ target: target || null });
+      run(setup.prompt, target);
     },
     keep: () => {
       if (!looked.data) return null;
@@ -47,12 +56,14 @@ export function useInspectTab(setup: Setup) {
     setSide: (side: (typeof SIDES)[number]) => void set({ side }),
     // the stream read: the intervened one only while there is an intervention
     shown: s.side === "intervention" && intervened ? lookedEdited : looked,
+    // the other side, which the intervened side's panels show their change from
+    base: s.side === "intervention" && intervened ? (looked.data?.readout ?? null) : null,
   };
 }
 
 /** The Inspect tab: which stream to read, and what the pass showed. */
 export function InspectTab({
-  tool: { side, setSide, shown },
+  tool: { side, setSide, shown, base, follow },
   setup: { info, intervened, label },
 }: {
   tool: ReturnType<typeof useInspectTab>;
@@ -80,6 +91,18 @@ export function InspectTab({
         <span className="text-muted-foreground animate-pulse text-sm">Reading…</span>
       ) : shown.error ? (
         <span className="text-negative text-sm">{shown.error.message}</span>
+      ) : shown.data?.readout ? (
+        <>
+          <InspectReadout
+            r={shown.data.readout}
+            other={base}
+            label={label}
+            patterns={patternsOf(shown.data.views)}
+            onTarget={follow}
+          />
+          {/* what the readout does not draw: projections onto saved vectors */}
+          <ViewList views={shown.data.views.filter(extra)} at={shown.submittedAt} />
+        </>
       ) : shown.data ? (
         <ViewList views={shown.data.views} at={shown.submittedAt} />
       ) : (
@@ -90,3 +113,13 @@ export function InspectTab({
     </TabsContent>
   );
 }
+
+/** The attention view's weights by "layer i · head j", each [query][key]. */
+function patternsOf(views: View[]): Record<string, number[][]> | null {
+  const attention = views.find((v) => v.kind === "tokens" && v.pairs);
+  return attention?.kind === "tokens" ? (attention.pairs ?? null) : null;
+}
+
+/** A view the readout does not already draw: not the lens, not the attention. */
+const extra = (v: View) =>
+  !(v.kind === "heatmap" && v.title.startsWith("Logit lens")) && !(v.kind === "tokens" && v.pairs);

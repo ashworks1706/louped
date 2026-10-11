@@ -61,6 +61,7 @@ export type PlaygroundInfo = Schemas["PlaygroundInfo"];
 type GenerateRequest = Schemas["GenerateRequest"];
 type InspectRequest = Schemas["InspectRequest"];
 type InspectResponse = Schemas["InspectResponse"];
+export type Readout = Schemas["Readout"];
 export type FeatureDashboard = Schemas["FeatureDashboard"];
 export type Launchable = Schemas["Launchable"];
 export type LaunchOption = Schemas["Option"];

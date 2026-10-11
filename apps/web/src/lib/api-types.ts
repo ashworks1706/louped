@@ -3042,6 +3042,11 @@ export interface components {
        * @default true
        */
       chat: boolean;
+      /**
+       * Target
+       * @description The token to follow; the model's prediction if unset.
+       */
+      target?: string | null;
     };
     /** InspectResponse */
     InspectResponse: {
@@ -3056,6 +3061,7 @@ export interface components {
         | components["schemas"]["PlotlyView"]
         | components["schemas"]["BoardView"]
       )[];
+      readout?: components["schemas"]["Readout"] | null;
     };
     /** Issue */
     Issue: {
@@ -3784,6 +3790,52 @@ export interface components {
       read_by?: string | null;
       /** Matched */
       matched?: string | null;
+    };
+    /**
+     * Readout
+     * @description One prompt read layer by layer, from louped.analysis.readout.
+     */
+    Readout: {
+      /** Tokens */
+      tokens: string[];
+      /** Layers */
+      layers: string[];
+      /** Vocab */
+      vocab: {
+        [key: string]: string;
+      };
+      /** Top Ids */
+      top_ids: number[][][];
+      /** Top Probs */
+      top_probs: number[][][];
+      /** Entropy */
+      entropy: number[][];
+      /** Kl */
+      kl: number[][];
+      /** Target */
+      target: number;
+      /** Target Prob */
+      target_prob: number[][];
+      /** Target Rank */
+      target_rank: number[][];
+      /** Target Logit */
+      target_logit: number[];
+      /** Dla Embed */
+      dla_embed: number[];
+      /** Dla Attn */
+      dla_attn: number[][];
+      /** Dla Mlp */
+      dla_mlp: number[][];
+      /** Dla Heads */
+      dla_heads: number[][][];
+      /** Head Positions */
+      head_positions: number[];
+      /** Head Entropy */
+      head_entropy: number[][];
+      /** Head Prev */
+      head_prev: number[][];
+      /** Head First */
+      head_first: number[][];
     };
     /** RemoteState */
     RemoteState: {

@@ -213,6 +213,19 @@ KINDS: list[Kind] = [
     _k(part="playground/reply/*", about="The base or intervened reply.", rules=PICK),
     _k(part="playground/figure/*", about="A figure a tool drew, by its title (logit-lens).",
        rules=["hidden", "note", "order"]),
+    _k(part="playground/readout", about="Inspect's readout: every panel at the picked token.",
+       rules=PICK),
+    _k(part="playground/readout/tokens", about="The prompt's tokens: pick the position to read.",
+       rules=PICK),
+    _k(part="playground/readout/target", about="The token every panel follows, and its "
+       "probability and rank at the output.", rules=PICK),
+    _k(part="playground/readout/panel/*", about="A readout panel: lens, target, certainty, dla, "
+       "heads.", rules=["hidden", "note"]),
+    _k(part="playground/readout/cell", about="The lens cell under the cursor: its top tokens.",
+       rules=PICK),
+    _k(part="playground/readout/heads-metric", about="What the heads grid scores.", rules=PICK),
+    _k(part="playground/readout/head", about="The picked head: what the token reads through it.",
+       rules=PICK),
     # saved vectors
     _k(part="vectors/model/*", about="A model's heading over its vectors.", rules=PICK),
     _k(part="vectors/column/*", about="A column of the vectors table.", rules=PICK),

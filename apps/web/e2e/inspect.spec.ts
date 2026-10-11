@@ -40,6 +40,49 @@ const views = [
   },
 ];
 
+// A readout of the same pass: 3 tokens, the embeddings and 2 layers, 4 heads.
+const L = 3;
+const by = <T>(f: (l: number, p: number) => T) =>
+  Array.from({ length: L }, (_, l) => tokens.map((_, p) => f(l, p)));
+function readout(shift = 0) {
+  return {
+    tokens,
+    layers: ["emb", "0", "1"],
+    vocab: { "1": "a", "2": "b", "3": "sure", "4": "no", "5": "ok", "6": "hm" },
+    top_ids: by((l) => (l === 2 ? [3, 4, 5, 6, 1] : [1, 2, 3, 4, 5])),
+    top_probs: by((l) => [0.3 + 0.3 * l, 0.1, 0.05, 0.03, 0.01]),
+    entropy: by((l) => 3 - l),
+    kl: by((l) => 2 - l),
+    target: 3,
+    target_prob: by((l) => Math.min(1, 0.05 + 0.4 * l + shift)),
+    target_rank: by((l) => 2 - l),
+    target_logit: [1, 2, 3],
+    dla_embed: [0.1, 0.1, 0.2],
+    dla_attn: [
+      [0.5, 0.2, 1.5 + shift],
+      [-0.2, 0.1, 0.4],
+    ],
+    dla_mlp: [
+      [0.1, 0.3, 0.2],
+      [0.3, -0.1, 0.7],
+    ],
+    dla_heads: [0, 1].map((l) => [0, 1, 2, 3].map((h) => [0.1 * h, -0.1 * l, 0.4 * h - 0.2 * l])),
+    head_positions: [0, 1, 2],
+    head_entropy: [
+      [1, 0.5, 0.2, 0.9],
+      [0.3, 0.8, 1.1, 0.1],
+    ],
+    head_prev: [
+      [0.9, 0.1, 0.2, 0.3],
+      [0.1, 0.2, 0.1, 0.6],
+    ],
+    head_first: [
+      [0.1, 0.8, 0.2, 0.3],
+      [0.5, 0.2, 0.1, 0.1],
+    ],
+  };
+}
+
 async function mockApi(page: Page, info: object = {}) {
   await page.route("**/api/playground", (r) =>
     r.fulfill({
@@ -91,6 +134,58 @@ test("Inspect tab draws the lens, projections and attention", async ({ page }, i
   await page.getByRole("tab", { name: /ablate|steer/ }).click();
   await expect(page).toHaveURL(/side=intervention/);
   await page.screenshot({ path: info.outputPath("inspect.png"), fullPage: true });
+  expect(errors).toEqual([]);
+});
+
+test("Inspect's readout follows a token through the layers, heads and parts", async ({
+  page,
+}, info) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await mockApi(page);
+  const asked: { target: string | null; interventions: unknown[] }[] = [];
+  await page.route("**/api/playground/inspect", (r) => {
+    const body = r.request().postDataJSON();
+    asked.push(body);
+    r.fulfill({ json: { views, readout: readout(body.interventions.length ? 0.2 : 0) } });
+  });
+  await page.goto("/behavior/probe/?tab=inspect");
+  await page.getByLabel("Prompt").fill("hi");
+  await page.getByRole("button", { name: /Run/ }).click();
+  await expect(page.getByTestId("lens-cell")).toHaveCount(9);
+  await expect(page.locator('[data-part="playground/readout/target"]')).toContainText(
+    "p = 0.850, rank 1",
+  );
+  // the readout replaces the lens and attention figures; projections stay
+  await expect(page.getByText("Projections", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("heat-cell")).toHaveCount(0);
+
+  // a token moves every panel; a lens cell lists its top tokens; one of them becomes the target
+  await page.getByRole("option", { name: "hi" }).click();
+  await expect(page).toHaveURL(/pos=1/);
+  await page.getByRole("gridcell", { name: /layer 0, token 1/ }).click();
+  await expect(page.locator('[data-part="playground/readout/cell"]')).toContainText(
+    'layer 0 · token 1 "hi"',
+  );
+  await page
+    .locator('[data-part="playground/readout/cell"]')
+    .getByRole("button", { name: /"b"/ })
+    .click();
+  await expect.poll(() => asked.at(-1)?.target).toBe("b");
+
+  // a head shows what the picked token reads through it
+  await page.getByLabel("Score heads by").selectOption("prev");
+  await expect(page.getByTestId("head-cell")).toHaveCount(8);
+  await page.getByRole("gridcell", { name: /layer 0 head 0/ }).click();
+  await expect(page.locator('[data-part="playground/readout/head"]')).toContainText(
+    "previous 0.90",
+  );
+  await page.screenshot({ path: info.outputPath("readout.png"), fullPage: true });
+
+  // the intervened side shows the change from base
+  await page.getByRole("tab", { name: /ablate|steer/ }).click();
+  await expect(page.getByText("Δ target probability")).toBeVisible();
+  await page.screenshot({ path: info.outputPath("readout-delta.png"), fullPage: true });
   expect(errors).toEqual([]);
 });
 

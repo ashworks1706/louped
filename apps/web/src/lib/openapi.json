@@ -7609,6 +7609,19 @@
             "title": "Chat",
             "description": "Wrap the prompt in the model's chat template.",
             "default": true
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target",
+            "description": "The token to follow; the model's prediction if unset."
           }
         },
         "type": "object",
@@ -7661,6 +7674,16 @@
             },
             "type": "array",
             "title": "Views"
+          },
+          "readout": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Readout"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -9422,6 +9445,209 @@
         "type": "object",
         "title": "Reading",
         "description": "How a scorer read its verdict from free text."
+      },
+      "Readout": {
+        "properties": {
+          "tokens": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tokens"
+          },
+          "layers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Layers"
+          },
+          "vocab": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Vocab"
+          },
+          "top_ids": {
+            "items": {
+              "items": {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Top Ids"
+          },
+          "top_probs": {
+            "items": {
+              "items": {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Top Probs"
+          },
+          "entropy": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Entropy"
+          },
+          "kl": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Kl"
+          },
+          "target": {
+            "type": "integer",
+            "title": "Target"
+          },
+          "target_prob": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Target Prob"
+          },
+          "target_rank": {
+            "items": {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Target Rank"
+          },
+          "target_logit": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Target Logit"
+          },
+          "dla_embed": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Dla Embed"
+          },
+          "dla_attn": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Dla Attn"
+          },
+          "dla_mlp": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Dla Mlp"
+          },
+          "dla_heads": {
+            "items": {
+              "items": {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Dla Heads"
+          },
+          "head_positions": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Head Positions"
+          },
+          "head_entropy": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Head Entropy"
+          },
+          "head_prev": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Head Prev"
+          },
+          "head_first": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Head First"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tokens",
+          "layers",
+          "vocab",
+          "top_ids",
+          "top_probs",
+          "entropy",
+          "kl",
+          "target",
+          "target_prob",
+          "target_rank",
+          "target_logit",
+          "dla_embed",
+          "dla_attn",
+          "dla_mlp",
+          "dla_heads",
+          "head_positions",
+          "head_entropy",
+          "head_prev",
+          "head_first"
+        ],
+        "title": "Readout",
+        "description": "One prompt read layer by layer, from louped.analysis.readout."
       },
       "RemoteState": {
         "properties": {
