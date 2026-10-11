@@ -154,7 +154,10 @@ Every region can also hold `text` (your own Markdown) and `plugin` (a page from 
 
 `views` shows every figure in `experiments/<name>/views/`. Your agent adds them with `add_view`.
 `view` (`path`) shows one. A figure can be any of louped's kinds or `plotly`. `plotly` draws 3D
-points and surfaces, and plays `frames` as an animation.
+points and surfaces, and plays `frames` as an animation. Its `animation` (`autoplay`, `loop`,
+`duration_ms`, `transition_ms`, `orbit`) starts the frames when the figure comes into view, plays
+them again, and turns a 3D scene. When your system asks for reduced motion, the figure does not
+move by itself. Before it adds a figure, your agent can look at it as an image with `preview_view`.
 
 ## Boards
 

@@ -14,7 +14,7 @@ from typing import Any, Literal
 from urllib.parse import quote
 
 import httpx
-from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver import Image, MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp_types import ToolAnnotations
 
@@ -39,9 +39,10 @@ mark or a record comes from (its rows, script and commit). Papers and docs the p
 on are its sources: search_sources and source_page before the web, add_source to keep one.
 A figure the person asks for (a chart of a file, points in 3D, an animation) is add_view, or
 derive when it needs a script
-over the run's files (new columns on its items); then ui_show. A dashboard whose panels follow
-each other (a click or a control filters the rest, live tables, diagrams) is a board: check_view,
-then add_view, or add_page for a page of its own. Evals are Inspect tasks: eval_tasks
+over the run's files (new columns on its items); check it with preview_view before ui_show.
+A dashboard whose panels follow each other (a click or a control filters the rest, live tables,
+diagrams) is a board: check_view, then add_view, or add_page for a page of its own.
+Evals are Inspect tasks: eval_tasks
 lists the project's and inspect_evals' to launch with "eval". Judging two eval runs is launch
 "judge" with --judge one of judges; a new criterion or prompt is new_judge. The person's own
 blind picks of two runs (Compare's Blind A/B) are ab_results; check a judge against them there.
@@ -75,14 +76,16 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
     api = httpx.AsyncClient(base_url=f"{url.rstrip('/')}/api", transport=transport, timeout=180)
     mcp = MCPServer("louped", instructions=INSTRUCTIONS)
 
-    async def send(method: str, path: str, **kwargs: Any) -> Any:
+    async def request(method: str, path: str, **kwargs: Any) -> httpx.Response:
         try:
-            response = await api.request(method, path, **kwargs)
+            return await api.request(method, path, **kwargs)
         except httpx.ConnectError as e:
             raise ToolError(f"no louped server at {url}; start one with `louped serve`") from e
         except httpx.HTTPError as e:
             raise ToolError(f"{method} {path} to {url} failed: {e!r}") from e
-        return _read(response)
+
+    async def send(method: str, path: str, **kwargs: Any) -> Any:
+        return _read(await request(method, path, **kwargs))
 
     async def get(path: str, /, **params: Any) -> Any:
         return await send("GET", path, params={k: v for k, v in params.items() if v is not None})
@@ -254,13 +257,15 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         with experiment, on its page (experiments/<experiment>/views/<name>.json, to commit).
         The same name replaces it, which is how to edit it. view is a figure as figure returns
         one: heatmap, line, scatter, table, tokens, vega (any Vega-Lite spec, data inline; its
-        params animate) or plotly (traces inline: scatter3d for points in 3D, frames to play).
-        Give it an about: how to read it. When its marks are items of a run (points of an
-        embedding, one per record), give it items: {"run": None or the run, "folder": the item
-        folder}, the ids of each plotly trace (or, for vega, items.field: the data field) being
-        the items' keys; then a mark opens its item and trace follows it. Then point the
-        person at it with ui_show: the part is figures/figure/<path> on the run's figures tab,
-        experiment/view/<path> on the experiment's page.
+        params animate) or plotly (traces inline: scatter3d for points in 3D, frames to play;
+        animation {autoplay, loop, duration_ms, transition_ms, orbit} plays them when shown and
+        orbit turns a 3D scene). Check it with preview_view first. Give it an about: how to
+        read it. When its marks are items of a run (points of an embedding, one per record),
+        give it items: {"run": None or the run, "folder": the item folder}, the ids of each
+        plotly trace (or, for vega, items.field: the data field) being the items' keys; then a
+        mark opens its item and trace follows it. Then point the person at it with ui_show: the
+        part is figures/figure/<path> on the run's figures tab, experiment/view/<path> on the
+        experiment's page.
         A dashboard (linked panels, controls, live tables, diagrams) is a board: see check_view."""
         if (run_id is None) == (experiment is None):
             raise ToolError("give run_id or experiment, one of them")
@@ -300,6 +305,20 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         sidebar). The same name replaces it. Check it first with check_view; then ui_show the
         person to it: the page is /b/?name=<name> (/behavior/b/, /efficiency/b/)."""
         return await send("PUT", f"/boards/{quote(name, safe='')}", json=board)
+
+    @mcp.tool(annotations=READ)
+    async def preview_view(view: dict[str, Any] | None = None, ref: str | None = None) -> Image:
+        """See a figure as a PNG before the person does: view, a figure as add_view takes it
+        (not saved; an error says what in it is wrong), or ref, a saved one
+        (run:<id>/views/<name>.json, experiment:<name>/views/<name>.json). Look at it, fix the
+        spec, then add_view and ui_show. Only vega and plotly figures draw here; a plotly
+        figure shows its traces before any frame plays and needs Chrome."""
+        if (view is None) == (ref is None):
+            raise ToolError("give view or ref, one of them")
+        response = await request("POST", "/views/preview", json={"view": view, "ref": ref})
+        if not response.is_success:
+            _read(response)  # raises with the server's message
+        return Image(data=response.content, format="png")
 
     @mcp.tool(annotations=WRITE)
     async def derive(run_id: str, script: str, name: str | None = None) -> dict[str, Any]:

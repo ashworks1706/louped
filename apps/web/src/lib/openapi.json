@@ -1044,6 +1044,41 @@
         }
       }
     },
+    "/api/views/preview": {
+      "post": {
+        "summary": "Preview View",
+        "description": "A vega or plotly figure drawn as a PNG, unsaved or at its ref: 400 with what is wrong\nin a view that does not check, 501 when Plotly finds no Chrome. Off with --expose, like\nexport: it draws any spec it is sent.",
+        "operationId": "preview_view_api_views_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "image/png": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/check": {
       "get": {
         "summary": "Grounded",
@@ -4306,7 +4341,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+            "pattern": "^[a-z][a-z0-9_]{0,63}$",
             "title": "Id"
           },
           "kind": {
@@ -4947,7 +4982,7 @@
         "properties": {
           "param": {
             "type": "string",
-            "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+            "pattern": "^[a-z][a-z0-9_]{0,63}$",
             "title": "Param"
           },
           "field": {
@@ -8092,6 +8127,43 @@
         "required": ["model", "layers"],
         "title": "PlaygroundInfo"
       },
+      "PlotlyAnimation": {
+        "properties": {
+          "autoplay": {
+            "type": "boolean",
+            "title": "Autoplay",
+            "default": false
+          },
+          "loop": {
+            "type": "boolean",
+            "title": "Loop",
+            "default": false
+          },
+          "duration_ms": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 16.0,
+            "title": "Duration Ms",
+            "default": 400
+          },
+          "transition_ms": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Transition Ms",
+            "default": 0
+          },
+          "orbit": {
+            "type": "boolean",
+            "title": "Orbit",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PlotlyAnimation",
+        "description": "How a plotly figure moves when the app shows it. When the person's system asks for reduced\nmotion, nothing moves by itself: the Play button stays."
+      },
       "PlotlyView": {
         "properties": {
           "kind": {
@@ -8164,6 +8236,16 @@
                 "type": "null"
               }
             ]
+          },
+          "animation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlotlyAnimation"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -8219,6 +8301,35 @@
         "type": "object",
         "required": ["name", "title", "section", "description", "panel"],
         "title": "PluginInfo"
+      },
+      "PreviewRequest": {
+        "properties": {
+          "view": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "View"
+          },
+          "ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref"
+          }
+        },
+        "type": "object",
+        "title": "PreviewRequest"
       },
       "Pushed": {
         "properties": {

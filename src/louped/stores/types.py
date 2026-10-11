@@ -321,6 +321,28 @@ class VegaView(BaseModel):
         return self
 
 
+class PlotlyAnimation(BaseModel):
+    """How a plotly figure moves when the app shows it. When the person's system asks for reduced
+    motion, nothing moves by itself: the Play button stays."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    #: Play the frames when the figure comes into view.
+    autoplay: bool = False
+    #: Play the frames again from the first after the last.
+    loop: bool = False
+    #: How long each frame shows, in milliseconds.
+    duration_ms: int = Field(400, ge=16, le=10_000)
+    #: How long the change from one frame to the next takes, in milliseconds.
+    transition_ms: int = Field(0, ge=0, le=10_000)
+    #: Turn the 3D camera around the z axis until the person drags the figure; frames or not.
+    orbit: bool = False
+
+
+#: Plotly trace types drawn in a 3D scene, which orbit turns.
+_SCENE = {"scatter3d", "surface", "mesh3d", "cone", "streamtube", "volume", "isosurface"}
+
+
 class PlotlyView(BaseModel):
     """A Plotly figure with its data inline: what Vega-Lite does not draw, such as points in 3D
     (scatter3d, surface) and figures that play through frames. The UI loads Plotly only when one
@@ -338,6 +360,8 @@ class PlotlyView(BaseModel):
     about: str | None = None
     #: The items its marks stand for, each trace naming its points' items in `ids`.
     items: ItemSource | None = None
+    #: How it moves when shown: autoplay and loop play its frames, orbit turns its 3D scene.
+    animation: PlotlyAnimation | None = None
 
     @model_validator(mode="after")
     def _inline(self) -> PlotlyView:
@@ -356,6 +380,13 @@ class PlotlyView(BaseModel):
                              "trace's ids")  # fmt: skip
         if self.items is not None and self.items.field is not None:
             raise ValueError("a plotly figure's items are its traces' ids: leave field out")
+        if (a := self.animation) is not None:
+            if (a.autoplay or a.loop) and not self.frames:
+                raise ValueError("animation autoplay and loop play frames: give the figure frames")
+            if a.orbit and not any(t.get("type") in _SCENE and t.get("scene", "scene") == "scene"
+                                   for t in self.data):  # fmt: skip
+                raise ValueError("animation orbit turns the 3D scene: give the figure a trace "
+                                 "such as scatter3d or surface in its scene")  # fmt: skip
         return self
 
 

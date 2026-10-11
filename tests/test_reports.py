@@ -1,8 +1,11 @@
 """reports/: decks, documents and exported figures, shown, previewed and checked."""
 
+import asyncio
+import base64
 import functools
 import glob
 import json
+import re
 import shutil
 import subprocess
 import tempfile
@@ -11,11 +14,15 @@ from pathlib import Path
 import pytest
 from docx import Document
 from fastapi.testclient import TestClient
+from mcp.server.mcpserver.exceptions import ToolError
+from mcp_types import CallToolResult, ImageContent
 from pptx import Presentation
 from pptx.util import Inches
+from pydantic import TypeAdapter
 from test_agent import call, tools
 from test_views import CLOUD, run_id  # noqa: F401  (the fixture)
 
+from louped.analysis.views import heatmap
 from louped.check import check
 from louped.reports import (
     Format,
@@ -24,13 +31,14 @@ from louped.reports import (
     list_reports,
     number,
     outline,
+    preview,
     preview_pdf,
     render,
     resolve,
 )
 from louped.server import create_app
 from louped.stores import add_view
-from louped.stores.types import PlotlyView, VegaView
+from louped.stores.types import PlotlyView, VegaView, View
 
 BARS = {"kind": "vega", "title": "Caving by condition",
         "spec": {"mark": "bar", "data": {"values": [{"c": "pressure", "v": 0.9}]},
@@ -229,6 +237,74 @@ def test_reports_through_the_api_and_mcp(
     assert again.status_code == 409
     readonly = TestClient(create_app(launching=False), base_url="http://localhost")
     assert readonly.post("/api/reports/figures", json={"ref": "x"}).status_code == 403
+
+
+def png(result: object) -> bytes:
+    """The image a tool returned."""
+    assert isinstance(result, CallToolResult) and not result.is_error, result
+    [image] = result.content
+    assert isinstance(image, ImageContent) and image.mime_type == "image/png"
+    return base64.b64decode(image.data)
+
+
+def test_the_agent_sees_a_figure_as_a_png_before_and_after_it_keeps_it(
+    run_id: str,  # noqa: F811
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mcp = tools()
+    assert png(asyncio.run(mcp.call_tool("preview_view", {"view": BARS}))).startswith(b"\x89PNG")
+    add_view(run_id, "bars", VegaView.model_validate(BARS))
+    saved = asyncio.run(mcp.call_tool("preview_view", {"ref": f"run:{run_id}/views/bars.json"}))
+    assert png(saved).startswith(b"\x89PNG")
+    with pytest.raises(ToolError, match="give view or ref, one of them"):
+        asyncio.run(mcp.call_tool("preview_view", {}))
+    # a view that does not check says what is wrong in it, so the agent can fix the spec
+    wrong = r"louped answered 400: the view does not check: vega\.spec: Input should be a valid"
+    with pytest.raises(ToolError, match=wrong + " dictionary$"):
+        asyncio.run(mcp.call_tool("preview_view", {"view": {**BARS, "spec": "bar"}}))
+    with pytest.raises(ToolError, match="plotly: Value error, animation autoplay and loop play"):
+        moves = {**CLOUD, "animation": {"autoplay": True}}
+        asyncio.run(mcp.call_tool("preview_view", {"view": moves}))
+    api = TestClient(create_app(launching=True), base_url="http://localhost")
+    drawn = api.post("/api/views/preview", json={"view": BARS})
+    assert drawn.headers["content-type"] == "image/png" and drawn.content.startswith(b"\x89PNG")
+    lens = heatmap("lens", [[0.5]], ["0"], ["0"], "position", "layer")
+    for body, code, why in (
+        ({"view": {**BARS, "spec": {"mark": "nope", "data": {"values": []}}}}, 400, "failed"),
+        ({"view": lens}, 400, "a heatmap figure, which only the app draws"),
+        ({"ref": f"run:{run_id}/views/none.json"}, 404, "none.json"),
+        ({"view": BARS, "ref": f"run:{run_id}/views/bars.json"}, 400, "one of them"),
+    ):
+        answer = api.post("/api/views/preview", json=body)
+        assert answer.status_code == code and why in answer.json()["detail"], answer.text
+    readonly = TestClient(create_app(launching=False), base_url="http://localhost")
+    assert readonly.post("/api/views/preview", json={"view": BARS}).status_code == 403
+    # a plotly figure draws in Chrome; without it, the answer says so
+    surface = {**CLOUD, "data": [{"type": "surface", "z": [[0, 1], [1, 0]]}],
+               "animation": {"orbit": True}}  # fmt: skip
+    monkeypatch.delenv("BROWSER_PATH", raising=False)
+    monkeypatch.setenv("PATH", str(tmp_path))  # no Chrome on it
+    with pytest.raises(
+        ToolError, match="louped answered 501: Plotly exports figures through Chrome"
+    ):
+        asyncio.run(mcp.call_tool("preview_view", {"view": surface}))
+    if CHROME is None:
+        pytest.skip("no Chrome to draw through")
+    monkeypatch.setenv("BROWSER_PATH", CHROME)
+    assert png(asyncio.run(mcp.call_tool("preview_view", {"view": surface}))).startswith(b"\x89PNG")
+
+
+def test_the_figure_recipes_agents_copy_check_and_vega_ones_draw() -> None:
+    import louped
+
+    skill = Path(louped.__file__).parent / "templates" / "agent" / "skills" / "change-ui"
+    recipes = re.findall(r"```json\n(.*?)```", (skill / "figures.md").read_text(), re.S)
+    kinds = [TypeAdapter(View).validate_json(r).kind for r in recipes]
+    assert kinds == ["plotly", "plotly", "plotly", "vega", "vega"]
+    for recipe in recipes[3:]:
+        assert preview(json.loads(recipe)).startswith(b"\x89PNG")
+    assert "(figures.md)" in (skill / "SKILL.md").read_text()
 
 
 @pytest.fixture

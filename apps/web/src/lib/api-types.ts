@@ -413,6 +413,28 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/views/preview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Preview View
+     * @description A vega or plotly figure drawn as a PNG, unsaved or at its ref: 400 with what is wrong
+     *     in a view that does not check, 501 when Plotly finds no Chrome. Off with --expose, like
+     *     export: it draws any spec it is sent.
+     */
+    post: operations["preview_view_api_views_preview_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/check": {
     parameters: {
       query?: never;
@@ -3212,6 +3234,38 @@ export interface components {
       switchable: boolean;
     };
     /**
+     * PlotlyAnimation
+     * @description How a plotly figure moves when the app shows it. When the person's system asks for reduced
+     *     motion, nothing moves by itself: the Play button stays.
+     */
+    PlotlyAnimation: {
+      /**
+       * Autoplay
+       * @default false
+       */
+      autoplay: boolean;
+      /**
+       * Loop
+       * @default false
+       */
+      loop: boolean;
+      /**
+       * Duration Ms
+       * @default 400
+       */
+      duration_ms: number;
+      /**
+       * Transition Ms
+       * @default 0
+       */
+      transition_ms: number;
+      /**
+       * Orbit
+       * @default false
+       */
+      orbit: boolean;
+    };
+    /**
      * PlotlyView
      * @description A Plotly figure with its data inline: what Vega-Lite does not draw, such as points in 3D
      *     (scatter3d, surface) and figures that play through frames. The UI loads Plotly only when one
@@ -3247,6 +3301,7 @@ export interface components {
       /** About */
       about?: string | null;
       items?: components["schemas"]["ItemSource"] | null;
+      animation?: components["schemas"]["PlotlyAnimation"] | null;
     };
     /** PluginInfo */
     PluginInfo: {
@@ -3275,6 +3330,15 @@ export interface components {
       experiment: boolean;
       /** Error */
       error?: string | null;
+    };
+    /** PreviewRequest */
+    PreviewRequest: {
+      /** View */
+      view?: {
+        [key: string]: unknown;
+      } | null;
+      /** Ref */
+      ref?: string | null;
     };
     /** Pushed */
     Pushed: {
@@ -4844,6 +4908,39 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Report"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  preview_view_api_views_preview_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PreviewRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/png": unknown;
         };
       };
       /** @description Validation Error */

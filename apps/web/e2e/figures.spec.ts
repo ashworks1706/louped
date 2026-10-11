@@ -34,6 +34,73 @@ test("a Plotly figure an agent added shows on the run, with its frames", async (
   await page.screenshot({ path: info.outputPath("run-plotly.png"), fullPage: true });
 });
 
+/** Shows a figure on the run's Figures tab and returns its Plotly element's state: the frame it
+ * is on and where its 3D camera is. */
+async function moving(page: import("@playwright/test").Page, view: object) {
+  await mock(page);
+  const withViews = {
+    ...run,
+    artifacts: [...run.artifacts, { path: "views/moves.json", size: 1 }],
+  };
+  await page.route("**/api/runs/m-1", (r) => r.fulfill({ json: withViews }));
+  await page.route("**/api/runs/m-1/views", (r) =>
+    r.fulfill({ json: [{ path: "views/moves.json", view }] }),
+  );
+  await page.goto("/run/?id=m-1&tab=figures");
+  const plot = page.getByTestId("plotly");
+  await expect(plot.locator(".main-svg").first()).toBeVisible({ timeout: 15_000 });
+  return async () =>
+    plot.evaluate((el) => {
+      const gd = el as unknown as {
+        _fullLayout: { _currentFrame?: string };
+        layout: { scene?: { camera?: { eye?: { x: number; y: number } } } };
+      };
+      return { frame: gd._fullLayout._currentFrame, eye: gd.layout.scene?.camera?.eye };
+    });
+}
+
+const moves = {
+  ...cloud,
+  frames: ["0", "1", "2"].map((name, i) => ({ name, data: [{ x: [i, 1] }] })),
+  animation: { autoplay: true, loop: true, duration_ms: 100, transition_ms: 0, orbit: true },
+};
+
+test("a figure with animation plays its frames again and again and turns until dragged", async ({
+  page,
+}) => {
+  const state = await moving(page, moves);
+  // the frames it shows, in order, watched in the page until it plays the first after the last
+  const shown = await page.getByTestId("plotly").evaluate(
+    (el) =>
+      new Promise<string[]>((resolve) => {
+        const gd = el as unknown as { _fullLayout: { _currentFrame?: string } };
+        const order: string[] = [];
+        const watch = () => {
+          const at = gd._fullLayout._currentFrame;
+          if (at !== undefined && at !== order.at(-1)) order.push(at);
+          if (order.join().includes("1,2,0")) resolve(order);
+          else requestAnimationFrame(watch);
+        };
+        watch();
+      }),
+  );
+  expect(shown.join()).toContain("1,2,0");
+  const first = (await state()).eye;
+  await expect.poll(async () => (await state()).eye?.x).not.toBe(first?.x);
+  await page.getByTestId("plotly").dispatchEvent("pointerdown");
+  const held = (await state()).eye;
+  await page.waitForTimeout(300);
+  expect((await state()).eye).toEqual(held);
+});
+
+test("with reduced motion asked for, a figure does not move by itself", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const state = await moving(page, moves);
+  await page.waitForTimeout(500);
+  expect(await state()).toEqual({ frame: undefined, eye: undefined });
+  await expect(page.getByTestId("plotly").getByText("Play")).toBeVisible();
+});
+
 test("an experiment's page shows the figures an agent put there", async ({ page }, info) => {
   await mock(page);
   await page.route("**/api/experiments/hello/views", (r) =>

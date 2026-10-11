@@ -56,8 +56,10 @@ description: Change what louped's pages show (reorder, hide, rename or explain a
        `add_view` (on a run or an experiment), or with `add_page` as a page in the sidebar
        (`/b/?name=<name>`). A panel is `board/<name>/panel/<id>`.
      - A page of its own only when it is a tool, not a figure or a board: a plugin (below).
-     To change it later, call `add_view` or `derive` again with the same name. Then `ui_show` the
-     person to it with a one-line note. Keep data inline (no URLs). Give every figure an `about`.
+     To change it later, call `add_view` or `derive` again with the same name. Look at it with
+     `preview_view` first. Then `ui_show` the person to it with a one-line note. Keep data inline
+     (no URLs). Give every figure an `about`.
+     [figures.md](figures.md) has examples to copy: 3D points, animation, orbit, Vega-Lite params.
    - Only when nothing built in shows it, a `plugin` block (`plugin`, and `page` for a file in
      its `panel/`). Follow `add-plugin`, and build the page from the kit (step 5).
 4. Scope:

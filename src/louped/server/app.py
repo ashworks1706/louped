@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import mimetypes
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
@@ -122,6 +122,13 @@ class FigureRequest(BaseModel):
     name: str | None = None
     #: Write over a file of the same name; without it, 409.
     replace: bool = False
+
+
+class PreviewRequest(BaseModel):
+    #: A figure as add_view takes one, not saved; checked first.
+    view: dict[str, Any] | None = None
+    #: A saved figure: run:<id>/views/<name>.json or experiment:<name>/views/<name>.json.
+    ref: str | None = None
 
 
 class PinRequest(BaseModel):
@@ -426,6 +433,24 @@ def create_app(
             raise HTTPException(404, str(exc)) from exc
         except FileExistsError as exc:
             raise HTTPException(409, str(exc)) from exc
+        except (ValueError, RuntimeError) as exc:
+            raise _report_error(exc) from exc
+
+    @app.post(
+        "/api/views/preview",
+        dependencies=[Depends(launch.require_json)],
+        response_class=Response,
+        responses={200: {"content": {"image/png": {}}}},
+    )
+    def preview_view(req: PreviewRequest) -> Response:
+        """A vega or plotly figure drawn as a PNG, unsaved or at its ref: 400 with what is wrong
+        in a view that does not check, 501 when Plotly finds no Chrome. Off with --expose, like
+        export: it draws any spec it is sent."""
+        editing()
+        try:
+            return Response(reporting.preview(req.view, req.ref), media_type="image/png")
+        except stores.NotFound as exc:
+            raise HTTPException(404, str(exc)) from exc
         except (ValueError, RuntimeError) as exc:
             raise _report_error(exc) from exc
 

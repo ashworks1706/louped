@@ -184,7 +184,8 @@ core                                     run metadata, paths, the project and it
   as citation chips.
   `louped.reports` lists reports/. It previews decks and documents through LibreOffice when
   installed. It exports Vega-Lite (vl-convert) and Plotly (Kaleido, with Chrome) figures with a
-  `<file>.refs.json` sidecar that holds the ref and its trace. It files each report under the
+  `<file>.refs.json` sidecar that holds the ref and its trace. The same drawing gives the agent a
+  figure as a PNG before the person sees it (`POST /api/views/preview`, MCP `preview_view`). It files each report under the
   experiment it reports on, and resolves the live refs in Markdown (`{{run:<id> <metric>}}`, a
   figure's ref) for the app's renderer (`GET /api/live`), so a write-up's numbers are read from
   its runs. `louped.core.documents` reads PDFs,
