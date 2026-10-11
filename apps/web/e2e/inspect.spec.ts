@@ -66,6 +66,7 @@ function readout(shift = 0) {
       [0.1, 0.3, 0.2],
       [0.3, -0.1, 0.7],
     ],
+    dla_rest: [0.01, 0, -0.02],
     dla_heads: [0, 1].map((l) => [0, 1, 2, 3].map((h) => [0.1 * h, -0.1 * l, 0.4 * h - 0.2 * l])),
     head_positions: [0, 1, 2],
     head_entropy: [
@@ -143,7 +144,7 @@ test("Inspect's readout follows a token through the layers, heads and parts", as
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await mockApi(page);
-  const asked: { target: string | null; interventions: unknown[] }[] = [];
+  const asked: { target: string | null; target_id: number | null; interventions: unknown[] }[] = [];
   await page.route("**/api/playground/inspect", (r) => {
     const body = r.request().postDataJSON();
     asked.push(body);
@@ -156,13 +157,15 @@ test("Inspect's readout follows a token through the layers, heads and parts", as
   await expect(page.locator('[data-part="playground/readout/target"]')).toContainText(
     "p = 0.850, rank 1",
   );
+  // the intervened pass follows the token the base pass followed
+  expect(asked.find((b) => b.interventions.length)?.target_id).toBe(3);
   // the readout replaces the lens and attention figures; projections stay
   await expect(page.getByText("Projections", { exact: true })).toBeVisible();
   await expect(page.getByTestId("heat-cell")).toHaveCount(0);
 
   // a token moves every panel; a lens cell lists its top tokens; one of them becomes the target
   await page.getByRole("option", { name: "hi" }).click();
-  await expect(page).toHaveURL(/pos=1/);
+  await expect(page).toHaveURL(/lpos=1/);
   await page.getByRole("gridcell", { name: /layer 0, token 1/ }).click();
   await expect(page.locator('[data-part="playground/readout/cell"]')).toContainText(
     'layer 0 · token 1 "hi"',
@@ -171,7 +174,9 @@ test("Inspect's readout follows a token through the layers, heads and parts", as
     .locator('[data-part="playground/readout/cell"]')
     .getByRole("button", { name: /"b"/ })
     .click();
-  await expect.poll(() => asked.at(-1)?.target).toBe("b");
+  // a lens token is sent by its id; the intervened pass follows the base pass's target
+  await expect.poll(() => asked.find((b) => b.target_id === 2) !== undefined).toBe(true);
+  await expect(page).toHaveURL(/ltarget=%232/);
 
   // a head shows what the picked token reads through it
   await page.getByLabel("Score heads by").selectOption("prev");

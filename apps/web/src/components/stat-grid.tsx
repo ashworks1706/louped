@@ -34,23 +34,27 @@ export function Stat({
   label,
   children,
   note,
+  about,
   href,
   part,
 }: {
   label: string;
   children: React.ReactNode;
   note?: React.ReactNode;
+  /** What the number means, behind a ?; the layout's about wins. */
+  about?: string;
   href?: string;
   part?: string;
 }) {
   const rule = useRules();
   const r = part ? rule(part) : {};
   if (r.hidden) return null;
+  const meaning = r.about ?? about;
   const body = (
     <>
       <span className="text-muted-foreground flex items-center gap-1 text-xs">
         {r.label ?? label}
-        {r.about && <Help>{r.about}</Help>}
+        {meaning && <Help label={`What is ${label}?`}>{meaning}</Help>}
       </span>
       <span className="font-mono text-2xl font-medium tabular-nums">{children}</span>
       {note && <span className="text-muted-foreground text-xs">{note}</span>}

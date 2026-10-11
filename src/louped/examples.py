@@ -265,14 +265,13 @@ def circuit(lm, prompt: str, slug: str = "example-refusal", per_layer: int = 4) 
     nodes: list[dict[str, Any]] = []
     for pos, (t, w) in enumerate(zip(ids[0].tolist(), words, strict=True)):
         nodes.append({"node_id": f"E_{t}_{pos}", "feature": pos, "layer": "E", "ctx_idx": pos,
-                      "feature_type": "embedding", "jsNodeId": f"E_{t}-{pos}", "clerp": w,
-                      "influence": float(to_logit[0][0, pos].sum().abs())})  # fmt: skip
+                      "feature_type": "embedding", "jsNodeId": f"E_{t}-{pos}",
+                      "clerp": w})  # fmt: skip
     for layer, pos, n in picked:
         nodes.append({"node_id": f"{layer}_{n}_{pos}", "feature": n, "layer": str(layer),
                       "ctx_idx": pos, "feature_type": "cross layer transcoder",
                       "jsNodeId": f"{layer}_{n}-0", "clerp": f"neuron {layer}.{n}",
-                      "activation": float(acts[layer][0, pos, n].detach()),
-                      "influence": float(to_logit[layer + 1][0, pos, n].abs())})  # fmt: skip
+                      "activation": float(acts[layer][0, pos, n].detach())})  # fmt: skip
     logit_id = f"{layers + 1}_{target}_{positions - 1}"
     nodes.append(
         {

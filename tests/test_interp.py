@@ -671,8 +671,69 @@ def test_a_readout_follows_one_token_through_the_layers(lm) -> None:
         assert sum(h[last] for h in heads) == pytest.approx(attn[last], abs=1e-2)
     assert r["head_positions"] == list(range(last + 1))
     assert len(r["head_prev"]) == n_layers(lm) and 0 <= r["head_prev"][0][0] <= 1
-    other = readout(lm, prompt, target=" mat")
-    assert other["target"] == lm.tokenizer(" mat", add_special_tokens=False)["input_ids"][0]
+    assert readout(lm, prompt, target=7)["target"] == 7
+    with pytest.raises(ValueError, match="tokens; the target is one token"):
+        readout(lm, prompt, target="the cat sat")
+
+
+def _family(name: str):
+    """A tiny model of one family, its biases and norm weights nonzero."""
+    from transformers import Gemma2Config, Gemma2ForCausalLM, GPT2Config, GPT2LMHeadModel
+
+    from louped.models import load
+    from louped.models.tiny import tokenizer
+
+    tok = tokenizer()
+    torch.manual_seed(0)
+    if name == "gpt2":
+        model = GPT2LMHeadModel(GPT2Config(vocab_size=len(tok), n_embd=32, n_layer=2, n_head=4,
+                                           n_positions=64))  # fmt: skip
+    else:
+        model = Gemma2ForCausalLM(Gemma2Config(vocab_size=len(tok), hidden_size=32,
+                                               intermediate_size=64, num_hidden_layers=2,
+                                               num_attention_heads=4, num_key_value_heads=2,
+                                               head_dim=8, pad_token_id=0,
+                                               final_logit_softcapping=2.0))  # fmt: skip
+    for p in model.parameters():
+        if p.dim() == 1:
+            p.data.normal_(0, 0.5)
+    return load(model.eval(), tokenizer=tok)
+
+
+@pytest.mark.parametrize("family", ["gpt2", "gemma2"])
+def test_a_readout_adds_up_on_layernorm_conv1d_post_norm_and_softcap(family: str) -> None:
+    """GPT-2 (LayerNorm with biases, Conv1D projections) and Gemma 2 (1 + weight norms, attention
+    normed before it is added, a logit softcap): the parts and the rest add up to the logit, and
+    the probabilities are the model's own."""
+    from louped.analysis.readout import readout
+
+    lm = _family(family)
+    prompt = "the cat sat on the"
+    r = readout(lm, prompt)
+    last = len(r["tokens"]) - 1
+    parts = r["dla_embed"][last] + sum(a[last] for a in r["dla_attn"])
+    parts += sum(m[last] for m in r["dla_mlp"]) + r["dla_rest"][last]
+    assert parts == pytest.approx(r["target_logit"][last], abs=1e-2)
+    ids = lm.tokenizer(prompt, return_tensors="pt")
+    with torch.no_grad():
+        logits = lm._model(**ids).logits[0, last]
+    assert r["target_prob"][-1][last] == pytest.approx(float(logits.softmax(-1)[r["target"]]),
+                                                       abs=1e-3)  # fmt: skip
+    if family == "gemma2":
+        assert r["softcap"] == 2.0 and abs(r["target_logit"][last]) > 0
+        # attention's write is its normed output: the split is not the raw projection's
+        assert all(abs(a[last]) < 50 for a in r["dla_attn"])
+
+
+def test_a_readout_runs_under_a_heads_ablation(lm) -> None:
+    from louped.analysis.readout import readout
+    from louped.interventions import compile
+    from louped.interventions.specs import Heads
+
+    plan = compile(lm, [Heads(layers=[1], heads=[0, 1])])
+    r = readout(lm, "the cat sat on the", plan)
+    last = len(r["tokens"]) - 1
+    assert r["dla_heads"][1][0][last] == 0 and r["dla_heads"][1][1][last] == 0
 
 
 def test_patch_and_dose_routes_read_the_next_token(lm) -> None:

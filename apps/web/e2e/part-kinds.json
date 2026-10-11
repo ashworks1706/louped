@@ -565,6 +565,11 @@
     "rules": []
   },
   {
+    "part": "circuits/figure",
+    "about": "The attribution graph with its title and how to read it.",
+    "rules": ["label", "about", "note"]
+  },
+  {
     "part": "circuits/canvas",
     "about": "The graph: token positions across, layers up.",
     "rules": []
@@ -592,6 +597,11 @@
   {
     "part": "circuits/pin",
     "about": "Pins or unpins the picked node.",
+    "rules": []
+  },
+  {
+    "part": "circuits/member/*",
+    "about": "One node of the picked group.",
     "rules": []
   },
   {

@@ -292,7 +292,10 @@ def _write(key: str, ids: list[str]) -> None:
     else:
         end = next((i for i in range(head + 1, len(lines)) if lines[i].lstrip().startswith("[")),
                    len(lines))  # fmt: skip
-        at = next((i for i in range(head + 1, end) if re.match(rf"\s*{key}\s*=", lines[i])), None)
+        at = next(
+            (i for i in range(head + 1, end) if re.match(rf"\s*{re.escape(key)}\s*=", lines[i])),
+            None,
+        )
         if at is None:
             lines.insert(head + 1, line)
         else:

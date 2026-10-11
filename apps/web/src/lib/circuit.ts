@@ -25,16 +25,25 @@ function strongest<T>(items: T[], share: (t: T) => number, keep: number): T[] {
   return out;
 }
 
+/** Whether every feature and error node carries circuit-tracer's own cumulative influence. */
+export function hasInfluence(g: CircuitGraph): boolean {
+  const inner = g.nodes.filter((n) => n.kind !== "logit" && n.kind !== "embedding");
+  return inner.length > 0 && inner.every((n) => n.influence != null);
+}
+
 /** Prunes as circuit-tracer does: the nodes that carry `nodes` of the influence on the logits, then
- * the edges between them that carry `edges` of it. Logits stay; a node left with no edge goes. */
+ * the edges between them that carry `edges` of it. Logits stay; a node left with no edge goes.
+ * When circuit-tracer stored each node's cumulative influence, a node stays while it is at most
+ * `nodes`, as in circuit-tracer's own pruning; else louped's score is summed strongest first. */
 export function prune(g: CircuitGraph, nodes: number, edges: number): Cut {
   const logits = g.nodes.filter((n) => n.kind === "logit");
+  const rest = g.nodes.filter((n) => n.kind !== "logit");
+  const own = hasInfluence(g);
   const kept = new Set([
     ...logits.map((n) => n.id),
-    ...strongest(
-      g.nodes.filter((n) => n.kind !== "logit"),
-      (n) => n.score,
-      nodes,
+    ...(own
+      ? rest.filter((n) => n.influence == null || n.influence <= nodes)
+      : strongest(rest, (n) => n.score, nodes)
     ).map((n) => n.id),
   ]);
   const among = g.links.filter((l) => kept.has(l.source) && kept.has(l.target));
@@ -122,7 +131,9 @@ export function layout(cut: Cut, tokens: string[], fit = 0): Laid {
   const cells = new Map<string, CircuitNode[]>();
   for (const n of [...cut.nodes].sort((a, b) => b.score - a.score)) {
     const key = `${n.row}:${n.position}`;
-    cells.set(key, [...(cells.get(key) ?? []), n]);
+    const cell = cells.get(key);
+    if (cell) cell.push(n);
+    else cells.set(key, [n]);
   }
   const widths = Array.from({ length: positions }, (_, p) =>
     Math.max(
@@ -173,9 +184,14 @@ export function paths(
 ): { nodes: Set<string>; links: Set<CircuitLink> } {
   const up = new Map<string, CircuitLink[]>();
   const down = new Map<string, CircuitLink[]>();
+  const add = (m: Map<string, CircuitLink[]>, k: string, l: CircuitLink) => {
+    const list = m.get(k);
+    if (list) list.push(l);
+    else m.set(k, [l]);
+  };
   for (const l of links) {
-    up.set(l.source, [...(up.get(l.source) ?? []), l]);
-    down.set(l.target, [...(down.get(l.target) ?? []), l]);
+    add(up, l.source, l);
+    add(down, l.target, l);
   }
   const nodes = new Set([from]);
   const on = new Set<CircuitLink>();

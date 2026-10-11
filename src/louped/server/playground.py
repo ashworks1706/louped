@@ -106,7 +106,13 @@ class InspectRequest(Ask):
     vectors: list[str] = Field([], description="Saved directions to read, each at its own layer.")
     chat: bool = Field(True, description="Wrap the prompt in the model's chat template.")
     target: str | None = Field(
-        None, max_length=200, description="The token to follow; the model's prediction if unset."
+        None, max_length=200, description="The token to follow, as one token's text."
+    )
+    target_id: int | None = Field(
+        None,
+        ge=0,
+        description="The token to follow, by id; wins over target. Neither: the "
+        "model's prediction at the last position.",
     )
 
 
@@ -134,12 +140,18 @@ class Readout(BaseModel):
     target_rank: list[list[int]]
     #: [position]: the target's logit at the output.
     target_logit: list[float]
+    #: The model's final logit softcap (Gemma 2), when it has one: probabilities are read after it,
+    #: target_logit and the attribution before it.
+    softcap: float | None = None
     #: [position]: the embeddings' direct effect on the target's logit.
     dla_embed: list[float]
     #: [layer][position]: each layer's attention and MLP's direct effect (the MLP's includes any
     #: steering added at that layer).
     dla_attn: Grid
     dla_mlp: Grid
+    #: [position]: what the parts above do not explain: the final norm's and the head's biases.
+    #: The embeddings, every layer's attention and MLP, and this add up to target_logit.
+    dla_rest: list[float]
     #: [layer][head][i]: each head's direct effect at head_positions[i].
     dla_heads: list[Grid]
     head_positions: list[int]
@@ -416,7 +428,8 @@ def router(switchable: bool = False) -> APIRouter:
             pattern, attended = attention_patterns(m, prompt, edits)
             views.append(attended)
             try:
-                read = readout(m, prompt, edits, req.target, pattern)
+                read = readout(m, prompt, edits, req.target_id if req.target_id is not None
+                               else req.target, pattern)  # fmt: skip
             except ValueError as exc:
                 raise HTTPException(400, str(exc)) from exc
         return InspectResponse.model_validate({"views": views, "readout": read})

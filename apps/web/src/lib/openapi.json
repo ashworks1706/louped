@@ -5734,6 +5734,17 @@
           "score": {
             "type": "number",
             "title": "Score"
+          },
+          "influence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Influence"
           }
         },
         "type": "object",
@@ -7621,7 +7632,20 @@
               }
             ],
             "title": "Target",
-            "description": "The token to follow; the model's prediction if unset."
+            "description": "The token to follow, as one token's text."
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id",
+            "description": "The token to follow, by id; wins over target. Neither: the model's prediction at the last position."
           }
         },
         "type": "object",
@@ -9546,6 +9570,17 @@
             "type": "array",
             "title": "Target Logit"
           },
+          "softcap": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Softcap"
+          },
           "dla_embed": {
             "items": {
               "type": "number"
@@ -9572,6 +9607,13 @@
             },
             "type": "array",
             "title": "Dla Mlp"
+          },
+          "dla_rest": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Dla Rest"
           },
           "dla_heads": {
             "items": {
@@ -9640,6 +9682,7 @@
           "dla_embed",
           "dla_attn",
           "dla_mlp",
+          "dla_rest",
           "dla_heads",
           "head_positions",
           "head_entropy",

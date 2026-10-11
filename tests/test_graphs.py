@@ -88,3 +88,17 @@ def test_an_agent_reads_a_circuit_and_pins_its_nodes(graph: dict) -> None:
     ]
     call(mcp, "pin_circuit", slug="g", pinned=["0_7_1"], groups=[{"name": "a", "nodes": ["E_1_0"]}])
     assert call(mcp, "circuit", slug="g")["pinned"] == ["0_7_1"]
+
+
+def test_circuit_tracers_own_influence_comes_along_and_a_graph_needs_probabilities(
+    graph: dict,
+) -> None:
+    graph["nodes"][2]["influence"] = 0.4
+    (graphs_dir() / "g.json").write_text(json.dumps(graph))
+    client = TestClient(create_app(), base_url="http://localhost")
+    nodes = {n["id"]: n for n in client.get("/api/graphs/g").json()["nodes"]}
+    assert nodes["0_7_1"]["influence"] == 0.4 and nodes["E_1_0"]["influence"] is None
+    graph["nodes"][4].pop("token_prob")
+    (graphs_dir() / "g.json").write_text(json.dumps(graph))
+    bad = client.get("/api/graphs/g")
+    assert bad.status_code == 400 and "no logit with a probability" in bad.json()["detail"]

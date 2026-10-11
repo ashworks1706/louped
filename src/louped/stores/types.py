@@ -708,9 +708,13 @@ class CircuitNode(BaseModel):
     prob: float | None = None
     #: Whether it is the logit the graph explains.
     target: bool = False
-    #: Its share of the influence on the logits, direct and through later nodes; the shares of a
-    #: graph's other nodes add up past 1, since influence passes through several layers.
+    #: Its share of the influence on the logits, direct and through later nodes, over the edges
+    #: the file keeps; the shares of a graph's nodes add up past 1, since influence passes through
+    #: several layers.
     score: float
+    #: circuit-tracer's own influence, from the whole graph before it pruned it: the cumulative
+    #: share of the nodes as strong or stronger. The app prunes by it when every node has one.
+    influence: float | None = None
 
 
 class CircuitLink(BaseModel):
@@ -718,7 +722,8 @@ class CircuitLink(BaseModel):
     target: str
     #: The direct effect of the source on the target.
     weight: float
-    #: Its share of the influence on the logits that flows through this edge.
+    #: Its share of the influence on the logits that flows through this edge, over the edges the
+    #: file keeps.
     share: float
 
 

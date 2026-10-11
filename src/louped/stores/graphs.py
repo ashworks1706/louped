@@ -5,6 +5,7 @@ logits, and the nodes a person pinned."""
 from __future__ import annotations
 
 import json
+import os
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -52,8 +53,10 @@ def _depth(layer: str) -> float:
 
 
 def get_graph(slug: str) -> CircuitGraph:
-    """One graph, scored the way circuit-tracer prunes: a logit starts with its probability, and
-    each node passes what it received down its inputs in proportion to their absolute weight."""
+    """One graph, each node scored over the edges the file keeps: a logit starts with its
+    probability, and each node passes what it received down its inputs in proportion to their
+    absolute weight. circuit-tracer's own influence, from the graph before it was pruned, comes
+    along where the file has it. ValueError when no logit has a probability."""
     data = json.loads(_file(slug).read_text())
     raw = data["nodes"]
     ids = {n["node_id"] for n in raw}
@@ -63,7 +66,9 @@ def get_graph(slug: str) -> CircuitGraph:
         incoming[x["target"]].append(x)
     logits = [n for n in raw if _kind(n) == "logit"]
     probs = {n["node_id"]: float(n.get("token_prob") or 0) for n in logits}
-    total = sum(probs.values()) or 1.0
+    total = sum(probs.values())
+    if total <= 0:
+        raise ValueError(f"graph {slug} has no logit with a probability (token_prob)")
     received = {i: probs.get(i, 0.0) / total for i in ids}
     share: dict[tuple[str, str], float] = {}
     # top layer down: a node has received all it will by the time its layer is reached
@@ -92,6 +97,7 @@ def get_graph(slug: str) -> CircuitGraph:
             prob=n.get("token_prob") if _kind(n) == "logit" else None,
             target=bool(n.get("is_target_logit")),
             score=round(received[n["node_id"]], 6),
+            influence=n.get("influence") if _kind(n) != "logit" else None,
         )
         for n in raw
     ]
@@ -151,5 +157,8 @@ def save_pins(slug: str, pins: CircuitPins) -> CircuitPins:
     q["pinnedIds"] = list(dict.fromkeys(pins.pinned))
     q["supernodes"] = [[g.name, *g.nodes] for g in pins.groups]
     data["qParams"] = q
-    path.write_text(json.dumps(data))
+    # a reader mid-write would see half a file: write beside it, then swap
+    part = path.with_suffix(".json.part")
+    part.write_text(json.dumps(data))
+    os.replace(part, path)
     return pins

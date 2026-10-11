@@ -64,6 +64,11 @@ export const GLOSSARY = {
   error_node:
     "What the transcoder does not explain at that layer and position: a dashed diamond. A strong one means part of the circuit is not in the features.",
   activation: "How strongly the feature fires at its token position.",
+  // Probe's readout
+  entropy:
+    "How unsure the layer's guess is, in nats: 0 when it puts all its probability on one token.",
+  kl_final:
+    "How far the layer's guess is from the model's final one, in nats (KL divergence from the final distribution). 0 at the last layer.",
 } as const;
 
 export type Term = keyof typeof GLOSSARY;

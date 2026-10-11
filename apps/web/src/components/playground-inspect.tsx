@@ -3,7 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { parseAsStringLiteral, useQueryStates } from "nuqs";
 
-import { InspectReadout, useReadoutState } from "@/components/inspect-readout";
+import { InspectReadout, targetOf, useReadoutState } from "@/components/inspect-readout";
 import { type Setup, ViewList } from "@/components/playground-fields";
 import { part } from "@/components/parts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,16 +19,29 @@ export function useInspectTab(setup: Setup) {
   // Their errors show in the result pane they fill, so no toast.
   const looked = useMutation({ mutationFn: inspect, meta: { quiet: true } });
   const lookedEdited = useMutation({ mutationFn: inspect, meta: { quiet: true } });
-  const run = (prompt: string, target = read.target) => {
+  const run = (prompt: string, target = read.ltarget) => {
     const ask = {
       prompt,
       vectors: info.diffusion ? [] : vectors.map((v) => v.name),
       chat: true,
-      target: target || null,
+      ...targetOf(target),
     };
-    looked.mutate({ ...ask, ...gen, interventions: [], adapters: [] });
-    if (intervened) lookedEdited.mutate({ ...ask, ...gen, interventions, adapters: live });
-    else lookedEdited.reset();
+    lookedEdited.reset();
+    // the intervened pass follows the token the base pass followed, so the two compare
+    void looked
+      .mutateAsync({ ...ask, ...gen, interventions: [], adapters: [] })
+      .then((b) => {
+        if (!intervened) return;
+        const id = b.readout?.target;
+        lookedEdited.mutate({
+          ...ask,
+          ...gen,
+          ...(id == null ? {} : { target: null, target_id: id }),
+          interventions,
+          adapters: live,
+        });
+      })
+      .catch(() => undefined); // the error shows in the result pane
   };
   return {
     ready: true,
@@ -36,7 +49,7 @@ export function useInspectTab(setup: Setup) {
     run,
     /** Follows another token: every panel reads it, from a new pass. */
     follow: (target: string) => {
-      void setRead({ target: target || null });
+      void setRead({ ltarget: target });
       run(setup.prompt, target);
     },
     keep: () => {

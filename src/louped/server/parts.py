@@ -245,6 +245,8 @@ KINDS: list[Kind] = [
        "edges carry.", rules=PICK),
     _k(part="circuits/view", about="The pruned graph, or only the pinned nodes.", rules=PICK),
     _k(part="circuits/save", about="Saves the pins into the graph file.", rules=PICK),
+    _k(part="circuits/figure", about="The attribution graph with its title and how to read it.",
+       rules=["label", "about", "note"]),
     _k(part="circuits/canvas", about="The graph: token positions across, layers up.",
        rules=PICK),
     _k(part="circuits/node/*", about="One node of the graph, by circuit-tracer's node id.",
@@ -255,6 +257,7 @@ KINDS: list[Kind] = [
     _k(part="circuits/node-detail/*", about="The picked node: influence, activation, inputs and "
        "outputs.", rules=PICK),
     _k(part="circuits/pin", about="Pins or unpins the picked node.", rules=PICK),
+    _k(part="circuits/member/*", about="One node of the picked group.", rules=PICK),
     _k(part="circuits/top", about="The outputs and the strongest features.", rules=PICK),
     _k(part="circuits/pinned", about="The pinned nodes and their groups.", rules=PICK),
     # an SAE feature

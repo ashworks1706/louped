@@ -1,11 +1,11 @@
 "use client";
 
-import { useTheme } from "next-themes";
 import { parseAsInteger, parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
 import { useMemo, useState } from "react";
 
 import { Help } from "@/components/help";
-import { part, partId } from "@/components/parts";
+import { part, partId, PartNote, useRules } from "@/components/parts";
+import { Term } from "@/components/term";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Input } from "@/components/ui/input";
 import { VegaFigure } from "@/components/vega-figure";
@@ -30,15 +30,23 @@ const METRIC_ABOUT: Record<Metric, string> = {
     "The share of each head's attention on the first token, often a place to park attention it does not need.",
 };
 
-/** Where the person is looking: a position, a lens cell's layer, a head, a metric for the heads. */
+/** Where the person is looking: a position, a lens cell's layer, a head, a metric for the heads,
+ * and the target (text, or "#<id>" for a token picked in the lens). Keys of their own: the Probe's
+ * layer and heads are the intervention's. */
 export function useReadoutState() {
   return useQueryStates({
-    pos: parseAsInteger,
-    layer: parseAsInteger,
-    head: parseAsString,
-    heads: parseAsStringLiteral(METRICS).withDefault("dla"),
-    target: parseAsString.withDefault(""),
+    lpos: parseAsInteger,
+    llayer: parseAsInteger,
+    lhead: parseAsString,
+    lmetric: parseAsStringLiteral(METRICS).withDefault("dla"),
+    ltarget: parseAsString.withDefault(""),
   });
+}
+
+/** A target as the server takes it: a token id ("#123") or one token's text. */
+export function targetOf(t: string): { target: string | null; target_id: number | null } {
+  const id = /^#(\d+)$/.exec(t);
+  return id ? { target: null, target_id: Number(id[1]) } : { target: t || null, target_id: null };
 }
 
 /** One forward pass read layer by layer, every panel at the picked token: what each layer would
@@ -59,13 +67,27 @@ export function InspectReadout({
 }) {
   const [s, set] = useReadoutState();
   const last = r.tokens.length - 1;
-  const pos = Math.min(s.pos ?? last, last);
+  const top = r.layers.length - 1;
+  // a shared link can name a position or layer this prompt or model does not have
+  const pos = Math.max(0, Math.min(s.lpos ?? last, last));
+  const layer = Math.max(0, Math.min(s.llayer ?? top, top));
   const [draft, setDraft] = useState<string | null>(null);
   const word = r.vocab[String(r.target)] ?? "";
-  const rank = r.target_rank[r.layers.length - 1][pos];
-  const prob = r.target_prob[r.layers.length - 1][pos];
+  const rank = r.target_rank[top][pos];
+  const prob = r.target_prob[top][pos];
   const compare = other !== null && other.target === r.target ? other : null;
-  const ink = useInk();
+  const follow = (t: string) => {
+    setDraft(null);
+    onTarget(t);
+  };
+  const charts = useMemo(
+    () => ({
+      target: targetChart(r, compare, pos, label),
+      certainty: certaintyChart(r, compare, pos, label),
+      dla: dlaChart(r, compare, pos),
+    }),
+    [r, compare, pos, label],
+  );
 
   return (
     <div className="flex flex-col gap-4" {...part("playground/readout")}>
@@ -79,7 +101,7 @@ export function InspectReadout({
             if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
             e.preventDefault();
             const next = Math.max(0, Math.min(last, pos + (e.key === "ArrowRight" ? 1 : -1)));
-            void set({ pos: next });
+            void set({ lpos: next });
             document.getElementById(`readout-token-${next}`)?.focus();
           }}
         >
@@ -91,7 +113,7 @@ export function InspectReadout({
               role="option"
               aria-selected={i === pos}
               tabIndex={i === pos ? 0 : -1}
-              onClick={() => void set({ pos: i })}
+              onClick={() => void set({ lpos: i })}
               className={cn(
                 "focus-visible:ring-ring rounded px-1 py-0.5 font-mono text-xs whitespace-pre outline-none focus-visible:ring-2",
                 i === pos ? "bg-foreground text-background" : "bg-muted hover:bg-accent",
@@ -105,24 +127,20 @@ export function InspectReadout({
           className="flex flex-wrap items-center gap-2 text-sm"
           onSubmit={(e) => {
             e.preventDefault();
-            if (draft !== null) onTarget(draft);
-            setDraft(null);
+            if (draft !== null) follow(draft);
           }}
           {...part("playground/readout/target")}
         >
-          <label
-            htmlFor="readout-target"
-            className="text-muted-foreground flex items-center gap-1 text-xs"
-          >
-            Target
+          <span className="text-muted-foreground flex items-center gap-1 text-xs">
+            <label htmlFor="readout-target">Target</label>
             <Help label="What is the target?">
               The token every panel follows. By default the model&apos;s prediction at the last
-              position; type another and press Enter, or click a token in the lens&apos;s list.
+              position; type one token and press Enter, or click a token in the lens&apos;s list.
             </Help>
-          </label>
+          </span>
           <Input
             id="readout-target"
-            value={draft ?? (s.target || word)}
+            value={draft ?? word}
             onChange={(e) => setDraft(e.target.value)}
             className="h-7 w-40 font-mono text-xs"
           />
@@ -130,15 +148,21 @@ export function InspectReadout({
             at {pos} {JSON.stringify(r.tokens[pos])}: p = {num(prob, 3)}, rank {rank + 1}
           </span>
         </form>
+        {other !== null && !compare && (
+          <p className="text-muted-foreground text-xs">
+            Base and the intervention follow different tokens, so the panels show this pass alone.
+            Pick one target to compare them.
+          </p>
+        )}
       </div>
 
       <Lens
         r={r}
         other={compare}
         pos={pos}
-        layer={s.layer}
-        onPick={(p, l) => void set({ pos: p, layer: l })}
-        onTarget={onTarget}
+        layer={layer}
+        onPick={(p, l) => void set({ lpos: p, llayer: l })}
+        onTarget={follow}
       />
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -147,53 +171,35 @@ export function InspectReadout({
           title={`${JSON.stringify(word)} by layer`}
           about="The target token's probability (top) and rank (bottom, 1 is the top) if the model stopped after each layer, at the picked position. Where it jumps is where the answer forms."
         >
-          <VegaFigure view={targetChart(r, compare, pos, label, ink)} />
+          <VegaFigure view={charts.target} />
         </Panel>
         <Panel
           id="certainty"
           title="Certainty by layer"
           about="Entropy: how unsure each layer's guess is (nats). KL: how far it is from the final answer (nats). Both fall to the right as the model settles."
         >
-          <VegaFigure view={certaintyChart(r, compare, pos, label, ink)} />
+          <VegaFigure view={charts.certainty} />
         </Panel>
         <Panel
           id="dla"
           title="Who writes the target"
-          about="Direct logit attribution: how much each layer's attention and MLP add to the target's logit at the picked position, straight to the output, with the final norm frozen. The bars add up to the logit. With an intervention, the bars show the change from base."
+          about="Direct logit attribution: how much each layer's attention and MLP add to the target's logit at the picked position, straight to the output, with the final norm frozen. With the rest (the norm's and the head's biases), the bars add up to the logit before any softcap. With an intervention, the bars show the change from base."
         >
-          <VegaFigure view={dlaChart(r, compare, pos, ink)} />
+          <VegaFigure view={charts.dla} />
         </Panel>
         <Heads
           r={r}
           other={compare}
           pos={pos}
-          metric={s.heads}
-          head={s.head}
+          metric={s.lmetric}
+          head={s.lhead}
           patterns={patterns}
-          onMetric={(heads) => void set({ heads })}
-          onHead={(head) => void set({ head })}
+          onMetric={(lmetric) => void set({ lmetric })}
+          onHead={(lhead) => void set({ lhead })}
         />
       </div>
     </div>
   );
-}
-
-type Ink = Record<"fg" | "muted" | "accent", string>;
-const INK: Ink = { fg: "#888", muted: "#888", accent: "#36c" };
-
-/** The theme's colours as values: a Vega chart draws SVG attributes, which do not read var(). */
-function useInk(): Ink {
-  const { resolvedTheme } = useTheme();
-  return useMemo(() => {
-    if (typeof document === "undefined" || !resolvedTheme) return INK;
-    const css = getComputedStyle(document.documentElement);
-    const v = (n: string) => css.getPropertyValue(n).trim();
-    return {
-      fg: v("--foreground"),
-      muted: v("--muted-foreground"),
-      accent: v("--intervention"),
-    };
-  }, [resolvedTheme]);
 }
 
 const show = (t: string) => JSON.stringify(t).slice(1, -1) || " ";
@@ -211,14 +217,18 @@ function Panel({
   note?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const address = partId("playground/readout/panel", id);
+  const rule = useRules()(address);
+  if (rule.hidden) return null;
   return (
-    <figure className="min-w-0 rounded-xl border" {...part(partId("playground/readout/panel", id))}>
+    <figure className="min-w-0 rounded-xl border" {...part(address)}>
       <figcaption className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
         <span className="flex items-center gap-1.5 text-sm font-medium">
           {title}
           <Help label={`How to read ${title}`}>{about}</Help>
         </span>
         {note}
+        <PartNote rule={rule} className="basis-full" />
       </figcaption>
       <div className="p-4">{children}</div>
     </figure>
@@ -243,14 +253,14 @@ function Lens({
   r: Readout;
   other: Readout | null;
   pos: number;
-  layer: number | null;
+  layer: number;
   onPick: (pos: number, layer: number) => void;
   onTarget: (t: string) => void;
 }) {
   const rows = r.layers.length;
   const cols = r.tokens.length;
   const [at, setAt] = useState<[number, number] | null>(null);
-  const [l, p] = at ?? [layer ?? rows - 1, pos];
+  const [l, p] = at ?? [layer, pos];
   const cell = Math.max(18, Math.min(56, Math.floor(880 / cols)));
   const labelled = cell >= 34;
   const delta = other !== null;
@@ -294,7 +304,7 @@ function Lens({
                 {r.tokens.map((_, pi) => {
                   const v = value(li, pi);
                   const top = r.vocab[String(r.top_ids[li][pi][0])] ?? "";
-                  const on = pi === pos && li === (layer ?? rows - 1);
+                  const on = pi === pos && li === layer;
                   return (
                     <button
                       key={pi}
@@ -323,7 +333,7 @@ function Lens({
                         "focus-visible:ring-ring h-6 overflow-hidden px-0.5 font-mono text-[10px] leading-6 outline-none focus-visible:ring-2",
                         pi === pos && "ring-foreground/40 ring-1",
                         on && "ring-foreground ring-2",
-                        Math.abs(v) > 0.55 && !delta ? "text-background" : "text-foreground",
+                        Math.abs(v) > 0.62 && !delta ? "text-background" : "text-foreground",
                       )}
                       style={{ background: fill(delta ? v * 2 : v, delta) }}
                     >
@@ -333,18 +343,21 @@ function Lens({
                 })}
               </div>
             ))}
-            <span />
-            {r.tokens.map((t, pi) => (
-              <span
-                key={pi}
-                className={cn(
-                  "truncate pt-1 text-center font-mono text-[10px]",
-                  pi === pos ? "text-foreground" : "text-muted-foreground",
-                )}
-              >
-                {show(t)}
-              </span>
-            ))}
+            <div role="row" className="contents">
+              <span />
+              {r.tokens.map((t, pi) => (
+                <span
+                  key={pi}
+                  role="columnheader"
+                  className={cn(
+                    "truncate pt-1 text-center font-mono text-[10px]",
+                    pi === pos ? "text-foreground" : "text-muted-foreground",
+                  )}
+                >
+                  {show(t)}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
         <div
@@ -360,7 +373,7 @@ function Lens({
               <li key={id}>
                 <button
                   type="button"
-                  onClick={() => onTarget(r.vocab[String(id)] ?? "")}
+                  onClick={() => onTarget(`#${id}`)}
                   title="Follow this token"
                   className={cn(
                     "hover:bg-muted focus-visible:ring-ring flex w-full items-center gap-2 rounded px-1 py-0.5 text-left outline-none focus-visible:ring-2",
@@ -383,8 +396,9 @@ function Lens({
               </li>
             ))}
           </ol>
-          <span className="text-muted-foreground font-mono tabular-nums">
-            entropy {num(r.entropy[l][p], 2)} · KL {num(r.kl[l][p], 2)}
+          <span className="text-muted-foreground flex gap-3 font-mono tabular-nums">
+            <Term k="entropy">entropy {num(r.entropy[l][p], 2)}</Term>
+            <Term k="kl_final">KL {num(r.kl[l][p], 2)}</Term>
           </span>
         </div>
       </div>
@@ -394,7 +408,7 @@ function Lens({
 
 const layerName = (l: string) => (l === "emb" ? "emb" : `L${l}`);
 
-function targetChart(r: Readout, other: Readout | null, pos: number, label: string, ink: Ink) {
+function targetChart(r: Readout, other: Readout | null, pos: number, label: string) {
   const rows = (x: Readout, side: string) =>
     x.layers.map((l, i) => ({
       layer: layerName(l),
@@ -413,7 +427,7 @@ function targetChart(r: Readout, other: Readout | null, pos: number, label: stri
         encoding: {
           x: { field: "layer", type: "ordinal", sort: { field: "i" }, title: null },
           y: { field: "p", type: "quantitative", title: "probability", scale: { domain: [0, 1] } },
-          ...sides(other, label, ink),
+          ...sides(other, label),
           tooltip: [{ field: "side" }, { field: "layer" }, { field: "p", format: ".3f" }],
         },
       },
@@ -429,7 +443,7 @@ function targetChart(r: Readout, other: Readout | null, pos: number, label: stri
             title: "rank",
             scale: { type: "log", reverse: true },
           },
-          ...sides(other, label, ink),
+          ...sides(other, label),
           tooltip: [{ field: "side" }, { field: "layer" }, { field: "rank" }],
         },
       },
@@ -437,7 +451,7 @@ function targetChart(r: Readout, other: Readout | null, pos: number, label: stri
   });
 }
 
-function certaintyChart(r: Readout, other: Readout | null, pos: number, label: string, ink: Ink) {
+function certaintyChart(r: Readout, other: Readout | null, pos: number, label: string) {
   const rows = (x: Readout, side: string) =>
     x.layers.flatMap((l, i) => [
       { layer: layerName(l), i, side, measure: "entropy", v: x.entropy[i][pos] },
@@ -451,7 +465,7 @@ function certaintyChart(r: Readout, other: Readout | null, pos: number, label: s
       x: { field: "layer", type: "ordinal", sort: { field: "i" }, title: "layer" },
       y: { field: "v", type: "quantitative", title: "nats" },
       strokeDash: { field: "measure", title: null },
-      ...sides(other, label, ink),
+      ...sides(other, label),
       tooltip: [
         { field: "side" },
         { field: "measure" },
@@ -462,7 +476,7 @@ function certaintyChart(r: Readout, other: Readout | null, pos: number, label: s
   });
 }
 
-function dlaChart(r: Readout, other: Readout | null, pos: number, ink: Ink) {
+function dlaChart(r: Readout, other: Readout | null, pos: number) {
   const parts = (x: Readout) => [
     { layer: "emb", i: 0, part: "embed", v: x.dla_embed[pos] },
     ...x.layers.slice(1).flatMap((l, i) => [
@@ -472,7 +486,11 @@ function dlaChart(r: Readout, other: Readout | null, pos: number, ink: Ink) {
   ];
   const mine = parts(r);
   const base = other ? parts(other) : null;
-  const values = mine.map((m, k) => ({ ...m, v: base ? m.v - base[k].v : m.v }));
+  const values = mine.map((m, k) => ({
+    ...m,
+    shade: m.part === "attention" ? "attention" : "MLP",
+    v: base ? m.v - base[k].v : m.v,
+  }));
   return vega("dla", values, {
     height: 230,
     mark: { type: "bar" },
@@ -485,10 +503,12 @@ function dlaChart(r: Readout, other: Readout | null, pos: number, ink: Ink) {
         title: other ? "Δ logit" : "logit",
         axis: { format: ".3~f" },
       },
+      // the theme's category colours are [ink, intervention, muted]: attention in ink, the MLP
+      // and the embeddings muted, the intervention colour unused
       color: {
-        field: "part",
+        field: "shade",
         title: null,
-        scale: { domain: ["embed", "attention", "MLP"], range: [ink.muted, ink.fg, ink.muted] },
+        scale: { domain: ["attention", "-", "MLP"] },
         legend: { orient: "top", values: ["attention", "MLP"] },
       },
       tooltip: [
@@ -500,15 +520,15 @@ function dlaChart(r: Readout, other: Readout | null, pos: number, ink: Ink) {
   });
 }
 
-function sides(other: Readout | null, label: string, ink: Ink) {
+/** One line per pass: this pass in ink, or the intervention in its colour beside base, muted (the
+ * theme's category colours are [ink, intervention, muted]). */
+function sides(other: Readout | null, label: string) {
   return {
     color: {
       field: "side",
       title: null,
-      scale: other
-        ? { domain: [label, "base"], range: [ink.accent, ink.muted] }
-        : { range: [ink.fg] },
-      legend: other ? { orient: "top" } : null,
+      scale: { domain: other ? ["this pass", label, "base"] : ["this pass"] },
+      legend: other ? { orient: "top", values: [label, "base"] } : null,
     },
   };
 }
@@ -569,6 +589,13 @@ function Heads({
   const weights =
     picked && patterns ? patterns[`layer ${picked[0]} · head ${picked[1]}`]?.[pos] : undefined;
   const cell = Math.max(10, Math.min(28, Math.floor(420 / heads)));
+  const [fl, fh] = picked ?? [0, 0];
+  const step = (l: number, h: number) => {
+    const nl = Math.max(0, Math.min(layers - 1, l));
+    const nh = Math.max(0, Math.min(heads - 1, h));
+    onHead(`${nl}.${nh}`);
+    document.getElementById(`head-${nl}-${nh}`)?.focus();
+  };
   return (
     <Panel
       id="heads"
@@ -613,9 +640,22 @@ function Heads({
                   return (
                     <button
                       key={h}
+                      id={`head-${l}-${h}`}
                       type="button"
                       role="gridcell"
                       aria-selected={on}
+                      tabIndex={l === fl && h === fh ? 0 : -1}
+                      onKeyDown={(e) => {
+                        const d = {
+                          ArrowUp: [-1, 0],
+                          ArrowDown: [1, 0],
+                          ArrowLeft: [0, -1],
+                          ArrowRight: [0, 1],
+                        }[e.key];
+                        if (!d) return;
+                        e.preventDefault();
+                        step(l + d[0], h + d[1]);
+                      }}
                       aria-label={`layer ${l} head ${h}: ${num(v, 3)}`}
                       title={`L${l}.H${h}: ${num(v, 3)}`}
                       data-testid="head-cell"
@@ -630,12 +670,18 @@ function Heads({
                 })}
               </div>
             ))}
-            <span />
-            {Array.from({ length: heads }, (_, h) => (
-              <span key={h} className="text-muted-foreground text-center font-mono text-[10px]">
-                {heads <= 16 || h % 4 === 0 ? h : ""}
-              </span>
-            ))}
+            <div role="row" className="contents">
+              <span />
+              {Array.from({ length: heads }, (_, h) => (
+                <span
+                  key={h}
+                  role="columnheader"
+                  className="text-muted-foreground text-center font-mono text-[10px]"
+                >
+                  {heads <= 16 || h % 4 === 0 ? h : ""}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
         {picked && (
@@ -655,7 +701,7 @@ function Heads({
                     className="rounded-sm font-mono text-xs whitespace-pre"
                     style={{
                       background: i <= pos ? fill(weights[i], false) : undefined,
-                      color: (weights[i] ?? 0) > 0.55 ? "var(--background)" : undefined,
+                      color: (weights[i] ?? 0) > 0.62 ? "var(--background)" : undefined,
                     }}
                   >
                     {show(t)}

@@ -2302,6 +2302,8 @@ export interface components {
       target: boolean;
       /** Score */
       score: number;
+      /** Influence */
+      influence?: number | null;
     };
     /**
      * CircuitPins
@@ -3044,9 +3046,14 @@ export interface components {
       chat: boolean;
       /**
        * Target
-       * @description The token to follow; the model's prediction if unset.
+       * @description The token to follow, as one token's text.
        */
       target?: string | null;
+      /**
+       * Target Id
+       * @description The token to follow, by id; wins over target. Neither: the model's prediction at the last position.
+       */
+      target_id?: number | null;
     };
     /** InspectResponse */
     InspectResponse: {
@@ -3820,12 +3827,16 @@ export interface components {
       target_rank: number[][];
       /** Target Logit */
       target_logit: number[];
+      /** Softcap */
+      softcap?: number | null;
       /** Dla Embed */
       dla_embed: number[];
       /** Dla Attn */
       dla_attn: number[][];
       /** Dla Mlp */
       dla_mlp: number[][];
+      /** Dla Rest */
+      dla_rest: number[];
       /** Dla Heads */
       dla_heads: number[][][];
       /** Head Positions */

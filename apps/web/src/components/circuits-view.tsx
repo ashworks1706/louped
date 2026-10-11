@@ -4,13 +4,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, Pin, PinOff, Waypoints, X } from "lucide-react";
 import Link from "next/link";
 import { parseAsFloat, parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
-import { useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { CircuitGraph } from "@/components/circuit-graph";
 import { EmptyState } from "@/components/empty-state";
 import { ExamplesButton } from "@/components/examples-button";
-import { part, partId } from "@/components/parts";
+import { Help } from "@/components/help";
+import { part, partId, PartNote, useRules } from "@/components/parts";
 import { QueryState } from "@/components/query-state";
 import { Stat, StatGrid } from "@/components/stat-grid";
 import { Term } from "@/components/term";
@@ -26,8 +27,9 @@ import {
   q,
   saveGraphPins,
 } from "@/lib/api";
-import { type Group, neighbours, prune, subgraph } from "@/lib/circuit";
+import { type Group, hasInfluence, neighbours, prune, subgraph } from "@/lib/circuit";
 import { num, pct } from "@/lib/format";
+import { GLOSSARY } from "@/lib/glossary";
 import { cn } from "@/lib/utils";
 
 /** The project's attribution graphs, one at a time, drawn by louped. */
@@ -114,20 +116,39 @@ function Loaded({ g }: { g: Graph }) {
   });
 
   const byId = useMemo(() => new Map(g.nodes.map((n) => [n.id, n])), [g]);
+  // the sliders move at once; the graph follows when it can
+  const keepLate = useDeferredValue(keep);
+  const edgesLate = useDeferredValue(edges);
   const cut = useMemo(
-    () => (view === "pinned" ? subgraph(g, pinned, groups) : prune(g, keep, edges)),
-    [g, view, pinned, groups, keep, edges],
+    () => (view === "pinned" ? subgraph(g, pinned, groups) : prune(g, keepLate, edgesLate)),
+    [g, view, pinned, groups, keepLate, edgesLate],
+  );
+  // a group drawn as one node is picked like any other
+  const known = useMemo(
+    () => new Map([...byId, ...cut.nodes.map((n) => [n.id, n] as const)]),
+    [byId, cut],
   );
   const pinSet = useMemo(() => new Set(pinned), [pinned]);
-  const togglePin = (id: string) =>
-    setPinned((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+  const togglePin = (id: string) => {
+    if (!pinned.includes(id)) return setPinned([...pinned, id]);
+    setPinned(pinned.filter((x) => x !== id));
+    // an unpinned node leaves its group; an empty group goes
+    setGroups(
+      groups
+        .map((x) => ({ ...x, nodes: x.nodes.filter((n) => n !== id) }))
+        .filter((x) => x.nodes.length > 0),
+    );
+  };
   const logits = g.nodes
     .filter((n) => n.kind === "logit")
     .sort((a, b) => (b.prob ?? 0) - (a.prob ?? 0));
   const target = logits.find((n) => n.target) ?? logits[0];
   const errorShare = g.nodes.filter((n) => n.kind === "error").reduce((s, n) => s + n.score, 0);
   const featureShare = g.nodes.filter((n) => n.kind === "feature").reduce((s, n) => s + n.score, 0);
-  const selected = node ? (byId.get(node) ?? null) : null;
+  const selected = node ? (known.get(node) ?? null) : null;
+  const group = selected?.id.startsWith("group:")
+    ? groups.find((x) => `group:${x.name}` === selected.id)
+    : undefined;
 
   return (
     <div className="flex flex-col gap-4">
@@ -157,6 +178,7 @@ function Loaded({ g }: { g: Graph }) {
         </Stat>
         <Stat
           label="Unexplained"
+          about={GLOSSARY.error_node}
           part="circuits/stat/errors"
           note="error nodes' share of the influence on features and errors"
         >
@@ -227,14 +249,16 @@ function Loaded({ g }: { g: Graph }) {
                 : "No node carries influence on the output."}
             </p>
           ) : (
-            <CircuitGraph
-              cut={cut}
-              tokens={g.tokens}
-              selected={node}
-              pinned={pinSet}
-              onSelect={(id) => void setNode(id)}
-              onPin={togglePin}
-            />
+            <GraphFigure pruning={view === "all" && hasInfluence(g)}>
+              <CircuitGraph
+                cut={cut}
+                tokens={g.tokens}
+                selected={node}
+                pinned={pinSet}
+                onSelect={(id) => void setNode(id)}
+                onPin={togglePin}
+              />
+            </GraphFigure>
           )}
           <Legend />
         </div>
@@ -242,8 +266,9 @@ function Loaded({ g }: { g: Graph }) {
           {selected ? (
             <NodeDetail
               n={selected}
-              links={view === "pinned" ? g.links : cut.links}
-              byId={byId}
+              members={group?.nodes}
+              links={view === "pinned" && !group ? g.links : cut.links}
+              byId={known}
               tokens={g.tokens}
               pinned={pinSet.has(selected.id)}
               onPin={() => togglePin(selected.id)}
@@ -273,6 +298,29 @@ function Loaded({ g }: { g: Graph }) {
   );
 }
 
+/** The graph with its title and how to read it. */
+function GraphFigure({ pruning, children }: { pruning: boolean; children: React.ReactNode }) {
+  const rule = useRules()("circuits/figure");
+  return (
+    <figure className="flex min-w-0 flex-col gap-2" {...part("circuits/figure")}>
+      <figcaption className="flex flex-wrap items-center gap-1.5 text-sm font-medium">
+        {rule.label ?? "Attribution graph"}
+        <Help label="How to read the attribution graph">
+          {rule.about ??
+            "Tokens sit along the bottom, layers go up, the outputs are on top. Each edge is one node's direct effect on another: green raises the target, red lowers it, wider is a larger share of the influence on the outputs. Hover or pick a node to light the paths through it."}
+        </Help>
+        {pruning && (
+          <span className="text-muted-foreground text-xs font-normal">
+            Nodes pruned by circuit-tracer&apos;s own influence
+          </span>
+        )}
+        <PartNote rule={rule} className="basis-full" />
+      </figcaption>
+      {children}
+    </figure>
+  );
+}
+
 function Range({
   id,
   term,
@@ -294,9 +342,10 @@ function Range({
 }) {
   return (
     <div className="flex items-center gap-2" {...part(partId("circuits/prune", id))}>
-      <label htmlFor={`circuit-${id}`} className="text-muted-foreground text-xs">
-        <Term k={term}>{label}</Term>
-      </label>
+      <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
+        <label htmlFor={`circuit-${id}`}>{label}</label>
+        <Help label={`What is ${label}?`}>{GLOSSARY[term]}</Help>
+      </span>
       <input
         id={`circuit-${id}`}
         type="range"
@@ -315,6 +364,7 @@ function Range({
 
 function Legend() {
   const item = "inline-flex items-center gap-1.5";
+  if (useRules()("circuits/legend").hidden) return null;
   return (
     <p
       className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs"
@@ -365,6 +415,7 @@ function where(n: CircuitNode, tokens: string[]) {
 
 function NodeDetail({
   n,
+  members,
   links,
   byId,
   tokens,
@@ -374,6 +425,8 @@ function NodeDetail({
   onClose,
 }: {
   n: CircuitNode;
+  /** A group's nodes, when n is a group drawn as one. */
+  members?: string[];
   links: CircuitLink[];
   byId: Map<string, CircuitNode>;
   tokens: string[];
@@ -390,7 +443,7 @@ function NodeDetail({
     >
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-medium break-words">{n.label}</h3>
+          <h2 className="text-sm font-medium break-words">{n.label}</h2>
           <p className="text-muted-foreground text-xs">{where(n, tokens)}</p>
         </div>
         <Button size="icon-sm" variant="ghost" aria-label="Close" onClick={onClose}>
@@ -398,7 +451,7 @@ function NodeDetail({
         </Button>
       </div>
       <div className="flex flex-wrap gap-1">
-        <Badge>{n.kind}</Badge>
+        <Badge>{members ? "group" : n.kind}</Badge>
         {n.feature != null && n.kind !== "embedding" && (
           <Badge className="font-mono">#{n.feature}</Badge>
         )}
@@ -424,10 +477,27 @@ function NodeDetail({
           </>
         )}
       </dl>
-      <Button size="sm" variant="outline" onClick={onPin} {...part("circuits/pin")}>
-        {pinned ? <PinOff /> : <Pin />}
-        {pinned ? "Unpin" : "Pin"}
-      </Button>
+      {members ? (
+        <ul className="flex flex-col" aria-label="Members">
+          {members.map((id) => (
+            <li key={id}>
+              <button
+                type="button"
+                onClick={() => onSelect(id)}
+                {...part(partId("circuits/member", id))}
+                className="hover:bg-muted focus-visible:ring-ring w-full truncate rounded px-1 py-0.5 text-left text-xs outline-none focus-visible:ring-2"
+              >
+                {byId.get(id)?.label ?? id}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <Button size="sm" variant="outline" onClick={onPin} {...part("circuits/pin")}>
+          {pinned ? <PinOff /> : <Pin />}
+          {pinned ? "Unpin" : "Pin"}
+        </Button>
+      )}
       <Edges
         title="Reads from"
         edges={inputs}
@@ -462,9 +532,9 @@ function Edges({
   if (edges.length === 0) return null;
   return (
     <div className="flex flex-col gap-1">
-      <h4 className="text-muted-foreground text-xs">
+      <h3 className="text-muted-foreground text-xs">
         <Term k="edge_weight">{title}</Term>
-      </h4>
+      </h3>
       <ul className="flex flex-col">
         {edges.map((l) => {
           const id = other(l);
@@ -523,13 +593,13 @@ function TopNodes({
   return (
     <section className="flex flex-col gap-3 rounded-xl border p-4" {...part("circuits/top")}>
       <div className="flex flex-col gap-1">
-        <h3 className="text-xs font-medium">Outputs</h3>
+        <h2 className="text-xs font-medium">Outputs</h2>
         <ul>{logits.slice(0, 5).map((n) => row(n, num(n.prob, 3)))}</ul>
       </div>
       <div className="flex flex-col gap-1">
-        <h3 className="text-xs font-medium">
+        <h2 className="text-xs font-medium">
           <Term k="influence">Strongest features</Term>
-        </h3>
+        </h2>
         <ul>{top.map((n) => row(n, pct(n.score)))}</ul>
       </div>
       <p className="text-muted-foreground text-xs">
@@ -562,7 +632,7 @@ function Pinned({
   const loose = pinned.filter((id) => !grouped.has(id));
   return (
     <section className="flex flex-col gap-2 rounded-xl border p-4" {...part("circuits/pinned")}>
-      <h3 className="text-xs font-medium">Pinned</h3>
+      <h2 className="text-xs font-medium">Pinned</h2>
       {groups.map((g) => (
         <div key={g.name} className="flex items-center gap-2 text-xs">
           <Badge>{g.name}</Badge>

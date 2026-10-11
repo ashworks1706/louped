@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 
 import { part, partId } from "@/components/parts";
 import type { CircuitLink } from "@/lib/api";
@@ -52,7 +52,10 @@ export function CircuitGraph({
     const row = laid.nodes.filter((n) => n.y === from.y).sort((a, b) => a.x - b.x);
     return row[row.indexOf(from) + (key === "ArrowRight" ? 1 : -1)];
   };
-  const tab = selected && at.has(selected) ? selected : laid.nodes.find((n) => n.target)?.id;
+  const tab =
+    selected && at.has(selected)
+      ? selected
+      : (laid.nodes.find((n) => n.target) ?? laid.nodes[0])?.id;
 
   return (
     <div ref={box} className="overflow-x-auto rounded-xl border" {...part("circuits/canvas")}>
@@ -123,7 +126,8 @@ export function CircuitGraph({
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
                 onSelect(n.id);
-              } else if (e.key === "p") {
+              } else if (e.key.toLowerCase() === "p" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+                e.preventDefault();
                 onPin(n.id);
               } else if (e.key === "Escape") {
                 onSelect(null);
@@ -151,7 +155,7 @@ function short(n: Placed): string {
 
 const nodeDom = (id: string) => `circuit-node-${id.replace(/[^\w-]/g, "_")}`;
 
-function Edge({
+const Edge = memo(function Edge({
   link,
   from,
   to,
@@ -178,9 +182,9 @@ function Edge({
       pointerEvents="none"
     />
   );
-}
+});
 
-function Node({
+const Node = memo(function Node({
   n,
   on,
   pinned,
@@ -227,7 +231,6 @@ function Node({
       onKeyDown={onKey}
       {...part(partId("circuits/node", n.id))}
     >
-      <title>{n.label}</title>
       {n.kind === "embedding" ? (
         <rect x={-r} y={-r} width={2 * r} height={2 * r} rx={2} {...common} />
       ) : n.kind === "error" ? (
@@ -250,6 +253,7 @@ function Node({
           {short(n)}
         </text>
       )}
+      <title>{n.label}</title>
     </g>
   );
-}
+});
