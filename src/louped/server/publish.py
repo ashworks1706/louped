@@ -87,6 +87,12 @@ def publish(out: Path, web: Path) -> Published:
     for graph in save("/graphs") or []:
         save(f"/graphs/{_enc(graph['slug'])}")
     save("/playground", expected=False)  # no model is loaded in a snapshot
+    # the Datasets and Benchmarks lists, read-only: no Hub detail, the Hub is off in a snapshot
+    save("/datasets")
+    save("/benchmarks/speed")
+    for row in save("/benchmarks") or []:
+        if row["runs"]:
+            save(f"/benchmarks/board?task={_enc(row['task']['task'])}")
     layouts: set[str] = set()  # each run's page asks for its experiment's, listed or not
     for experiment in save("/experiments") or []:
         save(f"/experiments/{_enc(experiment['name'])}")

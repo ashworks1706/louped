@@ -120,7 +120,7 @@ What the app shows depends on what the script writes:
 | `views.vega(title, spec)`, data inline      | **Figures**: any Vega-Lite chart            |
 | `views.plotly(title, data, frames=...)`     | **Figures**: 3D and animated charts         |
 
-A finding made by hand in Probe or Benchmark becomes a run too. **Save as run** keeps what the
+A finding made by hand in Probe or Speed becomes a run too. **Save as run** keeps what the
 open tool showed: its figures, the prompt and the settings sent. It saves them under one of the
 experiments. If the finding answers no experiment yet, it saves them under `probe` or `benchmark`.
 
@@ -307,6 +307,30 @@ that records `read_by` or grades C/I. When a run has two or more readers, the Sa
 different values. Each reader's column then shows its rule and the text it matched. Read these
 samples first: a misread answer shows here. On a task whose scorers ask different questions (such
 as `correct_first` and `held`), a difference can be the result itself.
+
+## Probe and Circuits
+
+**Probe › Inspect** reads one prompt through every layer. Click a token: each panel then shows that
+position. The panels are:
+
+- **Logit lens**: what each layer would predict. Click a cell to see its top tokens. Click a token
+  there to follow it.
+- **Target**: the probability and rank of the followed token at each layer.
+- **Parts**: how much the embeddings, each layer's attention and MLP, and each head add to the
+  token's logit (direct logit attribution). The final norm is held at its scale, so the parts are
+  linear. **Rest** is what the biases add, so that the parts and the rest give the logit.
+- **Heads**: each head by its entropy, its attention to the previous token or to the first token.
+  Click a head to see what the picked token reads through it.
+
+With an intervention, the intervened pass follows the same token as the base pass. Each panel
+then shows the change from base.
+
+**Circuits** draws each attribution graph from circuit-tracer. Tokens are across, layers go up,
+and the outputs are on top. Use the sliders to keep less or more of the influence. Click a node to
+see what it reads from and writes to. Press P to pin it. **Pinned** shows only the pinned nodes,
+and a group of pinned nodes shows as one node. **Save pins** writes them into the graph file, so
+circuit-tracer's own viewer opens the same subgraph. The agent reads a graph with `circuit` and
+pins nodes with `pin_circuit`.
 
 ## Code from a paper
 

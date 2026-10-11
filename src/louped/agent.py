@@ -43,6 +43,9 @@ on are its sources: search_sources and source_page before the web, add_source to
 Models, embedding models, datasets and papers on the Hugging Face Hub are hub_search and
 hub_info; hub_add lists a model or dataset in louped.toml (download=True gets it as a job) and
 keeps a paper as a source.
+The project's datasets (Hub, data/ files, training sets) are datasets and dataset (rows); a
+Hub dataset becomes an eval with add_benchmark. benchmarks and benchmark are the leaderboards:
+eval tasks by score (behavior), `louped bench` runs by speed (efficiency).
 A figure the person asks for (a chart of a file, points in 3D, an animation) is add_view, or
 derive when it needs a script
 over the run's files (new columns on its items); check it with preview_view before ui_show.
@@ -347,12 +350,102 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         kind: Literal["models", "embeddings", "datasets", "papers"],
         id: str,
         download: bool = False,
+        domains: list[Literal["behavior", "efficiency"]] | None = None,
     ) -> dict[str, Any]:
         """Add a Hub model, embedding model or dataset to the project's louped.toml ([hub]),
         where the app's model fields offer it; with download, also get it into this machine's
-        cache as a job (follow it with job). A paper (its arXiv id) is kept in sources/ to
-        search, quote and cite."""
-        return await post("/hub/add", {"kind": kind, "id": id, "download": download})
+        cache as a job (follow it with job). domains, for a dataset only, lists it on those
+        sections' Datasets pages ([hub.domains], added to what it had); a dataset with none
+        shows on both. A paper (its arXiv id) is kept in sources/ to search, quote and cite."""
+        body = {"kind": kind, "id": id, "download": download, "domains": domains or []}
+        return await post("/hub/add", body)
+
+    @mcp.tool(annotations=READ)
+    async def datasets(
+        domain: Literal["behavior", "efficiency"] | None = None,
+    ) -> list[dict[str, Any]]:
+        """The project's datasets: the Hub datasets louped.toml lists (source "hub"), the files
+        under data/ at the project's root (JSONL, CSV, TSV, JSON, Parquet; source "local", id
+        its path such as data/x.jsonl), and the training sets louped reads (source
+        "training", read on the Training sets page). Each has id, source, domains (empty: listed
+        under both), path, format, size, rows and error. With domain, only those listed under
+        it or under none. Read one with dataset; add a Hub one with hub_add(kind="datasets",
+        domains=[...])."""
+        found = await get("/datasets")
+        return [d for d in found if domain is None or not d["domains"] or domain in d["domains"]]
+
+    @mcp.tool(annotations=LOOKUP)
+    async def dataset(
+        id: str, split: str | None = None, rows: int = 20, config: str | None = None
+    ) -> dict[str, Any]:
+        """One dataset with its first rows (rows, at most 100). id is a Hub id, or a file's
+        path from the project's root (data/x.jsonl). A Hub dataset gives its page (hub: card
+        excerpt, license, size, downloads), its splits by config with their row counts, its
+        features, and the first rows of config and split (default: the first the Hub's dataset
+        viewer lists), read with this machine's Hugging Face token; hub_error and error say
+        what could not be read and why (gated, no viewer for it, unreachable). A file gives
+        its columns with their types, its first rows and total. A training set's pairs are
+        on the Training sets page, not here."""
+        known = {d["id"]: d["source"] for d in await get("/datasets")}
+        local = known.get(id, "local" if id.startswith("data/") else "hub") != "hub"
+        if local:
+            return await get("/datasets/local", path=id, rows=rows)
+        return await get("/datasets/hub", id=id, config=config, split=split, rows=rows)
+
+    @mcp.tool(annotations=READ)
+    async def benchmarks(
+        domain: Literal["behavior", "efficiency"] = "behavior", search: str | None = None
+    ) -> list[dict[str, Any]]:
+        """behavior: every eval task (the project's, its Hub benchmarks louped/<name>,
+        inspect_evals'), each with runs (its finished eval runs), best (the top run: run,
+        model, score, metric, samples, created) and, for a Hub benchmark, spec (its field
+        mapping); tasks with runs first. search filters by task, title, group or about,
+        case-insensitively. efficiency: every weight format of every `louped bench` run, newest
+        first: model, setting, throughput (most tokens/s) at batch, prefill_ms at context
+        tokens, peak_mib, weights_mib, device, created, and best on each model's fastest. A
+        task's whole leaderboard is benchmark; run one with launch("eval", {"task": ...})."""
+        if domain == "efficiency":
+            return await get("/benchmarks/speed")
+        found = await get("/benchmarks")
+        if search:
+            word = search.lower()
+            found = [b for b in found
+                     if word in " ".join(str(v) for v in b["task"].values()).lower()]  # fmt: skip
+        return found
+
+    @mcp.tool(annotations=READ)
+    async def benchmark(name: str) -> dict[str, Any]:
+        """One eval task's leaderboard: its finished runs, best score first, each with run,
+        model, score (its first scorer's accuracy, else mean, else first metric), metric,
+        samples and created; with the task and, for a Hub benchmark, its spec. name is the task
+        as eval_tasks writes it (experiments/x/task.py@fn, louped/gsm8k, inspect_evals/gsm8k),
+        or a Hub benchmark's or inspect_evals' bare name."""
+        return await get("/benchmarks/board", task=name)
+
+    @mcp.tool(annotations=FETCH)
+    async def add_benchmark(
+        name: str,
+        dataset: str,
+        split: str,
+        input: str,
+        target: str,
+        choices: str | None = None,
+        scorer: Literal["match", "choice", "judge"] = "match",
+        config: str | None = None,
+    ) -> dict[str, Any]:
+        """Make a Hub dataset a benchmark, kept in louped.toml as [benchmarks.<name>] (a name
+        of lowercase letters, digits, - and _; one of that name is replaced). Each row of
+        dataset's config and split is a sample: input and target name its fields, choices a
+        field holding a list of choices. scorer: match (Inspect's match: the target at the end
+        of the reply), choice (multiple choice by letter; target is the right choice's index,
+        letter or text; needs choices) or judge (louped's local judge model grades the reply
+        against the target). The config, split and fields are checked against the Hub's
+        dataset viewer first and refused when wrong; checked says whether it could answer,
+        note why not. It is then the eval task louped/<name>: launch("eval", {"task":
+        "louped/<name>", "--model": ...}), and its leaderboard is benchmark(name)."""
+        body = {"name": name, "dataset": dataset, "config": config, "split": split,
+                "input": input, "target": target, "choices": choices, "scorer": scorer}  # fmt: skip
+        return await post("/benchmarks", body)
 
     @mcp.tool(annotations=READ)
     async def trace(ref: str) -> dict[str, Any]:
@@ -487,7 +580,8 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
     @mcp.tool(annotations=READ)
     async def eval_tasks(search: str | None = None) -> list[dict[str, Any]]:
         """Inspect tasks launch "eval" runs (option task): the project's @task functions
-        (experiments/<name>/task.py@fn), then inspect_evals' benchmarks (inspect_evals/<name>),
+        (experiments/<name>/task.py@fn), its Hub benchmarks (louped/<name>, add_benchmark),
+        then inspect_evals' benchmarks (inspect_evals/<name>),
         each with its title, group, what it measures and samples. search filters by any of
         them, case-insensitively."""
         found = await get("/evals")

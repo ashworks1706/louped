@@ -29,7 +29,18 @@ from louped.check import Issue, check
 from louped.core import Direction, cohorts, documents, home
 from louped.core.judges import Judge, find_judges, write_judge
 from louped.core.paths import experiments_dir, inside
-from louped.server import graphs, hub, inspect_view, launch, playground, plugins, serving, ui
+from louped.server import (
+    benchmarks,
+    datasets,
+    graphs,
+    hub,
+    inspect_view,
+    launch,
+    playground,
+    plugins,
+    serving,
+    ui,
+)
 from louped.stores import ab, boards, gates
 from louped.stores import experiments as experiment_store
 from louped.stores import projects as project_store
@@ -847,6 +858,8 @@ def create_app(
     jobs = launch.Jobs() if launching else None
     app.include_router(launch.router(jobs))
     app.include_router(hub.router(jobs))
+    app.include_router(datasets.router(jobs))
+    app.include_router(benchmarks.router(editing))
     pages: dict[str, list[str]] = {}  # the plugins' pages, once plugins.mount has served them
     app.include_router(ui.router(launching, pages))
     # louped's look and helpers for plugin pages (louped.server.ui, plugins.mdx)

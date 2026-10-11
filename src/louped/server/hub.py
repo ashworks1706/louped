@@ -10,6 +10,9 @@ repositories the account can see show too. What a project adds is listed in its 
     embeddings = ["BAAI/bge-small-en-v1.5"]
     datasets = ["openai/gsm8k"]
 
+    [hub.domains]   # the Datasets pages a dataset shows on; one not here shows on both
+    "openai/gsm8k" = ["behavior"]
+
 and the app's model fields offer them. A paper becomes a source (louped.sources) from its arXiv
 page, so it is searched and cited like any other. A download is a job (`louped hub get`) on the
 queue, so it shows on Runs.
@@ -31,7 +34,7 @@ from typing import Any, Literal
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, TypeAdapter
 
 from louped import sources as library
 from louped import sync
@@ -39,6 +42,8 @@ from louped.core.project import FILE, config, root
 from louped.server.launch import Job, Jobs, LaunchRequest, require_json
 
 Kind = Literal["models", "embeddings", "datasets", "papers"]
+#: The research sections a dataset is listed under; none means both.
+Domain = Literal["behavior", "efficiency"]
 Sort = Literal["downloads", "likes", "recent"]
 #: The pipeline tags of a model that turns text into a vector.
 EMBEDDING_TASKS = ("sentence-similarity", "feature-extraction")
@@ -122,6 +127,9 @@ class AddRequest(BaseModel):
     id: str = Field(pattern=REPO)
     #: For a model or dataset: also download it here, as a job.
     download: bool = False
+    #: For a dataset: the sections whose Datasets page lists it ([hub.domains]); none lists it
+    #: under both.
+    domains: list[Domain] = []
 
 
 class AddResult(BaseModel):
@@ -277,47 +285,76 @@ def added() -> HubAdded:
                          f"repository ids: {exc}") from exc  # fmt: skip
 
 
-def _write(key: str, ids: list[str]) -> None:
-    """Set `key = [...]` in louped.toml's [hub] table, one line, the rest of the file (comments
-    too) as it was."""
+def write_toml(table: str, values: dict[str, str | list[str] | None]) -> None:
+    """Set each `key = value` in one table of louped.toml ([hub], [hub.domains],
+    [benchmarks.<name>]), one line each, the rest of the file (comments too) as it was; None
+    removes the key. The table is added at the end when the file has none."""
     found = root()
     if found is None:
         raise ValueError("not in a louped project: run louped init first")
     path = found / FILE
-    line = f"{key} = {json.dumps(ids)}"
     lines = path.read_text(encoding="utf-8").splitlines()
-    head = next((i for i, x in enumerate(lines) if re.match(r"\s*\[hub\]\s*(#.*)?$", x)), None)
+    header = rf"\s*\[\s*{re.escape(table)}\s*\]\s*(#.*)?$"
+    head = next((i for i, x in enumerate(lines) if re.match(header, x)), None)
     if head is None:
-        lines += [*([""] if lines and lines[-1].strip() else []), "[hub]", line]
-    else:
+        lines += [*([""] if lines and lines[-1].strip() else []), f"[{table}]"]
+        head = len(lines) - 1
+    for key, value in values.items():
+        name = key if re.fullmatch(r"[A-Za-z0-9_-]+", key) else json.dumps(key)
         end = next((i for i in range(head + 1, len(lines)) if lines[i].lstrip().startswith("[")),
                    len(lines))  # fmt: skip
-        at = next(
-            (i for i in range(head + 1, end) if re.match(rf"\s*{re.escape(key)}\s*=", lines[i])),
-            None,
-        )
-        if at is None:
-            lines.insert(head + 1, line)
-        else:
+        named = rf"\s*({re.escape(key)}|{re.escape(json.dumps(key))})\s*="
+        at = next((i for i in range(head + 1, end) if re.match(named, lines[i])), None)
+        line = None if value is None else f"{name} = {json.dumps(value)}"
+        if at is not None and line is None:
+            del lines[at]
+        elif at is not None and line is not None:
             lines[at] = line
+        elif line is not None:
+            lines.insert(head + 1, line)
     text = "\n".join(lines) + "\n"
     try:
-        written = tomllib.loads(text).get("hub", {}).get(key)
+        written: Any = tomllib.loads(text)
+        for part in table.split("."):
+            written = written.get(part, {})
     except tomllib.TOMLDecodeError:
         written = None
-    if written != ids:
-        raise ValueError(f"{path}: could not set [hub] {key} there; add {line} by hand")
+    want = {k: v for k, v in values.items() if v is not None}
+    if not isinstance(written, dict) or {k: written.get(k) for k in values} != {
+        k: want.get(k) for k in values
+    }:
+        raise ValueError(f"{path}: could not set {', '.join(values)} in [{table}] there; set "
+                         "them by hand")  # fmt: skip
     path.write_text(text, encoding="utf-8")
 
 
-def add(kind: Kind, id: str) -> HubAdded:
-    """List a model, embedding model or dataset under [hub] in louped.toml, once."""
+def dataset_domains() -> dict[str, list[Domain]]:
+    """The [hub.domains] table of louped.toml: the sections each dataset is listed under. A
+    dataset not in it is listed under both."""
+    table = config().get("hub", {}).get("domains", {})
+    try:
+        return TypeAdapter(dict[str, list[Domain]]).validate_python(table)
+    except ValueError as exc:
+        raise ValueError(f'{FILE} [hub.domains]: each is "<dataset id>" = ["behavior"], '
+                         f'["efficiency"] or both: {exc}') from exc  # fmt: skip
+
+
+def add(kind: Kind, id: str, domains: Iterable[Domain] = ()) -> HubAdded:
+    """List a model, embedding model or dataset under [hub] in louped.toml, once; a dataset's
+    domains are added to its [hub.domains] entry."""
     if kind == "papers":
         raise ValueError("a paper is added as a source")
+    domains = list(domains)
+    if domains and kind != "datasets":
+        raise ValueError("only a dataset is listed under a domain")
     have = added()
     listed: list[str] = getattr(have, kind)
     if id not in listed:
-        _write(kind, [*listed, id])
+        write_toml("hub", {kind: [*listed, id]})
+    tagged = dataset_domains().get(id, [])
+    if domains and not set(domains) <= set(tagged):
+        merged = [d for d in ("behavior", "efficiency") if d in {*tagged, *domains}]
+        write_toml("hub.domains", {id: merged})
     return added()
 
 
@@ -379,8 +416,9 @@ def router(jobs: Jobs | None) -> APIRouter:
         here as a job; a paper kept in sources/ from its arXiv page."""
         assert jobs is not None  # on() refused otherwise
         if req.kind == "papers":
-            if req.download:
-                raise HTTPException(400, "a paper is added to sources, not downloaded")
+            if req.download or req.domains:
+                raise HTTPException(400, "a paper is added to sources, not downloaded or listed "
+                                    "under a domain")  # fmt: skip
             if not re.match(PAPER, req.id):
                 raise HTTPException(400, f"{req.id} is not an arXiv id")
             url = f"https://arxiv.org/abs/{req.id}"
@@ -392,7 +430,7 @@ def router(jobs: Jobs | None) -> APIRouter:
                 raise HTTPException(502, f"could not fetch {url}: {exc}") from exc
             return AddResult(added=added(), source=kept)
         try:
-            listed = add(req.kind, req.id)
+            listed = add(req.kind, req.id, req.domains)
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
         job = None

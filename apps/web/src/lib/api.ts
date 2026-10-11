@@ -73,6 +73,14 @@ export type Judge = Schemas["Judge"];
 export type AbSession = Schemas["AbSession"];
 export type AbResult = Schemas["AbResult"];
 export type EvalTask = Schemas["EvalTask"];
+export type Dataset = Schemas["Dataset"];
+export type DatasetDetail = Schemas["DatasetDetail"];
+export type Domain = NonNullable<Dataset["domains"]>[number];
+export type BenchmarkRow = Schemas["BenchmarkRow"];
+export type Leaderboard = Schemas["Leaderboard"];
+export type LeaderboardEntry = Schemas["Entry"];
+export type SpeedRow = Schemas["SpeedRow"];
+export type BenchmarkRequest = Schemas["BenchmarkRequest"];
 export type LaunchRequest = Schemas["LaunchRequest"];
 export type Job = Schemas["Job"];
 export type Target = Schemas["Target"];
@@ -307,7 +315,12 @@ export const sourceNotebook = (key: string) =>
 export const saveHubToken = (token: string) => post<HubAccount>("/hub/token", { token });
 /** Lists a model, embedding model or dataset in louped.toml (and downloads it as a job), or
  * keeps a paper as a source. */
-export const hubAdd = (body: Schemas["AddRequest"]) => post<Schemas["AddResult"]>("/hub/add", body);
+export const hubAdd = (
+  body: Pick<Schemas["AddRequest"], "kind" | "id"> & Partial<Schemas["AddRequest"]>,
+) => post<Schemas["AddResult"]>("/hub/add", body);
+/** A Hub dataset made a benchmark by a field mapping, checked against the dataset first. */
+export const addBenchmark = (body: BenchmarkRequest) =>
+  post<Schemas["AddedBenchmark"]>("/benchmarks", body);
 export const addSource = (body: Schemas["SourceRequest"]) => post<Source>("/sources", body);
 export const addPin = (body: Schemas["PinRequest"]) => post<Pin>("/pins", body);
 export const deletePin = (id: string) => del(`/pins/${encodeURIComponent(id)}`);
@@ -598,6 +611,42 @@ export const q = {
     queryKey: ["ab-result", a, b],
     queryFn: () =>
       get<AbResult>(`/ab/result?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`),
+  }),
+  /** The project's datasets: Hub ones louped.toml lists, files under data/, training sets. */
+  datasets: () => ({
+    queryKey: ["datasets"],
+    queryFn: () => get<Dataset[]>("/datasets"),
+  }),
+  /** One Hub dataset's page, splits, features and first rows; off in a published dashboard. */
+  hubDataset: (id: string, config: string | null, split: string | null) => ({
+    queryKey: ["datasets", "hub", id, config, split],
+    queryFn: () =>
+      get<DatasetDetail>(
+        `/datasets/hub?${new URLSearchParams({ id, config: config ?? "", split: split ?? "" })}`,
+      ),
+    enabled: !isSnapshot(),
+    retry: false,
+    staleTime: 60_000,
+  }),
+  localDataset: (path: string) => ({
+    queryKey: ["datasets", "local", path],
+    queryFn: () => get<DatasetDetail>(`/datasets/local?path=${encodeURIComponent(path)}`),
+    enabled: !isSnapshot(),
+    retry: false,
+  }),
+  /** Every eval task with its leaderboard's size and top run. */
+  benchmarks: () => ({
+    queryKey: ["benchmarks"],
+    queryFn: () => get<BenchmarkRow[]>("/benchmarks"),
+  }),
+  leaderboard: (task: string) => ({
+    queryKey: ["benchmarks", "board", task],
+    queryFn: () => get<Leaderboard>(`/benchmarks/board?task=${encodeURIComponent(task)}`),
+  }),
+  /** Each weight format of each louped bench run. */
+  speed: () => ({
+    queryKey: ["benchmarks", "speed"],
+    queryFn: () => get<SpeedRow[]>("/benchmarks/speed"),
   }),
   /** Every Inspect task Launch's eval runs: the project's, then inspect_evals'. */
   evalTasks: () => ({

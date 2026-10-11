@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 
 import { mockBoards } from "./boards-api";
 import { mockCircuits } from "./circuits-api";
+import { mockDatasets } from "./datasets-api";
 import { mockHub } from "./hub-api";
 import { mock, run, summary } from "./items-run";
 import { mockProjects } from "./projects-api";
@@ -141,6 +142,7 @@ export async function mockPages(page: Page, parts: Record<string, object> = {}) 
   await mockBoards(page);
   await mockHub(page);
   await mockProjects(page);
+  await mockDatasets(page);
   const json = (glob: string, body: unknown) => page.route(glob, (r) => r.fulfill({ json: body }));
   await json("**/api/runs", summaries);
   await json("**/api/runs/e-1", evalRun);

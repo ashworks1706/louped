@@ -1689,6 +1689,135 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/datasets": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Datasets
+     * @description Every dataset the project has, each with the sections it is listed under (none:
+     *     both).
+     */
+    get: operations["datasets_api_datasets_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/datasets/hub": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Hub Dataset
+     * @description A Hub dataset's page, splits, features and first rows; what could not be read is
+     *     said in hub_error and error.
+     */
+    get: operations["hub_dataset_api_datasets_hub_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/datasets/local": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Local Dataset
+     * @description A file under data/: its columns and first rows, by its path from the project's
+     *     root.
+     */
+    get: operations["local_dataset_api_datasets_local_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/benchmarks": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Benchmarks
+     * @description Every eval task with the size and top of its leaderboard, those with runs first.
+     */
+    get: operations["list_benchmarks_api_benchmarks_get"];
+    put?: never;
+    /**
+     * Add Benchmark
+     * @description A Hub dataset as a benchmark: checked against its splits and features when the
+     *     dataset viewer answers, then kept in louped.toml and listed as the task louped/<name>.
+     */
+    post: operations["add_benchmark_api_benchmarks_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/benchmarks/board": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Leaderboard
+     * @description One eval task's finished runs, best score first.
+     */
+    get: operations["leaderboard_api_benchmarks_board_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/benchmarks/speed": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Speed
+     * @description Each weight format of each `louped bench` run, newest first; best marks each
+     *     model's fastest.
+     */
+    get: operations["speed_api_benchmarks_speed_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/ui/layout": {
     parameters: {
       query?: never;
@@ -2030,12 +2159,25 @@ export interface components {
        * @default false
        */
       download: boolean;
+      /**
+       * Domains
+       * @default []
+       */
+      domains: ("behavior" | "efficiency")[];
     };
     /** AddResult */
     AddResult: {
       added: components["schemas"]["HubAdded"];
       source?: components["schemas"]["Source"] | null;
       job?: components["schemas"]["Job"] | null;
+    };
+    /** AddedBenchmark */
+    AddedBenchmark: {
+      benchmark: components["schemas"]["BenchmarkRow"];
+      /** Checked */
+      checked: boolean;
+      /** Note */
+      note?: string | null;
     };
     /**
      * Agreement
@@ -2069,6 +2211,71 @@ export interface components {
       path: string;
       /** Size */
       size: number | null;
+    };
+    /**
+     * Benchmark
+     * @description A Hub dataset as an eval: which rows, and which field is the input, the target and the
+     *     choices.
+     */
+    Benchmark: {
+      /** Dataset */
+      dataset: string;
+      /** Config */
+      config?: string | null;
+      /**
+       * Split
+       * @default test
+       */
+      split: string;
+      /** Input */
+      input: string;
+      /** Target */
+      target: string;
+      /** Choices */
+      choices?: string | null;
+      /**
+       * Scorer
+       * @default match
+       * @enum {string}
+       */
+      scorer: "match" | "choice" | "judge";
+    };
+    /** BenchmarkRequest */
+    BenchmarkRequest: {
+      /** Dataset */
+      dataset: string;
+      /** Config */
+      config?: string | null;
+      /**
+       * Split
+       * @default test
+       */
+      split: string;
+      /** Input */
+      input: string;
+      /** Target */
+      target: string;
+      /** Choices */
+      choices?: string | null;
+      /**
+       * Scorer
+       * @default match
+       * @enum {string}
+       */
+      scorer: "match" | "choice" | "judge";
+      /** Name */
+      name: string;
+    };
+    /**
+     * BenchmarkRow
+     * @description One eval task with its leaderboard's size and top run.
+     */
+    BenchmarkRow: {
+      task: components["schemas"]["EvalTask"];
+      /** Runs */
+      runs: number;
+      best?: components["schemas"]["Entry"] | null;
+      spec?: components["schemas"]["Benchmark"] | null;
     };
     /**
      * Block
@@ -2623,6 +2830,75 @@ export interface components {
       cues: components["schemas"]["Cue"][];
     };
     /**
+     * Dataset
+     * @description One dataset the project has.
+     */
+    Dataset: {
+      /** Id */
+      id: string;
+      /**
+       * Source
+       * @enum {string}
+       */
+      source: "hub" | "local" | "training";
+      /**
+       * Domains
+       * @default []
+       */
+      domains: ("behavior" | "efficiency")[];
+      /** Path */
+      path?: string | null;
+      /** Format */
+      format?: string | null;
+      /** Size */
+      size?: number | null;
+      /** Rows */
+      rows?: number | null;
+      /** Error */
+      error?: string | null;
+    };
+    /**
+     * DatasetDetail
+     * @description One dataset's card, splits, features and first rows.
+     */
+    DatasetDetail: {
+      /** Id */
+      id: string;
+      /**
+       * Source
+       * @enum {string}
+       */
+      source: "hub" | "local";
+      hub?: components["schemas"]["HubDetail"] | null;
+      /** Hub Error */
+      hub_error?: string | null;
+      /**
+       * Splits
+       * @default []
+       */
+      splits: components["schemas"]["Split"][];
+      /** Config */
+      config?: string | null;
+      /** Split */
+      split?: string | null;
+      /**
+       * Features
+       * @default []
+       */
+      features: components["schemas"]["Feature"][];
+      /**
+       * Rows
+       * @default []
+       */
+      rows: {
+        [key: string]: unknown;
+      }[];
+      /** Total */
+      total?: number | null;
+      /** Error */
+      error?: string | null;
+    };
+    /**
      * Direction
      * @description Where a direction came from and what it is, stored alongside its values.
      */
@@ -2692,6 +2968,24 @@ export interface components {
        */
       chat: boolean;
     };
+    /**
+     * Entry
+     * @description One finished eval run of a task.
+     */
+    Entry: {
+      /** Run */
+      run: string;
+      /** Model */
+      model: string | null;
+      /** Score */
+      score: number | null;
+      /** Metric */
+      metric: string | null;
+      /** Samples */
+      samples: number | null;
+      /** Created */
+      created: string | null;
+    };
     /** EvalTask */
     EvalTask: {
       /** Task */
@@ -2708,7 +3002,7 @@ export interface components {
        * Source
        * @enum {string}
        */
-      source: "project" | "inspect_evals";
+      source: "project" | "benchmark" | "inspect_evals";
     };
     /** Experiment */
     Experiment: {
@@ -2783,6 +3077,13 @@ export interface components {
       /** Recipe */
       recipe?: string | null;
       target?: components["schemas"]["Target"];
+    };
+    /** Feature */
+    Feature: {
+      /** Name */
+      name: string;
+      /** Type */
+      type: string;
     };
     /**
      * FeatureDashboard
@@ -3403,6 +3704,13 @@ export interface components {
       config?: string | null;
       /** Recipe */
       recipe?: string | null;
+    };
+    /** Leaderboard */
+    Leaderboard: {
+      task: components["schemas"]["EvalTask"] | null;
+      spec?: components["schemas"]["Benchmark"] | null;
+      /** Entries */
+      entries: components["schemas"]["Entry"][];
     };
     /** LineView */
     LineView: {
@@ -4704,6 +5012,48 @@ export interface components {
        * @default 3
        */
       repeats: number;
+    };
+    /**
+     * SpeedRow
+     * @description One weight format of one `louped bench` run.
+     */
+    SpeedRow: {
+      /** Run */
+      run: string;
+      /** Model */
+      model: string | null;
+      /** Setting */
+      setting: string;
+      /** Device */
+      device?: string | null;
+      /** Weights Mib */
+      weights_mib?: number | null;
+      /** Throughput */
+      throughput?: number | null;
+      /** Batch */
+      batch?: number | null;
+      /** Prefill Ms */
+      prefill_ms?: number | null;
+      /** Context */
+      context?: number | null;
+      /** Peak Mib */
+      peak_mib?: number | null;
+      /** Created */
+      created?: string | null;
+      /**
+       * Best
+       * @default false
+       */
+      best: boolean;
+    };
+    /** Split */
+    Split: {
+      /** Config */
+      config: string;
+      /** Split */
+      split: string;
+      /** Rows */
+      rows?: number | null;
     };
     /** SubmitRequest */
     SubmitRequest: {
@@ -8071,6 +8421,196 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  datasets_api_datasets_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Dataset"][];
+        };
+      };
+    };
+  };
+  hub_dataset_api_datasets_hub_get: {
+    parameters: {
+      query: {
+        id: string;
+        config?: string | null;
+        split?: string | null;
+        rows?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DatasetDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  local_dataset_api_datasets_local_get: {
+    parameters: {
+      query: {
+        path: string;
+        rows?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DatasetDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_benchmarks_api_benchmarks_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BenchmarkRow"][];
+        };
+      };
+    };
+  };
+  add_benchmark_api_benchmarks_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BenchmarkRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AddedBenchmark"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  leaderboard_api_benchmarks_board_get: {
+    parameters: {
+      query: {
+        task: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Leaderboard"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  speed_api_benchmarks_speed_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SpeedRow"][];
         };
       };
     };

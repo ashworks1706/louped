@@ -320,6 +320,43 @@ KINDS: list[Kind] = [
     _k(part="hub/hit/*/*", about="One result, by kind and Hub id.", rules=PICK),
     _k(part="hub/detail/*", about="The open result's title, facts, card, abstract, links and "
        "actions.", rules=PICK),
+    # Datasets (Behavior and Efficiency)
+    _k(part="datasets/heading", about="The count of datasets on the page.", rules=PICK),
+    _k(part="datasets/column/*", about="A column of the datasets: name, source, format, size, "
+       "listed under.", rules=PICK),
+    _k(part="datasets/row/*", about="One dataset, by its Hub id or its path from the project's "
+       "root.", rules=PICK),
+    _k(part="datasets/hub", about="Search the Hub's datasets and add one to this page.",
+       rules=["hidden", "note"]),
+    _k(part="datasets/search", about="Search the Hub's datasets.", rules=PICK),
+    _k(part="datasets/clear", about="Clears the Hub search.", rules=PICK),
+    _k(part="datasets/hit-column/*", about="A column of the Hub's results.", rules=PICK),
+    _k(part="datasets/hit/*", about="One dataset the Hub search found, by its id.", rules=PICK),
+    _k(part="datasets/add/*", about="Adds that dataset to this page's domain.", rules=PICK),
+    _k(part="datasets/detail/*", about="The open dataset's title, actions, facts, split, "
+       "features, rows, card and errors.", rules=PICK),
+    _k(part="datasets/field/*", about="A field (column) of the open dataset's rows.", rules=PICK),
+    _k(part="datasets/sample/*", about="One of the open dataset's first rows, by its index.",
+       rules=PICK),
+    # Benchmarks (Behavior: eval tasks; Efficiency: speed)
+    _k(part="benchmarks/search", about="Filters the eval tasks.", rules=PICK),
+    _k(part="benchmarks/add", about="Makes a Hub dataset a benchmark.", rules=["hidden"]),
+    _k(part="benchmarks/form", about="The new benchmark's form.", rules=PICK),
+    _k(part="benchmarks/form/*", about="A field of the new benchmark's form.", rules=PICK),
+    _k(part="benchmarks/column/*", about="A column of the eval tasks.", rules=PICK),
+    _k(part="benchmarks/task/*", about="One eval task with its runs and best score, by task.",
+       rules=PICK),
+    _k(part="benchmarks/more", about="How many tasks without runs a search would show.",
+       rules=["hidden"]),
+    _k(part="benchmarks/board/*", about="The open task's title, Launch, about, field mapping or "
+       "empty note.", rules=PICK),
+    _k(part="benchmarks/entry-column/*", about="A column of the leaderboard.", rules=PICK),
+    _k(part="benchmarks/entry/*", about="One run on the leaderboard, by run id.", rules=PICK),
+    _k(part="benchmarks/show/*", about="Speed runs newest first, or each model's fastest.",
+       rules=PICK),
+    _k(part="benchmarks/speed-column/*", about="A column of the speed benchmarks.", rules=PICK),
+    _k(part="benchmarks/speed/*/*", about="One weight format of one louped bench run, by run "
+       "and setting.", rules=PICK),
     # Reports
     _k(part="reports/heading", about="The count of files in reports/.", rules=PICK),
     _k(part="reports/table", about="The files in reports/.", rules=["note"]),

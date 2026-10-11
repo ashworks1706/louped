@@ -57,7 +57,7 @@ src/louped/        the package (distribution louped); layers in docs/ARCHITECTUR
   retrieval/      search and its metrics
   train/          sft, dpo, grpo, classify, reft, sweeps, replayed tool environments
   stores/         read Inspect logs, MLflow, vectors, experiments/
-  server/         the API, the Probe and Benchmark tools, launching jobs
+  server/         the API, the Probe and Speed tools, launching jobs
   agent.py        the MCP server coding agents drive louped through
   sweep.py grid.py features.py circuits.py cli.py
   templates/      what `louped init` copies: the project files, the agent's skills and MCP config

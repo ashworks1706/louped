@@ -4130,6 +4130,284 @@
         }
       }
     },
+    "/api/datasets": {
+      "get": {
+        "summary": "Datasets",
+        "description": "Every dataset the project has, each with the sections it is listed under (none:\nboth).",
+        "operationId": "datasets_api_datasets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Dataset"
+                  },
+                  "type": "array",
+                  "title": "Response Datasets Api Datasets Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/datasets/hub": {
+      "get": {
+        "summary": "Hub Dataset",
+        "description": "A Hub dataset's page, splits, features and first rows; what could not be read is\nsaid in hub_error and error.",
+        "operationId": "hub_dataset_api_datasets_hub_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "config",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Config"
+            }
+          },
+          {
+            "name": "split",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Split"
+            }
+          },
+          {
+            "name": "rows",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "title": "Rows"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/datasets/local": {
+      "get": {
+        "summary": "Local Dataset",
+        "description": "A file under data/: its columns and first rows, by its path from the project's\nroot.",
+        "operationId": "local_dataset_api_datasets_local_get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          },
+          {
+            "name": "rows",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "title": "Rows"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/benchmarks": {
+      "get": {
+        "summary": "List Benchmarks",
+        "description": "Every eval task with the size and top of its leaderboard, those with runs first.",
+        "operationId": "list_benchmarks_api_benchmarks_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BenchmarkRow"
+                  },
+                  "type": "array",
+                  "title": "Response List Benchmarks Api Benchmarks Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add Benchmark",
+        "description": "A Hub dataset as a benchmark: checked against its splits and features when the\ndataset viewer answers, then kept in louped.toml and listed as the task louped/<name>.",
+        "operationId": "add_benchmark_api_benchmarks_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BenchmarkRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddedBenchmark"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/benchmarks/board": {
+      "get": {
+        "summary": "Leaderboard",
+        "description": "One eval task's finished runs, best score first.",
+        "operationId": "leaderboard_api_benchmarks_board_get",
+        "parameters": [
+          {
+            "name": "task",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Leaderboard"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/benchmarks/speed": {
+      "get": {
+        "summary": "Speed",
+        "description": "Each weight format of each `louped bench` run, newest first; best marks each\nmodel's fastest.",
+        "operationId": "speed_api_benchmarks_speed_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SpeedRow"
+                  },
+                  "type": "array",
+                  "title": "Response Speed Api Benchmarks Speed Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/ui/layout": {
       "get": {
         "summary": "Layout",
@@ -4906,6 +5184,15 @@
             "type": "boolean",
             "title": "Download",
             "default": false
+          },
+          "domains": {
+            "items": {
+              "type": "string",
+              "enum": ["behavior", "efficiency"]
+            },
+            "type": "array",
+            "title": "Domains",
+            "default": []
           }
         },
         "type": "object",
@@ -4941,6 +5228,31 @@
         "type": "object",
         "required": ["added"],
         "title": "AddResult"
+      },
+      "AddedBenchmark": {
+        "properties": {
+          "benchmark": {
+            "$ref": "#/components/schemas/BenchmarkRow"
+          },
+          "checked": {
+            "type": "boolean",
+            "title": "Checked"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": ["benchmark", "checked"],
+        "title": "AddedBenchmark"
       },
       "Agreement": {
         "properties": {
@@ -5005,6 +5317,155 @@
         "type": "object",
         "required": ["path", "size"],
         "title": "Artifact"
+      },
+      "Benchmark": {
+        "properties": {
+          "dataset": {
+            "type": "string",
+            "pattern": "^[\\w.-]+(/[\\w.-]+)?$",
+            "title": "Dataset"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "split": {
+            "type": "string",
+            "title": "Split",
+            "default": "test"
+          },
+          "input": {
+            "type": "string",
+            "title": "Input"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          },
+          "choices": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Choices"
+          },
+          "scorer": {
+            "type": "string",
+            "enum": ["match", "choice", "judge"],
+            "title": "Scorer",
+            "default": "match"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": ["dataset", "input", "target"],
+        "title": "Benchmark",
+        "description": "A Hub dataset as an eval: which rows, and which field is the input, the target and the\nchoices."
+      },
+      "BenchmarkRequest": {
+        "properties": {
+          "dataset": {
+            "type": "string",
+            "pattern": "^[\\w.-]+(/[\\w.-]+)?$",
+            "title": "Dataset"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "split": {
+            "type": "string",
+            "title": "Split",
+            "default": "test"
+          },
+          "input": {
+            "type": "string",
+            "title": "Input"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          },
+          "choices": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Choices"
+          },
+          "scorer": {
+            "type": "string",
+            "enum": ["match", "choice", "judge"],
+            "title": "Scorer",
+            "default": "match"
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+            "title": "Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": ["dataset", "input", "target", "name"],
+        "title": "BenchmarkRequest"
+      },
+      "BenchmarkRow": {
+        "properties": {
+          "task": {
+            "$ref": "#/components/schemas/EvalTask"
+          },
+          "runs": {
+            "type": "integer",
+            "title": "Runs"
+          },
+          "best": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Entry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spec": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Benchmark"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": ["task", "runs"],
+        "title": "BenchmarkRow",
+        "description": "One eval task with its leaderboard's size and top run."
       },
       "Block": {
         "properties": {
@@ -6578,6 +7039,194 @@
         "required": ["now", "cues"],
         "title": "Cues"
       },
+      "Dataset": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "source": {
+            "type": "string",
+            "enum": ["hub", "local", "training"],
+            "title": "Source"
+          },
+          "domains": {
+            "items": {
+              "type": "string",
+              "enum": ["behavior", "efficiency"]
+            },
+            "type": "array",
+            "title": "Domains",
+            "default": []
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "format": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Format"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size"
+          },
+          "rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": ["id", "source"],
+        "title": "Dataset",
+        "description": "One dataset the project has."
+      },
+      "DatasetDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "source": {
+            "type": "string",
+            "enum": ["hub", "local"],
+            "title": "Source"
+          },
+          "hub": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HubDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hub_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hub Error"
+          },
+          "splits": {
+            "items": {
+              "$ref": "#/components/schemas/Split"
+            },
+            "type": "array",
+            "title": "Splits",
+            "default": []
+          },
+          "config": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "split": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Split"
+          },
+          "features": {
+            "items": {
+              "$ref": "#/components/schemas/Feature"
+            },
+            "type": "array",
+            "title": "Features",
+            "default": []
+          },
+          "rows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Rows",
+            "default": []
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": ["id", "source"],
+        "title": "DatasetDetail",
+        "description": "One dataset's card, splits, features and first rows."
+      },
       "Direction": {
         "properties": {
           "name": {
@@ -6725,6 +7374,74 @@
         "title": "DoseRequest",
         "description": "A saved direction swept over strengths, read at the next token."
       },
+      "Entry": {
+        "properties": {
+          "run": {
+            "type": "string",
+            "title": "Run"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "metric": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric"
+          },
+          "samples": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Samples"
+          },
+          "created": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created"
+          }
+        },
+        "type": "object",
+        "required": ["run", "model", "score", "metric", "samples", "created"],
+        "title": "Entry",
+        "description": "One finished eval run of a task."
+      },
       "EvalTask": {
         "properties": {
           "task": {
@@ -6763,7 +7480,7 @@
           },
           "source": {
             "type": "string",
-            "enum": ["project", "inspect_evals"],
+            "enum": ["project", "benchmark", "inspect_evals"],
             "title": "Source"
           }
         },
@@ -6998,6 +7715,21 @@
         "type": "object",
         "required": ["id"],
         "title": "ExportRequest"
+      },
+      "Feature": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "required": ["name", "type"],
+        "title": "Feature"
       },
       "FeatureDashboard": {
         "properties": {
@@ -8648,6 +9380,40 @@
         "type": "object",
         "required": ["id", "group", "title"],
         "title": "Launchable"
+      },
+      "Leaderboard": {
+        "properties": {
+          "task": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvalTask"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spec": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Benchmark"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/Entry"
+            },
+            "type": "array",
+            "title": "Entries"
+          }
+        },
+        "type": "object",
+        "required": ["task", "entries"],
+        "title": "Leaderboard"
       },
       "LineView": {
         "properties": {
@@ -11741,6 +12507,153 @@
         "required": ["prompt"],
         "title": "SpeedRequest",
         "description": "The prompt timed base and, with interventions or adapters, changed."
+      },
+      "SpeedRow": {
+        "properties": {
+          "run": {
+            "type": "string",
+            "title": "Run"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "setting": {
+            "type": "string",
+            "title": "Setting"
+          },
+          "device": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device"
+          },
+          "weights_mib": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weights Mib"
+          },
+          "throughput": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Throughput"
+          },
+          "batch": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch"
+          },
+          "prefill_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prefill Ms"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context"
+          },
+          "peak_mib": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peak Mib"
+          },
+          "created": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created"
+          },
+          "best": {
+            "type": "boolean",
+            "title": "Best",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": ["run", "model", "setting"],
+        "title": "SpeedRow",
+        "description": "One weight format of one `louped bench` run."
+      },
+      "Split": {
+        "properties": {
+          "config": {
+            "type": "string",
+            "title": "Config"
+          },
+          "split": {
+            "type": "string",
+            "title": "Split"
+          },
+          "rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": ["config", "split"],
+        "title": "Split"
       },
       "SubmitRequest": {
         "properties": {
