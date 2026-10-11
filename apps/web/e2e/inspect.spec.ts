@@ -231,11 +231,9 @@ test("Adapters and heads go to the intervened side and into the model args", asy
   await mockApi(page, { layers: 2, bank: ["formal", "terse"] });
   const sent: { adapters: string[]; interventions: { kind: string; heads: number[] }[] }[] = [];
   await page.route("**/api/playground/generate", (r) => {
-    sent.push(r.request().postDataJSON());
-    r.fulfill({
-      contentType: "text/plain",
-      body: sent.at(-1)!.adapters.length ? " terse" : " base",
-    });
+    const body = r.request().postDataJSON();
+    sent.push(body);
+    r.fulfill({ contentType: "text/plain", body: body.adapters.length ? " terse" : " base" });
   });
   await page.goto("/behavior/probe/");
   await page.getByRole("checkbox", { name: "terse" }).click();
@@ -245,6 +243,7 @@ test("Adapters and heads go to the intervened side and into the model args", asy
   await page.getByLabel("Prompt").fill("hi");
   await page.getByRole("button", { name: /Run/ }).click();
   await expect(page.getByTestId("reply-intervention")).toContainText("terse");
+  await expect.poll(() => sent.some((b) => b.adapters.length)).toBe(true);
   const edited = sent.find((b) => b.adapters.length)!;
   expect(edited.adapters).toEqual(["terse"]);
   expect(edited.interventions[0]).toMatchObject({ kind: "heads", heads: [1, 3] });

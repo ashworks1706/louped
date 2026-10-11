@@ -7,6 +7,7 @@ import {
   Dumbbell,
   FlaskConical,
   FileText,
+  FolderKanban,
   Gauge,
   GitCompareArrows,
   House,
@@ -42,6 +43,14 @@ export const NAV: NavItem[] = [
     description: "What is running and what is being asked.",
     icon: House,
     shortcut: "G H",
+    section: "workspace",
+  },
+  {
+    href: "/projects/",
+    title: "Projects",
+    description: "The goals the experiments serve, each with its README, links and runs.",
+    icon: FolderKanban,
+    shortcut: "G J",
     section: "workspace",
   },
   {
@@ -203,6 +212,7 @@ export const SECTIONS: { section: Section; title: string; href: string }[] = [
 const DETAIL: Record<string, string> = {
   "/run/": "/runs/",
   "/job/": "/runs/",
+  "/projects/p/": "/projects/",
   "/behavior/experiment/": "/behavior/experiments/",
   "/efficiency/experiment/": "/efficiency/experiments/",
   "/behavior/feature/": "/behavior/vectors/",

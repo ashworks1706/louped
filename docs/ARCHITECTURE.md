@@ -38,6 +38,8 @@ projects; each project is its own folder and repository. `louped init` makes one
 my-research/
   louped.toml          marks the root (commands find it from any subfolder) and lists its domains
   experiments/        the questions, written by the person and their agent; committed
+  projects/           goals that group experiments (project: in an experiment's README);
+                      committed
   AGENTS.md, .mcp.json, .claude/skills/, .claude/settings.json
                       the harness for the person's own coding agent
   .louped/             what louped writes: runs, logs, jobs, vendored harnesses; gitignored
@@ -45,7 +47,8 @@ my-research/
 
 What is written by hand is versioned. What louped writes can be deleted and rebuilt by running the
 experiments. `louped.core.project` finds the root. `louped.core.paths` puts `.louped/` and
-`experiments/` there, unless `LOUPED_HOME` and `LOUPED_EXPERIMENTS` set other paths.
+`experiments/` and `projects/` there, unless `LOUPED_HOME`, `LOUPED_EXPERIMENTS` and
+`LOUPED_PROJECTS` set other paths.
 
 louped's own repository is not a project. It holds the package and, under `src/louped/templates/`,
 the files that `init` copies. These files are also served to Claude Code as a plugin through
@@ -266,7 +269,7 @@ Pages: a top bar of sections is over a sidebar of the section's pages. The sideb
 
 | Section | Pages |
 |---|---|
-| Workspace | Home, Runs (jobs with their progress, then every run), Compare, Launch, Sources, Hub and Reports, with Run, Job, Source and Report detail |
+| Workspace | Home, Projects (with each project's page), Runs (jobs with their progress, then every run), Compare, Launch, Sources, Hub and Reports, with Run, Job, Source and Report detail |
 | `/behavior/` | Overview, Experiments, Probe (reply, inspect, patch, dose), Vectors, Circuits, Feature |
 | `/efficiency/` | Overview, Experiments, Benchmark (speed, reply), Training |
 

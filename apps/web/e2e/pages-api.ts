@@ -4,6 +4,7 @@ import { mockBoards } from "./boards-api";
 import { mockCircuits } from "./circuits-api";
 import { mockHub } from "./hub-api";
 import { mock, run, summary } from "./items-run";
+import { mockProjects } from "./projects-api";
 import { mockReports } from "./reports-api";
 import { mockSources } from "./sources-api";
 
@@ -139,6 +140,7 @@ export async function mockPages(page: Page, parts: Record<string, object> = {}) 
   await mockReports(page);
   await mockBoards(page);
   await mockHub(page);
+  await mockProjects(page);
   const json = (glob: string, body: unknown) => page.route(glob, (r) => r.fulfill({ json: body }));
   await json("**/api/runs", summaries);
   await json("**/api/runs/e-1", evalRun);

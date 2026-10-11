@@ -107,6 +107,22 @@ class New:
     """The domain it is filed under on the Experiments page: one the project's louped.toml lists,
     else mechanisms, honesty, conditioning, agents, context, inference, specialisation or
     reproduction."""
+    project: str | None = None
+    """The project it is part of: one under projects/ (louped project new)."""
+
+
+@dataclass(frozen=True)
+class ProjectCmd:
+    """Start a project that holds experiments: projects/<name>/README.md with its front matter
+    and the sections to fill in. An experiment joins it with project: <name> in its README."""
+
+    action: tyro.conf.Positional[Literal["new"]]
+    name: tyro.conf.Positional[str]
+    """Lowercase with dashes: sycophancy-under-pushback."""
+    title: str | None = None
+    """Its name for people; the folder's name by default."""
+    summary: str = ""
+    """One line on what it is for."""
 
 
 @dataclass(frozen=True)
@@ -459,6 +475,7 @@ Command = (
     | Annotated[Grid, tyro.conf.subcommand("grid")]
     | Annotated[Init, tyro.conf.subcommand("init")]
     | Annotated[New, tyro.conf.subcommand("new")]
+    | Annotated[ProjectCmd, tyro.conf.subcommand("project")]
     | Annotated[View, tyro.conf.subcommand("view")]
     | Annotated[Features, tyro.conf.subcommand("features")]
     | Annotated[Circuit, tyro.conf.subcommand("circuit")]
@@ -494,6 +511,7 @@ COMMANDS = {
     "grid",
     "init",
     "new",
+    "project",
     "view",
     "features",
     "circuit",
@@ -755,8 +773,17 @@ def main() -> None:
             from louped.stores.experiments import BadExperiment, scaffold
 
             try:
-                print(f"created {scaffold(cmd.name, cmd.domain)}")
+                print(f"created {scaffold(cmd.name, cmd.domain, cmd.project)}")
             except BadExperiment as exc:
+                raise SystemExit(str(exc)) from exc
+        case ProjectCmd() as cmd:
+            from louped.stores.projects import BadProject, create
+            from louped.stores.types import ProjectMeta
+
+            try:
+                meta = ProjectMeta(title=cmd.title or "", summary=cmd.summary)
+                print(f"created {create(cmd.name, meta) / 'README.md'}")
+            except (BadProject, ValueError) as exc:
                 raise SystemExit(str(exc)) from exc
         case Features() as cmd:
             from louped.features import features

@@ -8,7 +8,8 @@
 
 Keep your research questions about language models in a project. Each question is an experiment
 with a README (the question and the test) and a script that runs it. Your coding agent writes and
-runs them. You read the results item by item in louped's app. Everything runs on your machine or
+runs them. Experiments that serve one goal can share a project (`projects/<name>/README.md`).
+You read the results item by item in louped's app. Everything runs on your machine or
 your cluster, with open-weight models.
 
 <picture>

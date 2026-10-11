@@ -22,7 +22,9 @@ test.
 | `status`                                                 | The server's version, home, and whether it launches     |
 | `experiments`, `experiment`, `runs`, `run`               | Lists questions and runs                                |
 | `samples`, `sample`, `figures`, `figure`, `compare`      | Reads results                                           |
-| `new_experiment`                                         | Starts a question                                       |
+| `new_experiment`                                         | Starts a question, in a project when given              |
+| `projects`, `project`                                    | Lists projects; reads one with its experiments          |
+| `new_project`, `set_project`, `move_experiment`          | Makes and changes projects; moves an experiment         |
 | `launchables`, `launch_options`, `launch`                | Starts a job                                            |
 | `jobs`, `job`, `cancel_job`                              | Follows or stops jobs                                   |
 | `submit_job`                                             | Sends a job to a cluster over ssh and follows it        |

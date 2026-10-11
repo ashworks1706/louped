@@ -157,8 +157,8 @@ KINDS: list[Kind] = [
     _k(part="artifacts/whole/*", about="A folder's JSONL files read as one.", rules=PICK),
     _k(part="artifacts/*", about="The file filter and the open file.", rules=PICK),
     # an experiment's page and the lists of them
-    _k(part="experiment/meta/*", about="The experiment's axis, domain, runs or last run.",
-       rules=LIST),
+    _k(part="experiment/meta/*", about="The experiment's axis, domain, project, runs or last "
+       "run.", rules=LIST),
     _k(part="experiment/launch/*", about="Opens Launch on one of the experiment's scripts.",
        rules=PICK),
     _k(part="experiment/view/*", about="A figure an agent added to the experiment's page, by "
@@ -172,6 +172,24 @@ KINDS: list[Kind] = [
     _k(part="experiments/domain/*", about="A domain's heading in a list.", rules=PICK),
     _k(part="experiments/filter/*", about="A status filter: all, active, answered, parked.",
        rules=PICK),
+    _k(part="experiments/project", about="Shows only one project's experiments.",
+       rules=CONTROL),
+    # the projects and one project's page
+    _k(part="projects/card/*", about="One project in the list, by name.", rules=PICK),
+    _k(part="projects/new", about="Starts a project: projects/<name>/README.md.",
+       rules=["hidden"]),
+    _k(part="projects/new-experiment", about="Starts an experiment in the project.",
+       rules=["hidden"]),
+    _k(part="projects/edit", about="Edits the project's metadata.", rules=["hidden"]),
+    _k(part="projects/section/*", about="The project's readme, metadata, experiments or runs.",
+       rules=["hidden", "note"]),
+    _k(part="projects/meta/*", about="One field of the project's metadata: links, models, "
+       "datasets, benchmarks, tags.", rules=LIST),
+    _k(part="projects/link/*", about="One of the project's links, by name.", rules=PICK),
+    _k(part="projects/dialog/*", about="A form: new-project, new-experiment or edit (the "
+       "metadata).", rules=PICK),
+    _k(part="projects/*", about="The count of projects; a project's title, status, summary and "
+       "back link; the note on a project with no README and its create button.", rules=PICK),
     # runs tables
     _k(part="runs/column/*", about="A column of a runs table: select, run, kind, model, "
        "headline, status, created.", rules=LIST),

@@ -38,7 +38,7 @@ import {
 } from "@/lib/api";
 import { ago, num } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { axisPath, experimentHref, runHref } from "@/lib/href";
+import { axisPath, experimentHref, projectHref, runHref } from "@/lib/href";
 
 const AXIS_TITLE: Record<ExperimentDetail["axis"], string> = {
   behavior: "Behavior & alignment",
@@ -98,6 +98,22 @@ function ExperimentHeader({ experiment: e }: { experiment: ExperimentDetail }) {
   const meta: { name: string; label: string; value: React.ReactNode; className?: string }[] = [
     { name: "axis", label: "Axis", value: AXIS_TITLE[e.axis] },
     { name: "domain", label: "Domain", value: e.domain_title },
+    ...(e.project
+      ? [
+          {
+            name: "project",
+            label: "Project",
+            value: (
+              <Link
+                href={projectHref(e.project)}
+                className="font-mono underline-offset-4 hover:underline"
+              >
+                {e.project}
+              </Link>
+            ),
+          },
+        ]
+      : []),
     {
       name: "runs",
       label: "Runs",

@@ -9,7 +9,8 @@ description: Start a research experiment in a louped project. Use when the perso
    own (mechanisms, honesty, conditioning, agents; context, inference, specialisation;
    reproduction).
 3. Create it with the `new_experiment` MCP tool (or `louped new <name> --domain <domain>`). Name it
-   for the question, in lowercase letters, digits and `-`. It starts `active`.
+   for the question, in lowercase letters, digits and `-`. It starts `active`. If it serves a
+   project's goal (the `projects` MCP tool), give `project=<name>` (or `--project <name>`).
 4. Fill the README before the code, one or two sentences a section:
    - **Question**: comes out yes or no, or as a number.
    - **Observation**: what was seen, apart from what it is thought to mean.

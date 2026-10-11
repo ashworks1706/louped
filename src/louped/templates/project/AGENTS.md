@@ -9,8 +9,9 @@ results.
 
 - `louped mcp`, registered in `.mcp.json`, drives the running app. Start `louped serve` first.
   Work started through it shows in the app.
-  - To read: `experiments`, `runs`, `run`, `samples`, `figures`, `compare`.
-  - To act: `new_experiment`, `launch`, `job`, `submit_job`, `export_job`, `import_result`,
+  - To read: `experiments`, `projects`, `project`, `runs`, `run`, `samples`, `figures`,
+    `compare`.
+  - To act: `new_experiment`, `new_project`, `set_project`, `move_experiment`, `launch`, `job`, `submit_job`, `export_job`, `import_result`,
     `push`, `pull`.
   - `experiment` shows an experiment's gate. A launch that the gate guards is refused until the
     gate passes. Do not edit a gate to get past it. Tell the person.
@@ -24,7 +25,7 @@ results.
     them for a run.py's `--cohort`.
 - Skills in `.claude/skills/`: `new-experiment`, `read-results`, `run-elsewhere`, `write-report`,
   `ground-claims`, `add-plugin`, `change-ui`.
-- The CLI does the same steps: `louped new`, `louped push`, `louped pull`, `louped --help`.
+- The CLI does the same steps: `louped new`, `louped project new`, `louped push`, `louped pull`, `louped --help`.
 - Never ask for a Hugging Face token in chat. If push or pull says one is missing, ask the person
   to press Connect on Runs or to run `louped push` in a terminal. Both ask for the token and keep
   it out of the project.
@@ -65,6 +66,7 @@ results.
 | `louped.toml`      | the project's root and settings (domains, remote, theme) |
 | `layout.json`     | what the app's pages show (`change-ui`); committed     |
 | `experiments/`    | the questions: README, scripts, notebooks; committed  |
+| `projects/`       | goals that group experiments (`project:` in their README); committed |
 | `sources/`        | papers, docs, slides, notebooks; committed            |
 | `reports/`        | write-ups, decks, documents, exported figures; committed |
 | `plugins/`        | the project's own pages, routes and tools; committed  |

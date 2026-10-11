@@ -14,6 +14,10 @@ export type SampleDetail = Schemas["SampleDetail"];
 export type ModelInput = Schemas["ModelInput"];
 export type Experiment = Schemas["Experiment"];
 export type ExperimentDetail = Schemas["ExperimentDetail"];
+export type Project = Schemas["Project"];
+export type ProjectDetail = Schemas["ProjectDetail"];
+export type ProjectMeta = Schemas["ProjectMeta"];
+export type DomainInfo = Schemas["DomainInfo"];
 type RunView = Schemas["RunView"];
 export type HeatmapView = Schemas["HeatmapView"];
 export type LineView = Schemas["LineView"];
@@ -166,6 +170,17 @@ export const readme = (name: string) =>
   get<{ text: string }>(`/experiments/${encodeURIComponent(name)}/readme`).then((r) => r.text);
 export const saveReadme = (name: string, text: string) =>
   put(`/experiments/${encodeURIComponent(name)}/readme`, { text });
+/** A project's README as written, front matter and all. */
+export const projectReadme = (name: string) =>
+  get<{ text: string }>(`/projects/${encodeURIComponent(name)}/readme`).then((r) => r.text);
+export const saveProjectReadme = (name: string, text: string) =>
+  put(`/projects/${encodeURIComponent(name)}/readme`, { text });
+/** Replaces a project's front matter, keeping its README's text. */
+export const saveProjectMeta = (name: string, meta: ProjectMeta) =>
+  put<ProjectDetail>(`/projects/${encodeURIComponent(name)}/meta`, meta);
+/** Puts an experiment in a project, or takes it out (null): only its front matter changes. */
+export const moveExperiment = (name: string, project: string | null) =>
+  put<ExperimentDetail>(`/experiments/${encodeURIComponent(name)}/project`, { project });
 /** Replaces a Markdown file a run logged. */
 export const saveArtifact = (run: string, path: string, text: string) =>
   put(
@@ -204,6 +219,14 @@ export const deleteJob = (id: string) => del(`/launch/jobs/${encodeURIComponent(
 async function post<T>(path: string, body: unknown): Promise<T> {
   return (await send(path, body)).json() as Promise<T>;
 }
+
+/** Writes projects/<name>/README.md with its front matter and sections to fill in; the server
+ * fills in the fields left out. */
+export const createProject = (body: { name: string } & Partial<ProjectMeta>) =>
+  post<ProjectDetail>("/projects", body);
+/** Writes experiments/<name>/ with its README and run.py, in a project when given. */
+export const createExperiment = (body: Schemas["NewExperiment"]) =>
+  post<ExperimentDetail>("/experiments", body);
 
 /** Streams a reply: onText gets each piece as the model writes it. Abort the signal to stop. */
 export async function generate(
@@ -580,6 +603,20 @@ export const q = {
   evalTasks: () => ({
     queryKey: ["eval-tasks"],
     queryFn: () => get<EvalTask[]>("/evals"),
+  }),
+  projects: () => ({
+    queryKey: ["projects"],
+    queryFn: () => get<Project[]>("/projects"),
+  }),
+  project: (name: string) => ({
+    queryKey: ["project", name],
+    queryFn: () => get<ProjectDetail>(`/projects/${encodeURIComponent(name)}`),
+  }),
+  /** The domains a new experiment can be filed under. */
+  domains: () => ({
+    queryKey: ["domains"],
+    queryFn: () => get<DomainInfo[]>("/domains"),
+    staleTime: Infinity,
   }),
   experiment: (name: string) => ({
     queryKey: ["experiment", name],

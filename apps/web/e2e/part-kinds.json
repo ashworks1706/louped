@@ -311,7 +311,7 @@
   },
   {
     "part": "experiment/meta/*",
-    "about": "The experiment's axis, domain, runs or last run.",
+    "about": "The experiment's axis, domain, project, runs or last run.",
     "rules": ["hidden", "label", "about", "order"]
   },
   {
@@ -352,6 +352,56 @@
   {
     "part": "experiments/filter/*",
     "about": "A status filter: all, active, answered, parked.",
+    "rules": []
+  },
+  {
+    "part": "experiments/project",
+    "about": "Shows only one project's experiments.",
+    "rules": ["hidden", "label", "default"]
+  },
+  {
+    "part": "projects/card/*",
+    "about": "One project in the list, by name.",
+    "rules": []
+  },
+  {
+    "part": "projects/new",
+    "about": "Starts a project: projects/<name>/README.md.",
+    "rules": ["hidden"]
+  },
+  {
+    "part": "projects/new-experiment",
+    "about": "Starts an experiment in the project.",
+    "rules": ["hidden"]
+  },
+  {
+    "part": "projects/edit",
+    "about": "Edits the project's metadata.",
+    "rules": ["hidden"]
+  },
+  {
+    "part": "projects/section/*",
+    "about": "The project's readme, metadata, experiments or runs.",
+    "rules": ["hidden", "note"]
+  },
+  {
+    "part": "projects/meta/*",
+    "about": "One field of the project's metadata: links, models, datasets, benchmarks, tags.",
+    "rules": ["hidden", "label", "about", "order"]
+  },
+  {
+    "part": "projects/link/*",
+    "about": "One of the project's links, by name.",
+    "rules": []
+  },
+  {
+    "part": "projects/dialog/*",
+    "about": "A form: new-project, new-experiment or edit (the metadata).",
+    "rules": []
+  },
+  {
+    "part": "projects/*",
+    "about": "The count of projects; a project's title, status, summary and back link; the note on a project with no README and its create button.",
     "rules": []
   },
   {

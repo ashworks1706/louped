@@ -38,6 +38,7 @@ def _point(home: Path, logs: Path) -> None:
     os.environ["INSPECT_LOG_DIR"] = str(logs)
     os.environ["MLFLOW_TRACKING_URI"] = f"sqlite:///{home / 'mlflow.db'}"
     os.environ["LOUPED_EXPERIMENTS"] = str(home / "experiments")
+    os.environ["LOUPED_PROJECTS"] = str(home / "projects")
 
 
 def _as_run(folder: Path) -> None:

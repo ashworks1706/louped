@@ -92,6 +92,8 @@ def publish(out: Path, web: Path) -> Published:
         save(f"/experiments/{_enc(experiment['name'])}")
         layouts.add(experiment["name"])
         save(f"/ui/layout?experiment={_enc(experiment['name'])}")
+    for project in save("/projects") or []:
+        save(f"/projects/{_enc(project['name'])}")
     for run in save("/runs") or []:
         done.runs += 1
         rid = _enc(run["id"])

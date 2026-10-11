@@ -25,7 +25,8 @@ import re
 from pathlib import Path
 from typing import Any, get_args
 
-from louped.core import experiments_dir, trash
+from louped.core import experiments_dir, projects_dir, trash
+from louped.core.paths import NAME
 from louped.core.project import config
 from louped.stores.runs import NotFound, list_runs
 from louped.stores.types import (
@@ -68,7 +69,8 @@ def domains() -> dict[Domain, tuple[Axis, str]]:
     return out
 
 
-_FRONT = re.compile(r"\A---\n(.*?)\n---\n", re.S)
+#: A README's front matter: the YAML between its opening --- lines.
+FRONT = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 _COMMENT = re.compile(r"<!--.*?-->", re.S)
 
 
@@ -107,7 +109,7 @@ def result(readme: str) -> str | None:
 
 def _fields(readme: str) -> dict[str, str] | None:
     """The front matter's key: value lines, or None when the README has none."""
-    found = _FRONT.match(readme)
+    found = FRONT.match(readme)
     if not found:
         return None
     return dict(
@@ -140,7 +142,7 @@ def declared(name: str, key: str) -> Any:
     import yaml
 
     try:
-        found = yaml.safe_load(_FRONT.match(text).group(1))  # type: ignore[union-attr]
+        found = yaml.safe_load(FRONT.match(text).group(1))  # type: ignore[union-attr]
     except yaml.YAMLError as exc:
         raise BadExperiment(
             f"experiments/{name}/README.md: front matter is not YAML: {exc}"
@@ -164,7 +166,18 @@ def front_matter(readme: str, name: str) -> tuple[Domain, Status]:
         raise BadExperiment(
             f"experiments/{name}: status {status!r} is not one of {get_args(Status)}"
         )
+    project = fields.get("project")
+    if project is not None and not NAME.match(project):
+        raise BadExperiment(
+            f"experiments/{name}: project {project!r} is not a project's name (lowercase "
+            "letters, digits and -)"
+        )
     return domain, status  # type: ignore[return-value]
+
+
+def project_of(readme: str) -> str | None:
+    """The project a README's front matter names (`project: <name>`), or None."""
+    return (_fields(readme) or {}).get("project") or None
 
 
 def _folders() -> list[Path]:
@@ -194,8 +207,9 @@ def _read(folder: Path, runs: list[RunSummary]) -> tuple[Experiment, str]:
         question=question(readme),
         result=result(readme),
         runs=[r for r in runs if r.experiment == folder.name],
+        project=project_of(readme),
     )
-    return experiment, _FRONT.sub("", readme, count=1).lstrip()
+    return experiment, FRONT.sub("", readme, count=1).lstrip()
 
 
 def list_experiments() -> list[Experiment]:
@@ -237,6 +251,31 @@ def write_readme(name: str, text: str) -> None:
     (folder / "README.md").write_text(text, encoding="utf-8")
 
 
+def set_project(name: str, project: str | None) -> None:
+    """Put an experiment in a project, or take it out of its project (None), by rewriting only the
+    project: line of its front matter; the folder stays where it is. Refused (BadExperiment) for
+    a project with no projects/<project>/README.md."""
+    folder = _folder(name)
+    if project is not None:
+        _require_project(project)
+    readme = (folder / "README.md").read_text(encoding="utf-8")
+    front_matter(readme, name)
+    found = FRONT.match(readme)
+    assert found is not None  # front_matter refuses a README without it
+    lines = [line for line in found.group(1).splitlines() if not re.match(r"project\s*:", line)]
+    if project is not None:
+        lines.append(f"project: {project}")
+    text = "---\n" + "\n".join(lines) + "\n---\n" + readme[found.end() :]
+    (folder / "README.md").write_text(text, encoding="utf-8")
+
+
+def _require_project(project: str) -> None:
+    if not NAME.match(project):
+        raise BadExperiment(f"{project!r}: a project's name is lowercase letters, digits and -")
+    if not (projects_dir() / project / "README.md").is_file():
+        raise BadExperiment(f"no project {project!r}: projects/{project}/README.md does not exist")
+
+
 def delete_experiment(name: str) -> Path:
     """Move an experiment's folder to the trash; its runs stay, under its name. Returns where."""
     return trash(_folder(name), "experiments")
@@ -258,7 +297,7 @@ def get_experiment(name: str) -> ExperimentDetail:
 TEMPLATE = """---
 domain: {domain}
 status: active
----
+{project}---
 
 # {name}
 
@@ -329,17 +368,22 @@ if __name__ == "__main__":
 '''
 
 
-def scaffold(name: str, domain: str) -> Path:
-    """experiments/<name>/ with its README to fill in and a run.py to write, active in domain."""
+def scaffold(name: str, domain: str, project: str | None = None) -> Path:
+    """experiments/<name>/ with its README to fill in and a run.py to write, active in domain;
+    in project when given, which must have its projects/<project>/README.md."""
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", name):
         raise BadExperiment(f"{name!r}: a name is lowercase letters, digits and dashes")
     known = domains()
     if domain not in known:
         raise BadExperiment(f"domain {domain!r} is not one of {list(known)}")
+    if project is not None:
+        _require_project(project)
     folder = experiments_dir() / name
     if folder.exists():
         raise BadExperiment(f"experiments/{name} exists")
     folder.mkdir(parents=True)
-    (folder / "README.md").write_text(TEMPLATE.format(name=name, domain=domain), encoding="utf-8")
+    line = f"project: {project}\n" if project else ""
+    readme = TEMPLATE.format(name=name, domain=domain, project=line)
+    (folder / "README.md").write_text(readme, encoding="utf-8")
     (folder / "run.py").write_text(RUN.format(name=name), encoding="utf-8")
     return folder

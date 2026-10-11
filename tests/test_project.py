@@ -23,6 +23,7 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A project made by louped init, the working directory inside it, no state env set."""
     monkeypatch.delenv("LOUPED_HOME")
     monkeypatch.delenv("LOUPED_EXPERIMENTS")
+    monkeypatch.delenv("LOUPED_PROJECTS")
     out = tmp_path / "proj"
     init(out)
     monkeypatch.chdir(out / "experiments")

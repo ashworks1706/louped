@@ -74,6 +74,7 @@ tests/            Python tests, CPU only
 | To add                     | Write                                                                    |
 | -------------------------- | ------------------------------------------------------------------------ |
 | A research question        | in a research project: `louped new <name> --domain <domain>`, then its README and `run.py` |
+| A goal that groups questions | in a research project: `louped project new <name>`, then `project: <name>` in each experiment's README ("projects.mdx") |
 | An eval                    | Inspect `@task`s in `experiments/<name>/task.py`                           |
 | A figure                   | a view from `louped.analysis.views`, logged with `log_json` under `views/` |
 | A chart no kind draws      | `views.vega(title, spec)`: any Vega-Lite spec with its data inline, no change to louped |

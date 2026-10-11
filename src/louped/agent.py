@@ -32,7 +32,10 @@ it has metrics, figures and, for an eval, samples. A job is a command started fr
 runs appear as it writes them.
 
 Work like this: read the experiments and runs first. Start a question with new_experiment, then
-edit its README and run.py in the project (the project's AGENTS.md says what goes where). Start
+edit its README and run.py in the project (the project's AGENTS.md says what goes where).
+A project (projects/<name>/README.md) groups experiments toward one goal: projects and project
+read them, new_project and set_project write one, new_experiment(project=) starts a question in
+it and move_experiment moves one in or out (its folder stays under experiments/). Start
 work with launchables, launch_options and launch (a script is "script:<name>/run.py"); follow it
 with job; read results with run, figures, figure, samples and compare; trace says where a figure's
 mark or a record comes from (its rows, script and commit). Papers and docs the project rests
@@ -124,6 +127,74 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         passed or not, and the launches it guards."""
         e = await get(f"/experiments/{name}")
         return {**e, "runs": [r["id"] for r in e["runs"]]}
+
+    @mcp.tool(annotations=READ)
+    async def projects() -> list[dict[str, Any]]:
+        """Every project (projects/<name>/README.md): name, title, status (active, parked, done),
+        summary, tags, its experiments' names, their run count and last run time. missing is
+        true for a name experiments give (project: in their README) with no README: make it
+        with new_project or move those experiments out."""
+        return await get("/projects")
+
+    @mcp.tool(annotations=READ)
+    async def project(name: str) -> dict[str, Any]:
+        """One project: its front matter (title, status, summary, tags, links, models, datasets,
+        benchmarks), its README text under it (goal, background, notes), each experiment with
+        its domain, status, question, result and run count, and its runs' ids, newest first."""
+        p = await get(f"/projects/{quote(name, safe='')}")
+        keep = ("name", "domain", "status", "question", "result")
+        return {**p, "runs": [r["id"] for r in p["runs"]],
+                "experiments": [{**{k: e[k] for k in keep}, "runs": len(e["runs"])}
+                                for e in p["experiments"]]}  # fmt: skip
+
+    @mcp.tool(annotations=WRITE)
+    async def new_project(
+        name: str,
+        title: str | None = None,
+        summary: str = "",
+        status: Literal["active", "parked", "done"] = "active",
+        tags: list[str] | None = None,
+        links: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        """Start a project: projects/<name>/README.md with its front matter and Goal, Background
+        and Notes to fill in (edit the file for the text). name is lowercase letters, digits and
+        -; title is its name for people (name when empty); summary is one line; links name the
+        project's other places (repo, paper, docs) by URL. Refused when it exists. Returns the
+        project as project does."""
+        body = {"name": name, "title": title or "", "summary": summary, "status": status,
+                "tags": tags or [], "links": links or {}}  # fmt: skip
+        return await post("/projects", body)
+
+    @mcp.tool(annotations=WRITE)
+    async def set_project(
+        name: str,
+        title: str | None = None,
+        summary: str | None = None,
+        status: Literal["active", "parked", "done"] | None = None,
+        tags: list[str] | None = None,
+        links: dict[str, str] | None = None,
+        models: list[str] | None = None,
+        datasets: list[str] | None = None,
+        benchmarks: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Change a project's front matter: each field given replaces its value (a list or map
+        whole), each left out keeps it. The README's text is kept. models, datasets and
+        benchmarks are ids (a Hub id, an inspect_evals task). Returns the project."""
+        path = f"/projects/{quote(name, safe='')}"
+        current = await get(path)
+        given = {"title": title, "summary": summary, "status": status, "tags": tags,
+                 "links": links, "models": models, "datasets": datasets,
+                 "benchmarks": benchmarks}  # fmt: skip
+        meta = {k: current[k] if v is None else v for k, v in given.items()}
+        return await send("PUT", f"{path}/meta", json=meta)
+
+    @mcp.tool(annotations=WRITE)
+    async def move_experiment(name: str, project: str | None) -> dict[str, Any]:
+        """Put an experiment in a project, or take it out of its project (project null). Only
+        the project: line of its README's front matter changes; its folder, runs, gates and
+        launches stay as they are. The project must exist. Returns the experiment."""
+        body = {"project": project}
+        return await send("PUT", f"/experiments/{quote(name, safe='')}/project", json=body)
 
     @mcp.tool(annotations=READ)
     async def runs(
@@ -577,12 +648,14 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         return await _wait(job_id, 10)
 
     @mcp.tool(annotations=WRITE)
-    async def new_experiment(name: str, domain: str) -> dict[str, Any]:
+    async def new_experiment(name: str, domain: str, project: str | None = None) -> dict[str, Any]:
         """Start a research question: experiments/<name>/ with its README to fill in and a run.py
         to write, active. name is kebab-case, named for the question; domain is one the project's
         louped.toml lists (else louped's own: mechanisms, honesty, conditioning, agents, context,
-        inference, specialisation, reproduction). Returns the finished job and its log."""
-        body = {"id": "new", "options": {"name": name, "--domain": domain}}
+        inference, specialisation, reproduction); project, when given, is a project it starts in
+        (one projects lists, not missing). Returns the finished job and its log."""
+        options = {"name": name, "--domain": domain, **({"--project": project} if project else {})}
+        body = {"id": "new", "options": options}
         job = await post("/launch", body)
         return await _wait(job["id"], 60)
 

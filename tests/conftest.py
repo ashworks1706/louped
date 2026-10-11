@@ -14,6 +14,7 @@ def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[P
     home = tmp_path / "home"
     monkeypatch.setenv("LOUPED_HOME", str(home))
     monkeypatch.setenv("LOUPED_EXPERIMENTS", str(tmp_path / "experiments"))
+    monkeypatch.setenv("LOUPED_PROJECTS", str(tmp_path / "projects"))
     for var in ("INSPECT_LOG_DIR", "MLFLOW_TRACKING_URI"):
         monkeypatch.delenv(var, raising=False)
     # runs are milliseconds long here; the sampler is tested on its own (test_tracking)

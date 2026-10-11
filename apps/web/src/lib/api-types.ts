@@ -821,6 +821,129 @@ export interface paths {
     /** Experiments */
     get: operations["experiments_api_experiments_get"];
     put?: never;
+    /**
+     * New Experiment
+     * @description experiments/<name>/ with its README and run.py, active, in a project when given.
+     */
+    post: operations["new_experiment_api_experiments_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/experiments/{name}/project": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Move Experiment
+     * @description Rewrites only the project: line of the experiment's front matter; its folder stays.
+     */
+    put: operations["move_experiment_api_experiments__name__project_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/domains": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Domain List
+     * @description The domains an experiment can be filed under, in the Experiments page's order.
+     */
+    get: operations["domain_list_api_domains_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/projects": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Projects
+     * @description Every project under projects/, then any that experiments name with no README.
+     */
+    get: operations["projects_api_projects_get"];
+    put?: never;
+    /**
+     * New Project
+     * @description Writes projects/<name>/README.md: the front matter, then sections to fill in.
+     */
+    post: operations["new_project_api_projects_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/projects/{name}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Project */
+    get: operations["project_api_projects__name__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/projects/{name}/readme": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Project Readme */
+    get: operations["project_readme_api_projects__name__readme_get"];
+    /** Edit Project Readme */
+    put: operations["edit_project_readme_api_projects__name__readme_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/projects/{name}/meta": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Edit Project Meta
+     * @description Replaces the README's front matter and keeps the text under it.
+     */
+    put: operations["edit_project_meta_api_projects__name__meta_put"];
     post?: never;
     delete?: never;
     options?: never;
@@ -2527,6 +2650,21 @@ export interface components {
       notes?: string | null;
     };
     /**
+     * DomainInfo
+     * @description A domain an experiment can be filed under, from louped.toml or louped's own.
+     */
+    DomainInfo: {
+      /** Key */
+      key: string;
+      /**
+       * Axis
+       * @enum {string}
+       */
+      axis: "behavior" | "efficiency" | "checks";
+      /** Title */
+      title: string;
+    };
+    /**
      * DoseRequest
      * @description A saved direction swept over strengths, read at the next token.
      */
@@ -2596,6 +2734,8 @@ export interface components {
       result: string | null;
       /** Runs */
       runs: components["schemas"]["RunSummary"][];
+      /** Project */
+      project?: string | null;
     };
     /** ExperimentDetail */
     ExperimentDetail: {
@@ -2621,6 +2761,8 @@ export interface components {
       result: string | null;
       /** Runs */
       runs: components["schemas"]["RunSummary"][];
+      /** Project */
+      project?: string | null;
       /** Readme */
       readme: string;
       gate?: components["schemas"]["GateStatus"] | null;
@@ -3390,6 +3532,63 @@ export interface components {
       /** Chat Template */
       chat_template?: string | null;
     };
+    /** NewExperiment */
+    NewExperiment: {
+      /** Name */
+      name: string;
+      /** Domain */
+      domain: string;
+      /** Project */
+      project?: string | null;
+    };
+    /** NewProject */
+    NewProject: {
+      /**
+       * Title
+       * @default
+       */
+      title: string;
+      /**
+       * Status
+       * @default active
+       * @enum {string}
+       */
+      status: "active" | "parked" | "done";
+      /**
+       * Summary
+       * @default
+       */
+      summary: string;
+      /**
+       * Tags
+       * @default []
+       */
+      tags: string[];
+      /**
+       * Links
+       * @default {}
+       */
+      links: {
+        [key: string]: string;
+      };
+      /**
+       * Models
+       * @default []
+       */
+      models: string[];
+      /**
+       * Datasets
+       * @default []
+       */
+      datasets: string[];
+      /**
+       * Benchmarks
+       * @default []
+       */
+      benchmarks: string[];
+      /** Name */
+      name: string;
+    };
     /**
      * Option
      * @description One flag of a command, as its parser declares it.
@@ -3770,6 +3969,185 @@ export interface components {
       } | null;
       /** Ref */
       ref?: string | null;
+    };
+    /**
+     * Project
+     * @description A project in the list: its front matter, its experiments by name and where its runs
+     *     stand.
+     */
+    Project: {
+      /**
+       * Title
+       * @default
+       */
+      title: string;
+      /**
+       * Status
+       * @default active
+       * @enum {string}
+       */
+      status: "active" | "parked" | "done";
+      /**
+       * Summary
+       * @default
+       */
+      summary: string;
+      /**
+       * Tags
+       * @default []
+       */
+      tags: string[];
+      /**
+       * Links
+       * @default {}
+       */
+      links: {
+        [key: string]: string;
+      };
+      /**
+       * Models
+       * @default []
+       */
+      models: string[];
+      /**
+       * Datasets
+       * @default []
+       */
+      datasets: string[];
+      /**
+       * Benchmarks
+       * @default []
+       */
+      benchmarks: string[];
+      /** Name */
+      name: string;
+      /** Experiments */
+      experiments: string[];
+      /** Runs */
+      runs: number;
+      /** Last Run */
+      last_run: string | null;
+      /**
+       * Missing
+       * @default false
+       */
+      missing: boolean;
+    };
+    /** ProjectChoice */
+    ProjectChoice: {
+      /** Project */
+      project: string | null;
+    };
+    /**
+     * ProjectDetail
+     * @description One project: its front matter, its README without it, its experiments and their runs.
+     */
+    ProjectDetail: {
+      /**
+       * Title
+       * @default
+       */
+      title: string;
+      /**
+       * Status
+       * @default active
+       * @enum {string}
+       */
+      status: "active" | "parked" | "done";
+      /**
+       * Summary
+       * @default
+       */
+      summary: string;
+      /**
+       * Tags
+       * @default []
+       */
+      tags: string[];
+      /**
+       * Links
+       * @default {}
+       */
+      links: {
+        [key: string]: string;
+      };
+      /**
+       * Models
+       * @default []
+       */
+      models: string[];
+      /**
+       * Datasets
+       * @default []
+       */
+      datasets: string[];
+      /**
+       * Benchmarks
+       * @default []
+       */
+      benchmarks: string[];
+      /** Name */
+      name: string;
+      /** Readme */
+      readme: string;
+      /** Experiments */
+      experiments: components["schemas"]["Experiment"][];
+      /** Runs */
+      runs: components["schemas"]["RunSummary"][];
+      /**
+       * Missing
+       * @default false
+       */
+      missing: boolean;
+    };
+    /**
+     * ProjectMeta
+     * @description A project's front matter: what projects/<name>/README.md declares above its text.
+     */
+    ProjectMeta: {
+      /**
+       * Title
+       * @default
+       */
+      title: string;
+      /**
+       * Status
+       * @default active
+       * @enum {string}
+       */
+      status: "active" | "parked" | "done";
+      /**
+       * Summary
+       * @default
+       */
+      summary: string;
+      /**
+       * Tags
+       * @default []
+       */
+      tags: string[];
+      /**
+       * Links
+       * @default {}
+       */
+      links: {
+        [key: string]: string;
+      };
+      /**
+       * Models
+       * @default []
+       */
+      models: string[];
+      /**
+       * Datasets
+       * @default []
+       */
+      datasets: string[];
+      /**
+       * Benchmarks
+       * @default []
+       */
+      benchmarks: string[];
     };
     /** Pushed */
     Pushed: {
@@ -6075,6 +6453,279 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Experiment"][];
+        };
+      };
+    };
+  };
+  new_experiment_api_experiments_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["NewExperiment"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ExperimentDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  move_experiment_api_experiments__name__project_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ProjectChoice"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ExperimentDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  domain_list_api_domains_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DomainInfo"][];
+        };
+      };
+    };
+  };
+  projects_api_projects_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Project"][];
+        };
+      };
+    };
+  };
+  new_project_api_projects_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["NewProject"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProjectDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  project_api_projects__name__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProjectDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  project_readme_api_projects__name__readme_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Text"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  edit_project_readme_api_projects__name__readme_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Text"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Text"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  edit_project_meta_api_projects__name__meta_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ProjectMeta"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProjectDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

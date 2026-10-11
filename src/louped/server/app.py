@@ -31,6 +31,8 @@ from louped.core.judges import Judge, find_judges, write_judge
 from louped.core.paths import experiments_dir, inside
 from louped.server import graphs, hub, inspect_view, launch, playground, plugins, serving, ui
 from louped.stores import ab, boards, gates
+from louped.stores import experiments as experiment_store
+from louped.stores import projects as project_store
 from louped.stores.catalog import EvalTask, eval_tasks
 from louped.stores.labels import Label
 from louped.stores.mlflow_runs import Unreachable
@@ -46,6 +48,7 @@ from louped.stores.types import (
     AbResult,
     AbSession,
     Agreement,
+    Axis,
     BoardView,
     CircuitGraph,
     CircuitPins,
@@ -55,6 +58,9 @@ from louped.stores.types import (
     FeatureDashboard,
     Graph,
     HeatmapView,
+    Project,
+    ProjectDetail,
+    ProjectMeta,
     RunDetail,
     RunSummary,
     RunView,
@@ -107,6 +113,32 @@ class Text(BaseModel):
     """A Markdown file's text."""
 
     text: str
+
+
+class NewProject(ProjectMeta):
+    #: Its folder's name under projects/: lowercase letters, digits and -.
+    name: str
+
+
+class NewExperiment(BaseModel):
+    #: Its folder's name under experiments/: lowercase letters, digits and -.
+    name: str
+    domain: str
+    #: The project it starts in; it must have its README.
+    project: str | None = None
+
+
+class ProjectChoice(BaseModel):
+    #: The project to put the experiment in; null takes it out of its project.
+    project: str | None
+
+
+class DomainInfo(BaseModel):
+    """A domain an experiment can be filed under, from louped.toml or louped's own."""
+
+    key: str
+    axis: Axis
+    title: str
 
 
 class SourceRequest(BaseModel):
@@ -620,6 +652,72 @@ def create_app(
     @app.get("/api/experiments")
     def experiments() -> list[Experiment]:
         return stores.list_experiments()
+
+    @app.post("/api/experiments", dependencies=[Depends(launch.require_json)])
+    def new_experiment(req: NewExperiment) -> ExperimentDetail:
+        """experiments/<name>/ with its README and run.py, active, in a project when given."""
+        editing()
+        try:
+            experiment_store.scaffold(req.name, req.domain, req.project)
+        except stores.BadExperiment as exc:
+            raise HTTPException(400, str(exc)) from exc
+        return stores.get_experiment(req.name)
+
+    @app.put("/api/experiments/{name}/project", dependencies=[Depends(launch.require_json)])
+    def move_experiment(name: str, req: ProjectChoice) -> ExperimentDetail:
+        """Rewrites only the project: line of the experiment's front matter; its folder stays."""
+        editing()
+        try:
+            experiment_store.set_project(name, req.project)
+        except stores.BadExperiment as exc:
+            raise HTTPException(400, str(exc)) from exc
+        return stores.get_experiment(name)
+
+    @app.get("/api/domains")
+    def domain_list() -> list[DomainInfo]:
+        """The domains an experiment can be filed under, in the Experiments page's order."""
+        return [DomainInfo(key=k, axis=axis, title=title)
+                for k, (axis, title) in experiment_store.domains().items()]  # fmt: skip
+
+    @app.get("/api/projects")
+    def projects() -> list[Project]:
+        """Every project under projects/, then any that experiments name with no README."""
+        return project_store.list_projects()
+
+    @app.post("/api/projects", dependencies=[Depends(launch.require_json)])
+    def new_project(req: NewProject) -> ProjectDetail:
+        """Writes projects/<name>/README.md: the front matter, then sections to fill in."""
+        editing()
+        meta = ProjectMeta.model_validate(req.model_dump(exclude={"name"}))
+        try:
+            project_store.create(req.name, meta)
+        except stores.BadExperiment as exc:
+            raise HTTPException(400, str(exc)) from exc
+        return project_store.get_project(req.name)
+
+    @app.get("/api/projects/{name}")
+    def project(name: str) -> ProjectDetail:
+        return project_store.get_project(name)
+
+    @app.get("/api/projects/{name}/readme")
+    def project_readme(name: str) -> Text:
+        return Text(text=project_store.read_readme(name))
+
+    @app.put("/api/projects/{name}/readme", dependencies=[Depends(launch.require_json)])
+    def edit_project_readme(name: str, req: Text) -> Text:
+        editing()
+        try:
+            project_store.write_readme(name, req.text)
+        except stores.BadExperiment as exc:  # the edit's fault, not the store's
+            raise HTTPException(400, str(exc)) from exc
+        return req
+
+    @app.put("/api/projects/{name}/meta", dependencies=[Depends(launch.require_json)])
+    def edit_project_meta(name: str, req: ProjectMeta) -> ProjectDetail:
+        """Replaces the README's front matter and keeps the text under it."""
+        editing()
+        project_store.set_meta(name, req)
+        return project_store.get_project(name)
 
     @app.get("/api/experiments/{name}/readme")
     def readme(name: str) -> Text:
