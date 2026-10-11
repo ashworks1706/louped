@@ -16,7 +16,7 @@ from louped.stores.experiments import (
     read_readme,
     write_readme,
 )
-from louped.stores.graphs import list_graphs
+from louped.stores.graphs import get_graph, list_graphs, save_pins
 from louped.stores.items import CohortStats, cohort
 from louped.stores.labels import agreement, get_labels, set_label
 from louped.stores.runs import (
@@ -49,6 +49,7 @@ __all__ = [
     "experiment_views",
     "get_experiment",
     "get_feature",
+    "get_graph",
     "get_labels",
     "get_run",
     "get_sample",
@@ -63,6 +64,7 @@ __all__ = [
     "read_view",
     "remote_artifact",
     "save_experiment_view",
+    "save_pins",
     "set_label",
     "trace",
     "write_readme",

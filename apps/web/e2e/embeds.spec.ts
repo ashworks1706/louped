@@ -1,6 +1,6 @@
 import { expect, test } from "./fixtures";
 
-// Mocked API: the viewers louped embeds (Inspect View, Neuronpedia, circuit-tracer) as iframes.
+// Mocked API: the viewers louped embeds (Inspect View, Neuronpedia) as iframes.
 const run = {
   id: "e-1",
   kind: "eval",
@@ -64,27 +64,4 @@ test("a Neuronpedia feature opens embedded beside the table", async ({ page }, i
   );
   await page.getByRole("button", { name: "Close" }).click();
   await expect(cell).toBeFocused();
-});
-
-test("circuits shows the latest graph in circuit-tracer's viewer", async ({ page }, info) => {
-  await page.route("**/api/graphs", (r) =>
-    r.fulfill({
-      json: [
-        { slug: "a", prompt: "first", scan: null },
-        { slug: "capital", prompt: "The capital of France is", scan: null },
-      ],
-    }),
-  );
-  await page.route("**/circuit/**", (r) =>
-    r.fulfill({ body: "<title>Attribution Graphs</title>" }),
-  );
-  await page.goto("/behavior/circuits/");
-  await expect(page.getByTitle("Attribution graph capital")).toHaveAttribute(
-    "src",
-    /\/circuit\/\?slug=capital$/,
-  );
-  await page.getByLabel("Graph").selectOption("a");
-  await expect(page).toHaveURL(/slug=a/);
-  await expect(page.getByTitle("Attribution graph a")).toBeVisible();
-  await page.screenshot({ path: info.outputPath("circuits.png"), fullPage: true });
 });

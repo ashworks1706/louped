@@ -51,6 +51,10 @@ export type TrainingSet = Schemas["TrainingSet"];
 export type SetPairs = Schemas["SetPairs"];
 export type Pair = Schemas["Pair"];
 type Graph = Schemas["Graph"];
+export type CircuitGraph = Schemas["CircuitGraph"];
+export type CircuitNode = Schemas["CircuitNode"];
+export type CircuitLink = Schemas["CircuitLink"];
+export type CircuitPins = Schemas["CircuitPins"];
 type Comparison = Schemas["Comparison"];
 export type PairedScore = Schemas["PairedScore"];
 export type PlaygroundInfo = Schemas["PlaygroundInfo"];
@@ -191,6 +195,9 @@ export const saveCohort = (experiment: string, name: string, cohort: Omit<Cohort
     `/experiments/${encodeURIComponent(experiment)}/cohorts/${encodeURIComponent(name)}`,
     cohort,
   );
+/** Keeps a graph's pinned nodes and groups in its file, where circuit-tracer's viewer reads them. */
+export const saveGraphPins = (slug: string, pins: CircuitPins) =>
+  put<CircuitPins>(`/graphs/${encodeURIComponent(slug)}/pins`, pins);
 export const deleteJob = (id: string) => del(`/launch/jobs/${encodeURIComponent(id)}`);
 
 async function post<T>(path: string, body: unknown): Promise<T> {
@@ -469,6 +476,10 @@ export const q = {
     queryFn: () => get<SetPairs>(`/training-sets/pairs?path=${encodeURIComponent(path)}`),
   }),
   graphs: () => ({ queryKey: ["graphs"], queryFn: () => get<Graph[]>("/graphs") }),
+  graph: (slug: string) => ({
+    queryKey: ["graphs", slug],
+    queryFn: () => get<CircuitGraph>(`/graphs/${encodeURIComponent(slug)}`),
+  }),
   launchables: () => ({
     queryKey: ["launchables"],
     queryFn: () => get<Launchable[]>("/launch"),

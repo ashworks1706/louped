@@ -1880,6 +1880,96 @@
         }
       }
     },
+    "/api/graphs/{slug}": {
+      "get": {
+        "summary": "Graph",
+        "description": "One graph with each node's and edge's share of the influence on the logits.",
+        "operationId": "graph_api_graphs__slug__get",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CircuitGraph"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/graphs/{slug}/pins": {
+      "put": {
+        "summary": "Graph Pins",
+        "description": "Keeps the pinned nodes and groups in the graph file, as circuit-tracer's viewer does.",
+        "operationId": "graph_pins_api_graphs__slug__pins_put",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CircuitPins"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CircuitPins"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/experiments": {
       "get": {
         "summary": "Experiments",
@@ -5466,6 +5556,213 @@
         "type": "object",
         "required": ["regions", "presets", "parts"],
         "title": "Catalog"
+      },
+      "CircuitGraph": {
+        "properties": {
+          "pinned": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Pinned",
+            "default": []
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/CircuitGroup"
+            },
+            "type": "array",
+            "title": "Groups",
+            "default": []
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "tokens": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tokens"
+          },
+          "scan": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/CircuitNode"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/CircuitLink"
+            },
+            "type": "array",
+            "title": "Links"
+          }
+        },
+        "type": "object",
+        "required": ["slug", "prompt", "tokens", "nodes", "links"],
+        "title": "CircuitGraph",
+        "description": "An attribution graph with each node's and each edge's share of the influence on the logits,\nfor louped's own graph view."
+      },
+      "CircuitGroup": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "nodes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Nodes"
+          }
+        },
+        "type": "object",
+        "required": ["name", "nodes"],
+        "title": "CircuitGroup",
+        "description": "Pinned nodes shown as one: circuit-tracer's supernode."
+      },
+      "CircuitLink": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight"
+          },
+          "share": {
+            "type": "number",
+            "title": "Share"
+          }
+        },
+        "type": "object",
+        "required": ["source", "target", "weight", "share"],
+        "title": "CircuitLink"
+      },
+      "CircuitNode": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["embedding", "feature", "error", "logit"],
+            "title": "Kind"
+          },
+          "layer": {
+            "type": "string",
+            "title": "Layer"
+          },
+          "row": {
+            "type": "integer",
+            "title": "Row"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "feature": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feature"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "activation": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activation"
+          },
+          "prob": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prob"
+          },
+          "target": {
+            "type": "boolean",
+            "title": "Target",
+            "default": false
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          }
+        },
+        "type": "object",
+        "required": ["id", "kind", "layer", "row", "position", "label", "score"],
+        "title": "CircuitNode",
+        "description": "One node of an attribution graph, as louped draws it."
+      },
+      "CircuitPins": {
+        "properties": {
+          "pinned": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Pinned",
+            "default": []
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/CircuitGroup"
+            },
+            "type": "array",
+            "title": "Groups",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "CircuitPins",
+        "description": "What a person kept of a graph; saved in the graph file as circuit-tracer's qParams, so its\nviewer opens the same subgraph."
       },
       "ClusterInfo": {
         "properties": {

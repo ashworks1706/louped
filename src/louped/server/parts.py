@@ -223,7 +223,27 @@ KINDS: list[Kind] = [
     _k(part="curves/metric/*", about="One metric's curve over steps.", rules=PICK),
     # attribution graphs
     _k(part="circuits/graph", about="Which graph is shown.", rules=PICK),
-    _k(part="circuits/viewer", about="circuit-tracer's viewer of the graph.", rules=PICK),
+    _k(part="circuits/viewer", about="A link to the graph in circuit-tracer's own viewer.",
+       rules=PICK),
+    _k(part="circuits/prompt", about="The graph's prompt, token by token.", rules=PICK),
+    _k(part="circuits/stat/*", about="One number about the graph: output, nodes, edges, "
+       "unexplained.", rules=["hidden", "label", "about", "note"]),
+    _k(part="circuits/prune/*", about="A slider: the share of influence the shown nodes or "
+       "edges carry.", rules=PICK),
+    _k(part="circuits/view", about="The pruned graph, or only the pinned nodes.", rules=PICK),
+    _k(part="circuits/save", about="Saves the pins into the graph file.", rules=PICK),
+    _k(part="circuits/canvas", about="The graph: token positions across, layers up.",
+       rules=PICK),
+    _k(part="circuits/node/*", about="One node of the graph, by circuit-tracer's node id.",
+       rules=PICK),
+    _k(part="circuits/legend", about="What the shapes and colours mean.", rules=["hidden"]),
+    _k(part="circuits/panel", about="The side panel: the picked node, or the strongest ones.",
+       rules=PICK),
+    _k(part="circuits/node-detail/*", about="The picked node: influence, activation, inputs and "
+       "outputs.", rules=PICK),
+    _k(part="circuits/pin", about="Pins or unpins the picked node.", rules=PICK),
+    _k(part="circuits/top", about="The outputs and the strongest features.", rules=PICK),
+    _k(part="circuits/pinned", about="The pinned nodes and their groups.", rules=PICK),
     # an SAE feature
     _k(part="feature/figure/*", about="Promotes, suppresses, histogram or examples.",
        rules=["hidden", "note"]),

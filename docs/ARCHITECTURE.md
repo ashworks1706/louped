@@ -89,7 +89,7 @@ RL environment without a rewrite.
 | SFT, DPO, GRPO, LoRA, prompt tuning, adapter merging | TRL, PEFT, unsloth | library |
 | RL environments, verifiable tasks, answer checks | TRL, reasoning-gym, math-verify | library |
 | SAEs | SAELens | library; dashboards computed by `louped features` |
-| Attribution graphs | circuit-tracer | own environment through uv (`louped circuit`); its viewer served on the Circuits page |
+| Attribution graphs | circuit-tracer | own environment through uv (`louped circuit`); the Circuits page draws its graphs, its viewer is a link |
 | Representation fine-tuning (LoReFT) | pyreft | own environment through uv (`louped train reft`) |
 | Probes | scikit-learn | library |
 | Retrieval, reranking, NLI | bm25s, sentence-transformers | library |

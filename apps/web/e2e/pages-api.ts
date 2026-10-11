@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 
 import { mockBoards } from "./boards-api";
+import { mockCircuits } from "./circuits-api";
 import { mockHub } from "./hub-api";
 import { mock, run, summary } from "./items-run";
 import { mockReports } from "./reports-api";
@@ -211,9 +212,7 @@ export async function mockPages(page: Page, parts: Record<string, object> = {}) 
   await json("**/api/graphs", [
     { slug: "capital", prompt: "The capital of France is", scan: null },
   ]);
-  await page.route("**/circuit/**", (r) =>
-    r.fulfill({ body: "<title>Attribution Graphs</title>" }),
-  );
+  await mockCircuits(page);
   await json("**/api/compare?*", {
     a: "m-1",
     b: "e-1",

@@ -52,6 +52,18 @@ export const GLOSSARY = {
     "Share of replies that say again what an earlier assistant turn of the same conversation said: the same text, or 90% the same words.",
   echo: "Share of replies that copy the system prompt (20 words in a row, or all of a short one) or chat-template text (<|im_start|>, [INST], or Assistant: at the start).",
   loop: "Share of replies that repeat themselves: one run of 8 words occurs 3 times or more.",
+  // attribution graphs
+  influence:
+    "The node's share of the effect on the output, directly and through every later node. The output starts with its probability; each node passes what it gets to its inputs in proportion to their weights.",
+  keep_nodes:
+    "Keep the strongest nodes until they carry this share of the influence on the output. Lower shows the core of the circuit; higher shows more of it.",
+  keep_edges:
+    "Of the edges between kept nodes, keep the strongest until they carry this share of the influence.",
+  edge_weight:
+    "The direct effect of one node on another: positive (green) pushes it up, negative (red) pushes it down.",
+  error_node:
+    "What the transcoder does not explain at that layer and position: a dashed diamond. A strong one means part of the circuit is not in the features.",
+  activation: "How strongly the feature fires at its token position.",
 } as const;
 
 export type Term = keyof typeof GLOSSARY;

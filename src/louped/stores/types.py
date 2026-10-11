@@ -689,6 +689,66 @@ class Graph(BaseModel):
     scan: str | None = None
 
 
+class CircuitNode(BaseModel):
+    """One node of an attribution graph, as louped draws it."""
+
+    id: str
+    kind: Literal["embedding", "feature", "error", "logit"]
+    #: The layer as circuit-tracer writes it: "E" for an embedding, the logits one past the last.
+    layer: str
+    #: The node's row from the bottom: embeddings 0, then each layer the graph has, logits last.
+    row: int
+    #: The token position it sits at.
+    position: int
+    #: The transcoder feature (or neuron, or token) index.
+    feature: int | None = None
+    label: str
+    activation: float | None = None
+    #: A logit's probability.
+    prob: float | None = None
+    #: Whether it is the logit the graph explains.
+    target: bool = False
+    #: Its share of the influence on the logits, direct and through later nodes; the shares of a
+    #: graph's other nodes add up past 1, since influence passes through several layers.
+    score: float
+
+
+class CircuitLink(BaseModel):
+    source: str
+    target: str
+    #: The direct effect of the source on the target.
+    weight: float
+    #: Its share of the influence on the logits that flows through this edge.
+    share: float
+
+
+class CircuitGroup(BaseModel):
+    """Pinned nodes shown as one: circuit-tracer's supernode."""
+
+    name: str = Field(min_length=1, max_length=80)
+    nodes: list[str] = Field(min_length=1)
+
+
+class CircuitPins(BaseModel):
+    """What a person kept of a graph; saved in the graph file as circuit-tracer's qParams, so its
+    viewer opens the same subgraph."""
+
+    pinned: list[str] = []
+    groups: list[CircuitGroup] = []
+
+
+class CircuitGraph(CircuitPins):
+    """An attribution graph with each node's and each edge's share of the influence on the logits,
+    for louped's own graph view."""
+
+    slug: str
+    prompt: str
+    tokens: list[str]
+    scan: str | None = None
+    nodes: list[CircuitNode]
+    links: list[CircuitLink]
+
+
 class PairedScore(BaseModel):
     name: str
     n: int

@@ -82,8 +82,10 @@ def publish(out: Path, web: Path) -> Published:
         done.files += 1
         return got.json()
 
-    for path in ("/health", "/vectors", "/graphs", "/ui/layout", "/ui/theme"):
+    for path in ("/health", "/vectors", "/ui/layout", "/ui/theme"):
         save(path)
+    for graph in save("/graphs") or []:
+        save(f"/graphs/{_enc(graph['slug'])}")
     save("/playground", expected=False)  # no model is loaded in a snapshot
     layouts: set[str] = set()  # each run's page asks for its experiment's, listed or not
     for experiment in save("/experiments") or []:

@@ -771,6 +771,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/graphs/{slug}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Graph
+     * @description One graph with each node's and edge's share of the influence on the logits.
+     */
+    get: operations["graph_api_graphs__slug__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/graphs/{slug}/pins": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Graph Pins
+     * @description Keeps the pinned nodes and groups in the graph file, as circuit-tracer's viewer does.
+     */
+    put: operations["graph_pins_api_graphs__slug__pins_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/experiments": {
     parameters: {
       query?: never;
@@ -2178,6 +2218,107 @@ export interface components {
       };
       /** Parts */
       parts: components["schemas"]["louped__server__parts__Kind"][];
+    };
+    /**
+     * CircuitGraph
+     * @description An attribution graph with each node's and each edge's share of the influence on the logits,
+     *     for louped's own graph view.
+     */
+    CircuitGraph: {
+      /**
+       * Pinned
+       * @default []
+       */
+      pinned: string[];
+      /**
+       * Groups
+       * @default []
+       */
+      groups: components["schemas"]["CircuitGroup"][];
+      /** Slug */
+      slug: string;
+      /** Prompt */
+      prompt: string;
+      /** Tokens */
+      tokens: string[];
+      /** Scan */
+      scan?: string | null;
+      /** Nodes */
+      nodes: components["schemas"]["CircuitNode"][];
+      /** Links */
+      links: components["schemas"]["CircuitLink"][];
+    };
+    /**
+     * CircuitGroup
+     * @description Pinned nodes shown as one: circuit-tracer's supernode.
+     */
+    CircuitGroup: {
+      /** Name */
+      name: string;
+      /** Nodes */
+      nodes: string[];
+    };
+    /** CircuitLink */
+    CircuitLink: {
+      /** Source */
+      source: string;
+      /** Target */
+      target: string;
+      /** Weight */
+      weight: number;
+      /** Share */
+      share: number;
+    };
+    /**
+     * CircuitNode
+     * @description One node of an attribution graph, as louped draws it.
+     */
+    CircuitNode: {
+      /** Id */
+      id: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "embedding" | "feature" | "error" | "logit";
+      /** Layer */
+      layer: string;
+      /** Row */
+      row: number;
+      /** Position */
+      position: number;
+      /** Feature */
+      feature?: number | null;
+      /** Label */
+      label: string;
+      /** Activation */
+      activation?: number | null;
+      /** Prob */
+      prob?: number | null;
+      /**
+       * Target
+       * @default false
+       */
+      target: boolean;
+      /** Score */
+      score: number;
+    };
+    /**
+     * CircuitPins
+     * @description What a person kept of a graph; saved in the graph file as circuit-tracer's qParams, so its
+     *     viewer opens the same subgraph.
+     */
+    CircuitPins: {
+      /**
+       * Pinned
+       * @default []
+       */
+      pinned: string[];
+      /**
+       * Groups
+       * @default []
+       */
+      groups: components["schemas"]["CircuitGroup"][];
     };
     /** ClusterInfo */
     ClusterInfo: {
@@ -5785,6 +5926,72 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Graph"][];
+        };
+      };
+    };
+  };
+  graph_api_graphs__slug__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        slug: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CircuitGraph"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  graph_pins_api_graphs__slug__pins_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        slug: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CircuitPins"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CircuitPins"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

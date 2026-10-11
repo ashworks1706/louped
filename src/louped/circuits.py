@@ -1,5 +1,5 @@
-"""Attribution graphs with circuit-tracer, into <home>/graphs, where the app's Circuits page shows
-them in circuit-tracer's own viewer.
+"""Attribution graphs with circuit-tracer, into <home>/graphs, where the app's Circuits page draws
+them; circuit-tracer's own viewer is one link away.
 
     louped circuit --model Qwen/Qwen3-0.6B --transcoders mwhanna/qwen3-0.6b-transcoders-lowl0 \\
         --prompt "The capital of the state containing Dallas is"

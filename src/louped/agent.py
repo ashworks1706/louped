@@ -141,6 +141,41 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         ][:limit]
 
     @mcp.tool(annotations=READ)
+    async def circuit(slug: str | None = None, top: int = 20) -> dict[str, Any]:
+        """An attribution graph: its prompt, its outputs with their probability, its pinned nodes
+        and groups, and the `top` nodes with the largest share of the influence on the output
+        (id, label, kind, layer, token, score). No slug: the list of graphs. Point the person at a
+        node with ui_show part circuits/node/<id> on /behavior/circuits/?slug=<slug>&node=<id>."""
+        if slug is None:
+            return {"graphs": await get("/graphs")}
+        g = await get(f"/graphs/{slug}")
+        tokens = g["tokens"]
+
+        def brief(n: dict[str, Any]) -> dict[str, Any]:
+            token = tokens[n["position"]] if n["position"] < len(tokens) else None
+            return {k: n[k] for k in ("id", "label", "kind", "layer", "score")} | {"token": token}
+
+        ranked = sorted((n for n in g["nodes"] if n["kind"] != "logit"), key=lambda n: -n["score"])
+        return {
+            "prompt": g["prompt"],
+            "outputs": [{k: n[k] for k in ("id", "label", "prob", "target")}
+                        for n in g["nodes"] if n["kind"] == "logit"],
+            "pinned": g["pinned"],
+            "groups": g["groups"],
+            "nodes": [brief(n) for n in ranked[:top]],
+        }  # fmt: skip
+
+    @mcp.tool(annotations=WRITE)
+    async def pin_circuit(
+        slug: str, pinned: list[str], groups: list[dict[str, Any]] | None = None
+    ) -> dict[str, Any]:
+        """Replaces a graph's pinned nodes and groups ({"name", "nodes": [ids]}); the Circuits
+        page's Pinned view and circuit-tracer's viewer then show that subgraph."""
+        return await send(
+            "PUT", f"/graphs/{slug}/pins", json={"pinned": pinned, "groups": groups or []}
+        )
+
+    @mcp.tool(annotations=READ)
     async def run(run_id: str) -> dict[str, Any]:
         """One run in full: metrics, params, tags, the task and model, and any error."""
         return await get(f"/runs/{run_id}")

@@ -501,7 +501,72 @@
   },
   {
     "part": "circuits/viewer",
-    "about": "circuit-tracer's viewer of the graph.",
+    "about": "A link to the graph in circuit-tracer's own viewer.",
+    "rules": []
+  },
+  {
+    "part": "circuits/prompt",
+    "about": "The graph's prompt, token by token.",
+    "rules": []
+  },
+  {
+    "part": "circuits/stat/*",
+    "about": "One number about the graph: output, nodes, edges, unexplained.",
+    "rules": ["hidden", "label", "about", "note"]
+  },
+  {
+    "part": "circuits/prune/*",
+    "about": "A slider: the share of influence the shown nodes or edges carry.",
+    "rules": []
+  },
+  {
+    "part": "circuits/view",
+    "about": "The pruned graph, or only the pinned nodes.",
+    "rules": []
+  },
+  {
+    "part": "circuits/save",
+    "about": "Saves the pins into the graph file.",
+    "rules": []
+  },
+  {
+    "part": "circuits/canvas",
+    "about": "The graph: token positions across, layers up.",
+    "rules": []
+  },
+  {
+    "part": "circuits/node/*",
+    "about": "One node of the graph, by circuit-tracer's node id.",
+    "rules": []
+  },
+  {
+    "part": "circuits/legend",
+    "about": "What the shapes and colours mean.",
+    "rules": ["hidden"]
+  },
+  {
+    "part": "circuits/panel",
+    "about": "The side panel: the picked node, or the strongest ones.",
+    "rules": []
+  },
+  {
+    "part": "circuits/node-detail/*",
+    "about": "The picked node: influence, activation, inputs and outputs.",
+    "rules": []
+  },
+  {
+    "part": "circuits/pin",
+    "about": "Pins or unpins the picked node.",
+    "rules": []
+  },
+  {
+    "part": "circuits/top",
+    "about": "The outputs and the strongest features.",
+    "rules": []
+  },
+  {
+    "part": "circuits/pinned",
+    "about": "The pinned nodes and their groups.",
     "rules": []
   },
   {

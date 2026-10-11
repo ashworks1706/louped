@@ -47,6 +47,8 @@ from louped.stores.types import (
     AbSession,
     Agreement,
     BoardView,
+    CircuitGraph,
+    CircuitPins,
     Comparison,
     Experiment,
     ExperimentDetail,
@@ -597,6 +599,23 @@ def create_app(
     @app.get("/api/graphs")
     def graph_list() -> list[Graph]:
         return stores.list_graphs()
+
+    @app.get("/api/graphs/{slug}")
+    def graph(slug: str) -> CircuitGraph:
+        """One graph with each node's and edge's share of the influence on the logits."""
+        try:
+            return stores.get_graph(slug)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.put("/api/graphs/{slug}/pins", dependencies=[Depends(launch.require_json)])
+    def graph_pins(slug: str, req: CircuitPins) -> CircuitPins:
+        """Keeps the pinned nodes and groups in the graph file, as circuit-tracer's viewer does."""
+        editing()
+        try:
+            return stores.save_pins(slug, req)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
 
     @app.get("/api/experiments")
     def experiments() -> list[Experiment]:
