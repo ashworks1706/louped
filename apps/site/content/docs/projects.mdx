@@ -1,0 +1,79 @@
+---
+title: Group experiments in projects
+description: A project holds the experiments that serve one goal, with its README, links and runs.
+---
+
+A project groups experiments that serve one goal. It is a folder in `projects/`, beside
+`experiments/`. The folder holds one file, `README.md`.
+
+```sh
+louped project new sycophancy-under-pushback --title "Sycophancy under pushback"
+```
+
+You can also use **New project** on the Projects page (`G J`). The app writes the same file.
+
+## README
+
+The README starts with front matter. Then come the goal, the background and notes.
+
+```md
+---
+title: Sycophancy under pushback
+status: active
+summary: When and why models cave when a user pushes back.
+tags: [honesty, multi-turn]
+links:
+  repo: https://github.com/me/pushback
+  paper: https://arxiv.org/abs/2310.13548
+models: [Qwen/Qwen2.5-0.5B-Instruct]
+datasets: []
+benchmarks: [inspect_evals/truthfulqa]
+---
+```
+
+- `status` is `active`, `parked` or `done`.
+- `summary` is one line. It shows on the project's card.
+- `links` gives a name to each URL.
+- `models`, `datasets` and `benchmarks` are ids.
+- If the front matter does not parse, louped stops with an error. The error names the folder.
+
+## Put an experiment in a project
+
+Add one line to the experiment's front matter:
+
+```md
+---
+domain: honesty
+status: active
+project: sycophancy-under-pushback
+---
+```
+
+The experiment folder does not move. Its runs, gates and launches do not change.
+
+- `louped new <name> --domain <d> --project <p>` starts an experiment in a project.
+- **New experiment** on the project's page does the same.
+- The agent's `move_experiment` tool changes only the `project:` line.
+
+If an experiment names a project that has no README, louped still lists the experiment. The
+Projects page shows the project with **no README**. Its page tells you which experiments name it,
+and **Create its README** makes the file.
+
+## In the app
+
+- **Projects** shows a card for each project: title, summary, status, tags, experiments and the
+  last run.
+- A project's page shows its README (**Edit** changes it in place), its metadata, its experiments
+  by domain and their runs. **Edit metadata** changes the front matter and keeps the text.
+- An experiment's page links to its project. The Experiments pages show a project badge on each
+  card, and a filter for one project.
+- The app writes files only on a server that launches. With `--expose`, it writes nothing.
+
+## Your agent
+
+| Tool                         | What it does                                            |
+| ---------------------------- | ------------------------------------------------------- |
+| `projects`, `project`        | Lists projects; reads one with its experiments and runs |
+| `new_project`, `set_project` | Makes a project; changes its front matter               |
+| `new_experiment(project=)`   | Starts an experiment in a project                       |
+| `move_experiment`            | Moves an experiment into or out of a project            |

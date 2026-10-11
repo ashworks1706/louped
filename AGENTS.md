@@ -57,7 +57,7 @@ src/louped/        the package (distribution louped); layers in docs/ARCHITECTUR
   retrieval/      search and its metrics
   train/          sft, dpo, grpo, classify, reft, sweeps, replayed tool environments
   stores/         read Inspect logs, MLflow, vectors, experiments/
-  server/         the API, the Probe and Benchmark tools, launching jobs
+  server/         the API, the Probe and Speed tools, launching jobs
   agent.py        the MCP server coding agents drive louped through
   sweep.py grid.py features.py circuits.py cli.py
   templates/      what `louped init` copies: the project files, the agent's skills and MCP config
@@ -74,6 +74,7 @@ tests/            Python tests, CPU only
 | To add                     | Write                                                                    |
 | -------------------------- | ------------------------------------------------------------------------ |
 | A research question        | in a research project: `louped new <name> --domain <domain>`, then its README and `run.py` |
+| A goal that groups questions | in a research project: `louped project new <name>`, then `project: <name>` in each experiment's README ("projects.mdx") |
 | An eval                    | Inspect `@task`s in `experiments/<name>/task.py`                           |
 | A figure                   | a view from `louped.analysis.views`, logged with `log_json` under `views/` |
 | A chart no kind draws      | `views.vega(title, spec)`: any Vega-Lite spec with its data inline, no change to louped |

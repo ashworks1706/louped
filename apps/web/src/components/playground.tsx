@@ -39,7 +39,7 @@ const MODES = ["steer", "ablate", "heads"] as const;
 type Mode = (typeof MODES)[number];
 const TABS = ["reply", "inspect", "patch", "dose", "speed"] as const;
 type Tab = (typeof TABS)[number];
-/** The tools of each page that hosts the playground: Probe for behavior, Benchmark for cost. */
+/** The tools of each page that hosts the playground: Probe for behavior, Speed for cost. */
 export const PROBE: Tab[] = ["reply", "inspect", "patch", "dose"];
 export const BENCHMARK: Tab[] = ["speed", "reply"];
 const TAB_TITLES: Record<Tab, string> = {

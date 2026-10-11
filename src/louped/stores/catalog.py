@@ -1,8 +1,11 @@
-"""Every eval task Launch can run: the project's own Inspect tasks, then inspect_evals' benchmarks.
+"""Every eval task Launch can run: the project's own Inspect tasks, the benchmarks it makes from
+Hub datasets, then inspect_evals' benchmarks.
 
 The project's are the @task functions in experiments/<name>/*.py, found by reading the files
-(nothing runs). inspect_evals' come from the eval.yaml each benchmark ships (title, group, what
-it measures, samples per task), read from the installed package without importing it.
+(nothing runs). Its Hub benchmarks are louped.toml's [benchmarks.<name>] tables, each the task
+louped/<name> (louped.core.benchmarks). inspect_evals' come from the eval.yaml each benchmark
+ships (title, group, what it measures, samples per task), read from the installed package
+without importing it.
 """
 
 from __future__ import annotations
@@ -17,20 +20,33 @@ import yaml
 from pydantic import BaseModel
 
 from louped.core import experiments_dir
+from louped.core.benchmarks import benchmarks, task_name
 
 
 class EvalTask(BaseModel):
-    #: What `inspect eval` takes: experiments/<name>/task.py@fn, or inspect_evals/<name>.
+    #: What `inspect eval` takes: experiments/<name>/task.py@fn, louped/<name> or
+    #: inspect_evals/<name>.
     task: str
     title: str
     group: str
     about: str | None = None
     samples: int | None = None
-    source: Literal["project", "inspect_evals"]
+    source: Literal["project", "benchmark", "inspect_evals"]
 
 
 def eval_tasks() -> list[EvalTask]:
-    return [*project_tasks(), *inspect_evals_tasks()]
+    return [*project_tasks(), *benchmark_tasks(), *inspect_evals_tasks()]
+
+
+def benchmark_tasks() -> list[EvalTask]:
+    """The benchmarks louped.toml makes from Hub datasets ([benchmarks.<name>])."""
+    out: list[EvalTask] = []
+    for name, b in benchmarks().items():
+        rows = f"{b.dataset}{f' ({b.config})' if b.config else ''}, {b.split}"
+        about = f"{rows}: {b.input} to {b.target}, scored by {b.scorer}."
+        out.append(EvalTask(task=task_name(name), title=name, group="Hub benchmarks",
+                            about=about, source="benchmark"))  # fmt: skip
+    return out
 
 
 def project_tasks() -> list[EvalTask]:

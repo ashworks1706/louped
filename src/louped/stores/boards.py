@@ -115,11 +115,11 @@ def read_table(ref: str) -> Table:
             if not path.is_file():
                 raise NotFound(f"experiment {at.name} has no {at.path}")
             data = path.read_bytes()
-        rows = _parse(data, at.path)
+        rows = parse_rows(data, at.path)
     return _table(rows)
 
 
-def _parse(data: bytes, path: str) -> list[dict[str, Any]]:
+def parse_rows(data: bytes, path: str) -> list[dict[str, Any]]:
     text = data.decode("utf-8")
     suffix = path.rsplit(".", 1)[-1].lower()
     if suffix in ("jsonl", "ndjson"):

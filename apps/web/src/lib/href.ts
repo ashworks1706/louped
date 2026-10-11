@@ -30,6 +30,8 @@ export const axisPath = (axis: Experiment["axis"]) =>
 export const experimentHref = (name: string, axis: Experiment["axis"], tab?: string) =>
   `${axisPath(axis)}/experiment/?name=${encodeURIComponent(name)}${tab ? `&tab=${tab}` : ""}`;
 
+export const projectHref = (name: string) => `/projects/p/?name=${encodeURIComponent(name)}`;
+
 export const compareHref = (a: string, b: string) =>
   `/compare/?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`;
 

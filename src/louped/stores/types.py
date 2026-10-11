@@ -6,7 +6,7 @@ import re
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 RunKind = Literal["eval", "analysis", "training"]
 #: What is degenerate about a sample's reply (louped.stores.degeneracy).
@@ -173,6 +173,9 @@ class Experiment(BaseModel):
     #: The first paragraph of the README's Result section.
     result: str | None
     runs: list[RunSummary]
+    #: The project it is part of (`project:` in its front matter); None when it names none. It
+    #: may name a project with no README: the project's page then says so.
+    project: str | None = None
 
 
 #: A gate requirement's comparison.
@@ -204,6 +207,63 @@ class GateStatus(BaseModel):
     passed: bool
     #: Why the gate as written does not parse; the rest is then empty.
     error: str | None = None
+
+
+#: Where a project stands.
+ProjectStatus = Literal["active", "parked", "done"]
+
+
+class ProjectMeta(BaseModel):
+    """A project's front matter: what projects/<name>/README.md declares above its text."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    #: Its name for people; the folder's name when empty.
+    title: str = Field(default="", max_length=200)
+    status: ProjectStatus = "active"
+    #: One line on what it is for.
+    summary: str = Field(default="", max_length=500)
+    tags: list[str] = []
+    #: Where its other parts are, by name: repo, paper, docs.
+    links: dict[str, str] = {}
+    #: The models, datasets and benchmarks it works on, by id.
+    models: list[str] = []
+    datasets: list[str] = []
+    benchmarks: list[str] = []
+
+    @field_validator("summary")
+    @classmethod
+    def _one_line(cls, value: str) -> str:
+        if "\n" in value.strip():
+            raise ValueError("a summary is one line")
+        return value.strip()
+
+
+class Project(ProjectMeta):
+    """A project in the list: its front matter, its experiments by name and where its runs
+    stand."""
+
+    name: str
+    #: The experiments whose front matter names it.
+    experiments: list[str]
+    #: Its experiments' runs.
+    runs: int
+    last_run: datetime | None
+    #: True when experiments name it but projects/<name>/README.md does not exist.
+    missing: bool = False
+
+
+class ProjectDetail(ProjectMeta):
+    """One project: its front matter, its README without it, its experiments and their runs."""
+
+    name: str
+    #: The README as Markdown, without its front matter.
+    readme: str
+    experiments: list[Experiment]
+    #: Its experiments' runs, newest first.
+    runs: list[RunSummary]
+    #: True when experiments name it but projects/<name>/README.md does not exist.
+    missing: bool = False
 
 
 class ExperimentDetail(Experiment):
@@ -687,6 +747,71 @@ class Graph(BaseModel):
     slug: str
     prompt: str
     scan: str | None = None
+
+
+class CircuitNode(BaseModel):
+    """One node of an attribution graph, as louped draws it."""
+
+    id: str
+    kind: Literal["embedding", "feature", "error", "logit"]
+    #: The layer as circuit-tracer writes it: "E" for an embedding, the logits one past the last.
+    layer: str
+    #: The node's row from the bottom: embeddings 0, then each layer the graph has, logits last.
+    row: int
+    #: The token position it sits at.
+    position: int
+    #: The transcoder feature (or neuron, or token) index.
+    feature: int | None = None
+    label: str
+    activation: float | None = None
+    #: A logit's probability.
+    prob: float | None = None
+    #: Whether it is the logit the graph explains.
+    target: bool = False
+    #: Its share of the influence on the logits, direct and through later nodes, over the edges
+    #: the file keeps; the shares of a graph's nodes add up past 1, since influence passes through
+    #: several layers.
+    score: float
+    #: circuit-tracer's own influence, from the whole graph before it pruned it: the cumulative
+    #: share of the nodes as strong or stronger. The app prunes by it when every node has one.
+    influence: float | None = None
+
+
+class CircuitLink(BaseModel):
+    source: str
+    target: str
+    #: The direct effect of the source on the target.
+    weight: float
+    #: Its share of the influence on the logits that flows through this edge, over the edges the
+    #: file keeps.
+    share: float
+
+
+class CircuitGroup(BaseModel):
+    """Pinned nodes shown as one: circuit-tracer's supernode."""
+
+    name: str = Field(min_length=1, max_length=80)
+    nodes: list[str] = Field(min_length=1)
+
+
+class CircuitPins(BaseModel):
+    """What a person kept of a graph; saved in the graph file as circuit-tracer's qParams, so its
+    viewer opens the same subgraph."""
+
+    pinned: list[str] = []
+    groups: list[CircuitGroup] = []
+
+
+class CircuitGraph(CircuitPins):
+    """An attribution graph with each node's and each edge's share of the influence on the logits,
+    for louped's own graph view."""
+
+    slug: str
+    prompt: str
+    tokens: list[str]
+    scan: str | None = None
+    nodes: list[CircuitNode]
+    links: list[CircuitLink]
 
 
 class PairedScore(BaseModel):

@@ -771,6 +771,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/graphs/{slug}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Graph
+     * @description One graph with each node's and edge's share of the influence on the logits.
+     */
+    get: operations["graph_api_graphs__slug__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/graphs/{slug}/pins": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Graph Pins
+     * @description Keeps the pinned nodes and groups in the graph file, as circuit-tracer's viewer does.
+     */
+    put: operations["graph_pins_api_graphs__slug__pins_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/experiments": {
     parameters: {
       query?: never;
@@ -781,6 +821,129 @@ export interface paths {
     /** Experiments */
     get: operations["experiments_api_experiments_get"];
     put?: never;
+    /**
+     * New Experiment
+     * @description experiments/<name>/ with its README and run.py, active, in a project when given.
+     */
+    post: operations["new_experiment_api_experiments_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/experiments/{name}/project": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Move Experiment
+     * @description Rewrites only the project: line of the experiment's front matter; its folder stays.
+     */
+    put: operations["move_experiment_api_experiments__name__project_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/domains": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Domain List
+     * @description The domains an experiment can be filed under, in the Experiments page's order.
+     */
+    get: operations["domain_list_api_domains_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/projects": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Projects
+     * @description Every project under projects/, then any that experiments name with no README.
+     */
+    get: operations["projects_api_projects_get"];
+    put?: never;
+    /**
+     * New Project
+     * @description Writes projects/<name>/README.md: the front matter, then sections to fill in.
+     */
+    post: operations["new_project_api_projects_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/projects/{name}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Project */
+    get: operations["project_api_projects__name__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/projects/{name}/readme": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Project Readme */
+    get: operations["project_readme_api_projects__name__readme_get"];
+    /** Edit Project Readme */
+    put: operations["edit_project_readme_api_projects__name__readme_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/projects/{name}/meta": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Edit Project Meta
+     * @description Replaces the README's front matter and keeps the text under it.
+     */
+    put: operations["edit_project_meta_api_projects__name__meta_put"];
     post?: never;
     delete?: never;
     options?: never;
@@ -1526,6 +1689,135 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/datasets": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Datasets
+     * @description Every dataset the project has, each with the sections it is listed under (none:
+     *     both).
+     */
+    get: operations["datasets_api_datasets_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/datasets/hub": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Hub Dataset
+     * @description A Hub dataset's page, splits, features and first rows; what could not be read is
+     *     said in hub_error and error.
+     */
+    get: operations["hub_dataset_api_datasets_hub_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/datasets/local": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Local Dataset
+     * @description A file under data/: its columns and first rows, by its path from the project's
+     *     root.
+     */
+    get: operations["local_dataset_api_datasets_local_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/benchmarks": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Benchmarks
+     * @description Every eval task with the size and top of its leaderboard, those with runs first.
+     */
+    get: operations["list_benchmarks_api_benchmarks_get"];
+    put?: never;
+    /**
+     * Add Benchmark
+     * @description A Hub dataset as a benchmark: checked against its splits and features when the
+     *     dataset viewer answers, then kept in louped.toml and listed as the task louped/<name>.
+     */
+    post: operations["add_benchmark_api_benchmarks_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/benchmarks/board": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Leaderboard
+     * @description One eval task's finished runs, best score first.
+     */
+    get: operations["leaderboard_api_benchmarks_board_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/benchmarks/speed": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Speed
+     * @description Each weight format of each `louped bench` run, newest first; best marks each
+     *     model's fastest.
+     */
+    get: operations["speed_api_benchmarks_speed_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/ui/layout": {
     parameters: {
       query?: never;
@@ -1867,12 +2159,25 @@ export interface components {
        * @default false
        */
       download: boolean;
+      /**
+       * Domains
+       * @default []
+       */
+      domains: ("behavior" | "efficiency")[];
     };
     /** AddResult */
     AddResult: {
       added: components["schemas"]["HubAdded"];
       source?: components["schemas"]["Source"] | null;
       job?: components["schemas"]["Job"] | null;
+    };
+    /** AddedBenchmark */
+    AddedBenchmark: {
+      benchmark: components["schemas"]["BenchmarkRow"];
+      /** Checked */
+      checked: boolean;
+      /** Note */
+      note?: string | null;
     };
     /**
      * Agreement
@@ -1906,6 +2211,71 @@ export interface components {
       path: string;
       /** Size */
       size: number | null;
+    };
+    /**
+     * Benchmark
+     * @description A Hub dataset as an eval: which rows, and which field is the input, the target and the
+     *     choices.
+     */
+    Benchmark: {
+      /** Dataset */
+      dataset: string;
+      /** Config */
+      config?: string | null;
+      /**
+       * Split
+       * @default test
+       */
+      split: string;
+      /** Input */
+      input: string;
+      /** Target */
+      target: string;
+      /** Choices */
+      choices?: string | null;
+      /**
+       * Scorer
+       * @default match
+       * @enum {string}
+       */
+      scorer: "match" | "choice" | "judge";
+    };
+    /** BenchmarkRequest */
+    BenchmarkRequest: {
+      /** Dataset */
+      dataset: string;
+      /** Config */
+      config?: string | null;
+      /**
+       * Split
+       * @default test
+       */
+      split: string;
+      /** Input */
+      input: string;
+      /** Target */
+      target: string;
+      /** Choices */
+      choices?: string | null;
+      /**
+       * Scorer
+       * @default match
+       * @enum {string}
+       */
+      scorer: "match" | "choice" | "judge";
+      /** Name */
+      name: string;
+    };
+    /**
+     * BenchmarkRow
+     * @description One eval task with its leaderboard's size and top run.
+     */
+    BenchmarkRow: {
+      task: components["schemas"]["EvalTask"];
+      /** Runs */
+      runs: number;
+      best?: components["schemas"]["Entry"] | null;
+      spec?: components["schemas"]["Benchmark"] | null;
     };
     /**
      * Block
@@ -2179,6 +2549,109 @@ export interface components {
       /** Parts */
       parts: components["schemas"]["louped__server__parts__Kind"][];
     };
+    /**
+     * CircuitGraph
+     * @description An attribution graph with each node's and each edge's share of the influence on the logits,
+     *     for louped's own graph view.
+     */
+    CircuitGraph: {
+      /**
+       * Pinned
+       * @default []
+       */
+      pinned: string[];
+      /**
+       * Groups
+       * @default []
+       */
+      groups: components["schemas"]["CircuitGroup"][];
+      /** Slug */
+      slug: string;
+      /** Prompt */
+      prompt: string;
+      /** Tokens */
+      tokens: string[];
+      /** Scan */
+      scan?: string | null;
+      /** Nodes */
+      nodes: components["schemas"]["CircuitNode"][];
+      /** Links */
+      links: components["schemas"]["CircuitLink"][];
+    };
+    /**
+     * CircuitGroup
+     * @description Pinned nodes shown as one: circuit-tracer's supernode.
+     */
+    CircuitGroup: {
+      /** Name */
+      name: string;
+      /** Nodes */
+      nodes: string[];
+    };
+    /** CircuitLink */
+    CircuitLink: {
+      /** Source */
+      source: string;
+      /** Target */
+      target: string;
+      /** Weight */
+      weight: number;
+      /** Share */
+      share: number;
+    };
+    /**
+     * CircuitNode
+     * @description One node of an attribution graph, as louped draws it.
+     */
+    CircuitNode: {
+      /** Id */
+      id: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "embedding" | "feature" | "error" | "logit";
+      /** Layer */
+      layer: string;
+      /** Row */
+      row: number;
+      /** Position */
+      position: number;
+      /** Feature */
+      feature?: number | null;
+      /** Label */
+      label: string;
+      /** Activation */
+      activation?: number | null;
+      /** Prob */
+      prob?: number | null;
+      /**
+       * Target
+       * @default false
+       */
+      target: boolean;
+      /** Score */
+      score: number;
+      /** Influence */
+      influence?: number | null;
+    };
+    /**
+     * CircuitPins
+     * @description What a person kept of a graph; saved in the graph file as circuit-tracer's qParams, so its
+     *     viewer opens the same subgraph.
+     */
+    CircuitPins: {
+      /**
+       * Pinned
+       * @default []
+       */
+      pinned: string[];
+      /**
+       * Groups
+       * @default []
+       */
+      groups: components["schemas"]["CircuitGroup"][];
+    };
     /** ClusterInfo */
     ClusterInfo: {
       /** Name */
@@ -2357,6 +2830,75 @@ export interface components {
       cues: components["schemas"]["Cue"][];
     };
     /**
+     * Dataset
+     * @description One dataset the project has.
+     */
+    Dataset: {
+      /** Id */
+      id: string;
+      /**
+       * Source
+       * @enum {string}
+       */
+      source: "hub" | "local" | "training";
+      /**
+       * Domains
+       * @default []
+       */
+      domains: ("behavior" | "efficiency")[];
+      /** Path */
+      path?: string | null;
+      /** Format */
+      format?: string | null;
+      /** Size */
+      size?: number | null;
+      /** Rows */
+      rows?: number | null;
+      /** Error */
+      error?: string | null;
+    };
+    /**
+     * DatasetDetail
+     * @description One dataset's card, splits, features and first rows.
+     */
+    DatasetDetail: {
+      /** Id */
+      id: string;
+      /**
+       * Source
+       * @enum {string}
+       */
+      source: "hub" | "local";
+      hub?: components["schemas"]["HubDetail"] | null;
+      /** Hub Error */
+      hub_error?: string | null;
+      /**
+       * Splits
+       * @default []
+       */
+      splits: components["schemas"]["Split"][];
+      /** Config */
+      config?: string | null;
+      /** Split */
+      split?: string | null;
+      /**
+       * Features
+       * @default []
+       */
+      features: components["schemas"]["Feature"][];
+      /**
+       * Rows
+       * @default []
+       */
+      rows: {
+        [key: string]: unknown;
+      }[];
+      /** Total */
+      total?: number | null;
+      /** Error */
+      error?: string | null;
+    };
+    /**
      * Direction
      * @description Where a direction came from and what it is, stored alongside its values.
      */
@@ -2382,6 +2924,21 @@ export interface components {
       run?: string | null;
       /** Notes */
       notes?: string | null;
+    };
+    /**
+     * DomainInfo
+     * @description A domain an experiment can be filed under, from louped.toml or louped's own.
+     */
+    DomainInfo: {
+      /** Key */
+      key: string;
+      /**
+       * Axis
+       * @enum {string}
+       */
+      axis: "behavior" | "efficiency" | "checks";
+      /** Title */
+      title: string;
     };
     /**
      * DoseRequest
@@ -2411,6 +2968,24 @@ export interface components {
        */
       chat: boolean;
     };
+    /**
+     * Entry
+     * @description One finished eval run of a task.
+     */
+    Entry: {
+      /** Run */
+      run: string;
+      /** Model */
+      model: string | null;
+      /** Score */
+      score: number | null;
+      /** Metric */
+      metric: string | null;
+      /** Samples */
+      samples: number | null;
+      /** Created */
+      created: string | null;
+    };
     /** EvalTask */
     EvalTask: {
       /** Task */
@@ -2427,7 +3002,7 @@ export interface components {
        * Source
        * @enum {string}
        */
-      source: "project" | "inspect_evals";
+      source: "project" | "benchmark" | "inspect_evals";
     };
     /** Experiment */
     Experiment: {
@@ -2453,6 +3028,8 @@ export interface components {
       result: string | null;
       /** Runs */
       runs: components["schemas"]["RunSummary"][];
+      /** Project */
+      project?: string | null;
     };
     /** ExperimentDetail */
     ExperimentDetail: {
@@ -2478,6 +3055,8 @@ export interface components {
       result: string | null;
       /** Runs */
       runs: components["schemas"]["RunSummary"][];
+      /** Project */
+      project?: string | null;
       /** Readme */
       readme: string;
       gate?: components["schemas"]["GateStatus"] | null;
@@ -2498,6 +3077,13 @@ export interface components {
       /** Recipe */
       recipe?: string | null;
       target?: components["schemas"]["Target"];
+    };
+    /** Feature */
+    Feature: {
+      /** Name */
+      name: string;
+      /** Type */
+      type: string;
     };
     /**
      * FeatureDashboard
@@ -2901,6 +3487,16 @@ export interface components {
        * @default true
        */
       chat: boolean;
+      /**
+       * Target
+       * @description The token to follow, as one token's text.
+       */
+      target?: string | null;
+      /**
+       * Target Id
+       * @description The token to follow, by id; wins over target. Neither: the model's prediction at the last position.
+       */
+      target_id?: number | null;
     };
     /** InspectResponse */
     InspectResponse: {
@@ -2915,6 +3511,7 @@ export interface components {
         | components["schemas"]["PlotlyView"]
         | components["schemas"]["BoardView"]
       )[];
+      readout?: components["schemas"]["Readout"] | null;
     };
     /** Issue */
     Issue: {
@@ -3108,6 +3705,13 @@ export interface components {
       /** Recipe */
       recipe?: string | null;
     };
+    /** Leaderboard */
+    Leaderboard: {
+      task: components["schemas"]["EvalTask"] | null;
+      spec?: components["schemas"]["Benchmark"] | null;
+      /** Entries */
+      entries: components["schemas"]["Entry"][];
+    };
     /** LineView */
     LineView: {
       /**
@@ -3235,6 +3839,63 @@ export interface components {
       tokenizer?: string | null;
       /** Chat Template */
       chat_template?: string | null;
+    };
+    /** NewExperiment */
+    NewExperiment: {
+      /** Name */
+      name: string;
+      /** Domain */
+      domain: string;
+      /** Project */
+      project?: string | null;
+    };
+    /** NewProject */
+    NewProject: {
+      /**
+       * Title
+       * @default
+       */
+      title: string;
+      /**
+       * Status
+       * @default active
+       * @enum {string}
+       */
+      status: "active" | "parked" | "done";
+      /**
+       * Summary
+       * @default
+       */
+      summary: string;
+      /**
+       * Tags
+       * @default []
+       */
+      tags: string[];
+      /**
+       * Links
+       * @default {}
+       */
+      links: {
+        [key: string]: string;
+      };
+      /**
+       * Models
+       * @default []
+       */
+      models: string[];
+      /**
+       * Datasets
+       * @default []
+       */
+      datasets: string[];
+      /**
+       * Benchmarks
+       * @default []
+       */
+      benchmarks: string[];
+      /** Name */
+      name: string;
     };
     /**
      * Option
@@ -3617,6 +4278,185 @@ export interface components {
       /** Ref */
       ref?: string | null;
     };
+    /**
+     * Project
+     * @description A project in the list: its front matter, its experiments by name and where its runs
+     *     stand.
+     */
+    Project: {
+      /**
+       * Title
+       * @default
+       */
+      title: string;
+      /**
+       * Status
+       * @default active
+       * @enum {string}
+       */
+      status: "active" | "parked" | "done";
+      /**
+       * Summary
+       * @default
+       */
+      summary: string;
+      /**
+       * Tags
+       * @default []
+       */
+      tags: string[];
+      /**
+       * Links
+       * @default {}
+       */
+      links: {
+        [key: string]: string;
+      };
+      /**
+       * Models
+       * @default []
+       */
+      models: string[];
+      /**
+       * Datasets
+       * @default []
+       */
+      datasets: string[];
+      /**
+       * Benchmarks
+       * @default []
+       */
+      benchmarks: string[];
+      /** Name */
+      name: string;
+      /** Experiments */
+      experiments: string[];
+      /** Runs */
+      runs: number;
+      /** Last Run */
+      last_run: string | null;
+      /**
+       * Missing
+       * @default false
+       */
+      missing: boolean;
+    };
+    /** ProjectChoice */
+    ProjectChoice: {
+      /** Project */
+      project: string | null;
+    };
+    /**
+     * ProjectDetail
+     * @description One project: its front matter, its README without it, its experiments and their runs.
+     */
+    ProjectDetail: {
+      /**
+       * Title
+       * @default
+       */
+      title: string;
+      /**
+       * Status
+       * @default active
+       * @enum {string}
+       */
+      status: "active" | "parked" | "done";
+      /**
+       * Summary
+       * @default
+       */
+      summary: string;
+      /**
+       * Tags
+       * @default []
+       */
+      tags: string[];
+      /**
+       * Links
+       * @default {}
+       */
+      links: {
+        [key: string]: string;
+      };
+      /**
+       * Models
+       * @default []
+       */
+      models: string[];
+      /**
+       * Datasets
+       * @default []
+       */
+      datasets: string[];
+      /**
+       * Benchmarks
+       * @default []
+       */
+      benchmarks: string[];
+      /** Name */
+      name: string;
+      /** Readme */
+      readme: string;
+      /** Experiments */
+      experiments: components["schemas"]["Experiment"][];
+      /** Runs */
+      runs: components["schemas"]["RunSummary"][];
+      /**
+       * Missing
+       * @default false
+       */
+      missing: boolean;
+    };
+    /**
+     * ProjectMeta
+     * @description A project's front matter: what projects/<name>/README.md declares above its text.
+     */
+    ProjectMeta: {
+      /**
+       * Title
+       * @default
+       */
+      title: string;
+      /**
+       * Status
+       * @default active
+       * @enum {string}
+       */
+      status: "active" | "parked" | "done";
+      /**
+       * Summary
+       * @default
+       */
+      summary: string;
+      /**
+       * Tags
+       * @default []
+       */
+      tags: string[];
+      /**
+       * Links
+       * @default {}
+       */
+      links: {
+        [key: string]: string;
+      };
+      /**
+       * Models
+       * @default []
+       */
+      models: string[];
+      /**
+       * Datasets
+       * @default []
+       */
+      datasets: string[];
+      /**
+       * Benchmarks
+       * @default []
+       */
+      benchmarks: string[];
+    };
     /** Pushed */
     Pushed: {
       /** Remote */
@@ -3643,6 +4483,56 @@ export interface components {
       read_by?: string | null;
       /** Matched */
       matched?: string | null;
+    };
+    /**
+     * Readout
+     * @description One prompt read layer by layer, from louped.analysis.readout.
+     */
+    Readout: {
+      /** Tokens */
+      tokens: string[];
+      /** Layers */
+      layers: string[];
+      /** Vocab */
+      vocab: {
+        [key: string]: string;
+      };
+      /** Top Ids */
+      top_ids: number[][][];
+      /** Top Probs */
+      top_probs: number[][][];
+      /** Entropy */
+      entropy: number[][];
+      /** Kl */
+      kl: number[][];
+      /** Target */
+      target: number;
+      /** Target Prob */
+      target_prob: number[][];
+      /** Target Rank */
+      target_rank: number[][];
+      /** Target Logit */
+      target_logit: number[];
+      /** Softcap */
+      softcap?: number | null;
+      /** Dla Embed */
+      dla_embed: number[];
+      /** Dla Attn */
+      dla_attn: number[][];
+      /** Dla Mlp */
+      dla_mlp: number[][];
+      /** Dla Rest */
+      dla_rest: number[];
+      /** Dla Heads */
+      dla_heads: number[][][];
+      /** Head Positions */
+      head_positions: number[];
+      /** Head Entropy */
+      head_entropy: number[][];
+      /** Head Prev */
+      head_prev: number[][];
+      /** Head First */
+      head_first: number[][];
     };
     /** RemoteState */
     RemoteState: {
@@ -4122,6 +5012,48 @@ export interface components {
        * @default 3
        */
       repeats: number;
+    };
+    /**
+     * SpeedRow
+     * @description One weight format of one `louped bench` run.
+     */
+    SpeedRow: {
+      /** Run */
+      run: string;
+      /** Model */
+      model: string | null;
+      /** Setting */
+      setting: string;
+      /** Device */
+      device?: string | null;
+      /** Weights Mib */
+      weights_mib?: number | null;
+      /** Throughput */
+      throughput?: number | null;
+      /** Batch */
+      batch?: number | null;
+      /** Prefill Ms */
+      prefill_ms?: number | null;
+      /** Context */
+      context?: number | null;
+      /** Peak Mib */
+      peak_mib?: number | null;
+      /** Created */
+      created?: string | null;
+      /**
+       * Best
+       * @default false
+       */
+      best: boolean;
+    };
+    /** Split */
+    Split: {
+      /** Config */
+      config: string;
+      /** Split */
+      split: string;
+      /** Rows */
+      rows?: number | null;
     };
     /** SubmitRequest */
     SubmitRequest: {
@@ -5789,6 +6721,72 @@ export interface operations {
       };
     };
   };
+  graph_api_graphs__slug__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        slug: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CircuitGraph"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  graph_pins_api_graphs__slug__pins_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        slug: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CircuitPins"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CircuitPins"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   experiments_api_experiments_get: {
     parameters: {
       query?: never;
@@ -5805,6 +6803,279 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Experiment"][];
+        };
+      };
+    };
+  };
+  new_experiment_api_experiments_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["NewExperiment"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ExperimentDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  move_experiment_api_experiments__name__project_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ProjectChoice"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ExperimentDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  domain_list_api_domains_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DomainInfo"][];
+        };
+      };
+    };
+  };
+  projects_api_projects_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Project"][];
+        };
+      };
+    };
+  };
+  new_project_api_projects_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["NewProject"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProjectDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  project_api_projects__name__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProjectDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  project_readme_api_projects__name__readme_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Text"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  edit_project_readme_api_projects__name__readme_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Text"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Text"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  edit_project_meta_api_projects__name__meta_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ProjectMeta"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProjectDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -7150,6 +8421,196 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  datasets_api_datasets_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Dataset"][];
+        };
+      };
+    };
+  };
+  hub_dataset_api_datasets_hub_get: {
+    parameters: {
+      query: {
+        id: string;
+        config?: string | null;
+        split?: string | null;
+        rows?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DatasetDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  local_dataset_api_datasets_local_get: {
+    parameters: {
+      query: {
+        path: string;
+        rows?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DatasetDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_benchmarks_api_benchmarks_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BenchmarkRow"][];
+        };
+      };
+    };
+  };
+  add_benchmark_api_benchmarks_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BenchmarkRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AddedBenchmark"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  leaderboard_api_benchmarks_board_get: {
+    parameters: {
+      query: {
+        task: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Leaderboard"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  speed_api_benchmarks_speed_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SpeedRow"][];
         };
       };
     };

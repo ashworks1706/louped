@@ -1,0 +1,106 @@
+---
+title: Datasets and benchmarks
+description: The data your project uses, and leaderboards of evals and speed runs.
+---
+
+Behavior and Efficiency each have a **Datasets** page and a **Benchmarks** page.
+
+## Datasets
+
+The Datasets page lists the data the project uses. It reads three places:
+
+| Source   | Where it comes from                                                      |
+| -------- | ------------------------------------------------------------------------ |
+| Hub      | `datasets` under `[hub]` in `louped.toml`                                |
+| Local    | Files in `data/` at the project's root: JSONL, CSV, TSV, JSON or Parquet |
+| Training | The training sets louped reads. They open on the Training sets page.     |
+
+A Hub dataset can be filed under one domain or both. `[hub.domains]` keeps the domains. A dataset
+that is not in it shows on both pages.
+
+```toml
+[hub]
+datasets = ["openai/gsm8k", "cais/mmlu"]
+
+[hub.domains]
+"openai/gsm8k" = ["behavior"]
+```
+
+Click a dataset to open it. For a Hub dataset you see its card, license, size and downloads. You
+also see its splits, its features (the fields of each row) and its first rows. The rows come from
+the Hub's dataset viewer. louped sends your Hugging Face token, so gated datasets that your
+account can open show too. For a file, you see its columns and its first rows.
+
+When louped cannot read a dataset, the page tells you why. For example, the viewer does not
+support the dataset, or the Hub is not reachable.
+
+Search the Hub at the top of the page. **Add** files the dataset under the page's domain.
+**Download** puts it in this machine's cache as a job (`louped hub get`). Follow the job on Runs.
+
+## Benchmarks (Behavior)
+
+The Behavior Benchmarks page lists every eval task that Launch can run:
+
+- the project's own Inspect tasks
+- the benchmarks the project makes from Hub datasets
+- inspect_evals' benchmarks
+
+Each task has a leaderboard. The leaderboard shows the finished eval runs of the task, best score
+first. The score is the run's first scorer: its accuracy, else its mean. Open a task to see its
+runs, then click **Launch** to run it on another model.
+
+### A Hub dataset as a benchmark
+
+A Hub dataset becomes a benchmark with a field mapping. No code is necessary. Click **Hub
+dataset as a benchmark**, or add a table to `louped.toml`:
+
+```toml
+[benchmarks.gsm8k]
+dataset = "openai/gsm8k"
+config = "main"       # the subset; leave it out when the dataset has one
+split = "test"
+input = "question"    # the field each prompt comes from
+target = "answer"     # the field the reply is scored against
+scorer = "match"
+```
+
+| Scorer   | What it does                                                                         |
+| -------- | ------------------------------------------------------------------------------------ |
+| `match`  | Inspect's `match()`: the target at the end of the reply. Numbers compare as numbers. |
+| `choice` | Multiple choice by letter. `choices` names the field with the list of choices.       |
+| `judge`  | louped's local judge model grades the reply against the target.                      |
+
+For `choice`, the target can be the index, the letter or the text of the right choice.
+
+The app checks the config, the split and the fields against the dataset viewer before it keeps
+the table. If the viewer cannot answer, the app keeps the table and tells you that it did not
+check it.
+
+The benchmark is then the Inspect task `louped/<name>`. Launch it like any other task:
+
+```bash
+inspect eval louped/gsm8k --model louped/Qwen/Qwen2.5-0.5B-Instruct --limit 50
+```
+
+## Benchmarks (Efficiency)
+
+The Efficiency Benchmarks page shows the speed runs of `louped bench`. It has one row for each
+model and weight format:
+
+- throughput: the most tokens per second, and the batch size that gave it
+- prefill: the time to read the longest prompt, before the first token
+- peak memory and the size of the weights
+
+**Newest** shows the runs in time order. **Best per model** shows the fastest setting of each
+model. To measure one prompt by hand, use the **Speed** page.
+
+## Your agent
+
+| Tool                      | What it does                                                 |
+| ------------------------- | ------------------------------------------------------------ |
+| `datasets`, `dataset`     | Lists the datasets of a domain; reads one dataset's rows     |
+| `hub_add`                 | Adds a Hub dataset, with `domains` to file it under a domain |
+| `benchmarks`, `benchmark` | Reads the eval or speed leaderboards; reads one task's runs  |
+| `add_benchmark`           | Makes a Hub dataset a benchmark from a field mapping         |
+
+A published dashboard (`louped publish`) shows the lists only. It does not read the Hub.

@@ -13,7 +13,9 @@ const PAGES = [
   ["/behavior/probe/", "Probe"],
   ["/behavior/", "Behavior"],
   ["/efficiency/", "Efficiency"],
-  ["/efficiency/benchmark/", "Benchmark"],
+  ["/efficiency/benchmark/", "Speed"],
+  ["/behavior/datasets/", "Datasets"],
+  ["/efficiency/benchmarks/", "Benchmarks"],
   ["/efficiency/training/", "Training"],
 ] as const;
 
@@ -95,7 +97,7 @@ test("each domain has its own sidebar, entered from the top bar", async ({ page,
   );
   await sections().getByRole("link", { name: "Efficiency" }).click();
   await open();
-  await expect(pages().getByRole("link", { name: "Benchmark" })).toBeVisible();
+  await expect(pages().getByRole("link", { name: "Speed" })).toBeVisible();
   await expect(pages().getByRole("link", { name: "Vectors" })).toHaveCount(0);
 });
 

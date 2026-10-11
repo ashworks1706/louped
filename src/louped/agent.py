@@ -32,7 +32,10 @@ it has metrics, figures and, for an eval, samples. A job is a command started fr
 runs appear as it writes them.
 
 Work like this: read the experiments and runs first. Start a question with new_experiment, then
-edit its README and run.py in the project (the project's AGENTS.md says what goes where). Start
+edit its README and run.py in the project (the project's AGENTS.md says what goes where).
+A project (projects/<name>/README.md) groups experiments toward one goal: projects and project
+read them, new_project and set_project write one, new_experiment(project=) starts a question in
+it and move_experiment moves one in or out (its folder stays under experiments/). Start
 work with launchables, launch_options and launch (a script is "script:<name>/run.py"); follow it
 with job; read results with run, figures, figure, samples and compare; trace says where a figure's
 mark or a record comes from (its rows, script and commit). Papers and docs the project rests
@@ -40,6 +43,9 @@ on are its sources: search_sources and source_page before the web, add_source to
 Models, embedding models, datasets and papers on the Hugging Face Hub are hub_search and
 hub_info; hub_add lists a model or dataset in louped.toml (download=True gets it as a job) and
 keeps a paper as a source.
+The project's datasets (Hub, data/ files, training sets) are datasets and dataset (rows); a
+Hub dataset becomes an eval with add_benchmark. benchmarks and benchmark are the leaderboards:
+eval tasks by score (behavior), `louped bench` runs by speed (efficiency).
 A figure the person asks for (a chart of a file, points in 3D, an animation) is add_view, or
 derive when it needs a script
 over the run's files (new columns on its items); check it with preview_view before ui_show.
@@ -126,6 +132,74 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         return {**e, "runs": [r["id"] for r in e["runs"]]}
 
     @mcp.tool(annotations=READ)
+    async def projects() -> list[dict[str, Any]]:
+        """Every project (projects/<name>/README.md): name, title, status (active, parked, done),
+        summary, tags, its experiments' names, their run count and last run time. missing is
+        true for a name experiments give (project: in their README) with no README: make it
+        with new_project or move those experiments out."""
+        return await get("/projects")
+
+    @mcp.tool(annotations=READ)
+    async def project(name: str) -> dict[str, Any]:
+        """One project: its front matter (title, status, summary, tags, links, models, datasets,
+        benchmarks), its README text under it (goal, background, notes), each experiment with
+        its domain, status, question, result and run count, and its runs' ids, newest first."""
+        p = await get(f"/projects/{quote(name, safe='')}")
+        keep = ("name", "domain", "status", "question", "result")
+        return {**p, "runs": [r["id"] for r in p["runs"]],
+                "experiments": [{**{k: e[k] for k in keep}, "runs": len(e["runs"])}
+                                for e in p["experiments"]]}  # fmt: skip
+
+    @mcp.tool(annotations=WRITE)
+    async def new_project(
+        name: str,
+        title: str | None = None,
+        summary: str = "",
+        status: Literal["active", "parked", "done"] = "active",
+        tags: list[str] | None = None,
+        links: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        """Start a project: projects/<name>/README.md with its front matter and Goal, Background
+        and Notes to fill in (edit the file for the text). name is lowercase letters, digits and
+        -; title is its name for people (name when empty); summary is one line; links name the
+        project's other places (repo, paper, docs) by URL. Refused when it exists. Returns the
+        project as project does."""
+        body = {"name": name, "title": title or "", "summary": summary, "status": status,
+                "tags": tags or [], "links": links or {}}  # fmt: skip
+        return await post("/projects", body)
+
+    @mcp.tool(annotations=WRITE)
+    async def set_project(
+        name: str,
+        title: str | None = None,
+        summary: str | None = None,
+        status: Literal["active", "parked", "done"] | None = None,
+        tags: list[str] | None = None,
+        links: dict[str, str] | None = None,
+        models: list[str] | None = None,
+        datasets: list[str] | None = None,
+        benchmarks: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Change a project's front matter: each field given replaces its value (a list or map
+        whole), each left out keeps it. The README's text is kept. models, datasets and
+        benchmarks are ids (a Hub id, an inspect_evals task). Returns the project."""
+        path = f"/projects/{quote(name, safe='')}"
+        current = await get(path)
+        given = {"title": title, "summary": summary, "status": status, "tags": tags,
+                 "links": links, "models": models, "datasets": datasets,
+                 "benchmarks": benchmarks}  # fmt: skip
+        meta = {k: current[k] if v is None else v for k, v in given.items()}
+        return await send("PUT", f"{path}/meta", json=meta)
+
+    @mcp.tool(annotations=WRITE)
+    async def move_experiment(name: str, project: str | None) -> dict[str, Any]:
+        """Put an experiment in a project, or take it out of its project (project null). Only
+        the project: line of its README's front matter changes; its folder, runs, gates and
+        launches stay as they are. The project must exist. Returns the experiment."""
+        body = {"project": project}
+        return await send("PUT", f"/experiments/{quote(name, safe='')}/project", json=body)
+
+    @mcp.tool(annotations=READ)
     async def runs(
         experiment: str | None = None, kind: str | None = None, limit: int = 20
     ) -> list[dict[str, Any]]:
@@ -139,6 +213,41 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
             if (experiment is None or r["experiment"] == experiment)
             and (kind is None or r["kind"] == kind)
         ][:limit]
+
+    @mcp.tool(annotations=READ)
+    async def circuit(slug: str | None = None, top: int = 20) -> dict[str, Any]:
+        """An attribution graph: its prompt, its outputs with their probability, its pinned nodes
+        and groups, and the `top` nodes with the largest share of the influence on the output
+        (id, label, kind, layer, token, score). No slug: the list of graphs. Point the person at a
+        node with ui_show part circuits/node/<id> on /behavior/circuits/?slug=<slug>&node=<id>."""
+        if slug is None:
+            return {"graphs": await get("/graphs")}
+        g = await get(f"/graphs/{slug}")
+        tokens = g["tokens"]
+
+        def brief(n: dict[str, Any]) -> dict[str, Any]:
+            token = tokens[n["position"]] if n["position"] < len(tokens) else None
+            return {k: n[k] for k in ("id", "label", "kind", "layer", "score")} | {"token": token}
+
+        ranked = sorted((n for n in g["nodes"] if n["kind"] != "logit"), key=lambda n: -n["score"])
+        return {
+            "prompt": g["prompt"],
+            "outputs": [{k: n[k] for k in ("id", "label", "prob", "target")}
+                        for n in g["nodes"] if n["kind"] == "logit"],
+            "pinned": g["pinned"],
+            "groups": g["groups"],
+            "nodes": [brief(n) for n in ranked[:top]],
+        }  # fmt: skip
+
+    @mcp.tool(annotations=WRITE)
+    async def pin_circuit(
+        slug: str, pinned: list[str], groups: list[dict[str, Any]] | None = None
+    ) -> dict[str, Any]:
+        """Replaces a graph's pinned nodes and groups ({"name", "nodes": [ids]}); the Circuits
+        page's Pinned view and circuit-tracer's viewer then show that subgraph."""
+        return await send(
+            "PUT", f"/graphs/{slug}/pins", json={"pinned": pinned, "groups": groups or []}
+        )
 
     @mcp.tool(annotations=READ)
     async def run(run_id: str) -> dict[str, Any]:
@@ -241,12 +350,102 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         kind: Literal["models", "embeddings", "datasets", "papers"],
         id: str,
         download: bool = False,
+        domains: list[Literal["behavior", "efficiency"]] | None = None,
     ) -> dict[str, Any]:
         """Add a Hub model, embedding model or dataset to the project's louped.toml ([hub]),
         where the app's model fields offer it; with download, also get it into this machine's
-        cache as a job (follow it with job). A paper (its arXiv id) is kept in sources/ to
-        search, quote and cite."""
-        return await post("/hub/add", {"kind": kind, "id": id, "download": download})
+        cache as a job (follow it with job). domains, for a dataset only, lists it on those
+        sections' Datasets pages ([hub.domains], added to what it had); a dataset with none
+        shows on both. A paper (its arXiv id) is kept in sources/ to search, quote and cite."""
+        body = {"kind": kind, "id": id, "download": download, "domains": domains or []}
+        return await post("/hub/add", body)
+
+    @mcp.tool(annotations=READ)
+    async def datasets(
+        domain: Literal["behavior", "efficiency"] | None = None,
+    ) -> list[dict[str, Any]]:
+        """The project's datasets: the Hub datasets louped.toml lists (source "hub"), the files
+        under data/ at the project's root (JSONL, CSV, TSV, JSON, Parquet; source "local", id
+        its path such as data/x.jsonl), and the training sets louped reads (source
+        "training", read on the Training sets page). Each has id, source, domains (empty: listed
+        under both), path, format, size, rows and error. With domain, only those listed under
+        it or under none. Read one with dataset; add a Hub one with hub_add(kind="datasets",
+        domains=[...])."""
+        found = await get("/datasets")
+        return [d for d in found if domain is None or not d["domains"] or domain in d["domains"]]
+
+    @mcp.tool(annotations=LOOKUP)
+    async def dataset(
+        id: str, split: str | None = None, rows: int = 20, config: str | None = None
+    ) -> dict[str, Any]:
+        """One dataset with its first rows (rows, at most 100). id is a Hub id, or a file's
+        path from the project's root (data/x.jsonl). A Hub dataset gives its page (hub: card
+        excerpt, license, size, downloads), its splits by config with their row counts, its
+        features, and the first rows of config and split (default: the first the Hub's dataset
+        viewer lists), read with this machine's Hugging Face token; hub_error and error say
+        what could not be read and why (gated, no viewer for it, unreachable). A file gives
+        its columns with their types, its first rows and total. A training set's pairs are
+        on the Training sets page, not here."""
+        known = {d["id"]: d["source"] for d in await get("/datasets")}
+        local = known.get(id, "local" if id.startswith("data/") else "hub") != "hub"
+        if local:
+            return await get("/datasets/local", path=id, rows=rows)
+        return await get("/datasets/hub", id=id, config=config, split=split, rows=rows)
+
+    @mcp.tool(annotations=READ)
+    async def benchmarks(
+        domain: Literal["behavior", "efficiency"] = "behavior", search: str | None = None
+    ) -> list[dict[str, Any]]:
+        """behavior: every eval task (the project's, its Hub benchmarks louped/<name>,
+        inspect_evals'), each with runs (its finished eval runs), best (the top run: run,
+        model, score, metric, samples, created) and, for a Hub benchmark, spec (its field
+        mapping); tasks with runs first. search filters by task, title, group or about,
+        case-insensitively. efficiency: every weight format of every `louped bench` run, newest
+        first: model, setting, throughput (most tokens/s) at batch, prefill_ms at context
+        tokens, peak_mib, weights_mib, device, created, and best on each model's fastest. A
+        task's whole leaderboard is benchmark; run one with launch("eval", {"task": ...})."""
+        if domain == "efficiency":
+            return await get("/benchmarks/speed")
+        found = await get("/benchmarks")
+        if search:
+            word = search.lower()
+            found = [b for b in found
+                     if word in " ".join(str(v) for v in b["task"].values()).lower()]  # fmt: skip
+        return found
+
+    @mcp.tool(annotations=READ)
+    async def benchmark(name: str) -> dict[str, Any]:
+        """One eval task's leaderboard: its finished runs, best score first, each with run,
+        model, score (its first scorer's accuracy, else mean, else first metric), metric,
+        samples and created; with the task and, for a Hub benchmark, its spec. name is the task
+        as eval_tasks writes it (experiments/x/task.py@fn, louped/gsm8k, inspect_evals/gsm8k),
+        or a Hub benchmark's or inspect_evals' bare name."""
+        return await get("/benchmarks/board", task=name)
+
+    @mcp.tool(annotations=FETCH)
+    async def add_benchmark(
+        name: str,
+        dataset: str,
+        split: str,
+        input: str,
+        target: str,
+        choices: str | None = None,
+        scorer: Literal["match", "choice", "judge"] = "match",
+        config: str | None = None,
+    ) -> dict[str, Any]:
+        """Make a Hub dataset a benchmark, kept in louped.toml as [benchmarks.<name>] (a name
+        of lowercase letters, digits, - and _; one of that name is replaced). Each row of
+        dataset's config and split is a sample: input and target name its fields, choices a
+        field holding a list of choices. scorer: match (Inspect's match: the target at the end
+        of the reply), choice (multiple choice by letter; target is the right choice's index,
+        letter or text; needs choices) or judge (louped's local judge model grades the reply
+        against the target). The config, split and fields are checked against the Hub's
+        dataset viewer first and refused when wrong; checked says whether it could answer,
+        note why not. It is then the eval task louped/<name>: launch("eval", {"task":
+        "louped/<name>", "--model": ...}), and its leaderboard is benchmark(name)."""
+        body = {"name": name, "dataset": dataset, "config": config, "split": split,
+                "input": input, "target": target, "choices": choices, "scorer": scorer}  # fmt: skip
+        return await post("/benchmarks", body)
 
     @mcp.tool(annotations=READ)
     async def trace(ref: str) -> dict[str, Any]:
@@ -381,7 +580,8 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
     @mcp.tool(annotations=READ)
     async def eval_tasks(search: str | None = None) -> list[dict[str, Any]]:
         """Inspect tasks launch "eval" runs (option task): the project's @task functions
-        (experiments/<name>/task.py@fn), then inspect_evals' benchmarks (inspect_evals/<name>),
+        (experiments/<name>/task.py@fn), its Hub benchmarks (louped/<name>, add_benchmark),
+        then inspect_evals' benchmarks (inspect_evals/<name>),
         each with its title, group, what it measures and samples. search filters by any of
         them, case-insensitively."""
         found = await get("/evals")
@@ -542,12 +742,14 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         return await _wait(job_id, 10)
 
     @mcp.tool(annotations=WRITE)
-    async def new_experiment(name: str, domain: str) -> dict[str, Any]:
+    async def new_experiment(name: str, domain: str, project: str | None = None) -> dict[str, Any]:
         """Start a research question: experiments/<name>/ with its README to fill in and a run.py
         to write, active. name is kebab-case, named for the question; domain is one the project's
         louped.toml lists (else louped's own: mechanisms, honesty, conditioning, agents, context,
-        inference, specialisation, reproduction). Returns the finished job and its log."""
-        body = {"id": "new", "options": {"name": name, "--domain": domain}}
+        inference, specialisation, reproduction); project, when given, is a project it starts in
+        (one projects lists, not missing). Returns the finished job and its log."""
+        options = {"name": name, "--domain": domain, **({"--project": project} if project else {})}
+        body = {"id": "new", "options": options}
         job = await post("/launch", body)
         return await _wait(job["id"], 60)
 

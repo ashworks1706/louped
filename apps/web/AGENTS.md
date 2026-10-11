@@ -20,10 +20,12 @@ The UI is the product: quiet, dense, keyboard-first.
 - Type: Geist Sans for text, Geist Mono for numbers, ids and commands. Numbers right-aligned.
 - Every page answers one question. Its header says which, in one line (`src/lib/nav.ts`).
 - Every page has an empty state with what fills it: a link into the app (Launch, Load examples).
-  A terminal command only where the app cannot act, such as starting the server or making an
-  experiment folder (the app does not create experiment folders; it edits only a README and a
-  run's text files, with the text beside its rendering, and deletes only to the trash after
-  one confirm; never when shared). Layouts are the agent's to edit, not the app's.
+  A terminal command only where the app cannot act, such as starting the server, or on a
+  server that does not launch. The app creates a project folder and an experiment folder (New
+  project, New experiment: a README from its template and, for an experiment, a run.py). Past
+  that it edits only a README, a project's front matter, an experiment's `project:` line and a
+  run's text files, with the text beside its rendering, and deletes only to the trash after one
+  confirm; never when shared. Layouts are the agent's to edit, not the app's.
 - Launching opens the job's page; jobs are followed on Runs, never on Launch.
 - Every figure has a ? beside its title saying how to read it: the view's `about`, set where the
   figure is made.

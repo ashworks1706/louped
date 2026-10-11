@@ -82,14 +82,24 @@ def publish(out: Path, web: Path) -> Published:
         done.files += 1
         return got.json()
 
-    for path in ("/health", "/vectors", "/graphs", "/ui/layout", "/ui/theme"):
+    for path in ("/health", "/vectors", "/ui/layout", "/ui/theme"):
         save(path)
+    for graph in save("/graphs") or []:
+        save(f"/graphs/{_enc(graph['slug'])}")
     save("/playground", expected=False)  # no model is loaded in a snapshot
+    # the Datasets and Benchmarks lists, read-only: no Hub detail, the Hub is off in a snapshot
+    save("/datasets")
+    save("/benchmarks/speed")
+    for row in save("/benchmarks") or []:
+        if row["runs"]:
+            save(f"/benchmarks/board?task={_enc(row['task']['task'])}")
     layouts: set[str] = set()  # each run's page asks for its experiment's, listed or not
     for experiment in save("/experiments") or []:
         save(f"/experiments/{_enc(experiment['name'])}")
         layouts.add(experiment["name"])
         save(f"/ui/layout?experiment={_enc(experiment['name'])}")
+    for project in save("/projects") or []:
+        save(f"/projects/{_enc(project['name'])}")
     for run in save("/runs") or []:
         done.runs += 1
         rid = _enc(run["id"])

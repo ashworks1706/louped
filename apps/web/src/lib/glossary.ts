@@ -18,6 +18,30 @@ export const GLOSSARY = {
     "Its owner asks people to accept terms first. Ask for access on its Hub page, then use a token of that account.",
   upvotes: "Votes for the paper on the Hugging Face Hub's papers page.",
   hubSize: "Bytes the repository takes on the Hub: every file, every format.",
+  // datasets and benchmarks
+  datasetSource:
+    "hub: listed in louped.toml from the Hugging Face Hub. local: a file under data/ in the project. training: a training set louped reads, opened on Training sets.",
+  datasetDomains:
+    "The research sections whose Datasets page lists it. A dataset with none is listed on both.",
+  split:
+    "A named part of a dataset, such as train or test, inside one config (a subset of the dataset).",
+  feature: "A field of each row, with the type the dataset declares for it.",
+  fieldMapping:
+    "Which field of each row is the prompt (input), the right answer (target) and, for multiple choice, the list of choices.",
+  benchmarkScorer:
+    "match: the target at the end of the reply. choice: multiple choice, answered by letter. judge: louped's local judge model grades the reply against the target.",
+  benchmarkScore:
+    "The run's first scorer: its accuracy, else its mean, else its first metric. Higher is better.",
+  benchmarkRuns:
+    "Finished eval runs of this task. Runs that failed or are still running are not counted.",
+  throughput:
+    "The most tokens per second over a batch of identical requests, and the batch size that reached it.",
+  prefill:
+    "Milliseconds to read the longest prompt measured, before the first token. Lower is better.",
+  peakMemory:
+    "Most GPU memory in use while reading that prompt: weights plus activations. CUDA only.",
+  weightFormat: "How the weights were loaded: as saved, or quantized (int8, nf4, …).",
+  weightsMib: "Memory the loaded weights take, in MiB.",
   // runs
   kind: "eval: a model scored on a task. analysis: figures from a script, such as patching or a sweep. training: fine-tuning, with its curves.",
   headline: "The run's first reported metric, at its final value. Open the run for all of them.",
@@ -52,6 +76,23 @@ export const GLOSSARY = {
     "Share of replies that say again what an earlier assistant turn of the same conversation said: the same text, or 90% the same words.",
   echo: "Share of replies that copy the system prompt (20 words in a row, or all of a short one) or chat-template text (<|im_start|>, [INST], or Assistant: at the start).",
   loop: "Share of replies that repeat themselves: one run of 8 words occurs 3 times or more.",
+  // attribution graphs
+  influence:
+    "The node's share of the effect on the output, directly and through every later node. The output starts with its probability; each node passes what it gets to its inputs in proportion to their weights.",
+  keep_nodes:
+    "Keep the strongest nodes until they carry this share of the influence on the output. Lower shows the core of the circuit; higher shows more of it.",
+  keep_edges:
+    "Of the edges between kept nodes, keep the strongest until they carry this share of the influence.",
+  edge_weight:
+    "The direct effect of one node on another: positive (green) pushes it up, negative (red) pushes it down.",
+  error_node:
+    "What the transcoder does not explain at that layer and position: a dashed diamond. A strong one means part of the circuit is not in the features.",
+  activation: "How strongly the feature fires at its token position.",
+  // Probe's readout
+  entropy:
+    "How unsure the layer's guess is, in nats: 0 when it puts all its probability on one token.",
+  kl_final:
+    "How far the layer's guess is from the model's final one, in nats (KL divergence from the final distribution). 0 at the last layer.",
 } as const;
 
 export type Term = keyof typeof GLOSSARY;

@@ -14,6 +14,10 @@ export type SampleDetail = Schemas["SampleDetail"];
 export type ModelInput = Schemas["ModelInput"];
 export type Experiment = Schemas["Experiment"];
 export type ExperimentDetail = Schemas["ExperimentDetail"];
+export type Project = Schemas["Project"];
+export type ProjectDetail = Schemas["ProjectDetail"];
+export type ProjectMeta = Schemas["ProjectMeta"];
+export type DomainInfo = Schemas["DomainInfo"];
 type RunView = Schemas["RunView"];
 export type HeatmapView = Schemas["HeatmapView"];
 export type LineView = Schemas["LineView"];
@@ -51,12 +55,17 @@ export type TrainingSet = Schemas["TrainingSet"];
 export type SetPairs = Schemas["SetPairs"];
 export type Pair = Schemas["Pair"];
 type Graph = Schemas["Graph"];
+export type CircuitGraph = Schemas["CircuitGraph"];
+export type CircuitNode = Schemas["CircuitNode"];
+export type CircuitLink = Schemas["CircuitLink"];
+export type CircuitPins = Schemas["CircuitPins"];
 type Comparison = Schemas["Comparison"];
 export type PairedScore = Schemas["PairedScore"];
 export type PlaygroundInfo = Schemas["PlaygroundInfo"];
 type GenerateRequest = Schemas["GenerateRequest"];
 type InspectRequest = Schemas["InspectRequest"];
 type InspectResponse = Schemas["InspectResponse"];
+export type Readout = Schemas["Readout"];
 export type FeatureDashboard = Schemas["FeatureDashboard"];
 export type Launchable = Schemas["Launchable"];
 export type LaunchOption = Schemas["Option"];
@@ -64,6 +73,14 @@ export type Judge = Schemas["Judge"];
 export type AbSession = Schemas["AbSession"];
 export type AbResult = Schemas["AbResult"];
 export type EvalTask = Schemas["EvalTask"];
+export type Dataset = Schemas["Dataset"];
+export type DatasetDetail = Schemas["DatasetDetail"];
+export type Domain = NonNullable<Dataset["domains"]>[number];
+export type BenchmarkRow = Schemas["BenchmarkRow"];
+export type Leaderboard = Schemas["Leaderboard"];
+export type LeaderboardEntry = Schemas["Entry"];
+export type SpeedRow = Schemas["SpeedRow"];
+export type BenchmarkRequest = Schemas["BenchmarkRequest"];
 export type LaunchRequest = Schemas["LaunchRequest"];
 export type Job = Schemas["Job"];
 export type Target = Schemas["Target"];
@@ -161,6 +178,17 @@ export const readme = (name: string) =>
   get<{ text: string }>(`/experiments/${encodeURIComponent(name)}/readme`).then((r) => r.text);
 export const saveReadme = (name: string, text: string) =>
   put(`/experiments/${encodeURIComponent(name)}/readme`, { text });
+/** A project's README as written, front matter and all. */
+export const projectReadme = (name: string) =>
+  get<{ text: string }>(`/projects/${encodeURIComponent(name)}/readme`).then((r) => r.text);
+export const saveProjectReadme = (name: string, text: string) =>
+  put(`/projects/${encodeURIComponent(name)}/readme`, { text });
+/** Replaces a project's front matter, keeping its README's text. */
+export const saveProjectMeta = (name: string, meta: ProjectMeta) =>
+  put<ProjectDetail>(`/projects/${encodeURIComponent(name)}/meta`, meta);
+/** Puts an experiment in a project, or takes it out (null): only its front matter changes. */
+export const moveExperiment = (name: string, project: string | null) =>
+  put<ExperimentDetail>(`/experiments/${encodeURIComponent(name)}/project`, { project });
 /** Replaces a Markdown file a run logged. */
 export const saveArtifact = (run: string, path: string, text: string) =>
   put(
@@ -191,11 +219,22 @@ export const saveCohort = (experiment: string, name: string, cohort: Omit<Cohort
     `/experiments/${encodeURIComponent(experiment)}/cohorts/${encodeURIComponent(name)}`,
     cohort,
   );
+/** Keeps a graph's pinned nodes and groups in its file, where circuit-tracer's viewer reads them. */
+export const saveGraphPins = (slug: string, pins: CircuitPins) =>
+  put<CircuitPins>(`/graphs/${encodeURIComponent(slug)}/pins`, pins);
 export const deleteJob = (id: string) => del(`/launch/jobs/${encodeURIComponent(id)}`);
 
 async function post<T>(path: string, body: unknown): Promise<T> {
   return (await send(path, body)).json() as Promise<T>;
 }
+
+/** Writes projects/<name>/README.md with its front matter and sections to fill in; the server
+ * fills in the fields left out. */
+export const createProject = (body: { name: string } & Partial<ProjectMeta>) =>
+  post<ProjectDetail>("/projects", body);
+/** Writes experiments/<name>/ with its README and run.py, in a project when given. */
+export const createExperiment = (body: Schemas["NewExperiment"]) =>
+  post<ExperimentDetail>("/experiments", body);
 
 /** Streams a reply: onText gets each piece as the model writes it. Abort the signal to stop. */
 export async function generate(
@@ -276,7 +315,12 @@ export const sourceNotebook = (key: string) =>
 export const saveHubToken = (token: string) => post<HubAccount>("/hub/token", { token });
 /** Lists a model, embedding model or dataset in louped.toml (and downloads it as a job), or
  * keeps a paper as a source. */
-export const hubAdd = (body: Schemas["AddRequest"]) => post<Schemas["AddResult"]>("/hub/add", body);
+export const hubAdd = (
+  body: Pick<Schemas["AddRequest"], "kind" | "id"> & Partial<Schemas["AddRequest"]>,
+) => post<Schemas["AddResult"]>("/hub/add", body);
+/** A Hub dataset made a benchmark by a field mapping, checked against the dataset first. */
+export const addBenchmark = (body: BenchmarkRequest) =>
+  post<Schemas["AddedBenchmark"]>("/benchmarks", body);
 export const addSource = (body: Schemas["SourceRequest"]) => post<Source>("/sources", body);
 export const addPin = (body: Schemas["PinRequest"]) => post<Pin>("/pins", body);
 export const deletePin = (id: string) => del(`/pins/${encodeURIComponent(id)}`);
@@ -469,6 +513,10 @@ export const q = {
     queryFn: () => get<SetPairs>(`/training-sets/pairs?path=${encodeURIComponent(path)}`),
   }),
   graphs: () => ({ queryKey: ["graphs"], queryFn: () => get<Graph[]>("/graphs") }),
+  graph: (slug: string) => ({
+    queryKey: ["graphs", slug],
+    queryFn: () => get<CircuitGraph>(`/graphs/${encodeURIComponent(slug)}`),
+  }),
   launchables: () => ({
     queryKey: ["launchables"],
     queryFn: () => get<Launchable[]>("/launch"),
@@ -564,10 +612,60 @@ export const q = {
     queryFn: () =>
       get<AbResult>(`/ab/result?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`),
   }),
+  /** The project's datasets: Hub ones louped.toml lists, files under data/, training sets. */
+  datasets: () => ({
+    queryKey: ["datasets"],
+    queryFn: () => get<Dataset[]>("/datasets"),
+  }),
+  /** One Hub dataset's page, splits, features and first rows; off in a published dashboard. */
+  hubDataset: (id: string, config: string | null, split: string | null) => ({
+    queryKey: ["datasets", "hub", id, config, split],
+    queryFn: () =>
+      get<DatasetDetail>(
+        `/datasets/hub?${new URLSearchParams({ id, config: config ?? "", split: split ?? "" })}`,
+      ),
+    enabled: !isSnapshot(),
+    retry: false,
+    staleTime: 60_000,
+  }),
+  localDataset: (path: string) => ({
+    queryKey: ["datasets", "local", path],
+    queryFn: () => get<DatasetDetail>(`/datasets/local?path=${encodeURIComponent(path)}`),
+    enabled: !isSnapshot(),
+    retry: false,
+  }),
+  /** Every eval task with its leaderboard's size and top run. */
+  benchmarks: () => ({
+    queryKey: ["benchmarks"],
+    queryFn: () => get<BenchmarkRow[]>("/benchmarks"),
+  }),
+  leaderboard: (task: string) => ({
+    queryKey: ["benchmarks", "board", task],
+    queryFn: () => get<Leaderboard>(`/benchmarks/board?task=${encodeURIComponent(task)}`),
+  }),
+  /** Each weight format of each louped bench run. */
+  speed: () => ({
+    queryKey: ["benchmarks", "speed"],
+    queryFn: () => get<SpeedRow[]>("/benchmarks/speed"),
+  }),
   /** Every Inspect task Launch's eval runs: the project's, then inspect_evals'. */
   evalTasks: () => ({
     queryKey: ["eval-tasks"],
     queryFn: () => get<EvalTask[]>("/evals"),
+  }),
+  projects: () => ({
+    queryKey: ["projects"],
+    queryFn: () => get<Project[]>("/projects"),
+  }),
+  project: (name: string) => ({
+    queryKey: ["project", name],
+    queryFn: () => get<ProjectDetail>(`/projects/${encodeURIComponent(name)}`),
+  }),
+  /** The domains a new experiment can be filed under. */
+  domains: () => ({
+    queryKey: ["domains"],
+    queryFn: () => get<DomainInfo[]>("/domains"),
+    staleTime: Infinity,
   }),
   experiment: (name: string) => ({
     queryKey: ["experiment", name],

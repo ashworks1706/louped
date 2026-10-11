@@ -126,7 +126,7 @@ test("patch, dose and speed send their requests and draw what comes back", async
   expect(bodies.dose).toMatchObject({ vector: "caving", layer: 1, alphas: [-2, 0, 2] });
   await page.screenshot({ path: info.outputPath("dose.png"), fullPage: true });
 
-  // Speed is a cost, so it lives on Benchmark, under Efficiency.
+  // Speed is a cost, so it lives on the Speed page, under Efficiency.
   await page.goto("/efficiency/benchmark/");
   await expect(page.getByRole("tab", { name: "Speed" })).toHaveAttribute("data-state", "active");
   await expect(page.getByRole("tab", { name: "Patch" })).toHaveCount(0);

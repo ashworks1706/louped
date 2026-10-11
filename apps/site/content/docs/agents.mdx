@@ -17,33 +17,38 @@ test.
 
 ## Tools the agent gets
 
-| Tool                                                     | What it does                                          |
-| -------------------------------------------------------- | ----------------------------------------------------- |
-| `status`                                                 | The server's version, home, and whether it launches   |
-| `experiments`, `experiment`, `runs`, `run`               | Lists questions and runs                              |
-| `samples`, `sample`, `figures`, `figure`, `compare`      | Reads results                                         |
-| `new_experiment`                                         | Starts a question                                     |
-| `launchables`, `launch_options`, `launch`                | Starts a job                                          |
-| `jobs`, `job`, `cancel_job`                              | Follows or stops jobs                                 |
-| `submit_job`                                             | Sends a job to a cluster over ssh and follows it      |
-| `export_job`, `import_result`                            | Sends a job to a cluster or Colab, brings it back     |
-| `push`, `pull`                                           | Shares runs through the remote                        |
-| `ui_page`, `ui_selection`                                | Reads the app's pages and what you picked             |
-| `set_part`, `set_layout`, `set_preset`                   | Changes what a page shows                             |
-| `ui_show`                                                | Points you at parts of a page, with a note            |
-| `cohort`, `cohorts`, `save_cohort`                       | Reads and saves a set of a run's items                |
-| `eval_tasks`, `judges`, `new_judge`                      | Finds eval tasks; lists and writes judges             |
-| `ab_results`                                             | Reads your blind A/B picks of two runs                |
-| `add_view`, `derive`                                     | Adds a figure or columns from a run's files           |
-| `check_view`, `add_page`                                 | Checks a board, and keeps one as a page of its own    |
-| `preview_view`                                           | Draws a figure as an image for the agent to check     |
-| `vectors`                                                | Lists saved directions                                |
-| `sources`, `search_sources`, `source_page`, `add_source` | Searches, quotes and keeps the project's sources      |
-| `pins`, `pin`                                            | Reads and pins the passages a claim rests on          |
-| `hub_search`, `hub_info`, `hub_add`                      | Finds and adds Hugging Face models, data and papers   |
-| `trace`                                                  | Follows a figure's point to its rows, script and code |
-| `check`                                                  | Finds numbers and citations with no source            |
-| `reports`, `export_figure`                               | Lists reports/ and exports a figure into it           |
+| Tool                                                     | What it does                                            |
+| -------------------------------------------------------- | ------------------------------------------------------- |
+| `status`                                                 | The server's version, home, and whether it launches     |
+| `experiments`, `experiment`, `runs`, `run`               | Lists questions and runs                                |
+| `samples`, `sample`, `figures`, `figure`, `compare`      | Reads results                                           |
+| `new_experiment`                                         | Starts a question, in a project when given              |
+| `projects`, `project`                                    | Lists projects; reads one with its experiments          |
+| `new_project`, `set_project`, `move_experiment`          | Makes and changes projects; moves an experiment         |
+| `launchables`, `launch_options`, `launch`                | Starts a job                                            |
+| `jobs`, `job`, `cancel_job`                              | Follows or stops jobs                                   |
+| `submit_job`                                             | Sends a job to a cluster over ssh and follows it        |
+| `export_job`, `import_result`                            | Sends a job to a cluster or Colab, brings it back       |
+| `push`, `pull`                                           | Shares runs through the remote                          |
+| `ui_page`, `ui_selection`                                | Reads the app's pages and what you picked               |
+| `set_part`, `set_layout`, `set_preset`                   | Changes what a page shows                               |
+| `ui_show`                                                | Points you at parts of a page, with a note              |
+| `cohort`, `cohorts`, `save_cohort`                       | Reads and saves a set of a run's items                  |
+| `eval_tasks`, `judges`, `new_judge`                      | Finds eval tasks; lists and writes judges               |
+| `ab_results`                                             | Reads your blind A/B picks of two runs                  |
+| `add_view`, `derive`                                     | Adds a figure or columns from a run's files             |
+| `check_view`, `add_page`                                 | Checks a board, and keeps one as a page of its own      |
+| `preview_view`                                           | Draws a figure as an image for the agent to check       |
+| `circuit`, `pin_circuit`                                 | Reads an attribution graph's strongest nodes; pins some |
+| `vectors`                                                | Lists saved directions                                  |
+| `sources`, `search_sources`, `source_page`, `add_source` | Searches, quotes and keeps the project's sources        |
+| `pins`, `pin`                                            | Reads and pins the passages a claim rests on            |
+| `hub_search`, `hub_info`, `hub_add`                      | Finds and adds Hugging Face models, data and papers     |
+| `datasets`, `dataset`                                    | Lists a domain's datasets; reads one dataset's rows     |
+| `benchmarks`, `benchmark`, `add_benchmark`               | Reads leaderboards; makes a Hub dataset a benchmark     |
+| `trace`                                                  | Follows a figure's point to its rows, script and code   |
+| `check`                                                  | Finds numbers and citations with no source              |
+| `reports`, `export_figure`                               | Lists reports/ and exports a figure into it             |
 
 Work the agent starts shows in the app like your own. To ask about or change a part of a page,
 Shift+click it. You can pick as many parts as you like. Your agent gets them with their data. In

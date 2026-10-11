@@ -38,6 +38,8 @@ projects; each project is its own folder and repository. `louped init` makes one
 my-research/
   louped.toml          marks the root (commands find it from any subfolder) and lists its domains
   experiments/        the questions, written by the person and their agent; committed
+  projects/           goals that group experiments (project: in an experiment's README);
+                      committed
   AGENTS.md, .mcp.json, .claude/skills/, .claude/settings.json
                       the harness for the person's own coding agent
   .louped/             what louped writes: runs, logs, jobs, vendored harnesses; gitignored
@@ -45,7 +47,8 @@ my-research/
 
 What is written by hand is versioned. What louped writes can be deleted and rebuilt by running the
 experiments. `louped.core.project` finds the root. `louped.core.paths` puts `.louped/` and
-`experiments/` there, unless `LOUPED_HOME` and `LOUPED_EXPERIMENTS` set other paths.
+`experiments/` and `projects/` there, unless `LOUPED_HOME`, `LOUPED_EXPERIMENTS` and
+`LOUPED_PROJECTS` set other paths.
 
 louped's own repository is not a project. It holds the package and, under `src/louped/templates/`,
 the files that `init` copies. These files are also served to Claude Code as a plugin through
@@ -72,7 +75,7 @@ The same policy runs in:
 
 - an Inspect eval (through the `louped/` provider, agents with tools included)
 - a training run
-- the Probe and Benchmark tools
+- the Probe and Speed tools
 - an analysis
 
 Thus one eval, one scorer and one view compare the base, steered, ablated, fine-tuned and prompted
@@ -89,7 +92,7 @@ RL environment without a rewrite.
 | SFT, DPO, GRPO, LoRA, prompt tuning, adapter merging | TRL, PEFT, unsloth | library |
 | RL environments, verifiable tasks, answer checks | TRL, reasoning-gym, math-verify | library |
 | SAEs | SAELens | library; dashboards computed by `louped features` |
-| Attribution graphs | circuit-tracer | own environment through uv (`louped circuit`); its viewer served on the Circuits page |
+| Attribution graphs | circuit-tracer | own environment through uv (`louped circuit`); the Circuits page draws its graphs, its viewer is a link |
 | Representation fine-tuning (LoReFT) | pyreft | own environment through uv (`louped train reft`) |
 | Probes | scikit-learn | library |
 | Retrieval, reranking, NLI | bm25s, sentence-transformers | library |
@@ -147,7 +150,7 @@ retrieval and SAEs. A package imports only packages below it.
 ```
 experiments                              leaf, in a project; nothing imports it
 cli
-server | agent | init | picks           FastAPI over the stores; Probe and Benchmark; jobs; the
+server | agent | init | picks           FastAPI over the stores; Probe and Speed; jobs; the
                                          MCP server, an HTTP client of the API; louped init; the
                                          prompt hook that hands the agent the person's picks
 check                                    what in the project's write-ups is not grounded
@@ -203,6 +206,12 @@ core                                     run metadata, paths, the project and it
 - Judges: `judges/<name>.py` in the project, read without running for the list
   (`louped.core.judges`) and imported only by a judging job. Eval tasks are Inspect tasks: the
   project's `@task` functions and inspect_evals' `eval.yaml` metadata (`louped.stores.catalog`).
+- Datasets: the Hub datasets in louped.toml's `[hub]` (their domains in `[hub.domains]`), the
+  files in the project's `data/`, and the training sets (server/datasets.py). Hub rows come from
+  the Hub's dataset viewer. A Hub dataset becomes an eval with a field mapping in
+  `[benchmarks.<name>]` (`louped.core.benchmarks`). It runs as the Inspect task `louped/<name>`
+  (`louped.inspect_ext.benchmark`, registered by the entry point). Leaderboards read the eval
+  logs and the `louped bench` runs (`louped.stores.leaderboards`).
 - Directions: one safetensors file each under `<LOUPED_HOME>/vectors`, provenance in the header,
   read without torch so `louped serve` starts without importing it.
 - SAEs load through SAELens; louped reads the residual at the SAE's hook with nnsight, so the model
@@ -219,9 +228,9 @@ core                                     run metadata, paths, the project and it
 server in production. The server owns no database and no auth.
 Every route reads what another tool wrote.
 
-Three parts compute: the Probe and Benchmark tools, job launch, and model load.
+Three parts compute: the Probe and Speed tools, job launch, and model load.
 
-- The tools (server/playground.py, behind the Probe and Benchmark pages):
+- The tools (server/playground.py, behind the Probe and Speed pages):
   - generate streams a reply and continues a conversation.
   - inspect returns a prompt's views.
   - patch patches the residual stream or heads between a clean and a corrupt prompt.
@@ -266,12 +275,12 @@ Pages: a top bar of sections is over a sidebar of the section's pages. The sideb
 
 | Section | Pages |
 |---|---|
-| Workspace | Home, Runs (jobs with their progress, then every run), Compare, Launch, Sources, Hub and Reports, with Run, Job, Source and Report detail |
-| `/behavior/` | Overview, Experiments, Probe (reply, inspect, patch, dose), Vectors, Circuits, Feature |
-| `/efficiency/` | Overview, Experiments, Benchmark (speed, reply), Training |
+| Workspace | Home, Projects (with each project's page), Runs (jobs with their progress, then every run), Compare, Launch, Sources, Hub and Reports, with Run, Job, Source and Report detail |
+| `/behavior/` | Overview, Experiments, Probe (reply, inspect, patch, dose), Vectors, Training sets, Datasets, Benchmarks (eval leaderboards), Training, Circuits, Feature |
+| `/efficiency/` | Overview, Experiments, Speed (speed, reply), Datasets, Benchmarks (`louped bench` leaderboard), Training |
 
 Each research domain lives under its own path. An experiment's page is under its domain's path.
-Probe and Benchmark are one set of tools (server/playground.py); each page shows its own. Every
+Probe and Speed are one set of tools (server/playground.py); each page shows its own. Every
 technical term has a ? from `apps/web/src/lib/glossary.ts`.
 
 Home, a run's page and an experiment's page are data (server/ui.py). They are regions

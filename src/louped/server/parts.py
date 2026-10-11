@@ -157,8 +157,8 @@ KINDS: list[Kind] = [
     _k(part="artifacts/whole/*", about="A folder's JSONL files read as one.", rules=PICK),
     _k(part="artifacts/*", about="The file filter and the open file.", rules=PICK),
     # an experiment's page and the lists of them
-    _k(part="experiment/meta/*", about="The experiment's axis, domain, runs or last run.",
-       rules=LIST),
+    _k(part="experiment/meta/*", about="The experiment's axis, domain, project, runs or last "
+       "run.", rules=LIST),
     _k(part="experiment/launch/*", about="Opens Launch on one of the experiment's scripts.",
        rules=PICK),
     _k(part="experiment/view/*", about="A figure an agent added to the experiment's page, by "
@@ -172,6 +172,24 @@ KINDS: list[Kind] = [
     _k(part="experiments/domain/*", about="A domain's heading in a list.", rules=PICK),
     _k(part="experiments/filter/*", about="A status filter: all, active, answered, parked.",
        rules=PICK),
+    _k(part="experiments/project", about="Shows only one project's experiments.",
+       rules=CONTROL),
+    # the projects and one project's page
+    _k(part="projects/card/*", about="One project in the list, by name.", rules=PICK),
+    _k(part="projects/new", about="Starts a project: projects/<name>/README.md.",
+       rules=["hidden"]),
+    _k(part="projects/new-experiment", about="Starts an experiment in the project.",
+       rules=["hidden"]),
+    _k(part="projects/edit", about="Edits the project's metadata.", rules=["hidden"]),
+    _k(part="projects/section/*", about="The project's readme, metadata, experiments or runs.",
+       rules=["hidden", "note"]),
+    _k(part="projects/meta/*", about="One field of the project's metadata: links, models, "
+       "datasets, benchmarks, tags.", rules=LIST),
+    _k(part="projects/link/*", about="One of the project's links, by name.", rules=PICK),
+    _k(part="projects/dialog/*", about="A form: new-project, new-experiment or edit (the "
+       "metadata).", rules=PICK),
+    _k(part="projects/*", about="The count of projects; a project's title, status, summary and "
+       "back link; the note on a project with no README and its create button.", rules=PICK),
     # runs tables
     _k(part="runs/column/*", about="A column of a runs table: select, run, kind, model, "
        "headline, status, created.", rules=LIST),
@@ -213,6 +231,19 @@ KINDS: list[Kind] = [
     _k(part="playground/reply/*", about="The base or intervened reply.", rules=PICK),
     _k(part="playground/figure/*", about="A figure a tool drew, by its title (logit-lens).",
        rules=["hidden", "note", "order"]),
+    _k(part="playground/readout", about="Inspect's readout: every panel at the picked token.",
+       rules=PICK),
+    _k(part="playground/readout/tokens", about="The prompt's tokens: pick the position to read.",
+       rules=PICK),
+    _k(part="playground/readout/target", about="The token every panel follows, and its "
+       "probability and rank at the output.", rules=PICK),
+    _k(part="playground/readout/panel/*", about="A readout panel: lens, target, certainty, dla, "
+       "heads.", rules=["hidden", "note"]),
+    _k(part="playground/readout/cell", about="The lens cell under the cursor: its top tokens.",
+       rules=PICK),
+    _k(part="playground/readout/heads-metric", about="What the heads grid scores.", rules=PICK),
+    _k(part="playground/readout/head", about="The picked head: what the token reads through it.",
+       rules=PICK),
     # saved vectors
     _k(part="vectors/model/*", about="A model's heading over its vectors.", rules=PICK),
     _k(part="vectors/column/*", about="A column of the vectors table.", rules=PICK),
@@ -223,7 +254,30 @@ KINDS: list[Kind] = [
     _k(part="curves/metric/*", about="One metric's curve over steps.", rules=PICK),
     # attribution graphs
     _k(part="circuits/graph", about="Which graph is shown.", rules=PICK),
-    _k(part="circuits/viewer", about="circuit-tracer's viewer of the graph.", rules=PICK),
+    _k(part="circuits/viewer", about="A link to the graph in circuit-tracer's own viewer.",
+       rules=PICK),
+    _k(part="circuits/prompt", about="The graph's prompt, token by token.", rules=PICK),
+    _k(part="circuits/stat/*", about="One number about the graph: output, nodes, edges, "
+       "unexplained.", rules=["hidden", "label", "about", "note"]),
+    _k(part="circuits/prune/*", about="A slider: the share of influence the shown nodes or "
+       "edges carry.", rules=PICK),
+    _k(part="circuits/view", about="The pruned graph, or only the pinned nodes.", rules=PICK),
+    _k(part="circuits/save", about="Saves the pins into the graph file.", rules=PICK),
+    _k(part="circuits/figure", about="The attribution graph with its title and how to read it.",
+       rules=["label", "about", "note"]),
+    _k(part="circuits/canvas", about="The graph: token positions across, layers up.",
+       rules=PICK),
+    _k(part="circuits/node/*", about="One node of the graph, by circuit-tracer's node id.",
+       rules=PICK),
+    _k(part="circuits/legend", about="What the shapes and colours mean.", rules=["hidden"]),
+    _k(part="circuits/panel", about="The side panel: the picked node, or the strongest ones.",
+       rules=PICK),
+    _k(part="circuits/node-detail/*", about="The picked node: influence, activation, inputs and "
+       "outputs.", rules=PICK),
+    _k(part="circuits/pin", about="Pins or unpins the picked node.", rules=PICK),
+    _k(part="circuits/member/*", about="One node of the picked group.", rules=PICK),
+    _k(part="circuits/top", about="The outputs and the strongest features.", rules=PICK),
+    _k(part="circuits/pinned", about="The pinned nodes and their groups.", rules=PICK),
     # an SAE feature
     _k(part="feature/figure/*", about="Promotes, suppresses, histogram or examples.",
        rules=["hidden", "note"]),
@@ -266,6 +320,43 @@ KINDS: list[Kind] = [
     _k(part="hub/hit/*/*", about="One result, by kind and Hub id.", rules=PICK),
     _k(part="hub/detail/*", about="The open result's title, facts, card, abstract, links and "
        "actions.", rules=PICK),
+    # Datasets (Behavior and Efficiency)
+    _k(part="datasets/heading", about="The count of datasets on the page.", rules=PICK),
+    _k(part="datasets/column/*", about="A column of the datasets: name, source, format, size, "
+       "listed under.", rules=PICK),
+    _k(part="datasets/row/*", about="One dataset, by its Hub id or its path from the project's "
+       "root.", rules=PICK),
+    _k(part="datasets/hub", about="Search the Hub's datasets and add one to this page.",
+       rules=["hidden", "note"]),
+    _k(part="datasets/search", about="Search the Hub's datasets.", rules=PICK),
+    _k(part="datasets/clear", about="Clears the Hub search.", rules=PICK),
+    _k(part="datasets/hit-column/*", about="A column of the Hub's results.", rules=PICK),
+    _k(part="datasets/hit/*", about="One dataset the Hub search found, by its id.", rules=PICK),
+    _k(part="datasets/add/*", about="Adds that dataset to this page's domain.", rules=PICK),
+    _k(part="datasets/detail/*", about="The open dataset's title, actions, facts, split, "
+       "features, rows, card and errors.", rules=PICK),
+    _k(part="datasets/field/*", about="A field (column) of the open dataset's rows.", rules=PICK),
+    _k(part="datasets/sample/*", about="One of the open dataset's first rows, by its index.",
+       rules=PICK),
+    # Benchmarks (Behavior: eval tasks; Efficiency: speed)
+    _k(part="benchmarks/search", about="Filters the eval tasks.", rules=PICK),
+    _k(part="benchmarks/add", about="Makes a Hub dataset a benchmark.", rules=["hidden"]),
+    _k(part="benchmarks/form", about="The new benchmark's form.", rules=PICK),
+    _k(part="benchmarks/form/*", about="A field of the new benchmark's form.", rules=PICK),
+    _k(part="benchmarks/column/*", about="A column of the eval tasks.", rules=PICK),
+    _k(part="benchmarks/task/*", about="One eval task with its runs and best score, by task.",
+       rules=PICK),
+    _k(part="benchmarks/more", about="How many tasks without runs a search would show.",
+       rules=["hidden"]),
+    _k(part="benchmarks/board/*", about="The open task's title, Launch, about, field mapping or "
+       "empty note.", rules=PICK),
+    _k(part="benchmarks/entry-column/*", about="A column of the leaderboard.", rules=PICK),
+    _k(part="benchmarks/entry/*", about="One run on the leaderboard, by run id.", rules=PICK),
+    _k(part="benchmarks/show/*", about="Speed runs newest first, or each model's fastest.",
+       rules=PICK),
+    _k(part="benchmarks/speed-column/*", about="A column of the speed benchmarks.", rules=PICK),
+    _k(part="benchmarks/speed/*/*", about="One weight format of one louped bench run, by run "
+       "and setting.", rules=PICK),
     # Reports
     _k(part="reports/heading", about="The count of files in reports/.", rules=PICK),
     _k(part="reports/table", about="The files in reports/.", rules=["note"]),

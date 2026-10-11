@@ -311,7 +311,7 @@
   },
   {
     "part": "experiment/meta/*",
-    "about": "The experiment's axis, domain, runs or last run.",
+    "about": "The experiment's axis, domain, project, runs or last run.",
     "rules": ["hidden", "label", "about", "order"]
   },
   {
@@ -352,6 +352,56 @@
   {
     "part": "experiments/filter/*",
     "about": "A status filter: all, active, answered, parked.",
+    "rules": []
+  },
+  {
+    "part": "experiments/project",
+    "about": "Shows only one project's experiments.",
+    "rules": ["hidden", "label", "default"]
+  },
+  {
+    "part": "projects/card/*",
+    "about": "One project in the list, by name.",
+    "rules": []
+  },
+  {
+    "part": "projects/new",
+    "about": "Starts a project: projects/<name>/README.md.",
+    "rules": ["hidden"]
+  },
+  {
+    "part": "projects/new-experiment",
+    "about": "Starts an experiment in the project.",
+    "rules": ["hidden"]
+  },
+  {
+    "part": "projects/edit",
+    "about": "Edits the project's metadata.",
+    "rules": ["hidden"]
+  },
+  {
+    "part": "projects/section/*",
+    "about": "The project's readme, metadata, experiments or runs.",
+    "rules": ["hidden", "note"]
+  },
+  {
+    "part": "projects/meta/*",
+    "about": "One field of the project's metadata: links, models, datasets, benchmarks, tags.",
+    "rules": ["hidden", "label", "about", "order"]
+  },
+  {
+    "part": "projects/link/*",
+    "about": "One of the project's links, by name.",
+    "rules": []
+  },
+  {
+    "part": "projects/dialog/*",
+    "about": "A form: new-project, new-experiment or edit (the metadata).",
+    "rules": []
+  },
+  {
+    "part": "projects/*",
+    "about": "The count of projects; a project's title, status, summary and back link; the note on a project with no README and its create button.",
     "rules": []
   },
   {
@@ -470,6 +520,41 @@
     "rules": ["hidden", "note", "order"]
   },
   {
+    "part": "playground/readout",
+    "about": "Inspect's readout: every panel at the picked token.",
+    "rules": []
+  },
+  {
+    "part": "playground/readout/tokens",
+    "about": "The prompt's tokens: pick the position to read.",
+    "rules": []
+  },
+  {
+    "part": "playground/readout/target",
+    "about": "The token every panel follows, and its probability and rank at the output.",
+    "rules": []
+  },
+  {
+    "part": "playground/readout/panel/*",
+    "about": "A readout panel: lens, target, certainty, dla, heads.",
+    "rules": ["hidden", "note"]
+  },
+  {
+    "part": "playground/readout/cell",
+    "about": "The lens cell under the cursor: its top tokens.",
+    "rules": []
+  },
+  {
+    "part": "playground/readout/heads-metric",
+    "about": "What the heads grid scores.",
+    "rules": []
+  },
+  {
+    "part": "playground/readout/head",
+    "about": "The picked head: what the token reads through it.",
+    "rules": []
+  },
+  {
     "part": "vectors/model/*",
     "about": "A model's heading over its vectors.",
     "rules": []
@@ -501,7 +586,82 @@
   },
   {
     "part": "circuits/viewer",
-    "about": "circuit-tracer's viewer of the graph.",
+    "about": "A link to the graph in circuit-tracer's own viewer.",
+    "rules": []
+  },
+  {
+    "part": "circuits/prompt",
+    "about": "The graph's prompt, token by token.",
+    "rules": []
+  },
+  {
+    "part": "circuits/stat/*",
+    "about": "One number about the graph: output, nodes, edges, unexplained.",
+    "rules": ["hidden", "label", "about", "note"]
+  },
+  {
+    "part": "circuits/prune/*",
+    "about": "A slider: the share of influence the shown nodes or edges carry.",
+    "rules": []
+  },
+  {
+    "part": "circuits/view",
+    "about": "The pruned graph, or only the pinned nodes.",
+    "rules": []
+  },
+  {
+    "part": "circuits/save",
+    "about": "Saves the pins into the graph file.",
+    "rules": []
+  },
+  {
+    "part": "circuits/figure",
+    "about": "The attribution graph with its title and how to read it.",
+    "rules": ["label", "about", "note"]
+  },
+  {
+    "part": "circuits/canvas",
+    "about": "The graph: token positions across, layers up.",
+    "rules": []
+  },
+  {
+    "part": "circuits/node/*",
+    "about": "One node of the graph, by circuit-tracer's node id.",
+    "rules": []
+  },
+  {
+    "part": "circuits/legend",
+    "about": "What the shapes and colours mean.",
+    "rules": ["hidden"]
+  },
+  {
+    "part": "circuits/panel",
+    "about": "The side panel: the picked node, or the strongest ones.",
+    "rules": []
+  },
+  {
+    "part": "circuits/node-detail/*",
+    "about": "The picked node: influence, activation, inputs and outputs.",
+    "rules": []
+  },
+  {
+    "part": "circuits/pin",
+    "about": "Pins or unpins the picked node.",
+    "rules": []
+  },
+  {
+    "part": "circuits/member/*",
+    "about": "One node of the picked group.",
+    "rules": []
+  },
+  {
+    "part": "circuits/top",
+    "about": "The outputs and the strongest features.",
+    "rules": []
+  },
+  {
+    "part": "circuits/pinned",
+    "about": "The pinned nodes and their groups.",
     "rules": []
   },
   {
@@ -637,6 +797,131 @@
   {
     "part": "hub/detail/*",
     "about": "The open result's title, facts, card, abstract, links and actions.",
+    "rules": []
+  },
+  {
+    "part": "datasets/heading",
+    "about": "The count of datasets on the page.",
+    "rules": []
+  },
+  {
+    "part": "datasets/column/*",
+    "about": "A column of the datasets: name, source, format, size, listed under.",
+    "rules": []
+  },
+  {
+    "part": "datasets/row/*",
+    "about": "One dataset, by its Hub id or its path from the project's root.",
+    "rules": []
+  },
+  {
+    "part": "datasets/hub",
+    "about": "Search the Hub's datasets and add one to this page.",
+    "rules": ["hidden", "note"]
+  },
+  {
+    "part": "datasets/search",
+    "about": "Search the Hub's datasets.",
+    "rules": []
+  },
+  {
+    "part": "datasets/clear",
+    "about": "Clears the Hub search.",
+    "rules": []
+  },
+  {
+    "part": "datasets/hit-column/*",
+    "about": "A column of the Hub's results.",
+    "rules": []
+  },
+  {
+    "part": "datasets/hit/*",
+    "about": "One dataset the Hub search found, by its id.",
+    "rules": []
+  },
+  {
+    "part": "datasets/add/*",
+    "about": "Adds that dataset to this page's domain.",
+    "rules": []
+  },
+  {
+    "part": "datasets/detail/*",
+    "about": "The open dataset's title, actions, facts, split, features, rows, card and errors.",
+    "rules": []
+  },
+  {
+    "part": "datasets/field/*",
+    "about": "A field (column) of the open dataset's rows.",
+    "rules": []
+  },
+  {
+    "part": "datasets/sample/*",
+    "about": "One of the open dataset's first rows, by its index.",
+    "rules": []
+  },
+  {
+    "part": "benchmarks/search",
+    "about": "Filters the eval tasks.",
+    "rules": []
+  },
+  {
+    "part": "benchmarks/add",
+    "about": "Makes a Hub dataset a benchmark.",
+    "rules": ["hidden"]
+  },
+  {
+    "part": "benchmarks/form",
+    "about": "The new benchmark's form.",
+    "rules": []
+  },
+  {
+    "part": "benchmarks/form/*",
+    "about": "A field of the new benchmark's form.",
+    "rules": []
+  },
+  {
+    "part": "benchmarks/column/*",
+    "about": "A column of the eval tasks.",
+    "rules": []
+  },
+  {
+    "part": "benchmarks/task/*",
+    "about": "One eval task with its runs and best score, by task.",
+    "rules": []
+  },
+  {
+    "part": "benchmarks/more",
+    "about": "How many tasks without runs a search would show.",
+    "rules": ["hidden"]
+  },
+  {
+    "part": "benchmarks/board/*",
+    "about": "The open task's title, Launch, about, field mapping or empty note.",
+    "rules": []
+  },
+  {
+    "part": "benchmarks/entry-column/*",
+    "about": "A column of the leaderboard.",
+    "rules": []
+  },
+  {
+    "part": "benchmarks/entry/*",
+    "about": "One run on the leaderboard, by run id.",
+    "rules": []
+  },
+  {
+    "part": "benchmarks/show/*",
+    "about": "Speed runs newest first, or each model's fastest.",
+    "rules": []
+  },
+  {
+    "part": "benchmarks/speed-column/*",
+    "about": "A column of the speed benchmarks.",
+    "rules": []
+  },
+  {
+    "part": "benchmarks/speed/*/*",
+    "about": "One weight format of one louped bench run, by run and setting.",
     "rules": []
   },
   {

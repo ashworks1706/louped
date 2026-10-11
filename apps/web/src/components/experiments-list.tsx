@@ -1,20 +1,21 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { FlaskConical } from "lucide-react";
+import { FlaskConical, FolderKanban } from "lucide-react";
 import Link from "next/link";
-import { parseAsStringLiteral, useQueryState } from "nuqs";
+import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 
 import { EmptyState } from "@/components/empty-state";
-import { part, partId } from "@/components/parts";
+import { part, partId, useRules } from "@/components/parts";
 import { MetricValue } from "@/components/metric";
 import { QueryState } from "@/components/query-state";
-import { q, type Experiment } from "@/lib/api";
+import { NativeSelect } from "@/components/ui/native-select";
+import { q, type Experiment, type Project } from "@/lib/api";
 import { ago, headline, metricLabel } from "@/lib/format";
 import { experimentHref } from "@/lib/href";
 import { cn } from "@/lib/utils";
 
-type Status = Experiment["status"];
+type Status = Experiment["status"] | Project["status"];
 type Axis = "behavior" | "efficiency";
 
 const FILTERS = ["all", "active", "parked", "answered"] as const;
@@ -26,47 +27,72 @@ const inAxis = (e: Experiment, axis: Axis) =>
 /** The domain an empty state's command names, one that exists on each axis. */
 const EXAMPLE_DOMAIN: Record<Axis, string> = { behavior: "honesty", efficiency: "inference" };
 
-/** One axis's experiments grouped by domain, filtered by status through ?status=. */
+/** One axis's experiments grouped by domain, filtered by status through ?status= and by
+ * project through ?project=. */
 export function ExperimentsList({ axis }: { axis: Axis }) {
   const [status, setStatus] = useQueryState(
     "status",
     parseAsStringLiteral(FILTERS).withDefault("all"),
   );
+  const [chosen, setProject] = useQueryState("project", parseAsString);
+  const rule = useRules()("experiments/project");
+  const project = chosen ?? rule.default ?? null;
   const experiments = useQuery(q.experiments());
   return (
     <QueryState query={experiments}>
       {(everything) => {
-        const all = everything.filter((e) => inAxis(e, axis));
-        if (all.length === 0) return <NoExperiments axis={axis} />;
+        const axisAll = everything.filter((e) => inAxis(e, axis));
+        if (axisAll.length === 0) return <NoExperiments axis={axis} />;
+        const projects = [...new Set(axisAll.flatMap((e) => (e.project ? [e.project] : [])))];
+        const all = project ? axisAll.filter((e) => e.project === project) : axisAll;
         const shown = status === "all" ? all : all.filter((e) => e.status === status);
         return (
           <div className="flex flex-col gap-8">
-            <div
-              role="group"
-              aria-label="Status"
-              className="bg-muted/50 flex w-fit items-center gap-0.5 rounded-lg border p-0.5"
-            >
-              {FILTERS.map((f) => {
-                const n = f === "all" ? all.length : all.filter((e) => e.status === f).length;
-                return (
-                  <button
-                    key={f}
-                    type="button"
-                    {...part(partId("experiments/filter", f))}
-                    aria-pressed={status === f}
-                    onClick={() => void setStatus(f === "all" ? null : f)}
-                    className={cn(
-                      "focus-visible:ring-ring/30 flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs capitalize outline-none focus-visible:ring-[3px]",
-                      status === f
-                        ? "bg-background text-foreground ring-border ring-1"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
+            <div className="flex flex-wrap items-center gap-3">
+              <div
+                role="group"
+                aria-label="Status"
+                className="bg-muted/50 flex w-fit items-center gap-0.5 rounded-lg border p-0.5"
+              >
+                {FILTERS.map((f) => {
+                  const n = f === "all" ? all.length : all.filter((e) => e.status === f).length;
+                  return (
+                    <button
+                      key={f}
+                      type="button"
+                      {...part(partId("experiments/filter", f))}
+                      aria-pressed={status === f}
+                      onClick={() => void setStatus(f === "all" ? null : f)}
+                      className={cn(
+                        "focus-visible:ring-ring/30 flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs capitalize outline-none focus-visible:ring-[3px]",
+                        status === f
+                          ? "bg-background text-foreground ring-border ring-1"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {f}
+                      <span className="font-mono text-[11px] tabular-nums opacity-70">{n}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {(projects.length > 0 || project) && !rule.hidden && (
+                <span {...part("experiments/project")}>
+                  <NativeSelect
+                    aria-label={rule.label ?? "Project"}
+                    value={project ?? ""}
+                    onChange={(e) => void setProject(e.target.value || null)}
+                    className="h-8 text-xs"
                   >
-                    {f}
-                    <span className="font-mono text-[11px] tabular-nums opacity-70">{n}</span>
-                  </button>
-                );
-              })}
+                    <option value="">Every project</option>
+                    {[...new Set([...projects, ...(project ? [project] : [])])].sort().map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </span>
+              )}
             </div>
             {shown.length > 0 ? (
               <DomainGroups experiments={shown} />
@@ -142,7 +168,13 @@ function CardGrid({ children }: { children: React.ReactNode }) {
 }
 
 /** Experiments under a heading per domain, in the store's domain order. */
-function DomainGroups({ experiments }: { experiments: Experiment[] }) {
+export function DomainGroups({
+  experiments,
+  showProject = true,
+}: {
+  experiments: Experiment[];
+  showProject?: boolean;
+}) {
   const domains = [...new Set(experiments.map((e) => e.domain))];
   return domains.map((domain) => {
     const group = experiments.filter((e) => e.domain === domain);
@@ -157,7 +189,7 @@ function DomainGroups({ experiments }: { experiments: Experiment[] }) {
         </h2>
         <CardGrid>
           {group.map((e) => (
-            <ExperimentCard key={e.name} experiment={e} />
+            <ExperimentCard key={e.name} experiment={e} showProject={showProject} />
           ))}
         </CardGrid>
       </section>
@@ -170,7 +202,7 @@ export function StatusLabel({ status }: { status: Status }) {
   const mark =
     status === "active"
       ? "bg-foreground"
-      : status === "answered"
+      : status === "answered" || status === "done"
         ? "bg-muted-foreground"
         : "border-muted-foreground border";
   return (
@@ -186,10 +218,13 @@ export function StatusLabel({ status }: { status: Status }) {
 function ExperimentCard({
   experiment: e,
   showDomain = false,
+  showProject = true,
 }: {
   experiment: Experiment;
   showDomain?: boolean;
+  showProject?: boolean;
 }) {
+  const project = showProject ? e.project : null;
   const last = e.runs[0];
   const metric = last ? headline(last.metrics).at(-1) : undefined;
   return (
@@ -203,7 +238,20 @@ function ExperimentCard({
         <h3 className="min-w-0 flex-1 truncate font-mono text-sm font-medium">{e.name}</h3>
         <StatusLabel status={e.status} />
       </div>
-      {showDomain && <p className="text-muted-foreground -mt-1 text-xs">{e.domain_title}</p>}
+      {(showDomain || project) && (
+        <p className="text-muted-foreground -mt-1 flex min-w-0 items-center gap-2 text-xs">
+          {showDomain && <span className="truncate">{e.domain_title}</span>}
+          {project && (
+            <span
+              className="bg-muted inline-flex max-w-full min-w-0 items-center gap-1 rounded-md border px-1.5 py-0.5 font-mono text-[11px]"
+              title={`In project ${project}`}
+            >
+              <FolderKanban className="size-3 shrink-0" />
+              <span className="truncate">{project}</span>
+            </span>
+          )}
+        </p>
+      )}
       <p className="text-muted-foreground line-clamp-2 text-sm leading-snug">
         {e.question ?? "No question written yet."}
       </p>

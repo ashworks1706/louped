@@ -59,6 +59,12 @@ def experiments_dir() -> Path:
     return Path(os.environ.get("LOUPED_EXPERIMENTS", base() / "experiments")).resolve()
 
 
+def projects_dir() -> Path:
+    """The projects that group experiments: LOUPED_PROJECTS when set, else projects/ at the
+    project's root, beside experiments/."""
+    return Path(os.environ.get("LOUPED_PROJECTS", base() / "projects")).resolve()
+
+
 def trash(path: Path, kind: str) -> Path:
     """Move a file or folder louped deletes to <home>/trash/<kind>/, stamped, instead of removing
     it: a deletion from the app is undone by moving it back. Returns where it went."""

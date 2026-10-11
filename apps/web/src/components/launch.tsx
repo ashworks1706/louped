@@ -238,10 +238,14 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
   // a cohort to run on, from Save cohort on a run's Items tab
   const [cohort] = useQueryState("cohort", parseAsString);
   const takesCohort = opts.some((o) => o.flag === "--cohort");
+  // an eval task to run, from a benchmark's Launch
+  const [task] = useQueryState("task", parseAsString);
+  const withTask =
+    task && item.id === "eval" && values.task === undefined ? { ...values, task } : values;
   const filled =
     cohort && takesCohort && values["--cohort"] === undefined
-      ? { ...values, "--cohort": cohort }
-      : values;
+      ? { ...withTask, "--cohort": cohort }
+      : withTask;
   const sent = changed(opts, filled);
   const missing = opts.filter((o) => (o.required || !o.flag.startsWith("-")) && !(o.flag in sent));
   const command = preview(item, recipe, sent);

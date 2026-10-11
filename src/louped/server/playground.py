@@ -105,10 +105,67 @@ class InspectRequest(Ask):
     prompt: str = Field(min_length=1, max_length=4000)
     vectors: list[str] = Field([], description="Saved directions to read, each at its own layer.")
     chat: bool = Field(True, description="Wrap the prompt in the model's chat template.")
+    target: str | None = Field(
+        None, max_length=200, description="The token to follow, as one token's text."
+    )
+    target_id: int | None = Field(
+        None,
+        ge=0,
+        description="The token to follow, by id; wins over target. Neither: the "
+        "model's prediction at the last position.",
+    )
+
+
+Grid = list[list[float]]
+
+
+class Readout(BaseModel):
+    """One prompt read layer by layer, from louped.analysis.readout."""
+
+    tokens: list[str]
+    #: "emb", then each layer's index: the rows of every [layer][position] grid.
+    layers: list[str]
+    #: Each token id the grids name, decoded.
+    vocab: dict[int, str]
+    #: [layer][position][TOP]: the lens's top token ids and their probabilities.
+    top_ids: list[list[list[int]]]
+    top_probs: list[list[list[float]]]
+    #: [layer][position], in nats: how unsure the lens is.
+    entropy: Grid
+    #: [layer][position], in nats: KL from the final layer's prediction to this layer's.
+    kl: Grid
+    target: int
+    #: [layer][position]: the target token's probability and rank (0 is the top).
+    target_prob: Grid
+    target_rank: list[list[int]]
+    #: [position]: the target's logit at the output.
+    target_logit: list[float]
+    #: The model's final logit softcap (Gemma 2), when it has one: probabilities are read after it,
+    #: target_logit and the attribution before it.
+    softcap: float | None = None
+    #: [position]: the embeddings' direct effect on the target's logit.
+    dla_embed: list[float]
+    #: [layer][position]: each layer's attention and MLP's direct effect (the MLP's includes any
+    #: steering added at that layer).
+    dla_attn: Grid
+    dla_mlp: Grid
+    #: [position]: what the parts above do not explain: the final norm's and the head's biases.
+    #: The embeddings, every layer's attention and MLP, and this add up to target_logit.
+    dla_rest: list[float]
+    #: [layer][head][i]: each head's direct effect at head_positions[i].
+    dla_heads: list[Grid]
+    head_positions: list[int]
+    #: [layer][head]: mean attention entropy over query positions (nats), and the mean share on
+    #: the previous token and on the first.
+    head_entropy: Grid
+    head_prev: Grid
+    head_first: Grid
 
 
 class InspectResponse(BaseModel):
     views: list[View]
+    #: The prompt read layer by layer (louped.analysis.readout); none on a diffusion model.
+    readout: Readout | None = None
 
 
 #: Exact patching runs one forward per layer and position (or head), so it caps the prompt.
@@ -334,6 +391,7 @@ def router(switchable: bool = False) -> APIRouter:
     @api.post("/inspect")
     def inspect(req: InspectRequest) -> InspectResponse:
         from louped.analysis import attention_patterns, logit_lens, projection, trajectory
+        from louped.analysis.readout import readout
         from louped.models import chat
         from louped.vectors import load_vector
 
@@ -367,8 +425,14 @@ def router(switchable: bool = False) -> APIRouter:
             views = [logit_lens(m, prompt, edits)[1]]
             if reads:
                 views.append(projection(m, prompt, reads, edits)[1])
-            views.append(attention_patterns(m, prompt, edits)[1])
-        return InspectResponse.model_validate({"views": views})
+            pattern, attended = attention_patterns(m, prompt, edits)
+            views.append(attended)
+            try:
+                read = readout(m, prompt, edits, req.target_id if req.target_id is not None
+                               else req.target, pattern)  # fmt: skip
+            except ValueError as exc:
+                raise HTTPException(400, str(exc)) from exc
+        return InspectResponse.model_validate({"views": views, "readout": read})
 
     def causal(c: LoadRequest) -> None:
         if c.diffusion:

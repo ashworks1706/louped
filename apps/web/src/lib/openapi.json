@@ -1880,6 +1880,96 @@
         }
       }
     },
+    "/api/graphs/{slug}": {
+      "get": {
+        "summary": "Graph",
+        "description": "One graph with each node's and edge's share of the influence on the logits.",
+        "operationId": "graph_api_graphs__slug__get",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CircuitGraph"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/graphs/{slug}/pins": {
+      "put": {
+        "summary": "Graph Pins",
+        "description": "Keeps the pinned nodes and groups in the graph file, as circuit-tracer's viewer does.",
+        "operationId": "graph_pins_api_graphs__slug__pins_put",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CircuitPins"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CircuitPins"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/experiments": {
       "get": {
         "summary": "Experiments",
@@ -1895,6 +1985,351 @@
                   },
                   "type": "array",
                   "title": "Response Experiments Api Experiments Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "New Experiment",
+        "description": "experiments/<name>/ with its README and run.py, active, in a project when given.",
+        "operationId": "new_experiment_api_experiments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewExperiment"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/experiments/{name}/project": {
+      "put": {
+        "summary": "Move Experiment",
+        "description": "Rewrites only the project: line of the experiment's front matter; its folder stays.",
+        "operationId": "move_experiment_api_experiments__name__project_put",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectChoice"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/domains": {
+      "get": {
+        "summary": "Domain List",
+        "description": "The domains an experiment can be filed under, in the Experiments page's order.",
+        "operationId": "domain_list_api_domains_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DomainInfo"
+                  },
+                  "type": "array",
+                  "title": "Response Domain List Api Domains Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects": {
+      "get": {
+        "summary": "Projects",
+        "description": "Every project under projects/, then any that experiments name with no README.",
+        "operationId": "projects_api_projects_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Project"
+                  },
+                  "type": "array",
+                  "title": "Response Projects Api Projects Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "New Project",
+        "description": "Writes projects/<name>/README.md: the front matter, then sections to fill in.",
+        "operationId": "new_project_api_projects_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewProject"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{name}": {
+      "get": {
+        "summary": "Project",
+        "operationId": "project_api_projects__name__get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{name}/readme": {
+      "get": {
+        "summary": "Project Readme",
+        "operationId": "project_readme_api_projects__name__readme_get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Text"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Edit Project Readme",
+        "operationId": "edit_project_readme_api_projects__name__readme_put",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Text"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Text"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{name}/meta": {
+      "put": {
+        "summary": "Edit Project Meta",
+        "description": "Replaces the README's front matter and keeps the text under it.",
+        "operationId": "edit_project_meta_api_projects__name__meta_put",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectMeta"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -3695,6 +4130,284 @@
         }
       }
     },
+    "/api/datasets": {
+      "get": {
+        "summary": "Datasets",
+        "description": "Every dataset the project has, each with the sections it is listed under (none:\nboth).",
+        "operationId": "datasets_api_datasets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Dataset"
+                  },
+                  "type": "array",
+                  "title": "Response Datasets Api Datasets Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/datasets/hub": {
+      "get": {
+        "summary": "Hub Dataset",
+        "description": "A Hub dataset's page, splits, features and first rows; what could not be read is\nsaid in hub_error and error.",
+        "operationId": "hub_dataset_api_datasets_hub_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "config",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Config"
+            }
+          },
+          {
+            "name": "split",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Split"
+            }
+          },
+          {
+            "name": "rows",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "title": "Rows"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/datasets/local": {
+      "get": {
+        "summary": "Local Dataset",
+        "description": "A file under data/: its columns and first rows, by its path from the project's\nroot.",
+        "operationId": "local_dataset_api_datasets_local_get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          },
+          {
+            "name": "rows",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "title": "Rows"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/benchmarks": {
+      "get": {
+        "summary": "List Benchmarks",
+        "description": "Every eval task with the size and top of its leaderboard, those with runs first.",
+        "operationId": "list_benchmarks_api_benchmarks_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BenchmarkRow"
+                  },
+                  "type": "array",
+                  "title": "Response List Benchmarks Api Benchmarks Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add Benchmark",
+        "description": "A Hub dataset as a benchmark: checked against its splits and features when the\ndataset viewer answers, then kept in louped.toml and listed as the task louped/<name>.",
+        "operationId": "add_benchmark_api_benchmarks_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BenchmarkRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddedBenchmark"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/benchmarks/board": {
+      "get": {
+        "summary": "Leaderboard",
+        "description": "One eval task's finished runs, best score first.",
+        "operationId": "leaderboard_api_benchmarks_board_get",
+        "parameters": [
+          {
+            "name": "task",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Leaderboard"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/benchmarks/speed": {
+      "get": {
+        "summary": "Speed",
+        "description": "Each weight format of each `louped bench` run, newest first; best marks each\nmodel's fastest.",
+        "operationId": "speed_api_benchmarks_speed_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SpeedRow"
+                  },
+                  "type": "array",
+                  "title": "Response Speed Api Benchmarks Speed Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/ui/layout": {
       "get": {
         "summary": "Layout",
@@ -4471,6 +5184,15 @@
             "type": "boolean",
             "title": "Download",
             "default": false
+          },
+          "domains": {
+            "items": {
+              "type": "string",
+              "enum": ["behavior", "efficiency"]
+            },
+            "type": "array",
+            "title": "Domains",
+            "default": []
           }
         },
         "type": "object",
@@ -4506,6 +5228,31 @@
         "type": "object",
         "required": ["added"],
         "title": "AddResult"
+      },
+      "AddedBenchmark": {
+        "properties": {
+          "benchmark": {
+            "$ref": "#/components/schemas/BenchmarkRow"
+          },
+          "checked": {
+            "type": "boolean",
+            "title": "Checked"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": ["benchmark", "checked"],
+        "title": "AddedBenchmark"
       },
       "Agreement": {
         "properties": {
@@ -4570,6 +5317,155 @@
         "type": "object",
         "required": ["path", "size"],
         "title": "Artifact"
+      },
+      "Benchmark": {
+        "properties": {
+          "dataset": {
+            "type": "string",
+            "pattern": "^[\\w.-]+(/[\\w.-]+)?$",
+            "title": "Dataset"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "split": {
+            "type": "string",
+            "title": "Split",
+            "default": "test"
+          },
+          "input": {
+            "type": "string",
+            "title": "Input"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          },
+          "choices": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Choices"
+          },
+          "scorer": {
+            "type": "string",
+            "enum": ["match", "choice", "judge"],
+            "title": "Scorer",
+            "default": "match"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": ["dataset", "input", "target"],
+        "title": "Benchmark",
+        "description": "A Hub dataset as an eval: which rows, and which field is the input, the target and the\nchoices."
+      },
+      "BenchmarkRequest": {
+        "properties": {
+          "dataset": {
+            "type": "string",
+            "pattern": "^[\\w.-]+(/[\\w.-]+)?$",
+            "title": "Dataset"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "split": {
+            "type": "string",
+            "title": "Split",
+            "default": "test"
+          },
+          "input": {
+            "type": "string",
+            "title": "Input"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          },
+          "choices": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Choices"
+          },
+          "scorer": {
+            "type": "string",
+            "enum": ["match", "choice", "judge"],
+            "title": "Scorer",
+            "default": "match"
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+            "title": "Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": ["dataset", "input", "target", "name"],
+        "title": "BenchmarkRequest"
+      },
+      "BenchmarkRow": {
+        "properties": {
+          "task": {
+            "$ref": "#/components/schemas/EvalTask"
+          },
+          "runs": {
+            "type": "integer",
+            "title": "Runs"
+          },
+          "best": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Entry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spec": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Benchmark"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": ["task", "runs"],
+        "title": "BenchmarkRow",
+        "description": "One eval task with its leaderboard's size and top run."
       },
       "Block": {
         "properties": {
@@ -5467,6 +6363,224 @@
         "required": ["regions", "presets", "parts"],
         "title": "Catalog"
       },
+      "CircuitGraph": {
+        "properties": {
+          "pinned": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Pinned",
+            "default": []
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/CircuitGroup"
+            },
+            "type": "array",
+            "title": "Groups",
+            "default": []
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "tokens": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tokens"
+          },
+          "scan": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/CircuitNode"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/CircuitLink"
+            },
+            "type": "array",
+            "title": "Links"
+          }
+        },
+        "type": "object",
+        "required": ["slug", "prompt", "tokens", "nodes", "links"],
+        "title": "CircuitGraph",
+        "description": "An attribution graph with each node's and each edge's share of the influence on the logits,\nfor louped's own graph view."
+      },
+      "CircuitGroup": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "nodes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Nodes"
+          }
+        },
+        "type": "object",
+        "required": ["name", "nodes"],
+        "title": "CircuitGroup",
+        "description": "Pinned nodes shown as one: circuit-tracer's supernode."
+      },
+      "CircuitLink": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight"
+          },
+          "share": {
+            "type": "number",
+            "title": "Share"
+          }
+        },
+        "type": "object",
+        "required": ["source", "target", "weight", "share"],
+        "title": "CircuitLink"
+      },
+      "CircuitNode": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["embedding", "feature", "error", "logit"],
+            "title": "Kind"
+          },
+          "layer": {
+            "type": "string",
+            "title": "Layer"
+          },
+          "row": {
+            "type": "integer",
+            "title": "Row"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "feature": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feature"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "activation": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activation"
+          },
+          "prob": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prob"
+          },
+          "target": {
+            "type": "boolean",
+            "title": "Target",
+            "default": false
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "influence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Influence"
+          }
+        },
+        "type": "object",
+        "required": ["id", "kind", "layer", "row", "position", "label", "score"],
+        "title": "CircuitNode",
+        "description": "One node of an attribution graph, as louped draws it."
+      },
+      "CircuitPins": {
+        "properties": {
+          "pinned": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Pinned",
+            "default": []
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/CircuitGroup"
+            },
+            "type": "array",
+            "title": "Groups",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "CircuitPins",
+        "description": "What a person kept of a graph; saved in the graph file as circuit-tracer's qParams, so its\nviewer opens the same subgraph."
+      },
       "ClusterInfo": {
         "properties": {
           "name": {
@@ -5925,6 +7039,194 @@
         "required": ["now", "cues"],
         "title": "Cues"
       },
+      "Dataset": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "source": {
+            "type": "string",
+            "enum": ["hub", "local", "training"],
+            "title": "Source"
+          },
+          "domains": {
+            "items": {
+              "type": "string",
+              "enum": ["behavior", "efficiency"]
+            },
+            "type": "array",
+            "title": "Domains",
+            "default": []
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "format": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Format"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size"
+          },
+          "rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": ["id", "source"],
+        "title": "Dataset",
+        "description": "One dataset the project has."
+      },
+      "DatasetDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "source": {
+            "type": "string",
+            "enum": ["hub", "local"],
+            "title": "Source"
+          },
+          "hub": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HubDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hub_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hub Error"
+          },
+          "splits": {
+            "items": {
+              "$ref": "#/components/schemas/Split"
+            },
+            "type": "array",
+            "title": "Splits",
+            "default": []
+          },
+          "config": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "split": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Split"
+          },
+          "features": {
+            "items": {
+              "$ref": "#/components/schemas/Feature"
+            },
+            "type": "array",
+            "title": "Features",
+            "default": []
+          },
+          "rows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Rows",
+            "default": []
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": ["id", "source"],
+        "title": "DatasetDetail",
+        "description": "One dataset's card, splits, features and first rows."
+      },
       "Direction": {
         "properties": {
           "name": {
@@ -5983,6 +7285,27 @@
         "required": ["name", "model", "layer", "method", "norm", "dim", "created"],
         "title": "Direction",
         "description": "Where a direction came from and what it is, stored alongside its values."
+      },
+      "DomainInfo": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "axis": {
+            "type": "string",
+            "enum": ["behavior", "efficiency", "checks"],
+            "title": "Axis"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          }
+        },
+        "type": "object",
+        "required": ["key", "axis", "title"],
+        "title": "DomainInfo",
+        "description": "A domain an experiment can be filed under, from louped.toml or louped's own."
       },
       "DoseRequest": {
         "properties": {
@@ -6051,6 +7374,74 @@
         "title": "DoseRequest",
         "description": "A saved direction swept over strengths, read at the next token."
       },
+      "Entry": {
+        "properties": {
+          "run": {
+            "type": "string",
+            "title": "Run"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "metric": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric"
+          },
+          "samples": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Samples"
+          },
+          "created": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created"
+          }
+        },
+        "type": "object",
+        "required": ["run", "model", "score", "metric", "samples", "created"],
+        "title": "Entry",
+        "description": "One finished eval run of a task."
+      },
       "EvalTask": {
         "properties": {
           "task": {
@@ -6089,7 +7480,7 @@
           },
           "source": {
             "type": "string",
-            "enum": ["project", "inspect_evals"],
+            "enum": ["project", "benchmark", "inspect_evals"],
             "title": "Source"
           }
         },
@@ -6149,6 +7540,17 @@
             },
             "type": "array",
             "title": "Runs"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
           }
         },
         "type": "object",
@@ -6216,6 +7618,17 @@
             },
             "type": "array",
             "title": "Runs"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
           },
           "readme": {
             "type": "string",
@@ -6302,6 +7715,21 @@
         "type": "object",
         "required": ["id"],
         "title": "ExportRequest"
+      },
+      "Feature": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "required": ["name", "type"],
+        "title": "Feature"
       },
       "FeatureDashboard": {
         "properties": {
@@ -7312,6 +8740,32 @@
             "title": "Chat",
             "description": "Wrap the prompt in the model's chat template.",
             "default": true
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target",
+            "description": "The token to follow, as one token's text."
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id",
+            "description": "The token to follow, by id; wins over target. Neither: the model's prediction at the last position."
           }
         },
         "type": "object",
@@ -7364,6 +8818,16 @@
             },
             "type": "array",
             "title": "Views"
+          },
+          "readout": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Readout"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -7917,6 +9381,40 @@
         "required": ["id", "group", "title"],
         "title": "Launchable"
       },
+      "Leaderboard": {
+        "properties": {
+          "task": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvalTask"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spec": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Benchmark"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/Entry"
+            },
+            "type": "array",
+            "title": "Entries"
+          }
+        },
+        "type": "object",
+        "required": ["task", "entries"],
+        "title": "Leaderboard"
+      },
       "LineView": {
         "properties": {
           "kind": {
@@ -8270,6 +9768,102 @@
         "required": ["model"],
         "title": "ModelInput",
         "description": "What one model call of a sample read."
+      },
+      "NewExperiment": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          }
+        },
+        "type": "object",
+        "required": ["name", "domain"],
+        "title": "NewExperiment"
+      },
+      "NewProject": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Title",
+            "default": ""
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "parked", "done"],
+            "title": "Status",
+            "default": "active"
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Summary",
+            "default": ""
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "default": []
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Links",
+            "default": {}
+          },
+          "models": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Models",
+            "default": []
+          },
+          "datasets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Datasets",
+            "default": []
+          },
+          "benchmarks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Benchmarks",
+            "default": []
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": ["name"],
+        "title": "NewProject"
       },
       "Option": {
         "properties": {
@@ -9055,6 +10649,283 @@
         "type": "object",
         "title": "PreviewRequest"
       },
+      "Project": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Title",
+            "default": ""
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "parked", "done"],
+            "title": "Status",
+            "default": "active"
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Summary",
+            "default": ""
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "default": []
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Links",
+            "default": {}
+          },
+          "models": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Models",
+            "default": []
+          },
+          "datasets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Datasets",
+            "default": []
+          },
+          "benchmarks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Benchmarks",
+            "default": []
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "experiments": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Experiments"
+          },
+          "runs": {
+            "type": "integer",
+            "title": "Runs"
+          },
+          "last_run": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run"
+          },
+          "missing": {
+            "type": "boolean",
+            "title": "Missing",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": ["name", "experiments", "runs", "last_run"],
+        "title": "Project",
+        "description": "A project in the list: its front matter, its experiments by name and where its runs\nstand."
+      },
+      "ProjectChoice": {
+        "properties": {
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          }
+        },
+        "type": "object",
+        "required": ["project"],
+        "title": "ProjectChoice"
+      },
+      "ProjectDetail": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Title",
+            "default": ""
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "parked", "done"],
+            "title": "Status",
+            "default": "active"
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Summary",
+            "default": ""
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "default": []
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Links",
+            "default": {}
+          },
+          "models": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Models",
+            "default": []
+          },
+          "datasets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Datasets",
+            "default": []
+          },
+          "benchmarks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Benchmarks",
+            "default": []
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "readme": {
+            "type": "string",
+            "title": "Readme"
+          },
+          "experiments": {
+            "items": {
+              "$ref": "#/components/schemas/Experiment"
+            },
+            "type": "array",
+            "title": "Experiments"
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/RunSummary"
+            },
+            "type": "array",
+            "title": "Runs"
+          },
+          "missing": {
+            "type": "boolean",
+            "title": "Missing",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": ["name", "readme", "experiments", "runs"],
+        "title": "ProjectDetail",
+        "description": "One project: its front matter, its README without it, its experiments and their runs."
+      },
+      "ProjectMeta": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Title",
+            "default": ""
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "parked", "done"],
+            "title": "Status",
+            "default": "active"
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Summary",
+            "default": ""
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "default": []
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Links",
+            "default": {}
+          },
+          "models": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Models",
+            "default": []
+          },
+          "datasets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Datasets",
+            "default": []
+          },
+          "benchmarks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Benchmarks",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ProjectMeta",
+        "description": "A project's front matter: what projects/<name>/README.md declares above its text."
+      },
       "Pushed": {
         "properties": {
           "remote": {
@@ -9125,6 +10996,228 @@
         "type": "object",
         "title": "Reading",
         "description": "How a scorer read its verdict from free text."
+      },
+      "Readout": {
+        "properties": {
+          "tokens": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tokens"
+          },
+          "layers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Layers"
+          },
+          "vocab": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Vocab"
+          },
+          "top_ids": {
+            "items": {
+              "items": {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Top Ids"
+          },
+          "top_probs": {
+            "items": {
+              "items": {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Top Probs"
+          },
+          "entropy": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Entropy"
+          },
+          "kl": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Kl"
+          },
+          "target": {
+            "type": "integer",
+            "title": "Target"
+          },
+          "target_prob": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Target Prob"
+          },
+          "target_rank": {
+            "items": {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Target Rank"
+          },
+          "target_logit": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Target Logit"
+          },
+          "softcap": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Softcap"
+          },
+          "dla_embed": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Dla Embed"
+          },
+          "dla_attn": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Dla Attn"
+          },
+          "dla_mlp": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Dla Mlp"
+          },
+          "dla_rest": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Dla Rest"
+          },
+          "dla_heads": {
+            "items": {
+              "items": {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Dla Heads"
+          },
+          "head_positions": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Head Positions"
+          },
+          "head_entropy": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Head Entropy"
+          },
+          "head_prev": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Head Prev"
+          },
+          "head_first": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Head First"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tokens",
+          "layers",
+          "vocab",
+          "top_ids",
+          "top_probs",
+          "entropy",
+          "kl",
+          "target",
+          "target_prob",
+          "target_rank",
+          "target_logit",
+          "dla_embed",
+          "dla_attn",
+          "dla_mlp",
+          "dla_rest",
+          "dla_heads",
+          "head_positions",
+          "head_entropy",
+          "head_prev",
+          "head_first"
+        ],
+        "title": "Readout",
+        "description": "One prompt read layer by layer, from louped.analysis.readout."
       },
       "RemoteState": {
         "properties": {
@@ -10414,6 +12507,153 @@
         "required": ["prompt"],
         "title": "SpeedRequest",
         "description": "The prompt timed base and, with interventions or adapters, changed."
+      },
+      "SpeedRow": {
+        "properties": {
+          "run": {
+            "type": "string",
+            "title": "Run"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "setting": {
+            "type": "string",
+            "title": "Setting"
+          },
+          "device": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device"
+          },
+          "weights_mib": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weights Mib"
+          },
+          "throughput": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Throughput"
+          },
+          "batch": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch"
+          },
+          "prefill_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prefill Ms"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context"
+          },
+          "peak_mib": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peak Mib"
+          },
+          "created": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created"
+          },
+          "best": {
+            "type": "boolean",
+            "title": "Best",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": ["run", "model", "setting"],
+        "title": "SpeedRow",
+        "description": "One weight format of one `louped bench` run."
+      },
+      "Split": {
+        "properties": {
+          "config": {
+            "type": "string",
+            "title": "Config"
+          },
+          "split": {
+            "type": "string",
+            "title": "Split"
+          },
+          "rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": ["config", "split"],
+        "title": "Split"
       },
       "SubmitRequest": {
         "properties": {
