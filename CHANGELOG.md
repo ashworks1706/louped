@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.9.0](https://github.com/ashworks1706/louped/compare/v0.8.0...v0.9.0) (2026-10-11)
+
+
+### Features
+
+* boards, dashboards an agent writes as data: linked panels, controls, live tables, diagrams ([e1c202d](https://github.com/ashworks1706/louped/commit/e1c202d3d4c5a798a44435e8482ccc841d84237f))
+* boards, figure previews and Plotly animation, Hugging Face Hub ([#78](https://github.com/ashworks1706/louped/issues/78)) ([30288fc](https://github.com/ashworks1706/louped/commit/30288fcb8c6814736a7abd7c53ca9a4e133ad048))
+* Hugging Face Hub in the app and the MCP ([4d342ba](https://github.com/ashworks1706/louped/commit/4d342baba4d663af68c4a81c417c526a1fb2a1f6))
+* the agent sees the figures it draws; plotly autoplay, loop and orbit ([be2f9b6](https://github.com/ashworks1706/louped/commit/be2f9b61eb714c8168e52c7bd50a989b1836d250))
+* **web:** Training in the Behavior sidebar too ([#76](https://github.com/ashworks1706/louped/issues/76)) ([fbe4b93](https://github.com/ashworks1706/louped/commit/fbe4b93e5c8093637ab41f0cc880255d29af071f))
+
 ## [0.8.0](https://github.com/ashworks1706/louped/compare/v0.7.0...v0.8.0) (2026-10-07)
 
 

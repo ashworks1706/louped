@@ -9,4 +9,4 @@ os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")
 try:
     __version__ = version("louped")
 except PackageNotFoundError:  # a source tree that was never installed
-    __version__ = "0.8.0"  # release-please sets this with pyproject.toml's version
+    __version__ = "0.9.0"  # release-please sets this with pyproject.toml's version
