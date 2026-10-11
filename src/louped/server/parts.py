@@ -255,6 +255,17 @@ KINDS: list[Kind] = [
        "for a notebook, the whole notebook.",
        rules=PICK),
     _k(part="source/pin/*", about="One pinned passage of the source, by id.", rules=PICK),
+    # Hub
+    _k(part="hub/account", about="The Hugging Face account signed in here, or Connect.",
+       rules=PICK),
+    _k(part="hub/token", about="The token dialog's form.", rules=PICK),
+    _k(part="hub/tab/*", about="Models, embeddings, datasets or papers.", rules=PICK),
+    _k(part="hub/search", about="Search the Hub.", rules=PICK),
+    _k(part="hub/filter/*", about="A search's task, library or sort.", rules=PICK),
+    _k(part="hub/column/*", about="A column of the results.", rules=PICK),
+    _k(part="hub/hit/*/*", about="One result, by kind and Hub id.", rules=PICK),
+    _k(part="hub/detail/*", about="The open result's title, facts, card, abstract, links and "
+       "actions.", rules=PICK),
     # Reports
     _k(part="reports/heading", about="The count of files in reports/.", rules=PICK),
     _k(part="reports/table", about="The files in reports/.", rules=["note"]),

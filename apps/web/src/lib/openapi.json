@@ -3424,6 +3424,277 @@
         }
       }
     },
+    "/api/hub/me": {
+      "get": {
+        "summary": "Me",
+        "description": "Whether a Hugging Face token is on this machine, and whose it is; a refused token is\nsaid in error.",
+        "operationId": "me_api_hub_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Account"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hub/token": {
+      "post": {
+        "summary": "Token",
+        "description": "Check a token and keep it where huggingface_hub keeps it, not in the project.",
+        "operationId": "token_api_hub_token_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Token"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Account"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hub/search": {
+      "get": {
+        "summary": "Hub Search",
+        "operationId": "hub_search_api_hub_search_get",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": ["models", "embeddings", "datasets", "papers"],
+              "type": "string",
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "task",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Task"
+            }
+          },
+          {
+            "name": "library",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Library"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": ["downloads", "likes", "recent"],
+              "type": "string",
+              "default": "downloads",
+              "title": "Sort"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HubHit"
+                  },
+                  "title": "Response Hub Search Api Hub Search Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hub/info": {
+      "get": {
+        "summary": "Hub Info",
+        "operationId": "hub_info_api_hub_info_get",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": ["models", "embeddings", "datasets", "papers"],
+              "type": "string",
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HubDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hub/added": {
+      "get": {
+        "summary": "Hub Added",
+        "operationId": "hub_added_api_hub_added_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HubAdded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hub/add": {
+      "post": {
+        "summary": "Hub Add",
+        "description": "A model, embedding model or dataset listed in louped.toml, and with download fetched\nhere as a job; a paper kept in sources/ from its arXiv page.",
+        "operationId": "hub_add_api_hub_add_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/ui/layout": {
       "get": {
         "summary": "Layout",
@@ -4139,6 +4410,102 @@
         "required": ["a", "b", "pairs", "labelled"],
         "title": "AbSession",
         "description": "A blind A/B of two eval runs: their shared samples, each side placed by a seed."
+      },
+      "Account": {
+        "properties": {
+          "token": {
+            "type": "boolean",
+            "title": "Token"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "avatar": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": ["token"],
+        "title": "Account"
+      },
+      "AddRequest": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["models", "embeddings", "datasets", "papers"],
+            "title": "Kind"
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[\\w.-]+(/[\\w.-]+)?$",
+            "title": "Id"
+          },
+          "download": {
+            "type": "boolean",
+            "title": "Download",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": ["kind", "id"],
+        "title": "AddRequest"
+      },
+      "AddResult": {
+        "properties": {
+          "added": {
+            "$ref": "#/components/schemas/HubAdded"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Source"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "job": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Job"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": ["added"],
+        "title": "AddResult"
       },
       "Agreement": {
         "properties": {
@@ -6472,6 +6839,363 @@
         "required": ["key", "title", "page", "snippet"],
         "title": "Hit"
       },
+      "HubAdded": {
+        "properties": {
+          "models": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Models",
+            "default": []
+          },
+          "embeddings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Embeddings",
+            "default": []
+          },
+          "datasets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Datasets",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "HubAdded",
+        "description": "What the project lists under [hub] in louped.toml."
+      },
+      "HubDetail": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["models", "embeddings", "datasets", "papers"],
+            "title": "Kind"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "downloads": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Downloads"
+          },
+          "likes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Likes"
+          },
+          "task": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task"
+          },
+          "library": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Library"
+          },
+          "gated": {
+            "type": "boolean",
+            "title": "Gated",
+            "default": false
+          },
+          "private": {
+            "type": "boolean",
+            "title": "Private",
+            "default": false
+          },
+          "updated": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated"
+          },
+          "params": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Params"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "authors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Authors",
+            "default": []
+          },
+          "upvotes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upvotes"
+          },
+          "card": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card"
+          },
+          "license": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "default": []
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size"
+          },
+          "files": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Files"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Links",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": ["kind", "id", "url"],
+        "title": "HubDetail"
+      },
+      "HubHit": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["models", "embeddings", "datasets", "papers"],
+            "title": "Kind"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "downloads": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Downloads"
+          },
+          "likes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Likes"
+          },
+          "task": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task"
+          },
+          "library": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Library"
+          },
+          "gated": {
+            "type": "boolean",
+            "title": "Gated",
+            "default": false
+          },
+          "private": {
+            "type": "boolean",
+            "title": "Private",
+            "default": false
+          },
+          "updated": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated"
+          },
+          "params": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Params"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "authors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Authors",
+            "default": []
+          },
+          "upvotes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upvotes"
+          }
+        },
+        "type": "object",
+        "required": ["kind", "id", "url"],
+        "title": "HubHit",
+        "description": "One model, dataset or paper a search found."
+      },
       "ImportPath": {
         "properties": {
           "path": {
@@ -7591,7 +8315,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "const": "evals"
+                "enum": ["evals", "models", "embeddings"]
               },
               {
                 "type": "null"
@@ -10068,6 +10792,18 @@
         "required": ["light", "dark", "errors"],
         "title": "Theme",
         "description": "Token values over the defaults, for light and dark mode; errors name what was dropped."
+      },
+      "Token": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Token"
+          }
+        },
+        "type": "object",
+        "required": ["token"],
+        "title": "Token"
       },
       "TokenRow": {
         "properties": {

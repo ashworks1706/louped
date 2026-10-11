@@ -12,7 +12,8 @@ run or file it came from, and each citation points at a pinned passage.
    `source_page` to read the page.
 2. If the paper is not there, fetch it from its primary source only: its arXiv page, the ACL
    Anthology, or the publisher's open PDF. Keep it with `add_source` (the URL is recorded with the
-   file). Never cite a blog post, a summary or your memory of a paper.
+   file), or find its arXiv id with `hub_search` (kind papers) and keep it with `hub_add`.
+   Never cite a blog post, a summary or your memory of a paper.
 3. If you cannot get the paper, say so and leave the claim out or mark it "not checked".
 
 ## Pin what a claim rests on

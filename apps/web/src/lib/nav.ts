@@ -1,6 +1,7 @@
 import {
   Activity,
   BookOpen,
+  Boxes,
   Brain,
   Database,
   Dumbbell,
@@ -65,6 +66,14 @@ export const NAV: NavItem[] = [
     description: "The papers, docs, slides and notebooks the project rests on.",
     icon: BookOpen,
     shortcut: "G S",
+    section: "workspace",
+  },
+  {
+    href: "/hub/",
+    title: "Hub",
+    description: "Models, embeddings, datasets and papers on Hugging Face, added to the project.",
+    icon: Boxes,
+    shortcut: "G U",
     section: "workspace",
   },
   {

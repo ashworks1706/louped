@@ -586,6 +586,27 @@ function Num({
   );
 }
 
+/** The models or embedding models the project added on the Hub page, for a field to offer;
+ * louped/ before each where the field takes a louped/ model (inspect eval's --model). */
+function Added({
+  id,
+  kind,
+  louped,
+}: {
+  id: string;
+  kind: "models" | "embeddings";
+  louped?: boolean;
+}) {
+  const added = useQuery(q.hubAdded());
+  return (
+    <datalist id={id}>
+      {(added.data?.[kind] ?? []).map((m) => (
+        <option key={m} value={louped ? `louped/${m}` : m} />
+      ))}
+    </datalist>
+  );
+}
+
 function Field({
   option: o,
   value,
@@ -656,6 +677,7 @@ function Field({
         <div className="flex gap-2">
           <Input
             id={id}
+            list={o.suggest === "models" || o.suggest === "embeddings" ? `${id}-added` : undefined}
             value={text}
             placeholder={o.default == null ? "none" : undefined}
             onChange={(e) => onChange(e.target.value)}
@@ -663,6 +685,9 @@ function Field({
             className="h-8 font-mono text-xs"
           />
           {o.suggest === "evals" && <EvalPicker flag={o.flag} onPick={onChange} />}
+          {(o.suggest === "models" || o.suggest === "embeddings") && (
+            <Added id={`${id}-added`} kind={o.suggest} louped={o.default?.startsWith("louped/")} />
+          )}
         </div>
       )}
       {help}

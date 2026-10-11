@@ -251,7 +251,10 @@ bundle per push into the remote. The remote is any fsspec URL (`remote` in loupe
 
 The first push makes an `hf://buckets/` remote, private. Its token is huggingface_hub's own
 (`hf auth login`, HF_TOKEN). The app's Connect dialog and the CLI's first push ask for it and never
-write it into the project. `louped publish` (server/publish.py) writes the UI as static files, with
+write it into the project. The Hub page (server/hub.py) searches the Hugging Face Hub with the
+same token through huggingface_hub's HfApi. It lists what a project adds under `[hub]` in
+louped.toml, keeps a paper as a source, and downloads as a job (`louped hub get`). It is off with
+`--expose`. `louped publish` (server/publish.py) writes the UI as static files, with
 every GET answer its pages ask for, for any static host.
 
 `louped mcp` is a stdio MCP server for coding agents. It imports nothing from the server. It calls
@@ -263,7 +266,7 @@ Pages: a top bar of sections is over a sidebar of the section's pages. The sideb
 
 | Section | Pages |
 |---|---|
-| Workspace | Home, Runs (jobs with their progress, then every run), Compare, Launch, Sources and Reports, with Run, Job, Source and Report detail |
+| Workspace | Home, Runs (jobs with their progress, then every run), Compare, Launch, Sources, Hub and Reports, with Run, Job, Source and Report detail |
 | `/behavior/` | Overview, Experiments, Probe (reply, inspect, patch, dose), Vectors, Circuits, Feature |
 | `/efficiency/` | Overview, Experiments, Benchmark (speed, reply), Training |
 

@@ -566,6 +566,8 @@ function ModelLoader({ current }: { current?: PlaygroundInfo }) {
   const [diffusion, setDiffusion] = useState(current?.diffusion ?? false);
   const [attn, setAttn] = useState("");
   const [remote, setRemote] = useState(false);
+  // the models the project added on the Hub page, offered as the field is typed in
+  const added = useQuery(q.hubAdded());
   const load = useMutation({
     mutationFn: loadModel,
     meta: { action: "Loading the model" },
@@ -599,11 +601,17 @@ function ModelLoader({ current }: { current?: PlaygroundInfo }) {
       </label>
       <Input
         id="load-model"
+        list="load-model-added"
         value={model}
         onChange={(e) => setModel(e.target.value)}
         spellCheck={false}
         className="h-8 font-mono text-xs"
       />
+      <datalist id="load-model-added">
+        {(added.data?.models ?? []).map((m) => (
+          <option key={m} value={m} />
+        ))}
+      </datalist>
       <label htmlFor="load-adapters" className="text-muted-foreground -mb-2 text-xs">
         Adapters
       </label>

@@ -37,6 +37,9 @@ work with launchables, launch_options and launch (a script is "script:<name>/run
 with job; read results with run, figures, figure, samples and compare; trace says where a figure's
 mark or a record comes from (its rows, script and commit). Papers and docs the project rests
 on are its sources: search_sources and source_page before the web, add_source to keep one.
+Models, embedding models, datasets and papers on the Hugging Face Hub are hub_search and
+hub_info; hub_add lists a model or dataset in louped.toml (download=True gets it as a job) and
+keeps a paper as a source.
 A figure the person asks for (a chart of a file, points in 3D, an animation) is add_view, or
 derive when it needs a script
 over the run's files (new columns on its items); check it with preview_view before ui_show.
@@ -64,6 +67,8 @@ at parts, with a note."""
 
 READ = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False)
+#: Reads the web, and writes nothing.
+LOOKUP = ToolAnnotations(read_only_hint=True, open_world_hint=True)
 #: Writes, and reaches the web when given a URL.
 FETCH = ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=True)
 STOP = ToolAnnotations(read_only_hint=False, destructive_hint=True, open_world_hint=False)
@@ -203,6 +208,45 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         from GitHub in Colab, a direct file link). Fetch a paper only from its primary source;
         the URL is recorded with the file."""
         return await post("/sources", {"location": location, "key": key, "title": title})
+
+    @mcp.tool(annotations=LOOKUP)
+    async def hub_search(
+        kind: Literal["models", "embeddings", "datasets", "papers"],
+        query: str = "",
+        task: str | None = None,
+        library: str | None = None,
+        sort: Literal["downloads", "likes", "recent"] = "downloads",
+        limit: int = 20,
+    ) -> list[dict[str, Any]]:
+        """Search the Hugging Face Hub with this machine's token: models (task is a pipeline tag
+        such as text-generation, library such as transformers), embeddings (models tagged
+        sentence-similarity or feature-extraction), datasets, or papers (today's daily papers
+        when query is empty; sort does not apply to them). Each hit has its id, downloads,
+        likes, gated, private and its Hub url; a gated one needs access asked for on that
+        page."""
+        return await get("/hub/search", kind=kind, q=query, task=task, library=library,
+                         sort=sort, limit=limit)  # fmt: skip
+
+    @mcp.tool(annotations=LOOKUP)
+    async def hub_info(
+        kind: Literal["models", "embeddings", "datasets", "papers"], id: str
+    ) -> dict[str, Any]:
+        """One Hub model, dataset or paper (by its arXiv id) in full: the start of its card,
+        license, tags, size and file count; for a paper its title, authors, abstract and
+        links."""
+        return await get("/hub/info", kind=kind, id=id)
+
+    @mcp.tool(annotations=FETCH)
+    async def hub_add(
+        kind: Literal["models", "embeddings", "datasets", "papers"],
+        id: str,
+        download: bool = False,
+    ) -> dict[str, Any]:
+        """Add a Hub model, embedding model or dataset to the project's louped.toml ([hub]),
+        where the app's model fields offer it; with download, also get it into this machine's
+        cache as a job (follow it with job). A paper (its arXiv id) is kept in sources/ to
+        search, quote and cite."""
+        return await post("/hub/add", {"kind": kind, "id": id, "download": download})
 
     @mcp.tool(annotations=READ)
     async def trace(ref: str) -> dict[str, Any]:

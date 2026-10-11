@@ -1413,6 +1413,119 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/hub/me": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Me
+     * @description Whether a Hugging Face token is on this machine, and whose it is; a refused token is
+     *     said in error.
+     */
+    get: operations["me_api_hub_me_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/hub/token": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Token
+     * @description Check a token and keep it where huggingface_hub keeps it, not in the project.
+     */
+    post: operations["token_api_hub_token_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/hub/search": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Hub Search */
+    get: operations["hub_search_api_hub_search_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/hub/info": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Hub Info */
+    get: operations["hub_info_api_hub_info_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/hub/added": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Hub Added */
+    get: operations["hub_added_api_hub_added_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/hub/add": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Hub Add
+     * @description A model, embedding model or dataset listed in louped.toml, and with download fetched
+     *     here as a job; a paper kept in sources/ from its arXiv page.
+     */
+    post: operations["hub_add_api_hub_add_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/ui/layout": {
     parameters: {
       query?: never;
@@ -1728,6 +1841,38 @@ export interface components {
       pairs: components["schemas"]["AbPair"][];
       /** Labelled */
       labelled: number;
+    };
+    /** Account */
+    Account: {
+      /** Token */
+      token: boolean;
+      /** Name */
+      name?: string | null;
+      /** Avatar */
+      avatar?: string | null;
+      /** Error */
+      error?: string | null;
+    };
+    /** AddRequest */
+    AddRequest: {
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "models" | "embeddings" | "datasets" | "papers";
+      /** Id */
+      id: string;
+      /**
+       * Download
+       * @default false
+       */
+      download: boolean;
+    };
+    /** AddResult */
+    AddResult: {
+      added: components["schemas"]["HubAdded"];
+      source?: components["schemas"]["Source"] | null;
+      job?: components["schemas"]["Job"] | null;
     };
     /**
      * Agreement
@@ -2557,6 +2702,138 @@ export interface components {
       /** Snippet */
       snippet: string;
     };
+    /**
+     * HubAdded
+     * @description What the project lists under [hub] in louped.toml.
+     */
+    HubAdded: {
+      /**
+       * Models
+       * @default []
+       */
+      models: string[];
+      /**
+       * Embeddings
+       * @default []
+       */
+      embeddings: string[];
+      /**
+       * Datasets
+       * @default []
+       */
+      datasets: string[];
+    };
+    /** HubDetail */
+    HubDetail: {
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "models" | "embeddings" | "datasets" | "papers";
+      /** Id */
+      id: string;
+      /** Url */
+      url: string;
+      /** Downloads */
+      downloads?: number | null;
+      /** Likes */
+      likes?: number | null;
+      /** Task */
+      task?: string | null;
+      /** Library */
+      library?: string | null;
+      /**
+       * Gated
+       * @default false
+       */
+      gated: boolean;
+      /**
+       * Private
+       * @default false
+       */
+      private: boolean;
+      /** Updated */
+      updated?: string | null;
+      /** Params */
+      params?: number | null;
+      /** Title */
+      title?: string | null;
+      /**
+       * Authors
+       * @default []
+       */
+      authors: string[];
+      /** Upvotes */
+      upvotes?: number | null;
+      /** Card */
+      card?: string | null;
+      /** License */
+      license?: string | null;
+      /**
+       * Tags
+       * @default []
+       */
+      tags: string[];
+      /** Size */
+      size?: number | null;
+      /** Files */
+      files?: number | null;
+      /** Summary */
+      summary?: string | null;
+      /**
+       * Links
+       * @default {}
+       */
+      links: {
+        [key: string]: string;
+      };
+    };
+    /**
+     * HubHit
+     * @description One model, dataset or paper a search found.
+     */
+    HubHit: {
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "models" | "embeddings" | "datasets" | "papers";
+      /** Id */
+      id: string;
+      /** Url */
+      url: string;
+      /** Downloads */
+      downloads?: number | null;
+      /** Likes */
+      likes?: number | null;
+      /** Task */
+      task?: string | null;
+      /** Library */
+      library?: string | null;
+      /**
+       * Gated
+       * @default false
+       */
+      gated: boolean;
+      /**
+       * Private
+       * @default false
+       */
+      private: boolean;
+      /** Updated */
+      updated?: string | null;
+      /** Params */
+      params?: number | null;
+      /** Title */
+      title?: string | null;
+      /**
+       * Authors
+       * @default []
+       */
+      authors: string[];
+      /** Upvotes */
+      upvotes?: number | null;
+    };
     /** ImportPath */
     ImportPath: {
       /** Path */
@@ -2989,7 +3266,7 @@ export interface components {
        */
       required: boolean;
       /** Suggest */
-      suggest?: "evals" | null;
+      suggest?: ("evals" | "models" | "embeddings") | null;
     };
     /**
      * Page
@@ -3977,6 +4254,11 @@ export interface components {
       };
       /** Errors */
       errors: string[];
+    };
+    /** Token */
+    Token: {
+      /** Token */
+      token: string;
     };
     /** TokenRow */
     TokenRow: {
@@ -6685,6 +6967,180 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Job"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  me_api_hub_me_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Account"];
+        };
+      };
+    };
+  };
+  token_api_hub_token_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Token"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Account"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  hub_search_api_hub_search_get: {
+    parameters: {
+      query: {
+        kind: "models" | "embeddings" | "datasets" | "papers";
+        q?: string;
+        task?: string | null;
+        library?: string | null;
+        sort?: "downloads" | "likes" | "recent";
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HubHit"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  hub_info_api_hub_info_get: {
+    parameters: {
+      query: {
+        kind: "models" | "embeddings" | "datasets" | "papers";
+        id: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HubDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  hub_added_api_hub_added_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HubAdded"];
+        };
+      };
+    };
+  };
+  hub_add_api_hub_add_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AddRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AddResult"];
         };
       };
       /** @description Validation Error */
