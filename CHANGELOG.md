@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.10.0](https://github.com/ashworks1706/louped/compare/v0.9.0...v0.10.0) (2026-10-11)
+
+
+### Features
+
+* **circuits:** louped draws attribution graphs itself: prune, walk, pin, group ([08b2da6](https://github.com/ashworks1706/louped/commit/08b2da691ee4e2debe48539e1514417728a74699))
+* Datasets and Benchmarks pages in Behavior and Efficiency, with Hugging Face ([5c32e90](https://github.com/ashworks1706/louped/commit/5c32e90fd13e4eee6691ae85d172ec5f0d733c5c))
+* **probe:** Inspect reads one token through every layer, part and head ([40da6e7](https://github.com/ashworks1706/louped/commit/40da6e7dae327fc1cd4276d8d0aae5d3e1a60077))
+* projects that hold experiments ([b28a7d7](https://github.com/ashworks1706/louped/commit/b28a7d7c730b5e546b16b8c92f68baece538a6e4))
+* projects, Datasets and Benchmarks pages, deeper Probe and Circuits ([54dd1e9](https://github.com/ashworks1706/louped/commit/54dd1e93dc192db1565f99b459c29491f1e607bd))
+
+
+### Bug Fixes
+
+* review findings on Probe readout and Circuits; next 16.3.8 and audit overrides; CodeQL regex ([5197cbc](https://github.com/ashworks1706/louped/commit/5197cbc5d419e67cfe035c021df70f7a460fa117))
+
 ## [0.9.0](https://github.com/ashworks1706/louped/compare/v0.8.0...v0.9.0) (2026-10-11)
 
 
