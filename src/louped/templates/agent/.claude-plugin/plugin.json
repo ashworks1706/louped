@@ -1,6 +1,6 @@
 {
   "name": "louped",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Drive louped research projects: start experiments, launch them, read results item by item, run them on a cluster.",
   "author": {
     "name": "ashworks1706"
