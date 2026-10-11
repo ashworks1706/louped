@@ -10,11 +10,13 @@ import pytest
 from fastapi.testclient import TestClient
 from mcp.server.mcpserver.exceptions import ToolError
 from mlflow.artifacts import load_text
+from pydantic import ValidationError
 from test_agent import call, tools
 from test_stores import write_experiment
 
 from louped.derive import derive
 from louped.server import create_app
+from louped.stores.types import PlotlyView
 from louped.tracking import start_run
 
 CLOUD = {"kind": "plotly", "title": "Claims in 3D", "about": "Each claim's embedding.",
@@ -70,6 +72,31 @@ def test_an_agent_adds_a_figure_to_a_run_and_edits_it_by_name(run_id: str) -> No
             asyncio.run(mcp.call_tool("add_view", {"name": "x", "view": bad, "run_id": run_id}))
     with pytest.raises(ToolError, match="an eval run's figures go on its experiment's page"):
         asyncio.run(mcp.call_tool("add_view", {"name": "x", "view": CLOUD, "run_id": "e-1"}))
+
+
+def test_a_plotly_figure_says_how_it_moves_and_the_check_holds_it_to_sense(run_id: str) -> None:
+    steps = [{"name": str(s), "data": [{"x": [s, 1], "y": [1, s], "z": [0, s]}]} for s in (0, 1)]
+    moves = {"autoplay": True, "loop": True, "duration_ms": 200, "orbit": True}
+    plays = {**CLOUD, "frames": steps, "animation": moves}
+    mcp = tools()
+    call(mcp, "add_view", name="steps", view=plays, run_id=run_id)
+    [f] = call(mcp, "figures", run_id=run_id)
+    whole = call(mcp, "figure", run_id=run_id, index=0)
+    assert f["title"] == "Claims in 3D" and whole["animation"] == {**moves, "transition_ms": 0}
+    # orbit turns a 3D scene with or without frames
+    PlotlyView.model_validate({**CLOUD, "animation": {"orbit": True}})
+    flat = {**CLOUD, "data": [{"type": "scatter", "x": [0], "y": [1]}]}
+    for bad, why in (
+        ({**CLOUD, "animation": {"autoplay": True}}, "give the figure frames"),
+        ({**plays, "animation": {"speed": 2}}, "Extra inputs are not permitted"),
+        ({**plays, "animation": {"duration_ms": 0}}, "greater than or equal to 16"),
+        ({**plays, "animation": {"transition_ms": 60_000}}, "less than or equal to 10000"),
+        ({**flat, "animation": {"orbit": True}}, "orbit turns the 3D scene"),
+    ):
+        with pytest.raises(ValidationError, match=why):
+            PlotlyView.model_validate(bad)
+        with pytest.raises(ToolError, match=why):
+            asyncio.run(mcp.call_tool("add_view", {"name": "x", "view": bad, "run_id": run_id}))
 
 
 def test_an_agent_adds_a_figure_to_an_experiments_page(tmp_path: Path) -> None:

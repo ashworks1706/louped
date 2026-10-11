@@ -77,6 +77,7 @@ tests/            Python tests, CPU only
 | An eval                    | Inspect `@task`s in `experiments/<name>/task.py`                           |
 | A figure                   | a view from `louped.analysis.views`, logged with `log_json` under `views/` |
 | A chart no kind draws      | `views.vega(title, spec)`: any Vega-Lite spec with its data inline, no change to louped |
+| A dashboard                | a `board` view (`louped.stores.types.BoardView`; tables, controls, linked panels), or `boards/<name>.json` for a page |
 | A project's own page, routes, command or agent tools | its `plugins/<name>/` (`louped.core.plugins`), no change to louped |
 | A number                   | `mlflow.log_metrics` inside `louped.tracking.start_run`                    |
 | A training run or a grid   | `experiments/<name>/*.yaml` starting `# louped train <recipe>` or `# louped grid` |

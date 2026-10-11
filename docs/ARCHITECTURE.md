@@ -94,7 +94,7 @@ RL environment without a rewrite.
 | Probes | scikit-learn | library |
 | Retrieval, reranking, NLI | bm25s, sentence-transformers | library |
 | Tracking | MLflow on SQLite, Inspect logs | library |
-| API and UI | FastAPI; Next.js static export, shadcn/ui, TanStack Query, nuqs, Recharts, Plotly (3D, animation; loaded when shown) | |
+| API and UI | FastAPI; Next.js static export, shadcn/ui, TanStack Query, nuqs, Recharts, Plotly (3D, animation; loaded when shown), dagre (a board's diagrams) | |
 
 Rejected:
 
@@ -184,7 +184,8 @@ core                                     run metadata, paths, the project and it
   as citation chips.
   `louped.reports` lists reports/. It previews decks and documents through LibreOffice when
   installed. It exports Vega-Lite (vl-convert) and Plotly (Kaleido, with Chrome) figures with a
-  `<file>.refs.json` sidecar that holds the ref and its trace. It files each report under the
+  `<file>.refs.json` sidecar that holds the ref and its trace. The same drawing gives the agent a
+  figure as a PNG before the person sees it (`POST /api/views/preview`, MCP `preview_view`). It files each report under the
   experiment it reports on, and resolves the live refs in Markdown (`{{run:<id> <metric>}}`, a
   figure's ref) for the app's renderer (`GET /api/live`), so a write-up's numbers are read from
   its runs. `louped.core.documents` reads PDFs,
@@ -250,7 +251,10 @@ bundle per push into the remote. The remote is any fsspec URL (`remote` in loupe
 
 The first push makes an `hf://buckets/` remote, private. Its token is huggingface_hub's own
 (`hf auth login`, HF_TOKEN). The app's Connect dialog and the CLI's first push ask for it and never
-write it into the project. `louped publish` (server/publish.py) writes the UI as static files, with
+write it into the project. The Hub page (server/hub.py) searches the Hugging Face Hub with the
+same token through huggingface_hub's HfApi. It lists what a project adds under `[hub]` in
+louped.toml, keeps a paper as a source, and downloads as a job (`louped hub get`). It is off with
+`--expose`. `louped publish` (server/publish.py) writes the UI as static files, with
 every GET answer its pages ask for, for any static host.
 
 `louped mcp` is a stdio MCP server for coding agents. It imports nothing from the server. It calls
@@ -262,7 +266,7 @@ Pages: a top bar of sections is over a sidebar of the section's pages. The sideb
 
 | Section | Pages |
 |---|---|
-| Workspace | Home, Runs (jobs with their progress, then every run), Compare, Launch, Sources and Reports, with Run, Job, Source and Report detail |
+| Workspace | Home, Runs (jobs with their progress, then every run), Compare, Launch, Sources, Hub and Reports, with Run, Job, Source and Report detail |
 | `/behavior/` | Overview, Experiments, Probe (reply, inspect, patch, dose), Vectors, Circuits, Feature |
 | `/efficiency/` | Overview, Experiments, Benchmark (speed, reply), Training |
 

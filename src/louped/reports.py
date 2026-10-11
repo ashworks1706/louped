@@ -1,5 +1,6 @@
 """reports/: what the project hands to people. Markdown write-ups, slide decks and Word documents
-the agent writes (with python-pptx and python-docx), and figures exported from runs.
+the agent writes (with python-pptx and python-docx), and figures exported from runs. The same
+drawing previews a figure as a PNG, so the agent sees it before the person does.
 
 An exported figure has a sidecar, <file>.refs.json, holding the ref it was exported from and the
 trace of that ref at the time: the run, the script and the commit behind it. A deck or a document
@@ -27,9 +28,9 @@ import subprocess
 import threading
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from louped.core import documents
 from louped.core.paths import experiment_folder, experiments_dir, home, inside
@@ -309,14 +310,7 @@ def export_figure(
     holding its ref and trace. Vega-Lite figures export through vl-convert; Plotly figures
     through Kaleido, which needs Chrome. The kinds the app draws itself do not export.
     FileExistsError when the file is there and replace is not set: a deck may show it."""
-    view = read_view(ref)
-    if isinstance(view, VegaView):
-        data = _vega(view, fmt)
-    elif isinstance(view, PlotlyView):
-        data = _plotly(view, fmt)
-    else:
-        raise ValueError(f"{ref} is a {view.kind} figure, which only the app draws: "
-                         "export a vega or plotly figure")  # fmt: skip
+    data = draw(read_view(ref), fmt, ref)
     at = parse(ref)
     name = name or f"{at.name}-{Path(at.path or '').stem}"
     if not re.fullmatch(r"[A-Za-z0-9][\w.-]{0,99}", name):
@@ -330,6 +324,34 @@ def export_figure(
     _write(target, data)
     _write(_sidecar(target), (json.dumps(meta, indent=2) + "\n").encode())
     return _report(reports_dir(), target)
+
+
+def draw(view: View, fmt: Format, what: str = "this") -> bytes:
+    """A vega or plotly figure as a file's bytes, as louped exports and previews it; what names
+    the figure in the error. ValueError for the kinds only the app draws; MissingTool when Plotly
+    finds no Chrome."""
+    if isinstance(view, VegaView):
+        return _vega(view, fmt)
+    if isinstance(view, PlotlyView):
+        return _plotly(view, fmt)
+    raise ValueError(f"{what} is a {view.kind} figure, which only the app draws: louped draws "
+                     "only vega and plotly figures to a file")  # fmt: skip
+
+
+def preview(view: dict[str, Any] | None = None, ref: str | None = None) -> bytes:
+    """A figure as a PNG, to look at before it is shown: an unsaved view, checked as add_view
+    checks it (ValueError with pydantic's message for each field that is wrong), or the saved
+    figure at a ref. A plotly figure shows its traces before any frame plays."""
+    if (view is None) == (ref is None):
+        raise ValueError("give a view or a ref, one of them")
+    if ref is not None:
+        return draw(read_view(ref), "png", ref)
+    try:
+        checked = TypeAdapter(View).validate_python(view)
+    except ValidationError as exc:
+        wrong = "; ".join(f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors())
+        raise ValueError(f"the view does not check: {wrong}") from exc
+    return draw(checked, "png")
 
 
 def _vega(view: VegaView, fmt: Format) -> bytes:

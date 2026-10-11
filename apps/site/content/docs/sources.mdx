@@ -43,6 +43,34 @@ Your agent:
 - quotes from `source_page`
 - keeps a new paper with `add_source`, which records the URL the file came from
 
+## The Hugging Face Hub
+
+The app's Hub page searches the Hugging Face Hub for models, embedding models, datasets and
+papers. It uses the Hugging Face token on this machine, so it also finds the gated and private
+repositories that your account can open. If there is no token, click **Connect** and paste one
+from [your token settings](https://huggingface.co/settings/tokens). louped keeps the token where
+Hugging Face's own tools keep it (as `hf auth login` does), never in the project.
+
+Click a result to read its card, license, size and files. Then:
+
+- **Add** lists a model, embedding model or dataset in the project's `louped.toml`. The Probe's
+  model field and the Launch form's model options then offer it.
+- **Download** also gets it into this machine's cache as a job (`louped hub get <id>`). The job
+  shows on Runs.
+- **Add to sources** keeps a paper in `sources/` from its arXiv page, as `louped source add` does.
+
+```toml
+[hub]
+models = ["Qwen/Qwen2.5-0.5B-Instruct"]
+embeddings = ["BAAI/bge-small-en-v1.5"]
+datasets = ["openai/gsm8k"]
+```
+
+A gated model needs access first. Its page on the Hub has the request. The Hub page is off on a
+server started with `--expose`, because it uses this machine's token.
+
+Your agent uses `hub_search`, `hub_info` and `hub_add` in the same way.
+
 ## Read, pin and cite
 
 The Sources page (G S) searches every page and lists the sources. Open a source to read it. A PDF

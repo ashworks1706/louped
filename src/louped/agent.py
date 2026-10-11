@@ -14,7 +14,7 @@ from typing import Any, Literal
 from urllib.parse import quote
 
 import httpx
-from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver import Image, MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp_types import ToolAnnotations
 
@@ -37,9 +37,15 @@ work with launchables, launch_options and launch (a script is "script:<name>/run
 with job; read results with run, figures, figure, samples and compare; trace says where a figure's
 mark or a record comes from (its rows, script and commit). Papers and docs the project rests
 on are its sources: search_sources and source_page before the web, add_source to keep one.
+Models, embedding models, datasets and papers on the Hugging Face Hub are hub_search and
+hub_info; hub_add lists a model or dataset in louped.toml (download=True gets it as a job) and
+keeps a paper as a source.
 A figure the person asks for (a chart of a file, points in 3D, an animation) is add_view, or
 derive when it needs a script
-over the run's files (new columns on its items); then ui_show. Evals are Inspect tasks: eval_tasks
+over the run's files (new columns on its items); check it with preview_view before ui_show.
+A dashboard whose panels follow each other (a click or a control filters the rest, live tables,
+diagrams) is a board: check_view, then add_view, or add_page for a page of its own.
+Evals are Inspect tasks: eval_tasks
 lists the project's and inspect_evals' to launch with "eval". Judging two eval runs is launch
 "judge" with --judge one of judges; a new criterion or prompt is new_judge. The person's own
 blind picks of two runs (Compare's Blind A/B) are ab_results; check a judge against them there.
@@ -61,6 +67,8 @@ at parts, with a note."""
 
 READ = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False)
+#: Reads the web, and writes nothing.
+LOOKUP = ToolAnnotations(read_only_hint=True, open_world_hint=True)
 #: Writes, and reaches the web when given a URL.
 FETCH = ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=True)
 STOP = ToolAnnotations(read_only_hint=False, destructive_hint=True, open_world_hint=False)
@@ -73,14 +81,16 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
     api = httpx.AsyncClient(base_url=f"{url.rstrip('/')}/api", transport=transport, timeout=180)
     mcp = MCPServer("louped", instructions=INSTRUCTIONS)
 
-    async def send(method: str, path: str, **kwargs: Any) -> Any:
+    async def request(method: str, path: str, **kwargs: Any) -> httpx.Response:
         try:
-            response = await api.request(method, path, **kwargs)
+            return await api.request(method, path, **kwargs)
         except httpx.ConnectError as e:
             raise ToolError(f"no louped server at {url}; start one with `louped serve`") from e
         except httpx.HTTPError as e:
             raise ToolError(f"{method} {path} to {url} failed: {e!r}") from e
-        return _read(response)
+
+    async def send(method: str, path: str, **kwargs: Any) -> Any:
+        return _read(await request(method, path, **kwargs))
 
     async def get(path: str, /, **params: Any) -> Any:
         return await send("GET", path, params={k: v for k, v in params.items() if v is not None})
@@ -199,6 +209,45 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         the URL is recorded with the file."""
         return await post("/sources", {"location": location, "key": key, "title": title})
 
+    @mcp.tool(annotations=LOOKUP)
+    async def hub_search(
+        kind: Literal["models", "embeddings", "datasets", "papers"],
+        query: str = "",
+        task: str | None = None,
+        library: str | None = None,
+        sort: Literal["downloads", "likes", "recent"] = "downloads",
+        limit: int = 20,
+    ) -> list[dict[str, Any]]:
+        """Search the Hugging Face Hub with this machine's token: models (task is a pipeline tag
+        such as text-generation, library such as transformers), embeddings (models tagged
+        sentence-similarity or feature-extraction), datasets, or papers (today's daily papers
+        when query is empty; sort does not apply to them). Each hit has its id, downloads,
+        likes, gated, private and its Hub url; a gated one needs access asked for on that
+        page."""
+        return await get("/hub/search", kind=kind, q=query, task=task, library=library,
+                         sort=sort, limit=limit)  # fmt: skip
+
+    @mcp.tool(annotations=LOOKUP)
+    async def hub_info(
+        kind: Literal["models", "embeddings", "datasets", "papers"], id: str
+    ) -> dict[str, Any]:
+        """One Hub model, dataset or paper (by its arXiv id) in full: the start of its card,
+        license, tags, size and file count; for a paper its title, authors, abstract and
+        links."""
+        return await get("/hub/info", kind=kind, id=id)
+
+    @mcp.tool(annotations=FETCH)
+    async def hub_add(
+        kind: Literal["models", "embeddings", "datasets", "papers"],
+        id: str,
+        download: bool = False,
+    ) -> dict[str, Any]:
+        """Add a Hub model, embedding model or dataset to the project's louped.toml ([hub]),
+        where the app's model fields offer it; with download, also get it into this machine's
+        cache as a job (follow it with job). A paper (its arXiv id) is kept in sources/ to
+        search, quote and cite."""
+        return await post("/hub/add", {"kind": kind, "id": id, "download": download})
+
     @mcp.tool(annotations=READ)
     async def trace(ref: str) -> dict[str, Any]:
         """Where a piece of evidence comes from, from it down to the run: a figure, the derive
@@ -252,18 +301,68 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         with experiment, on its page (experiments/<experiment>/views/<name>.json, to commit).
         The same name replaces it, which is how to edit it. view is a figure as figure returns
         one: heatmap, line, scatter, table, tokens, vega (any Vega-Lite spec, data inline; its
-        params animate) or plotly (traces inline: scatter3d for points in 3D, frames to play).
-        Give it an about: how to read it. When its marks are items of a run (points of an
-        embedding, one per record), give it items: {"run": None or the run, "folder": the item
-        folder}, the ids of each plotly trace (or, for vega, items.field: the data field) being
-        the items' keys; then a mark opens its item and trace follows it. Then point the
-        person at it with ui_show: the part is figures/figure/<path> on the run's figures tab,
-        experiment/view/<path> on the experiment's page."""
+        params animate) or plotly (traces inline: scatter3d for points in 3D, frames to play;
+        animation {autoplay, loop, duration_ms, transition_ms, orbit} plays them when shown and
+        orbit turns a 3D scene). Check it with preview_view first. Give it an about: how to
+        read it. When its marks are items of a run (points of an embedding, one per record),
+        give it items: {"run": None or the run, "folder": the item folder}, the ids of each
+        plotly trace (or, for vega, items.field: the data field) being the items' keys; then a
+        mark opens its item and trace follows it. Then point the person at it with ui_show: the
+        part is figures/figure/<path> on the run's figures tab, experiment/view/<path> on the
+        experiment's page.
+        A dashboard (linked panels, controls, live tables, diagrams) is a board: see check_view."""
         if (run_id is None) == (experiment is None):
             raise ToolError("give run_id or experiment, one of them")
         where = (f"/runs/{quote(run_id, safe='')}" if run_id
                  else f"/experiments/{quote(experiment or '', safe='')}")  # fmt: skip
         return await send("PUT", f"{where}/views/{quote(name, safe='')}", json=view)
+
+    @mcp.tool(annotations=READ)
+    async def check_view(board: dict[str, Any]) -> dict[str, Any]:
+        """Try a board before keeping it: reads each table and returns its rows and fields, and
+        each panel's rows (every control at its default) and the fields it names that its table
+        lacks. Fix every problem, then add_view or add_page.
+        A board is {"kind": "board", "title", "about", "data": {<table>: {"rows": [...]} or
+        {"ref": ..., "live": seconds}}, "controls": [...], "panels": [...]}. A table's ref is
+        run:<id>/<path> or experiment:<name>/<path> (JSONL, CSV, TSV, JSON), metrics:<run id>
+        (key, step, value, timestamp) or runs: / runs:<experiment> (id, name, status, model and
+        each metric). A control {"id", "kind": select|multi|range|search|toggle, "label",
+        "data"+"field" or "options", "default", range "min"/"max"/"step"} sets the param named
+        by its id. A panel {"id", "kind", "title", "about", "data": <table>, "span": 1-4 of 4
+        columns, "height", "where": [{"field", "op": ==|!=|<|<=|>|>=|in|contains, "param" or
+        "value"}], "select": {"param", "field"}} redraws when a param it filters by changes, and
+        select sets a param from the row, mark or node clicked. Kinds: vega ("spec" without data:
+        the rows are its data and the params its params, so a condition can test
+        datum.model == model), plotly ("trace" type and fields "x", "y", "z", "color" one trace
+        per value, "text", "size", "frame" an animation over a field, "layout"), table
+        ("columns", "sort", "desc"), stat ("op": count|mean|sum|min|max|distinct, "field",
+        "format": number|percent), text ("markdown" with {{param}}), detail (the first row left:
+        filter it to the selected one), diagram (data is its nodes: "node" names one, "label";
+        "edges" another table with "source" and "target"; "direction" LR or TB). Every panel and
+        control gets an about."""
+        return await post("/board/check", board)
+
+    @mcp.tool(annotations=WRITE)
+    async def add_page(name: str, board: dict[str, Any]) -> dict[str, Any]:
+        """Keep a board as a page of its own, listed in the sidebar (boards/<name>.json at the
+        project's root, to commit; "section": workspace, behavior or efficiency picks which
+        sidebar). The same name replaces it. Check it first with check_view; then ui_show the
+        person to it: the page is /b/?name=<name> (/behavior/b/, /efficiency/b/)."""
+        return await send("PUT", f"/boards/{quote(name, safe='')}", json=board)
+
+    @mcp.tool(annotations=READ)
+    async def preview_view(view: dict[str, Any] | None = None, ref: str | None = None) -> Image:
+        """See a figure as a PNG before the person does: view, a figure as add_view takes it
+        (not saved; an error says what in it is wrong), or ref, a saved one
+        (run:<id>/views/<name>.json, experiment:<name>/views/<name>.json). Look at it, fix the
+        spec, then add_view and ui_show. Only vega and plotly figures draw here; a plotly
+        figure shows its traces before any frame plays and needs Chrome."""
+        if (view is None) == (ref is None):
+            raise ToolError("give view or ref, one of them")
+        response = await request("POST", "/views/preview", json={"view": view, "ref": ref})
+        if not response.is_success:
+            _read(response)  # raises with the server's message
+        return Image(data=response.content, format="png")
 
     @mcp.tool(annotations=WRITE)
     async def derive(run_id: str, script: str, name: str | None = None) -> dict[str, Any]:

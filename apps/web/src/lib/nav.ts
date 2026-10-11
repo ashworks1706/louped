@@ -1,6 +1,7 @@
 import {
   Activity,
   BookOpen,
+  Boxes,
   Brain,
   Database,
   Dumbbell,
@@ -9,6 +10,7 @@ import {
   Gauge,
   GitCompareArrows,
   House,
+  LayoutDashboard,
   LayoutGrid,
   ListTree,
   MessageSquareText,
@@ -64,6 +66,14 @@ export const NAV: NavItem[] = [
     description: "The papers, docs, slides and notebooks the project rests on.",
     icon: BookOpen,
     shortcut: "G S",
+    section: "workspace",
+  },
+  {
+    href: "/hub/",
+    title: "Hub",
+    description: "Models, embeddings, datasets and papers on Hugging Face, added to the project.",
+    icon: Boxes,
+    shortcut: "G U",
     section: "workspace",
   },
   {
@@ -243,5 +253,28 @@ export function pluginItem(p: {
     icon: Puzzle,
     shortcut: "",
     section: p.section,
+  };
+}
+
+/** Where a section's boards shown as pages live: /b/, /behavior/b/, /efficiency/b/, with ?name=. */
+export const boardPath = (section: Section) => (section === "workspace" ? "/b/" : `/${section}/b/`);
+
+/** A board's sidebar entry (boards/<name>.json); no G jump, since names are the project's own. */
+export function boardItem(b: {
+  name: string;
+  title: string;
+  about?: string | null;
+  section: string;
+}): NavItem {
+  const section = (
+    ["behavior", "efficiency"].includes(b.section) ? b.section : "workspace"
+  ) as Section;
+  return {
+    href: `${boardPath(section)}?name=${encodeURIComponent(b.name)}`,
+    title: b.title,
+    description: b.about ?? "A board the project's agent made.",
+    icon: LayoutDashboard,
+    shortcut: "",
+    section,
   };
 }

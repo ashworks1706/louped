@@ -9,6 +9,15 @@ export const GLOSSARY = {
   dim: "Its number of entries: the model's hidden size.",
   model: "The model the vector belongs to. It only works on that model's activations.",
   source: "The run that saved the vector, with the figures that chose its layer.",
+  // the Hub
+  downloads: "Downloads on the Hugging Face Hub in the last 30 days.",
+  likes: "People who liked it on the Hugging Face Hub.",
+  params:
+    "Parameters in the model's safetensors files, as the Hub counts them. Empty when it has none.",
+  gated:
+    "Its owner asks people to accept terms first. Ask for access on its Hub page, then use a token of that account.",
+  upvotes: "Votes for the paper on the Hugging Face Hub's papers page.",
+  hubSize: "Bytes the repository takes on the Hub: every file, every format.",
   // runs
   kind: "eval: a model scored on a task. analysis: figures from a script, such as patching or a sweep. training: fine-tuning, with its curves.",
   headline: "The run's first reported metric, at its final value. Open the run for all of them.",

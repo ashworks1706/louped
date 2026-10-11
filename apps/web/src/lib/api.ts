@@ -22,6 +22,12 @@ export type ScatterView = Schemas["ScatterView"];
 export type TokensView = Schemas["TokensView"];
 export type VegaView = Schemas["VegaView"];
 export type PlotlyView = Schemas["PlotlyView"];
+export type BoardView = Schemas["BoardView"];
+export type BoardPanel = Schemas["BoardPanel"];
+export type BoardControl = Schemas["BoardControl"];
+export type BoardFilter = Schemas["BoardFilter"];
+export type BoardTable = Schemas["Table"];
+export type BoardPage = Schemas["BoardPage"];
 export type Trace = Schemas["Trace"];
 export type Code = Schemas["Code"];
 export type Source = Schemas["Source"];
@@ -32,6 +38,12 @@ export type Live = Schemas["Live"];
 export type SourcePage = Schemas["SourcePage"];
 export type Pushed = Schemas["Pushed"];
 export type RemoteState = Schemas["RemoteState"];
+export type HubAccount = Schemas["Account"];
+export type HubHit = Schemas["HubHit"];
+export type HubDetail = Schemas["HubDetail"];
+export type HubAdded = Schemas["HubAdded"];
+export type HubKind = HubHit["kind"];
+export type HubSort = "downloads" | "likes" | "recent";
 export type PluginInfo = Schemas["PluginInfo"];
 export type View = RunView["view"];
 export type Direction = Schemas["Direction"];
@@ -260,6 +272,11 @@ export const sourceFile = (key: string) => `${API}/api/sources/${encodeURICompon
 /** A notebook source as the page the API draws it as. */
 export const sourceNotebook = (key: string) =>
   `${API}/api/sources/${encodeURIComponent(key)}/notebook`;
+/** Checks a Hugging Face token and keeps it where huggingface_hub keeps it. */
+export const saveHubToken = (token: string) => post<HubAccount>("/hub/token", { token });
+/** Lists a model, embedding model or dataset in louped.toml (and downloads it as a job), or
+ * keeps a paper as a source. */
+export const hubAdd = (body: Schemas["AddRequest"]) => post<Schemas["AddResult"]>("/hub/add", body);
 export const addSource = (body: Schemas["SourceRequest"]) => post<Source>("/sources", body);
 export const addPin = (body: Schemas["PinRequest"]) => post<Pin>("/pins", body);
 export const deletePin = (id: string) => del(`/pins/${encodeURIComponent(id)}`);
@@ -397,6 +414,35 @@ export const q = {
     queryKey: ["feature", run, feature],
     queryFn: () => get<FeatureDashboard>(`/runs/${encodeURIComponent(run)}/features/${feature}`),
   }),
+  /** The Hugging Face account whose token is on this machine. */
+  hubMe: () => ({
+    queryKey: ["hub", "me"],
+    queryFn: () => get<HubAccount>("/hub/me"),
+    retry: false,
+  }),
+  hubSearch: (p: { kind: HubKind; q: string; task: string; library: string; sort: HubSort }) => ({
+    queryKey: ["hub", "search", p],
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      get<HubHit[]>(`/hub/search?${new URLSearchParams({ ...p, limit: "30" })}`, signal),
+    retry: false,
+    staleTime: 60_000,
+  }),
+  hubInfo: (kind: HubKind, id: string) => ({
+    queryKey: ["hub", "info", kind, id],
+    queryFn: () => get<HubDetail>(`/hub/info?kind=${kind}&id=${encodeURIComponent(id)}`),
+    retry: false,
+    staleTime: 60_000,
+  }),
+  /** What the project added from the Hub, for model fields to offer; none in a published
+   * dashboard. */
+  hubAdded: () => ({
+    queryKey: ["hub", "added"],
+    queryFn: () =>
+      isSnapshot()
+        ? Promise.resolve<HubAdded>({ models: [], embeddings: [], datasets: [] })
+        : get<HubAdded>("/hub/added"),
+    retry: false,
+  }),
   playground: () => ({
     queryKey: ["playground"],
     queryFn: () => get<PlaygroundInfo>("/playground"),
@@ -474,6 +520,26 @@ export const q = {
       isSnapshot()
         ? Promise.resolve([] as SavedCohort[])
         : get<SavedCohort[]>(`/experiments/${encodeURIComponent(experiment)}/cohorts`),
+  }),
+  /** A board's table read from louped: a run's or experiment's file, metrics:<id> or runs:.
+   * live is seconds between reads. */
+  boardTable: (ref: string, live?: number | null) => ({
+    queryKey: ["board-table", ref],
+    queryFn: () => get<BoardTable>(`/board/table?ref=${encodeURIComponent(ref)}`),
+    refetchInterval: () => (live && !isSnapshot() ? live * 1000 : false),
+  }),
+  /** The boards shown as their own pages; a published dashboard has none. Polled, so a page an
+   * agent adds shows in the sidebar. */
+  boards: () => ({
+    queryKey: ["boards"],
+    queryFn: () => (isSnapshot() ? Promise.resolve([]) : get<BoardPage[]>("/boards")),
+    retry: false,
+    refetchInterval: () => (isSnapshot() ? false : 3000),
+  }),
+  board: (name: string) => ({
+    queryKey: ["boards", name],
+    queryFn: () => get<BoardView>(`/boards/${encodeURIComponent(name)}`),
+    refetchInterval: () => (isSnapshot() ? false : 3000),
   }),
   /** An experiment's own figures; a published dashboard has none. */
   experimentViews: (experiment: string) => ({

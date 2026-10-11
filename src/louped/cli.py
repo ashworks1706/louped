@@ -232,6 +232,19 @@ class Cluster:
 
 
 @dataclass(frozen=True)
+class Hub:
+    """get puts a model or dataset from the Hugging Face Hub in this machine's cache
+    (huggingface_hub's snapshot_download), where loading it finds it. A gated one needs a token
+    with access: hf auth login, or the app's Hub page."""
+
+    action: tyro.conf.Positional[Literal["get"]]
+    repo: tyro.conf.Positional[str]
+    """The repository id, such as Qwen/Qwen2.5-0.5B-Instruct."""
+    dataset: bool = False
+    """It is a dataset, not a model."""
+
+
+@dataclass(frozen=True)
 class Publish:
     """Write this project's dashboard as static, read-only files to put on any static host at a
     domain's root: an HF static Space, Vercel, or a GitHub Pages user site."""
@@ -455,6 +468,7 @@ Command = (
     | Annotated[Gate, tyro.conf.subcommand("gate")]
     | Annotated[Submit, tyro.conf.subcommand("submit")]
     | Annotated[Cluster, tyro.conf.subcommand("cluster")]
+    | Annotated[Hub, tyro.conf.subcommand("hub")]
     | Annotated[Publish, tyro.conf.subcommand("publish")]
     | Annotated[Bench, tyro.conf.subcommand("bench")]
     | Annotated[EndpointBench, tyro.conf.subcommand("endpoint-bench")]
@@ -489,6 +503,7 @@ COMMANDS = {
     "gate",
     "submit",
     "cluster",
+    "hub",
     "publish",
     "bench",
     "endpoint-bench",
@@ -791,6 +806,14 @@ def main() -> None:
             _submit(cmd)
         case Cluster() as cmd:
             _cluster(cmd)
+        case Hub() as cmd:
+            from huggingface_hub import snapshot_download
+            from huggingface_hub.errors import HfHubHTTPError
+
+            try:
+                print(snapshot_download(cmd.repo, repo_type="dataset" if cmd.dataset else None))
+            except HfHubHTTPError as exc:
+                raise SystemExit(str(exc)) from exc
         case Publish() as cmd:
             from louped.server.app import find_ui
             from louped.server.publish import describe, publish

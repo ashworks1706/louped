@@ -18,6 +18,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { BoardFigure } from "@/components/board";
 import { ExportFigure } from "@/components/export-figure";
 import { Help } from "@/components/help";
 import { MarkTrace, useOpenMark } from "@/components/mark-trace";
@@ -97,6 +98,8 @@ const READ: Record<View["kind"], string> = {
     "Each token is shaded by the picked series: darker is a larger value. Hover a token for its number.",
   vega: "A chart the run drew itself. Hover marks for their values.",
   plotly: "A figure the run drew itself. Drag to turn a 3D one, scroll to zoom, hover points.",
+  board:
+    "Panels that follow each other: a control, or a click on a mark, row or node, filters the panels that use it. Click it again to let it go.",
 };
 
 /** One figure of any kind, with its title, how to read it, and its note. With source, the
@@ -140,6 +143,17 @@ export function Figure({ view, id, source }: { view: View; id?: string; source?:
         {view.kind === "tokens" && <TokensFigure view={view} />}
         {view.kind === "vega" && <VegaFigure view={view} onMark={onMark} />}
         {view.kind === "plotly" && <PlotlyFigure view={view} onMark={onMark} />}
+        {view.kind === "board" && (
+          <BoardFigure
+            view={view}
+            name={
+              source
+                ?.split("/")
+                .at(-1)
+                ?.replace(/\.json$/, "") ?? "board"
+            }
+          />
+        )}
         {traced && (
           <p className="mt-2 text-xs" aria-live="polite" data-testid="mark-trace">
             <MarkTrace source={source} mark={mark} failed={failed} />

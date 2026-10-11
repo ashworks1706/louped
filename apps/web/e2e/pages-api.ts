@@ -1,5 +1,7 @@
 import type { Page } from "@playwright/test";
 
+import { mockBoards } from "./boards-api";
+import { mockHub } from "./hub-api";
 import { mock, run, summary } from "./items-run";
 import { mockReports } from "./reports-api";
 import { mockSources } from "./sources-api";
@@ -134,6 +136,8 @@ export async function mockPages(page: Page, parts: Record<string, object> = {}) 
   await mock(page, parts);
   await mockSources(page);
   await mockReports(page);
+  await mockBoards(page);
+  await mockHub(page);
   const json = (glob: string, body: unknown) => page.route(glob, (r) => r.fulfill({ json: body }));
   await json("**/api/runs", summaries);
   await json("**/api/runs/e-1", evalRun);

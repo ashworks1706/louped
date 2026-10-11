@@ -19,7 +19,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Kbd } from "@/components/ui/kbd";
 import { q } from "@/lib/api";
 import { experimentHref, sourceHref } from "@/lib/href";
-import { fullTitle, NAV, pluginItem } from "@/lib/nav";
+import { boardItem, fullTitle, NAV, pluginItem } from "@/lib/nav";
 
 const DOCS = "https://github.com/ashworks1706/louped/tree/main/docs";
 
@@ -43,6 +43,7 @@ export function CommandMenu({ children }: { children: React.ReactNode }) {
   // Fetched only once the menu opens, so a page that never opens it pays nothing.
   const experiments = useQuery({ ...q.experiments(), enabled: open });
   const plugins = useQuery({ ...q.plugins(), enabled: open });
+  const boards = useQuery({ ...q.boards(), enabled: open });
   const sources = useQuery({ ...q.sources(), enabled: open });
   const canPick = useCanPick();
 
@@ -91,7 +92,11 @@ export function CommandMenu({ children }: { children: React.ReactNode }) {
             <CommandList>
               <CommandEmpty>Nothing matches.</CommandEmpty>
               <CommandGroup heading="Go to">
-                {[...NAV, ...(plugins.data ?? []).map(pluginItem)].map((item) => (
+                {[
+                  ...NAV,
+                  ...(boards.data ?? []).map(boardItem),
+                  ...(plugins.data ?? []).map(pluginItem),
+                ].map((item) => (
                   <CommandItem
                     key={item.href}
                     value={`${fullTitle(item)} ${item.description}`}

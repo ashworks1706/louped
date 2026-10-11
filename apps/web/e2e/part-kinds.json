@@ -250,6 +250,21 @@
     "rules": ["hidden", "note"]
   },
   {
+    "part": "board/*",
+    "about": "A board shown as a page of its own, by its name.",
+    "rules": []
+  },
+  {
+    "part": "board/*/panel/*",
+    "about": "One panel of a board, by the board's name and the panel's id: its rows as drawn.",
+    "rules": []
+  },
+  {
+    "part": "board/*/control/*",
+    "about": "One control of a board, by its param.",
+    "rules": []
+  },
+  {
     "part": "figures/export/*",
     "about": "Exports one figure to reports/ as SVG, PNG or PDF.",
     "rules": []
@@ -582,6 +597,46 @@
   {
     "part": "source/pin/*",
     "about": "One pinned passage of the source, by id.",
+    "rules": []
+  },
+  {
+    "part": "hub/account",
+    "about": "The Hugging Face account signed in here, or Connect.",
+    "rules": []
+  },
+  {
+    "part": "hub/token",
+    "about": "The token dialog's form.",
+    "rules": []
+  },
+  {
+    "part": "hub/tab/*",
+    "about": "Models, embeddings, datasets or papers.",
+    "rules": []
+  },
+  {
+    "part": "hub/search",
+    "about": "Search the Hub.",
+    "rules": []
+  },
+  {
+    "part": "hub/filter/*",
+    "about": "A search's task, library or sort.",
+    "rules": []
+  },
+  {
+    "part": "hub/column/*",
+    "about": "A column of the results.",
+    "rules": []
+  },
+  {
+    "part": "hub/hit/*/*",
+    "about": "One result, by kind and Hub id.",
+    "rules": []
+  },
+  {
+    "part": "hub/detail/*",
+    "about": "The open result's title, facts, card, abstract, links and actions.",
     "rules": []
   },
   {

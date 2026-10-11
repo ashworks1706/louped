@@ -154,7 +154,31 @@ Every region can also hold `text` (your own Markdown) and `plugin` (a page from 
 
 `views` shows every figure in `experiments/<name>/views/`. Your agent adds them with `add_view`.
 `view` (`path`) shows one. A figure can be any of louped's kinds or `plotly`. `plotly` draws 3D
-points and surfaces, and plays `frames` as an animation.
+points and surfaces, and plays `frames` as an animation. Its `animation` (`autoplay`, `loop`,
+`duration_ms`, `transition_ms`, `orbit`) starts the frames when the figure comes into view, plays
+them again, and turns a 3D scene. When your system asks for reduced motion, the figure does not
+move by itself. Before it adds a figure, your agent can look at it as an image with `preview_view`.
+
+## Boards
+
+A board is a figure made of panels that follow each other. Ask your agent for one when one chart
+is not enough, for example "a table of the items beside a chart of their scores, filtered by
+model". The agent writes it as data. No code runs in it.
+
+- **Tables**: rows written in the board, or read from louped. A ref names a run's JSONL, CSV or
+  JSON file (`run:<id>/<path>`), a file in an experiment (`experiment:<name>/<path>`), a run's
+  metrics over steps (`metrics:<id>`), or the runs (`runs:`, `runs:<experiment>`). With `live`,
+  the table is read again every few seconds while a run goes on.
+- **Controls**: select, multi-select, range, search and toggle. Each sets a param.
+- **Panels**: `vega`, `plotly` (3D, and `frame` plays the rows as an animation), `table`,
+  `stat`, `text`, `detail` (one row) and `diagram` (nodes and edges, laid out for you).
+- **Links**: a panel's `where` filters its rows by params. Its `select` sets a param when you
+  click a mark, a row or a node. Click it again, or its chip above the panels, to clear it.
+
+A board goes where a figure goes: a run's **Figures** or an experiment's page. As a page of its
+own it is `boards/<name>.json` in the project, listed in the sidebar of its `section`. The agent
+checks a board with `check_view` before you see it: each table's rows, and each field a panel
+names that its table lacks.
 
 A file that fails its check is not used. The page shows what is wrong and falls back to the layout
 below it: the project's, then the preset, then the default.

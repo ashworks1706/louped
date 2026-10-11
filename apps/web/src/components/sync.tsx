@@ -142,32 +142,49 @@ function Connect({
               autoComplete="off"
             />
           </label>
-          <label className="flex flex-col gap-1 text-xs">
-            <span>
-              Hugging Face token{" "}
-              <a
-                className="text-muted-foreground underline underline-offset-2"
-                href="https://huggingface.co/settings/tokens"
-                target="_blank"
-                rel="noreferrer"
-              >
-                (write access)
-              </a>
-            </span>
-            <Input
-              name="token"
-              type="password"
-              placeholder="Empty if this machine is signed in"
-              className="font-mono placeholder:font-sans"
-              autoComplete="off"
-            />
-          </label>
+          <TokenField access="write access" placeholder="Empty if this machine is signed in" />
           <Button type="submit" size="sm" className="self-end" disabled={connect.isPending}>
             Connect
           </Button>
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** A Hugging Face token, linked to where one is made; sent as the form's "token". It is kept
+ * where Hugging Face's own tools keep it, never in the project. */
+export function TokenField({
+  access,
+  placeholder,
+  required,
+}: {
+  access: string;
+  placeholder: string;
+  required?: boolean;
+}) {
+  return (
+    <label className="flex flex-col gap-1 text-xs">
+      <span>
+        Hugging Face token{" "}
+        <a
+          className="text-muted-foreground underline underline-offset-2"
+          href="https://huggingface.co/settings/tokens"
+          target="_blank"
+          rel="noreferrer"
+        >
+          ({access})
+        </a>
+      </span>
+      <Input
+        name="token"
+        type="password"
+        placeholder={placeholder}
+        required={required}
+        className="font-mono placeholder:font-sans"
+        autoComplete="off"
+      />
+    </label>
   );
 }
 

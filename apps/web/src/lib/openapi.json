@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "louped",
-    "version": "0.6.0"
+    "version": "0.8.0"
   },
   "paths": {
     "/api/health": {
@@ -1044,6 +1044,41 @@
         }
       }
     },
+    "/api/views/preview": {
+      "post": {
+        "summary": "Preview View",
+        "description": "A vega or plotly figure drawn as a PNG, unsaved or at its ref: 400 with what is wrong\nin a view that does not check, 501 when Plotly finds no Chrome. Off with --expose, like\nexport: it draws any spec it is sent.",
+        "operationId": "preview_view_api_views_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "image/png": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/check": {
       "get": {
         "summary": "Grounded",
@@ -1229,6 +1264,9 @@
                   },
                   {
                     "$ref": "#/components/schemas/PlotlyView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/BoardView"
                   }
                 ],
                 "discriminator": {
@@ -1240,7 +1278,8 @@
                     "table": "#/components/schemas/TableView",
                     "tokens": "#/components/schemas/TokensView",
                     "vega": "#/components/schemas/VegaView",
-                    "plotly": "#/components/schemas/PlotlyView"
+                    "plotly": "#/components/schemas/PlotlyView",
+                    "board": "#/components/schemas/BoardView"
                   }
                 },
                 "title": "Req"
@@ -2223,6 +2262,9 @@
                   },
                   {
                     "$ref": "#/components/schemas/PlotlyView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/BoardView"
                   }
                 ],
                 "discriminator": {
@@ -2234,7 +2276,8 @@
                     "table": "#/components/schemas/TableView",
                     "tokens": "#/components/schemas/TokensView",
                     "vega": "#/components/schemas/VegaView",
-                    "plotly": "#/components/schemas/PlotlyView"
+                    "plotly": "#/components/schemas/PlotlyView",
+                    "board": "#/components/schemas/BoardView"
                   }
                 },
                 "title": "Req"
@@ -2249,6 +2292,273 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RunView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/board/table": {
+      "get": {
+        "summary": "Board Table",
+        "description": "The rows a board's table reads: run:<id>/<path>, experiment:<name>/<path>,\nmetrics:<run id>, runs: or runs:<experiment> (louped.stores.boards).",
+        "operationId": "board_table_api_board_table_get",
+        "parameters": [
+          {
+            "name": "ref",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ref"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Table"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/board/check": {
+      "post": {
+        "summary": "Board Check",
+        "description": "A board's tables read and its panels tried, before it is shown: what the agent fixes.",
+        "operationId": "board_check_api_board_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/HeatmapView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LineView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ScatterView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/TableView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/TokensView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/VegaView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PlotlyView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/BoardView"
+                  }
+                ],
+                "title": "Req",
+                "discriminator": {
+                  "propertyName": "kind",
+                  "mapping": {
+                    "heatmap": "#/components/schemas/HeatmapView",
+                    "line": "#/components/schemas/LineView",
+                    "scatter": "#/components/schemas/ScatterView",
+                    "table": "#/components/schemas/TableView",
+                    "tokens": "#/components/schemas/TokensView",
+                    "vega": "#/components/schemas/VegaView",
+                    "plotly": "#/components/schemas/PlotlyView",
+                    "board": "#/components/schemas/BoardView"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardCheck"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/boards": {
+      "get": {
+        "summary": "List Boards",
+        "description": "The boards shown as pages of their own: boards/<name>.json at the project's root.",
+        "operationId": "list_boards_api_boards_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BoardPage"
+                  },
+                  "type": "array",
+                  "title": "Response List Boards Api Boards Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/boards/{name}": {
+      "get": {
+        "summary": "Get Board",
+        "operationId": "get_board_api_boards__name__get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Save Board",
+        "description": "Writes boards/<name>.json, replacing one of that name: a page in the sidebar.",
+        "operationId": "save_board_api_boards__name__put",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/HeatmapView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LineView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ScatterView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/TableView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/TokensView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/VegaView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PlotlyView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/BoardView"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "kind",
+                  "mapping": {
+                    "heatmap": "#/components/schemas/HeatmapView",
+                    "line": "#/components/schemas/LineView",
+                    "scatter": "#/components/schemas/ScatterView",
+                    "table": "#/components/schemas/TableView",
+                    "tokens": "#/components/schemas/TokensView",
+                    "vega": "#/components/schemas/VegaView",
+                    "plotly": "#/components/schemas/PlotlyView",
+                    "board": "#/components/schemas/BoardView"
+                  }
+                },
+                "title": "Req"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardPage"
                 }
               }
             }
@@ -3114,6 +3424,277 @@
         }
       }
     },
+    "/api/hub/me": {
+      "get": {
+        "summary": "Me",
+        "description": "Whether a Hugging Face token is on this machine, and whose it is; a refused token is\nsaid in error.",
+        "operationId": "me_api_hub_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Account"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hub/token": {
+      "post": {
+        "summary": "Token",
+        "description": "Check a token and keep it where huggingface_hub keeps it, not in the project.",
+        "operationId": "token_api_hub_token_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Token"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Account"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hub/search": {
+      "get": {
+        "summary": "Hub Search",
+        "operationId": "hub_search_api_hub_search_get",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": ["models", "embeddings", "datasets", "papers"],
+              "type": "string",
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "task",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Task"
+            }
+          },
+          {
+            "name": "library",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Library"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": ["downloads", "likes", "recent"],
+              "type": "string",
+              "default": "downloads",
+              "title": "Sort"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HubHit"
+                  },
+                  "title": "Response Hub Search Api Hub Search Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hub/info": {
+      "get": {
+        "summary": "Hub Info",
+        "operationId": "hub_info_api_hub_info_get",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": ["models", "embeddings", "datasets", "papers"],
+              "type": "string",
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HubDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hub/added": {
+      "get": {
+        "summary": "Hub Added",
+        "operationId": "hub_added_api_hub_added_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HubAdded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hub/add": {
+      "post": {
+        "summary": "Hub Add",
+        "description": "A model, embedding model or dataset listed in louped.toml, and with download fetched\nhere as a job; a paper kept in sources/ from its arXiv page.",
+        "operationId": "hub_add_api_hub_add_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/ui/layout": {
       "get": {
         "summary": "Layout",
@@ -3830,6 +4411,102 @@
         "title": "AbSession",
         "description": "A blind A/B of two eval runs: their shared samples, each side placed by a seed."
       },
+      "Account": {
+        "properties": {
+          "token": {
+            "type": "boolean",
+            "title": "Token"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "avatar": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": ["token"],
+        "title": "Account"
+      },
+      "AddRequest": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["models", "embeddings", "datasets", "papers"],
+            "title": "Kind"
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[\\w.-]+(/[\\w.-]+)?$",
+            "title": "Id"
+          },
+          "download": {
+            "type": "boolean",
+            "title": "Download",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": ["kind", "id"],
+        "title": "AddRequest"
+      },
+      "AddResult": {
+        "properties": {
+          "added": {
+            "$ref": "#/components/schemas/HubAdded"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Source"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "job": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Job"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": ["added"],
+        "title": "AddResult"
+      },
       "Agreement": {
         "properties": {
           "labelled": {
@@ -4000,6 +4677,761 @@
         "required": ["block"],
         "title": "Block",
         "description": "One piece of a region. Only the fields its kind needs are set."
+      },
+      "BoardCheck": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "tables": {
+            "items": {
+              "$ref": "#/components/schemas/TableCheck"
+            },
+            "type": "array",
+            "title": "Tables"
+          },
+          "panels": {
+            "items": {
+              "$ref": "#/components/schemas/PanelCheck"
+            },
+            "type": "array",
+            "title": "Panels"
+          }
+        },
+        "type": "object",
+        "required": ["ok", "tables", "panels"],
+        "title": "BoardCheck",
+        "description": "What a board reads and draws, before anyone sees it: each table's rows and fields, and\neach panel's rows and the fields it names that its table does not have."
+      },
+      "BoardControl": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,63}$",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["select", "multi", "range", "search", "toggle"],
+            "title": "Kind"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "about": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "About"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Options"
+          },
+          "default": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "step": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": ["id", "kind"],
+        "title": "BoardControl",
+        "description": "An input over the panels: it sets the param named by its id."
+      },
+      "BoardData": {
+        "properties": {
+          "rows": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows"
+          },
+          "ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref"
+          },
+          "live": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3600.0,
+                "minimum": 2.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Live"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "BoardData",
+        "description": "One of a board's tables: its rows inline, or read from what louped already keeps."
+      },
+      "BoardFilter": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "op": {
+            "type": "string",
+            "enum": ["==", "!=", "<", "<=", ">", ">=", "in", "contains"],
+            "title": "Op",
+            "default": "=="
+          },
+          "param": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Param"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": ["field"],
+        "title": "BoardFilter",
+        "description": "Keeps the rows whose field passes op against a param (or a fixed value). A param that\nis not set keeps every row."
+      },
+      "BoardPage": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "about": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "About"
+          },
+          "section": {
+            "type": "string",
+            "title": "Section"
+          }
+        },
+        "type": "object",
+        "required": ["name", "title", "about", "section"],
+        "title": "BoardPage"
+      },
+      "BoardPanel": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["vega", "plotly", "table", "stat", "text", "detail", "diagram"],
+            "title": "Kind"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "about": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "About"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "where": {
+            "items": {
+              "$ref": "#/components/schemas/BoardFilter"
+            },
+            "type": "array",
+            "title": "Where",
+            "default": []
+          },
+          "select": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoardSelect"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "span": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 1.0,
+            "title": "Span",
+            "default": 2
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1200.0,
+                "minimum": 80.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height"
+          },
+          "spec": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spec"
+          },
+          "trace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace"
+          },
+          "x": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X"
+          },
+          "y": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Y"
+          },
+          "z": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Z"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size"
+          },
+          "frame": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frame"
+          },
+          "layout": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Layout"
+          },
+          "columns": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Columns"
+          },
+          "sort": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort"
+          },
+          "desc": {
+            "type": "boolean",
+            "title": "Desc",
+            "default": false
+          },
+          "op": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["count", "mean", "sum", "min", "max", "distinct"]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Op"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "format": {
+            "type": "string",
+            "enum": ["number", "percent"],
+            "title": "Format",
+            "default": "number"
+          },
+          "markdown": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Markdown"
+          },
+          "edges": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edges"
+          },
+          "node": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "direction": {
+            "type": "string",
+            "enum": ["LR", "TB"],
+            "title": "Direction",
+            "default": "LR"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": ["id", "kind"],
+        "title": "BoardPanel",
+        "description": "One panel of a board. Only the fields its kind reads are set."
+      },
+      "BoardSelect": {
+        "properties": {
+          "param": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,63}$",
+            "title": "Param"
+          },
+          "field": {
+            "type": "string",
+            "title": "Field"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": ["param", "field"],
+        "title": "BoardSelect",
+        "description": "What a click on a mark, a row or a node does: param takes that row's field."
+      },
+      "BoardView": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "board",
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "about": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "About"
+          },
+          "data": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/BoardData"
+            },
+            "type": "object",
+            "minProperties": 1,
+            "title": "Data"
+          },
+          "controls": {
+            "items": {
+              "$ref": "#/components/schemas/BoardControl"
+            },
+            "type": "array",
+            "title": "Controls",
+            "default": []
+          },
+          "panels": {
+            "items": {
+              "$ref": "#/components/schemas/BoardPanel"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Panels"
+          },
+          "section": {
+            "type": "string",
+            "enum": ["workspace", "behavior", "efficiency"],
+            "title": "Section",
+            "default": "workspace"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": ["kind", "title", "data", "panels"],
+        "title": "BoardView",
+        "description": "A dashboard: tables, controls and linked panels. A control or a click on a panel sets a\nparam; every panel whose filters name it redraws. No code runs and nothing is fetched but\nlouped's own data, so a board is safe to show and to commit."
       },
       "Catalog": {
         "properties": {
@@ -5407,6 +6839,363 @@
         "required": ["key", "title", "page", "snippet"],
         "title": "Hit"
       },
+      "HubAdded": {
+        "properties": {
+          "models": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Models",
+            "default": []
+          },
+          "embeddings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Embeddings",
+            "default": []
+          },
+          "datasets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Datasets",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "HubAdded",
+        "description": "What the project lists under [hub] in louped.toml."
+      },
+      "HubDetail": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["models", "embeddings", "datasets", "papers"],
+            "title": "Kind"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "downloads": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Downloads"
+          },
+          "likes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Likes"
+          },
+          "task": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task"
+          },
+          "library": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Library"
+          },
+          "gated": {
+            "type": "boolean",
+            "title": "Gated",
+            "default": false
+          },
+          "private": {
+            "type": "boolean",
+            "title": "Private",
+            "default": false
+          },
+          "updated": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated"
+          },
+          "params": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Params"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "authors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Authors",
+            "default": []
+          },
+          "upvotes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upvotes"
+          },
+          "card": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card"
+          },
+          "license": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "default": []
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size"
+          },
+          "files": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Files"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Links",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": ["kind", "id", "url"],
+        "title": "HubDetail"
+      },
+      "HubHit": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["models", "embeddings", "datasets", "papers"],
+            "title": "Kind"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "downloads": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Downloads"
+          },
+          "likes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Likes"
+          },
+          "task": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task"
+          },
+          "library": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Library"
+          },
+          "gated": {
+            "type": "boolean",
+            "title": "Gated",
+            "default": false
+          },
+          "private": {
+            "type": "boolean",
+            "title": "Private",
+            "default": false
+          },
+          "updated": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated"
+          },
+          "params": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Params"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "authors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Authors",
+            "default": []
+          },
+          "upvotes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upvotes"
+          }
+        },
+        "type": "object",
+        "required": ["kind", "id", "url"],
+        "title": "HubHit",
+        "description": "One model, dataset or paper a search found."
+      },
       "ImportPath": {
         "properties": {
           "path": {
@@ -5554,11 +7343,15 @@
                 },
                 {
                   "$ref": "#/components/schemas/PlotlyView"
+                },
+                {
+                  "$ref": "#/components/schemas/BoardView"
                 }
               ],
               "discriminator": {
                 "propertyName": "kind",
                 "mapping": {
+                  "board": "#/components/schemas/BoardView",
                   "heatmap": "#/components/schemas/HeatmapView",
                   "line": "#/components/schemas/LineView",
                   "plotly": "#/components/schemas/PlotlyView",
@@ -6243,11 +8036,15 @@
                   },
                   {
                     "$ref": "#/components/schemas/PlotlyView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/BoardView"
                   }
                 ],
                 "discriminator": {
                   "propertyName": "kind",
                   "mapping": {
+                    "board": "#/components/schemas/BoardView",
                     "heatmap": "#/components/schemas/HeatmapView",
                     "line": "#/components/schemas/LineView",
                     "plotly": "#/components/schemas/PlotlyView",
@@ -6518,7 +8315,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "const": "evals"
+                "enum": ["evals", "models", "embeddings"]
               },
               {
                 "type": "null"
@@ -6675,6 +8472,35 @@
         "type": "object",
         "required": ["name", "n", "mean_a", "mean_b", "diff", "low", "high", "up", "down"],
         "title": "PairedScore"
+      },
+      "PanelCheck": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows"
+          },
+          "problems": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Problems"
+          }
+        },
+        "type": "object",
+        "required": ["id", "rows", "problems"],
+        "title": "PanelCheck"
       },
       "PartRule": {
         "properties": {
@@ -7025,6 +8851,43 @@
         "required": ["model", "layers"],
         "title": "PlaygroundInfo"
       },
+      "PlotlyAnimation": {
+        "properties": {
+          "autoplay": {
+            "type": "boolean",
+            "title": "Autoplay",
+            "default": false
+          },
+          "loop": {
+            "type": "boolean",
+            "title": "Loop",
+            "default": false
+          },
+          "duration_ms": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 16.0,
+            "title": "Duration Ms",
+            "default": 400
+          },
+          "transition_ms": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Transition Ms",
+            "default": 0
+          },
+          "orbit": {
+            "type": "boolean",
+            "title": "Orbit",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PlotlyAnimation",
+        "description": "How a plotly figure moves when the app shows it. When the person's system asks for reduced\nmotion, nothing moves by itself: the Play button stays."
+      },
       "PlotlyView": {
         "properties": {
           "kind": {
@@ -7097,6 +8960,16 @@
                 "type": "null"
               }
             ]
+          },
+          "animation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlotlyAnimation"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -7152,6 +9025,35 @@
         "type": "object",
         "required": ["name", "title", "section", "description", "panel"],
         "title": "PluginInfo"
+      },
+      "PreviewRequest": {
+        "properties": {
+          "view": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "View"
+          },
+          "ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref"
+          }
+        },
+        "type": "object",
+        "title": "PreviewRequest"
       },
       "Pushed": {
         "properties": {
@@ -7643,12 +9545,16 @@
               },
               {
                 "$ref": "#/components/schemas/PlotlyView"
+              },
+              {
+                "$ref": "#/components/schemas/BoardView"
               }
             ],
             "title": "View",
             "discriminator": {
               "propertyName": "kind",
               "mapping": {
+                "board": "#/components/schemas/BoardView",
                 "heatmap": "#/components/schemas/HeatmapView",
                 "line": "#/components/schemas/LineView",
                 "plotly": "#/components/schemas/PlotlyView",
@@ -7860,11 +9766,15 @@
                 },
                 {
                   "$ref": "#/components/schemas/PlotlyView"
+                },
+                {
+                  "$ref": "#/components/schemas/BoardView"
                 }
               ],
               "discriminator": {
                 "propertyName": "kind",
                 "mapping": {
+                  "board": "#/components/schemas/BoardView",
                   "heatmap": "#/components/schemas/HeatmapView",
                   "line": "#/components/schemas/LineView",
                   "plotly": "#/components/schemas/PlotlyView",
@@ -8578,6 +10488,66 @@
         "required": ["id", "cluster"],
         "title": "SubmitRequest"
       },
+      "Table": {
+        "properties": {
+          "rows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": ["rows", "columns"],
+        "title": "Table"
+      },
+      "TableCheck": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "rows": {
+            "type": "integer",
+            "title": "Rows"
+          },
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": ["name", "rows", "columns"],
+        "title": "TableCheck"
+      },
       "TableView": {
         "properties": {
           "kind": {
@@ -8822,6 +10792,18 @@
         "required": ["light", "dark", "errors"],
         "title": "Theme",
         "description": "Token values over the defaults, for light and dark mode; errors name what was dropped."
+      },
+      "Token": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Token"
+          }
+        },
+        "type": "object",
+        "required": ["token"],
+        "title": "Token"
       },
       "TokenRow": {
         "properties": {

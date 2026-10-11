@@ -52,8 +52,9 @@ class Option(BaseModel):
     help: str = ""
     choices: list[str] = []
     required: bool = False
-    #: A catalog the form offers to pick the value from: "evals", every Inspect task found.
-    suggest: Literal["evals"] | None = None
+    #: A catalog the form offers to pick the value from: "evals", every Inspect task found;
+    #: "models" or "embeddings", the ones the project added from the Hub (louped.server.hub).
+    suggest: Literal["evals", "models", "embeddings"] | None = None
 
 
 class Launchable(BaseModel):
@@ -122,6 +123,10 @@ COMMANDS = {
     "derive": (
         "Derive",
         "A script over a run's files: new columns on its Items, or a figure, kept with the run.",
+    ),
+    "hub": (
+        "Hub",
+        "Get a model or dataset from the Hugging Face Hub into this machine's cache.",
     ),
     "examples": (
         "Examples",
@@ -209,7 +214,7 @@ EVAL = [
     Option(flag="task", kind="text", default=None, required=True, suggest="evals",
            help="inspect_evals/<name>, or file.py@task"),
     Option(flag="--model", kind="text", default="louped/Qwen/Qwen2.5-0.5B-Instruct",
-           help="louped/<hub id or saved model>, or any Inspect model"),
+           suggest="models", help="louped/<hub id or saved model>, or any Inspect model"),
     Option(flag="--limit", kind="text", default=None, help="Samples to run; all when empty."),
     Option(flag="--epochs", kind="text", default=None),
     Option(flag="--max-tokens", kind="text", default="512"),
@@ -303,8 +308,17 @@ def dump(args: type | None) -> None:
         )
         out.append({"flag": flag, "kind": kind, "help": help.strip(), "required": a.required,
                     "default": None if default is None else str(default),
-                    "choices": [str(c) for c in a.choices or []]})  # fmt: skip
+                    "choices": [str(c) for c in a.choices or []],
+                    "suggest": _suggest(flag) if kind == "text" else None})  # fmt: skip
     print(json.dumps(out))
+
+
+def _suggest(flag: str) -> str | None:
+    """The Hub catalog a flag takes by its name: an embedding model (--embed-model, --embedder),
+    else a model (--model, --judge-model)."""
+    if "embed" in flag:
+        return "embeddings"
+    return "models" if flag.endswith("model") else None
 
 
 def _script(launchable: str) -> Path:
@@ -561,9 +575,9 @@ def require_json(request: Request) -> None:
         raise HTTPException(415, "send JSON")
 
 
-def router(enabled: bool) -> APIRouter:
+def router(jobs: Jobs | None) -> APIRouter:
+    """The launch routes over the queue; None turns launching off (--expose)."""
     api = APIRouter(prefix="/api/launch")
-    jobs = Jobs() if enabled else None
 
     def queue() -> Jobs:
         if jobs is None:

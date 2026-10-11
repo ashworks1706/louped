@@ -77,8 +77,12 @@ const PAGES: [string, string][] = [
   ["pdf source", "/source/?key=pushback"],
   ["slide source", "/source/?key=deck"],
   ["reports", "/reports/"],
+  ["hub", "/hub/?q=qwen"],
+  ["hub model", "/hub/?open=Qwen%2FQwen2.5-0.5B-Instruct"],
+  ["hub paper", "/hub/?kind=papers&open=2310.13548"],
   ["markdown report", "/report/?path=1b.md"],
   ["deck report", "/report/?path=lab.pptx"],
+  ["board", "/behavior/b/?name=scores"],
 ];
 
 for (const [name, url] of PAGES) {

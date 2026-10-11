@@ -6,6 +6,7 @@ const PAGES = [
   ["/launch/", "Launch"],
   ["/runs/", "Runs"],
   ["/compare/", "Compare"],
+  ["/hub/", "Hub"],
   ["/behavior/vectors/", "Vectors"],
   ["/behavior/training-sets/", "Training sets"],
   ["/behavior/circuits/", "Circuits"],

@@ -141,6 +141,10 @@ KINDS: list[Kind] = [
        rules=PICK),
     # figures, config, files
     _k(part="figures/figure/*", about="One figure, by its file.", rules=["hidden", "note"]),
+    _k(part="board/*", about="A board shown as a page of its own, by its name.", rules=PICK),
+    _k(part="board/*/panel/*", about="One panel of a board, by the board's name and the "
+       "panel's id: its rows as drawn.", rules=PICK),
+    _k(part="board/*/control/*", about="One control of a board, by its param.", rules=PICK),
     _k(part="figures/export/*", about="Exports one figure to reports/ as SVG, PNG or PDF.",
        rules=PICK),
     _k(part="figures/code/*", about="Opens the script that made one figure, at its commit, on "
@@ -251,6 +255,17 @@ KINDS: list[Kind] = [
        "for a notebook, the whole notebook.",
        rules=PICK),
     _k(part="source/pin/*", about="One pinned passage of the source, by id.", rules=PICK),
+    # Hub
+    _k(part="hub/account", about="The Hugging Face account signed in here, or Connect.",
+       rules=PICK),
+    _k(part="hub/token", about="The token dialog's form.", rules=PICK),
+    _k(part="hub/tab/*", about="Models, embeddings, datasets or papers.", rules=PICK),
+    _k(part="hub/search", about="Search the Hub.", rules=PICK),
+    _k(part="hub/filter/*", about="A search's task, library or sort.", rules=PICK),
+    _k(part="hub/column/*", about="A column of the results.", rules=PICK),
+    _k(part="hub/hit/*/*", about="One result, by kind and Hub id.", rules=PICK),
+    _k(part="hub/detail/*", about="The open result's title, facts, card, abstract, links and "
+       "actions.", rules=PICK),
     # Reports
     _k(part="reports/heading", about="The count of files in reports/.", rules=PICK),
     _k(part="reports/table", about="The files in reports/.", rules=["note"]),

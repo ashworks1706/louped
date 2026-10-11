@@ -162,13 +162,16 @@ def plotly(
     note: str | None = None,
     about: str | None = None,
     items: dict[str, Any] | None = None,
+    animation: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """A Plotly figure (https://plotly.com/javascript/): traces with their data inline, such as
     {"type": "scatter3d", "x": [...], "y": [...], "z": [...], "text": [...]}. With frames, each
     {"name": ..., "data": [...]}, it plays through them. The UI draws it in its own theme. With
-    items, each trace's ids are its points' item keys."""
+    items, each trace's ids are its points' item keys. animation is how it moves when shown:
+    {"autoplay", "loop", "duration_ms", "transition_ms", "orbit"} (orbit turns a 3D scene)."""
     return {"kind": "plotly", "title": title, "data": data, "layout": layout or {},
-            "frames": frames, "note": note, "about": about, "items": items}  # fmt: skip
+            "frames": frames, "note": note, "about": about, "items": items,
+            "animation": animation}  # fmt: skip
 
 
 def _loads(spec: Any) -> bool:

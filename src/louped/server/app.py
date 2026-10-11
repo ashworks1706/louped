@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import mimetypes
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
@@ -29,8 +29,8 @@ from louped.check import Issue, check
 from louped.core import Direction, cohorts, documents, home
 from louped.core.judges import Judge, find_judges, write_judge
 from louped.core.paths import experiments_dir, inside
-from louped.server import graphs, inspect_view, launch, playground, plugins, serving, ui
-from louped.stores import ab, gates
+from louped.server import graphs, hub, inspect_view, launch, playground, plugins, serving, ui
+from louped.stores import ab, boards, gates
 from louped.stores.catalog import EvalTask, eval_tasks
 from louped.stores.labels import Label
 from louped.stores.mlflow_runs import Unreachable
@@ -46,6 +46,7 @@ from louped.stores.types import (
     AbResult,
     AbSession,
     Agreement,
+    BoardView,
     Comparison,
     Experiment,
     ExperimentDetail,
@@ -121,6 +122,13 @@ class FigureRequest(BaseModel):
     name: str | None = None
     #: Write over a file of the same name; without it, 409.
     replace: bool = False
+
+
+class PreviewRequest(BaseModel):
+    #: A figure as add_view takes one, not saved; checked first.
+    view: dict[str, Any] | None = None
+    #: A saved figure: run:<id>/views/<name>.json or experiment:<name>/views/<name>.json.
+    ref: str | None = None
 
 
 class PinRequest(BaseModel):
@@ -428,6 +436,24 @@ def create_app(
         except (ValueError, RuntimeError) as exc:
             raise _report_error(exc) from exc
 
+    @app.post(
+        "/api/views/preview",
+        dependencies=[Depends(launch.require_json)],
+        response_class=Response,
+        responses={200: {"content": {"image/png": {}}}},
+    )
+    def preview_view(req: PreviewRequest) -> Response:
+        """A vega or plotly figure drawn as a PNG, unsaved or at its ref: 400 with what is wrong
+        in a view that does not check, 501 when Plotly finds no Chrome. Off with --expose, like
+        export: it draws any spec it is sent."""
+        editing()
+        try:
+            return Response(reporting.preview(req.view, req.ref), media_type="image/png")
+        except stores.NotFound as exc:
+            raise HTTPException(404, str(exc)) from exc
+        except (ValueError, RuntimeError) as exc:
+            raise _report_error(exc) from exc
+
     @app.get("/api/check")
     def grounded(path: str | None = None) -> list[Issue]:
         """What in the project's write-ups is not grounded (louped check): a file or folder in
@@ -631,6 +657,45 @@ def create_app(
         except (ValueError, FileNotFoundError) as exc:
             raise HTTPException(400, str(exc)) from exc
 
+    @app.get("/api/board/table")
+    def board_table(ref: str) -> boards.Table:
+        """The rows a board's table reads: run:<id>/<path>, experiment:<name>/<path>,
+        metrics:<run id>, runs: or runs:<experiment> (louped.stores.boards)."""
+        try:
+            return boards.read_table(ref)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.post("/api/board/check", dependencies=[Depends(launch.require_json)])
+    def board_check(req: View) -> boards.BoardCheck:
+        """A board's tables read and its panels tried, before it is shown: what the agent fixes."""
+        if not isinstance(req, BoardView):
+            raise HTTPException(400, f"a {req.kind} figure is not a board")
+        return boards.check(req)
+
+    @app.get("/api/boards")
+    def list_boards() -> list[boards.BoardPage]:
+        """The boards shown as pages of their own: boards/<name>.json at the project's root."""
+        return boards.list_boards()
+
+    @app.get("/api/boards/{name}")
+    def get_board(name: str) -> BoardView:
+        try:
+            return boards.get_board(name)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.put("/api/boards/{name}", dependencies=[Depends(launch.require_json)])
+    def save_board(name: str, req: View) -> boards.BoardPage:
+        """Writes boards/<name>.json, replacing one of that name: a page in the sidebar."""
+        editing()
+        if not isinstance(req, BoardView):
+            raise HTTPException(400, f"a page is a board; this is a {req.kind} figure")
+        try:
+            return boards.save_board(name, req)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
     @app.get("/api/judges")
     def list_judges() -> list[Judge]:
         """louped's judge and the project's judges/<name>.py, for Compare and Launch."""
@@ -662,7 +727,9 @@ def create_app(
         return found.model_copy(update={"gate": gates.status(name)})
 
     app.include_router(playground.router(switchable=launching))
-    app.include_router(launch.router(launching))
+    jobs = launch.Jobs() if launching else None
+    app.include_router(launch.router(jobs))
+    app.include_router(hub.router(jobs))
     pages: dict[str, list[str]] = {}  # the plugins' pages, once plugins.mount has served them
     app.include_router(ui.router(launching, pages))
     # louped's look and helpers for plugin pages (louped.server.ui, plugins.mdx)

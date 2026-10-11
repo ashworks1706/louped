@@ -413,6 +413,28 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/views/preview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Preview View
+     * @description A vega or plotly figure drawn as a PNG, unsaved or at its ref: 400 with what is wrong
+     *     in a view that does not check, 501 when Plotly finds no Chrome. Off with --expose, like
+     *     export: it draws any spec it is sent.
+     */
+    post: operations["preview_view_api_views_preview_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/check": {
     parameters: {
       query?: never;
@@ -882,6 +904,88 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/board/table": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Board Table
+     * @description The rows a board's table reads: run:<id>/<path>, experiment:<name>/<path>,
+     *     metrics:<run id>, runs: or runs:<experiment> (louped.stores.boards).
+     */
+    get: operations["board_table_api_board_table_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/board/check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Board Check
+     * @description A board's tables read and its panels tried, before it is shown: what the agent fixes.
+     */
+    post: operations["board_check_api_board_check_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/boards": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Boards
+     * @description The boards shown as pages of their own: boards/<name>.json at the project's root.
+     */
+    get: operations["list_boards_api_boards_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/boards/{name}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Board */
+    get: operations["get_board_api_boards__name__get"];
+    /**
+     * Save Board
+     * @description Writes boards/<name>.json, replacing one of that name: a page in the sidebar.
+     */
+    put: operations["save_board_api_boards__name__put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/judges": {
     parameters: {
       query?: never;
@@ -1309,6 +1413,119 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/hub/me": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Me
+     * @description Whether a Hugging Face token is on this machine, and whose it is; a refused token is
+     *     said in error.
+     */
+    get: operations["me_api_hub_me_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/hub/token": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Token
+     * @description Check a token and keep it where huggingface_hub keeps it, not in the project.
+     */
+    post: operations["token_api_hub_token_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/hub/search": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Hub Search */
+    get: operations["hub_search_api_hub_search_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/hub/info": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Hub Info */
+    get: operations["hub_info_api_hub_info_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/hub/added": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Hub Added */
+    get: operations["hub_added_api_hub_added_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/hub/add": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Hub Add
+     * @description A model, embedding model or dataset listed in louped.toml, and with download fetched
+     *     here as a job; a paper kept in sources/ from its arXiv page.
+     */
+    post: operations["hub_add_api_hub_add_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/ui/layout": {
     parameters: {
       query?: never;
@@ -1625,6 +1842,38 @@ export interface components {
       /** Labelled */
       labelled: number;
     };
+    /** Account */
+    Account: {
+      /** Token */
+      token: boolean;
+      /** Name */
+      name?: string | null;
+      /** Avatar */
+      avatar?: string | null;
+      /** Error */
+      error?: string | null;
+    };
+    /** AddRequest */
+    AddRequest: {
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "models" | "embeddings" | "datasets" | "papers";
+      /** Id */
+      id: string;
+      /**
+       * Download
+       * @default false
+       */
+      download: boolean;
+    };
+    /** AddResult */
+    AddResult: {
+      added: components["schemas"]["HubAdded"];
+      source?: components["schemas"]["Source"] | null;
+      job?: components["schemas"]["Job"] | null;
+    };
     /**
      * Agreement
      * @description A judge run's agreement with a person's labels on its pairs.
@@ -1687,6 +1936,235 @@ export interface components {
       page?: string | null;
       /** Text */
       text?: string | null;
+    };
+    /**
+     * BoardCheck
+     * @description What a board reads and draws, before anyone sees it: each table's rows and fields, and
+     *     each panel's rows and the fields it names that its table does not have.
+     */
+    BoardCheck: {
+      /** Ok */
+      ok: boolean;
+      /** Tables */
+      tables: components["schemas"]["TableCheck"][];
+      /** Panels */
+      panels: components["schemas"]["PanelCheck"][];
+    };
+    /**
+     * BoardControl
+     * @description An input over the panels: it sets the param named by its id.
+     */
+    BoardControl: {
+      /** Id */
+      id: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "select" | "multi" | "range" | "search" | "toggle";
+      /** Label */
+      label?: string | null;
+      /** About */
+      about?: string | null;
+      /** Data */
+      data?: string | null;
+      /** Field */
+      field?: string | null;
+      /** Options */
+      options?: (string | number | boolean)[] | null;
+      /** Default */
+      default?: string | number | boolean | (string | number | boolean)[] | null;
+      /** Min */
+      min?: number | null;
+      /** Max */
+      max?: number | null;
+      /** Step */
+      step?: number | null;
+    };
+    /**
+     * BoardData
+     * @description One of a board's tables: its rows inline, or read from what louped already keeps.
+     */
+    BoardData: {
+      /** Rows */
+      rows?:
+        | {
+            [key: string]: unknown;
+          }[]
+        | null;
+      /** Ref */
+      ref?: string | null;
+      /** Live */
+      live?: number | null;
+    };
+    /**
+     * BoardFilter
+     * @description Keeps the rows whose field passes op against a param (or a fixed value). A param that
+     *     is not set keeps every row.
+     */
+    BoardFilter: {
+      /** Field */
+      field: string;
+      /**
+       * Op
+       * @default ==
+       * @enum {string}
+       */
+      op: "==" | "!=" | "<" | "<=" | ">" | ">=" | "in" | "contains";
+      /** Param */
+      param?: string | null;
+      /** Value */
+      value?: string | number | boolean | (string | number | boolean)[] | null;
+    };
+    /** BoardPage */
+    BoardPage: {
+      /** Name */
+      name: string;
+      /** Title */
+      title: string;
+      /** About */
+      about: string | null;
+      /** Section */
+      section: string;
+    };
+    /**
+     * BoardPanel
+     * @description One panel of a board. Only the fields its kind reads are set.
+     */
+    BoardPanel: {
+      /** Id */
+      id: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "vega" | "plotly" | "table" | "stat" | "text" | "detail" | "diagram";
+      /** Title */
+      title?: string | null;
+      /** About */
+      about?: string | null;
+      /** Data */
+      data?: string | null;
+      /**
+       * Where
+       * @default []
+       */
+      where: components["schemas"]["BoardFilter"][];
+      select?: components["schemas"]["BoardSelect"] | null;
+      /**
+       * Span
+       * @default 2
+       */
+      span: number;
+      /** Height */
+      height?: number | null;
+      /** Spec */
+      spec?: {
+        [key: string]: unknown;
+      } | null;
+      /** Trace */
+      trace?: string | null;
+      /** X */
+      x?: string | null;
+      /** Y */
+      y?: string | null;
+      /** Z */
+      z?: string | null;
+      /** Color */
+      color?: string | null;
+      /** Text */
+      text?: string | null;
+      /** Size */
+      size?: string | null;
+      /** Frame */
+      frame?: string | null;
+      /** Layout */
+      layout?: {
+        [key: string]: unknown;
+      } | null;
+      /** Columns */
+      columns?: string[] | null;
+      /** Sort */
+      sort?: string | null;
+      /**
+       * Desc
+       * @default false
+       */
+      desc: boolean;
+      /** Op */
+      op?: ("count" | "mean" | "sum" | "min" | "max" | "distinct") | null;
+      /** Field */
+      field?: string | null;
+      /**
+       * Format
+       * @default number
+       * @enum {string}
+       */
+      format: "number" | "percent";
+      /** Markdown */
+      markdown?: string | null;
+      /** Edges */
+      edges?: string | null;
+      /** Node */
+      node?: string | null;
+      /** Label */
+      label?: string | null;
+      /** Source */
+      source?: string | null;
+      /** Target */
+      target?: string | null;
+      /**
+       * Direction
+       * @default LR
+       * @enum {string}
+       */
+      direction: "LR" | "TB";
+    };
+    /**
+     * BoardSelect
+     * @description What a click on a mark, a row or a node does: param takes that row's field.
+     */
+    BoardSelect: {
+      /** Param */
+      param: string;
+      /** Field */
+      field: string;
+    };
+    /**
+     * BoardView
+     * @description A dashboard: tables, controls and linked panels. A control or a click on a panel sets a
+     *     param; every panel whose filters name it redraws. No code runs and nothing is fetched but
+     *     louped's own data, so a board is safe to show and to commit.
+     */
+    BoardView: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      kind: "board";
+      /** Title */
+      title: string;
+      /** Note */
+      note?: string | null;
+      /** About */
+      about?: string | null;
+      /** Data */
+      data: {
+        [key: string]: components["schemas"]["BoardData"];
+      };
+      /**
+       * Controls
+       * @default []
+       */
+      controls: components["schemas"]["BoardControl"][];
+      /** Panels */
+      panels: components["schemas"]["BoardPanel"][];
+      /**
+       * Section
+       * @default workspace
+       * @enum {string}
+       */
+      section: "workspace" | "behavior" | "efficiency";
     };
     /** Catalog */
     Catalog: {
@@ -2224,6 +2702,138 @@ export interface components {
       /** Snippet */
       snippet: string;
     };
+    /**
+     * HubAdded
+     * @description What the project lists under [hub] in louped.toml.
+     */
+    HubAdded: {
+      /**
+       * Models
+       * @default []
+       */
+      models: string[];
+      /**
+       * Embeddings
+       * @default []
+       */
+      embeddings: string[];
+      /**
+       * Datasets
+       * @default []
+       */
+      datasets: string[];
+    };
+    /** HubDetail */
+    HubDetail: {
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "models" | "embeddings" | "datasets" | "papers";
+      /** Id */
+      id: string;
+      /** Url */
+      url: string;
+      /** Downloads */
+      downloads?: number | null;
+      /** Likes */
+      likes?: number | null;
+      /** Task */
+      task?: string | null;
+      /** Library */
+      library?: string | null;
+      /**
+       * Gated
+       * @default false
+       */
+      gated: boolean;
+      /**
+       * Private
+       * @default false
+       */
+      private: boolean;
+      /** Updated */
+      updated?: string | null;
+      /** Params */
+      params?: number | null;
+      /** Title */
+      title?: string | null;
+      /**
+       * Authors
+       * @default []
+       */
+      authors: string[];
+      /** Upvotes */
+      upvotes?: number | null;
+      /** Card */
+      card?: string | null;
+      /** License */
+      license?: string | null;
+      /**
+       * Tags
+       * @default []
+       */
+      tags: string[];
+      /** Size */
+      size?: number | null;
+      /** Files */
+      files?: number | null;
+      /** Summary */
+      summary?: string | null;
+      /**
+       * Links
+       * @default {}
+       */
+      links: {
+        [key: string]: string;
+      };
+    };
+    /**
+     * HubHit
+     * @description One model, dataset or paper a search found.
+     */
+    HubHit: {
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "models" | "embeddings" | "datasets" | "papers";
+      /** Id */
+      id: string;
+      /** Url */
+      url: string;
+      /** Downloads */
+      downloads?: number | null;
+      /** Likes */
+      likes?: number | null;
+      /** Task */
+      task?: string | null;
+      /** Library */
+      library?: string | null;
+      /**
+       * Gated
+       * @default false
+       */
+      gated: boolean;
+      /**
+       * Private
+       * @default false
+       */
+      private: boolean;
+      /** Updated */
+      updated?: string | null;
+      /** Params */
+      params?: number | null;
+      /** Title */
+      title?: string | null;
+      /**
+       * Authors
+       * @default []
+       */
+      authors: string[];
+      /** Upvotes */
+      upvotes?: number | null;
+    };
     /** ImportPath */
     ImportPath: {
       /** Path */
@@ -2303,6 +2913,7 @@ export interface components {
         | components["schemas"]["TokensView"]
         | components["schemas"]["VegaView"]
         | components["schemas"]["PlotlyView"]
+        | components["schemas"]["BoardView"]
       )[];
     };
     /** Issue */
@@ -2544,6 +3155,7 @@ export interface components {
             | components["schemas"]["TokensView"]
             | components["schemas"]["VegaView"]
             | components["schemas"]["PlotlyView"]
+            | components["schemas"]["BoardView"]
           )
         | null;
       /** Error */
@@ -2654,7 +3266,7 @@ export interface components {
        */
       required: boolean;
       /** Suggest */
-      suggest?: "evals" | null;
+      suggest?: ("evals" | "models" | "embeddings") | null;
     };
     /**
      * Page
@@ -2724,6 +3336,15 @@ export interface components {
       up: number;
       /** Down */
       down: number;
+    };
+    /** PanelCheck */
+    PanelCheck: {
+      /** Id */
+      id: string;
+      /** Rows */
+      rows: number | null;
+      /** Problems */
+      problems: string[];
     };
     /**
      * PartRule
@@ -2890,6 +3511,38 @@ export interface components {
       switchable: boolean;
     };
     /**
+     * PlotlyAnimation
+     * @description How a plotly figure moves when the app shows it. When the person's system asks for reduced
+     *     motion, nothing moves by itself: the Play button stays.
+     */
+    PlotlyAnimation: {
+      /**
+       * Autoplay
+       * @default false
+       */
+      autoplay: boolean;
+      /**
+       * Loop
+       * @default false
+       */
+      loop: boolean;
+      /**
+       * Duration Ms
+       * @default 400
+       */
+      duration_ms: number;
+      /**
+       * Transition Ms
+       * @default 0
+       */
+      transition_ms: number;
+      /**
+       * Orbit
+       * @default false
+       */
+      orbit: boolean;
+    };
+    /**
      * PlotlyView
      * @description A Plotly figure with its data inline: what Vega-Lite does not draw, such as points in 3D
      *     (scatter3d, surface) and figures that play through frames. The UI loads Plotly only when one
@@ -2925,6 +3578,7 @@ export interface components {
       /** About */
       about?: string | null;
       items?: components["schemas"]["ItemSource"] | null;
+      animation?: components["schemas"]["PlotlyAnimation"] | null;
     };
     /** PluginInfo */
     PluginInfo: {
@@ -2953,6 +3607,15 @@ export interface components {
       experiment: boolean;
       /** Error */
       error?: string | null;
+    };
+    /** PreviewRequest */
+    PreviewRequest: {
+      /** View */
+      view?: {
+        [key: string]: unknown;
+      } | null;
+      /** Ref */
+      ref?: string | null;
     };
     /** Pushed */
     Pushed: {
@@ -3114,7 +3777,8 @@ export interface components {
         | components["schemas"]["TableView"]
         | components["schemas"]["TokensView"]
         | components["schemas"]["VegaView"]
-        | components["schemas"]["PlotlyView"];
+        | components["schemas"]["PlotlyView"]
+        | components["schemas"]["BoardView"];
     };
     /** SampleDetail */
     SampleDetail: {
@@ -3200,6 +3864,7 @@ export interface components {
         | components["schemas"]["TokensView"]
         | components["schemas"]["VegaView"]
         | components["schemas"]["PlotlyView"]
+        | components["schemas"]["BoardView"]
       )[];
     };
     /** Saved */
@@ -3479,6 +4144,31 @@ export interface components {
       /** After */
       after?: string | null;
     };
+    /** Table */
+    Table: {
+      /** Rows */
+      rows: {
+        [key: string]: unknown;
+      }[];
+      /** Columns */
+      columns: string[];
+      /**
+       * Truncated
+       * @default false
+       */
+      truncated: boolean;
+    };
+    /** TableCheck */
+    TableCheck: {
+      /** Name */
+      name: string;
+      /** Rows */
+      rows: number;
+      /** Columns */
+      columns: string[];
+      /** Error */
+      error?: string | null;
+    };
     /** TableView */
     TableView: {
       /**
@@ -3564,6 +4254,11 @@ export interface components {
       };
       /** Errors */
       errors: string[];
+    };
+    /** Token */
+    Token: {
+      /** Token */
+      token: string;
     };
     /** TokenRow */
     TokenRow: {
@@ -4508,6 +5203,39 @@ export interface operations {
       };
     };
   };
+  preview_view_api_views_preview_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PreviewRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/png": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   grounded_api_check_get: {
     parameters: {
       query?: {
@@ -4620,7 +5348,8 @@ export interface operations {
           | components["schemas"]["TableView"]
           | components["schemas"]["TokensView"]
           | components["schemas"]["VegaView"]
-          | components["schemas"]["PlotlyView"];
+          | components["schemas"]["PlotlyView"]
+          | components["schemas"]["BoardView"];
       };
     };
     responses: {
@@ -5325,7 +6054,8 @@ export interface operations {
           | components["schemas"]["TableView"]
           | components["schemas"]["TokensView"]
           | components["schemas"]["VegaView"]
-          | components["schemas"]["PlotlyView"];
+          | components["schemas"]["PlotlyView"]
+          | components["schemas"]["BoardView"];
       };
     };
     responses: {
@@ -5336,6 +6066,172 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["RunView"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  board_table_api_board_table_get: {
+    parameters: {
+      query: {
+        ref: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Table"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  board_check_api_board_check_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json":
+          | components["schemas"]["HeatmapView"]
+          | components["schemas"]["LineView"]
+          | components["schemas"]["ScatterView"]
+          | components["schemas"]["TableView"]
+          | components["schemas"]["TokensView"]
+          | components["schemas"]["VegaView"]
+          | components["schemas"]["PlotlyView"]
+          | components["schemas"]["BoardView"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BoardCheck"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_boards_api_boards_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BoardPage"][];
+        };
+      };
+    };
+  };
+  get_board_api_boards__name__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BoardView"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  save_board_api_boards__name__put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json":
+          | components["schemas"]["HeatmapView"]
+          | components["schemas"]["LineView"]
+          | components["schemas"]["ScatterView"]
+          | components["schemas"]["TableView"]
+          | components["schemas"]["TokensView"]
+          | components["schemas"]["VegaView"]
+          | components["schemas"]["PlotlyView"]
+          | components["schemas"]["BoardView"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BoardPage"];
         };
       };
       /** @description Validation Error */
@@ -6071,6 +6967,180 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Job"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  me_api_hub_me_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Account"];
+        };
+      };
+    };
+  };
+  token_api_hub_token_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Token"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Account"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  hub_search_api_hub_search_get: {
+    parameters: {
+      query: {
+        kind: "models" | "embeddings" | "datasets" | "papers";
+        q?: string;
+        task?: string | null;
+        library?: string | null;
+        sort?: "downloads" | "likes" | "recent";
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HubHit"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  hub_info_api_hub_info_get: {
+    parameters: {
+      query: {
+        kind: "models" | "embeddings" | "datasets" | "papers";
+        id: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HubDetail"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  hub_added_api_hub_added_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HubAdded"];
+        };
+      };
+    };
+  };
+  hub_add_api_hub_add_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AddRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AddResult"];
         };
       };
       /** @description Validation Error */
