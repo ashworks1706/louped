@@ -866,7 +866,7 @@ def create_app(
     app.include_router(notes.router(editing))
     pages: dict[str, list[str]] = {}  # the plugins' pages, once plugins.mount has served them
     app.include_router(ui.router(launching, pages))
-    # louped's look and helpers for plugin pages (louped.server.ui, plugins.mdx)
+    # louped's look and helpers for plugin pages (louped.server.ui, docs/plugins.md)
     app.mount("/kit", StaticFiles(directory=Path(__file__).parent / "kit"), name="kit")
     plugins.mount(app, launching, pages)
     graphs.mount(app)

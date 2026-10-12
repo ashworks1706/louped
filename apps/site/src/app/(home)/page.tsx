@@ -1,8 +1,7 @@
 import Image, { type StaticImageData } from "next/image";
-import Link from "next/link";
 
 import { CopyCommand } from "@/components/copy-command";
-import { docsRoute, repoUrl, tagline } from "@/lib/shared";
+import { quickstartUrl, repoUrl, tagline } from "@/lib/shared";
 
 import experimentDark from "../../../public/demo/experiment-dark.png";
 import experimentLight from "../../../public/demo/experiment-light.png";
@@ -121,12 +120,12 @@ export default function HomePage() {
       </p>
       <div className="mt-10 flex max-w-full flex-wrap items-center justify-center gap-3">
         <CopyCommand command={INSTALL} />
-        <Link
-          href={`${docsRoute}/quickstart`}
+        <a
+          href={quickstartUrl}
           className="bg-fd-primary text-fd-primary-foreground inline-flex h-10.5 items-center rounded-lg px-5 text-sm font-medium hover:opacity-90"
         >
           Get started
-        </Link>
+        </a>
       </div>
 
       <figure className="mt-20 w-full">

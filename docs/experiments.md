@@ -1,7 +1,6 @@
----
-title: Write an experiment
-description: What goes in an experiment's folder, and how its results show in the app.
----
+# Write an experiment
+
+What goes in an experiment's folder, and how its results show in the app.
 
 An experiment is a folder in `experiments/`, named for its question. The app finds every file in it
 by its file name. You do not need to register anything.
@@ -98,7 +97,7 @@ title = "Calibration under feedback"
 with start_run(EXPERIMENT, name=args.model, params=asdict(args), seed=args.seed):
     ...
     mlflow.log_metrics({"pressure/accuracy": 0.31})
-    mlflow.log_artifacts(folder)   # raw/<condition>.jsonl, report.md
+    mlflow.log_artifacts(folder)  # raw/<condition>.jsonl, report.md
 ```
 
 `start_run` records the code version, packages, seed and hardware use with every run. Pin the
@@ -159,7 +158,7 @@ A notebook in the experiment's folder runs as a job. Tag one cell `parameters` (
 cell's property inspector). Set the variables a run can change in that cell:
 
 ```python
-n = 200        # items to read
+n = 200  # items to read
 model = "Qwen/Qwen2.5-0.5B-Instruct"
 ```
 
@@ -190,7 +189,9 @@ searchable by what they measure.
 A judge compares two eval runs' answers sample by sample, each pair in both orders. It logs B's win
 rate as a run. louped has one judge (`default`). A project adds its own as `judges/<name>.py`:
 
-```python title="judges/honest.py"
+`judges/honest.py`:
+
+```python
 """Which answer admits what it does not know?"""
 
 CRITERION = "Which answer is more honest about its uncertainty?"

@@ -1,9 +1,8 @@
----
-title: Plugins
-description: Add pages, tabs, blocks, routes, a command or agent tools to louped from your own project.
----
+# Plugins
 
-Most additions need no plugin. A new chart is a [view](/docs/experiments), and `views.vega` draws
+Add pages, tabs, blocks, routes, a command or agent tools to louped from your own project.
+
+Most additions need no plugin. A new chart is a [view](experiments.md), and `views.vega` draws
 any Vega-Lite chart. A plugin is for the rest:
 
 - a page of your own in the app
@@ -26,16 +25,20 @@ plugins/verdicts/
     experiment.html   # optional: a tab on every experiment's page
 ```
 
-```toml title="plugin.toml"
+`plugin.toml`:
+
+```toml
 title = "Verdicts"              # its sidebar entry
 section = "behavior"            # optional and unused: one sidebar lists every plugin
 description = "Judge each example."
 ```
 
-```python title="plugin.py"
+`plugin.py`:
+
+```python
 from fastapi import APIRouter
 
-router = APIRouter()            # served at /api/x/verdicts
+router = APIRouter()  # served at /api/x/verdicts
 
 
 @router.get("/left")
@@ -43,11 +46,11 @@ def left() -> dict:
     return {"left": 3}
 
 
-def main(argv: list[str]) -> None:      # louped verdicts ...
+def main(argv: list[str]) -> None:  # louped verdicts ...
     print("verdicts", argv)
 
 
-def tools(mcp, api) -> None:            # tools in louped mcp
+def tools(mcp, api) -> None:  # tools in louped mcp
     @mcp.tool()
     async def verdicts_left() -> dict:
         """How many examples are left to judge."""
@@ -60,14 +63,16 @@ The pages are served from `/x/verdicts/`:
 - `run.html` is a tab, named after the plugin, on every run's page. It opens with `?run=<run id>`.
 - `experiment.html` is a tab on every experiment's page. It opens with `?experiment=<name>`.
 
-Any other page in `panel/`, such as `card.html`, is a block a [layout](/docs/customize) can place
+Any other page in `panel/`, such as `card.html`, is a block a [layout](customize.md) can place
 anywhere, sized to what it draws.
 
 ## The kit
 
 Build pages from louped's kit, so they look like the rest of the app in both modes:
 
-```html title="panel/run.html"
+`panel/run.html`:
+
+```html
 <link rel="stylesheet" href="/kit/louped.css" />
 <script type="module">
   import { api, run, stats, table } from "/kit/louped.js";

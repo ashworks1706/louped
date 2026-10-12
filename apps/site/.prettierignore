@@ -5,4 +5,3 @@ pnpm-lock.yaml
 next-env.d.ts
 playwright-report
 test-results
-.source

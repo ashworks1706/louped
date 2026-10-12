@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { Mark } from "@/components/mark";
-import { appName, appUrl, docsRoute, repoUrl } from "@/lib/shared";
+import { appName, appUrl, docsUrl, repoUrl } from "@/lib/shared";
 
 export default function Layout({ children }: LayoutProps<"/">) {
   return (
@@ -12,9 +12,9 @@ export default function Layout({ children }: LayoutProps<"/">) {
           {appName}
         </Link>
         <nav className="text-fd-muted-foreground flex items-center gap-6 text-sm">
-          <Link href={docsRoute} className="hover:text-fd-foreground">
+          <a href={docsUrl} className="hover:text-fd-foreground">
             Docs
-          </Link>
+          </a>
           <a href={repoUrl} className="hover:text-fd-foreground">
             GitHub
           </a>

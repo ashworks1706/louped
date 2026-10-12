@@ -1,10 +1,9 @@
----
-title: Share results
-description: Serve the app read-only with Docker.
----
+# Share results
+
+Serve the app read-only with Docker.
 
 To share results without a server, `louped publish` writes a read-only dashboard for any static
-host ([Share and run elsewhere](/docs/remote#publish-a-read-only-dashboard)). The Docker image
+host ([Share and run elsewhere](remote.md#publish-a-read-only-dashboard)). The Docker image
 serves the app without GPU support. Use it to share results, not to run them.
 
 ```sh

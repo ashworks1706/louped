@@ -1,7 +1,6 @@
----
-title: Change a model
-description: Steer, ablate, inject and swap adapters, and compare the result against a baseline.
----
+# Change a model
+
+Steer, ablate, inject and swap adapters, and compare the result against a baseline.
 
 louped runs a model in Inspect evals as `louped/<model>`. Model arguments describe the change.
 
@@ -44,7 +43,9 @@ Saved directions are in `.louped/vectors`, adapters in `.louped/adapters`, and m
 
 A grid runs each condition on each task over several seeds, and compares it with a baseline.
 
-```yaml title="grid.yaml"
+`grid.yaml`:
+
+```yaml
 model: Qwen/Qwen2.5-0.5B-Instruct
 tasks:
   pushback: experiments/my-question/task.py@pushback

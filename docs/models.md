@@ -1,7 +1,6 @@
----
-title: Supported models
-description: Which model families work with which parts of louped.
----
+# Supported models
+
+Which model families work with which parts of louped.
 
 louped works with a model family when it can find the model's layers. Tests run on a tiny model
 offline. CI does not download real checkpoints.

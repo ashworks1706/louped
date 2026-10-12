@@ -37,7 +37,7 @@ just test-e2e           Playwright on the built UI; screenshots land in apps/web
 just fmt                format everything
 just serve              build the UI, then serve the API and UI on :8000
 just web                UI dev server on :3000
-just site               docs site on :3001
+just site               landing page on :3001
 just api-types          regenerate the UI's API types after changing a server route or model
 ```
 
@@ -64,7 +64,8 @@ src/louped/        the package (distribution louped); layers in docs/ARCHITECTUR
                   (also the Claude Code plugin, listed in .claude-plugin/), the example experiment
   init.py         `louped init`
 apps/web/         the UI; its AGENTS.md holds the design rules
-apps/site/        the docs site
+apps/site/        the landing page (the docs are in docs/)
+docs/             the user docs (Markdown, read on GitHub), ARCHITECTURE.md and ROADMAP.md
 hatch_build.py    puts the built UI in the wheel as louped/web
 tests/            Python tests, CPU only
 ```
@@ -74,7 +75,7 @@ tests/            Python tests, CPU only
 | To add                     | Write                                                                    |
 | -------------------------- | ------------------------------------------------------------------------ |
 | A research question        | in a research project: `louped new <name> --domain <domain>`, then its README and `run.py` |
-| A goal that groups questions | in a research project: `louped project new <name>`, then `project: <name>` in each experiment's README ("projects.mdx") |
+| A goal that groups questions | in a research project: `louped project new <name>`, then `project: <name>` in each experiment's README ("docs/projects.md") |
 | An eval                    | Inspect `@task`s in `experiments/<name>/task.py`                           |
 | A figure                   | a view from `louped.analysis.views`, logged with `log_json` under `views/` |
 | A chart no kind draws      | `views.vega(title, spec)`: any Vega-Lite spec with its data inline, no change to louped |
@@ -82,12 +83,12 @@ tests/            Python tests, CPU only
 | A project's own page, routes, command or agent tools | its `plugins/<name>/` (`louped.core.plugins`), no change to louped |
 | A number                   | `mlflow.log_metrics` inside `louped.tracking.start_run`                    |
 | A training run or a grid   | `experiments/<name>/*.yaml` starting `# louped train <recipe>` or `# louped grid` |
-| A paper's own harness      | a pinned clone under `.louped/vendor/`, run in its own venv ("Code from a paper" in `apps/site/content/docs/experiments.mdx`) |
+| A paper's own harness      | a pinned clone under `.louped/vendor/`, run in its own venv ("Code from a paper" in `docs/experiments.md`) |
 | What a new project gets    | `src/louped/templates/`: project files, agent skills, the example experiment |
-| A domain                   | `[domains.<key>]` in the project's `louped.toml` ("Domains" in `apps/site/content/docs/experiments.mdx`) |
+| A domain                   | `[domains.<key>]` in the project's `louped.toml` ("Domains" in `docs/experiments.md`) |
 | A view kind the UI lacks   | `louped.analysis.views`, `View` in `stores/types.py`, a renderer in `apps/web/src/components/run-views.tsx`, `just api-types` |
 
-The app finds each of these by convention: no registration. `apps/site/content/docs/experiments.mdx`
+The app finds each of these by convention: no registration. `docs/experiments.md`
 has the details.
 
 nnsight traces the source of the block it runs. Thus:

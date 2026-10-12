@@ -3,7 +3,7 @@
 
 <p align="center">
   <a href="https://louped.vercel.app">Website</a> •
-  <a href="https://louped.vercel.app/docs">Docs</a>
+  <a href="https://github.com/ashworks1706/louped/tree/main/docs">Docs</a>
 </p>
 
 Keep your research questions about language models in a project. Each question is an experiment
@@ -41,7 +41,7 @@ Open http://127.0.0.1:8000 and launch the example experiment.
 
 Already have results? `louped view <folder>` opens them read-only.
 
-See the [docs](https://louped.vercel.app/docs) for writing experiments, changing models, using
+See the [docs](docs/README.md) for writing experiments, changing models, using
 your agent and running on a cluster.
 
 ## Develop

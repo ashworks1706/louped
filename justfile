@@ -37,7 +37,7 @@ check-python:
 check-web:
     cd {{web}} && pnpm format:check && pnpm lint && pnpm typecheck && pnpm build
 
-# format, lint, types, static build of the landing page and docs
+# format, lint, types, static build of the landing page
 check-site:
     cd {{site}} && pnpm format:check && pnpm lint && pnpm typecheck && pnpm build
 
@@ -71,7 +71,7 @@ install-check: web-build
     rm -rf dist && uv build --wheel
     bash scripts/install-check.sh dist/*.whl
 
-# the landing page and docs on :3001
+# the landing page on :3001
 site:
     cd {{site}} && pnpm dev
 

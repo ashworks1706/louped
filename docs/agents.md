@@ -1,7 +1,6 @@
----
-title: Use your coding agent
-description: Let Claude Code, Codex or Cursor write, run and read your experiments.
----
+# Use your coding agent
+
+Let Claude Code, Codex or Cursor write, run and read your experiments.
 
 louped has no agent of its own. It connects to the one you already use.
 
@@ -55,7 +54,7 @@ test.
 Work the agent starts shows in the app like your own. To ask about or change a part of a page,
 Shift+click it. You can pick as many parts as you like. Your agent gets them with their data. In
 Claude Code they come with your next message; `@sel 2` names one pick
-([Customize the app](/docs/customize)).
+([Customize the app](customize.md)).
 
 You can ask for a view the app lacks ("these claims in 3D", "a column for which ones hedge"). The
 agent makes it where it belongs:

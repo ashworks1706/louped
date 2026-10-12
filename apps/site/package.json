@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "fumadocs-core": "16.15.15",
-    "fumadocs-mdx": "15.4.5",
     "fumadocs-ui": "npm:@fumadocs/base-ui@16.15.15",
     "geist": "^1.7.2",
     "lucide-react": "^1.48.0",
@@ -23,7 +22,6 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/mdx": "^2.0.14",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

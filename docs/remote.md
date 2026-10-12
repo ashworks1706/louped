@@ -1,7 +1,6 @@
----
-title: Share and run elsewhere
-description: Keep runs in a remote everyone can pull from, send jobs to a cluster or Colab, and publish a read-only dashboard.
----
+# Share and run elsewhere
+
+Keep runs in a remote everyone can pull from, send jobs to a cluster or Colab, and publish a read-only dashboard.
 
 ## A remote for runs
 
@@ -193,7 +192,7 @@ A failed ssh, scp or `sbatch` call marks the job failed and shows the error on i
 (`--dependency=afterok`). Thus a chain runs in order while your laptop is off. In the app, choose
 the earlier job in **After**.
 
-A chain can include the experiment's [gate](/docs/experiments#gate) as a step of its own:
+A chain can include the experiment's [gate](experiments.md#gate) as a step of its own:
 
 ```sh
 louped submit gate --experiment my-question --on sol --after <train job>

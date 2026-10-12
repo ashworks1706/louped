@@ -67,7 +67,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://louped.vercel.app"
-Documentation = "https://louped.vercel.app/docs"
+Documentation = "https://github.com/ashworks1706/louped/tree/main/docs"
 
 # `pip install louped` gives the app, evals, run tracking, model loading and the agent's tools.
 # The extras below add training, RL, retrieval and SAEs. The extras that name a part of the base

@@ -1,7 +1,6 @@
----
-title: Group experiments in projects
-description: A project holds the experiments that serve one goal, with its README, links and runs.
----
+# Group experiments in projects
+
+A project holds the experiments that serve one goal, with its README, links and runs.
 
 A project groups experiments that serve one goal. It is a folder in `projects/`, beside
 `experiments/`. The folder holds one file, `README.md`.

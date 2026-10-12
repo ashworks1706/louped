@@ -1,12 +1,11 @@
----
-title: Recipes
-description: How to run common kinds of experiments.
----
+# Recipes
+
+How to run common kinds of experiments.
 
 ## A model louped can load
 
 Hugging Face models load directly. Interventions, analyses (logit lens, patching, probes, SAE
-features) and fine-tuning all work on them. Compare versions with a [grid](/docs/changes).
+features) and fine-tuning all work on them. Compare versions with a [grid](changes.md).
 
 ## A model served elsewhere
 

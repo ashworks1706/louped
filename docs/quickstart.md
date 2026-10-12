@@ -1,7 +1,6 @@
----
-title: Get started
-description: Install louped, make a project and run the example.
----
+# Get started
+
+Install louped, make a project and run the example.
 
 You need Python 3.12 or newer.
 

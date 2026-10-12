@@ -1,7 +1,6 @@
----
-title: Customize the app
-description: Pick any part of a page for your agent, have it change any part, and let it point back, in louped's own look.
----
+# Customize the app
+
+Pick any part of a page for your agent, have it change any part, and let it point back, in louped's own look.
 
 Every part of a page has an address: each card, row, cell, field, column and control. Your agent
 can:
@@ -48,7 +47,9 @@ The tray says **not read by your agent yet** until the agent reads the picks, th
 has read them**. If the project's `.claude/settings.json` existed before `louped init`, init keeps
 it. Add the hook to it yourself:
 
-```json title=".claude/settings.json"
+`.claude/settings.json`:
+
+```json
 {
   "hooks": {
     "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "louped picks --hook" }] }]
@@ -109,7 +110,9 @@ A layout's `parts` change parts by address. `*` stands for any one name. Every p
 - Launch (each of a script's options)
 - a job
 
-```json title="experiments/rational-updating/layout.json"
+`experiments/rational-updating/layout.json`:
+
+```json
 {
   "parts": {
     "items/stat/pressure": { "label": "pushback", "note": "Read this one first." },
@@ -142,7 +145,9 @@ A page's blocks come from `layout.json` at the project's root, or from
 `experiments/<name>/layout.json` for that experiment's page and its runs' pages. Your agent
 writes these with `set_layout`, which checks them first. They are plain files to commit.
 
-```json title="layout.json"
+`layout.json`:
+
+```json
 {
   "preset": "eval",
   "regions": {
@@ -165,7 +170,7 @@ writes these with `set_layout`, which checks them first. They are plain files to
 | `experiment.design` | `readme`, `result`, `runs`, `views`, `view`                                                   |
 
 Every region can also hold `text` (your own Markdown) and `plugin` (a page from one of your
-[plugins](/docs/plugins)). Any block takes `title`, `about` (its ?) and `width`: `full`, `half`
+[plugins](plugins.md)). Any block takes `title`, `about` (its ?) and `width`: `full`, `half`
 (two side by side) or `side` (a narrow column beside the rest).
 
 `views` shows every figure in `experiments/<name>/views/`. Your agent adds them with `add_view`.
@@ -212,7 +217,9 @@ below it: the project's, then the preset, then the default.
 `louped.toml` sets the app's tokens: `radius`, and the colors for each mode. Plugin pages get them
 too.
 
-```toml title="louped.toml"
+`louped.toml`:
+
+```toml
 [theme]
 radius = "0.25rem"
 
@@ -228,5 +235,5 @@ The colors are `background`, `foreground`, `card`, `muted`, `muted-foreground`, 
 
 The look is louped's own, so every project reads the same. Parts change what they say and whether
 they show, not their style. Layouts, the theme and plugin blocks load only on your machine. A
-[published dashboard](/docs/remote#publish-a-read-only-dashboard) shows your layouts without
+[published dashboard](remote.md#publish-a-read-only-dashboard) shows your layouts without
 plugins.

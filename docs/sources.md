@@ -1,7 +1,6 @@
----
-title: Sources
-description: The papers, docs, slides and notebooks your claims rest on, kept with the project.
----
+# Sources
+
+The papers, docs, slides and notebooks your claims rest on, kept with the project.
 
 `sources/` sits beside `experiments/` and is committed with it. Each paper, doc, deck or notebook
 there has a key, a title and the URL it came from. A citation names the key. `sources/index.json`
@@ -100,7 +99,7 @@ in them (or the files you name). It lists what is not grounded, by file and line
 - A citation that names no source, no page, or a page with nothing pinned on it.
 - A ref that does not resolve.
 - A live ref that does not resolve: no run, no metric of that name, no figure, or a bad format.
-  See [Reports](/docs/reports#live-numbers-and-figures).
+  See [Reports](reports.md#live-numbers-and-figures).
 - A pin whose words are no longer on its page, because the source file changed.
 
 It exits 1 when it finds anything, so it can run in CI. Your agent runs it as `check` before it

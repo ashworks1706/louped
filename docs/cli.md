@@ -1,7 +1,6 @@
----
-title: CLI
-description: Every louped command.
----
+# CLI
+
+Every louped command.
 
 Every command takes `--help`, and most are also forms on the app's Launch page. Commands find the
 project by looking for `louped.toml` in the current folder and its parents.

@@ -1,7 +1,6 @@
----
-title: Datasets and benchmarks
-description: The data your project uses, and leaderboards of evals and speed runs.
----
+# Datasets and benchmarks
+
+The data your project uses, and leaderboards of evals and speed runs.
 
 The **Datasets** and **Benchmarks** pages are in the sidebar under Data. Each has an axis filter:
 Both, Behavior or Efficiency.

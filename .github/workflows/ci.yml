@@ -65,31 +65,6 @@ jobs:
       - run: uv sync --locked --all-extras
       - run: just check-python
 
-  web:
-              - 'apps/web/**'
-              - 'src/louped/server/**'
-              - 'src/louped/stores/**'
-              - 'justfile'
-              - '.github/workflows/ci.yml'
-            site:
-              - 'apps/site/**'
-              - 'justfile'
-              - '.github/workflows/ci.yml'
-
-  python:
-    name: Python
-    needs: changes
-    if: needs.changes.outputs.python == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.2.0
-        with:
-          enable-cache: true
-      - uses: extractions/setup-just@v4
-      - run: uv sync --locked --all-extras
-      - run: just check-python
-
   # The roadmap's acceptance "a fresh user runs an example from a clean clone": the worked examples
   # from the docs, on their tiny offline models, from a fresh checkout and a locked install.
   examples:

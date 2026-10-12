@@ -1,7 +1,6 @@
----
-title: Reports
-description: Write-ups, decks, documents and figures, each number traced to the run it came from.
----
+# Reports
+
+Write-ups, decks, documents and figures, each number traced to the run it came from.
 
 `reports/` sits beside `experiments/` and `sources/`. It holds what the project hands to people:
 
@@ -107,4 +106,4 @@ the slide, and for a document the paragraph. It also checks that each exported f
 resolves, and that each live ref resolves. A live ref is a source for its paragraph, as a ref
 is. A file that it cannot read, such as a damaged deck, is an issue of kind `file`. It
 does not stop the check. Office's lock files (`~$deck.pptx`) are skipped. See
-[Sources](/docs/sources#check-a-write-up) for what it looks for.
+[Sources](sources.md#check-a-write-up) for what it looks for.
