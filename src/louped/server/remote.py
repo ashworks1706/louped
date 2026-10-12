@@ -1,11 +1,14 @@
 """Running a launch on another machine: ASU's Sol, any Slurm cluster, a plain VM, or Colab.
 
-Export writes a bundle for one launch: job.sh (the scheduler's header, environment setup with uv,
-then the same command the Launch form would run here), the experiments/ folder, any edited config
-under job/, the project to install, and louped.json naming the job. On the other machine, job.sh
-writes everything under out/ as a louped home of its own (Inspect logs, MLflow, artifacts) with
-out/result.json and out/log.txt, and packs out/ as louped-result-<id>.tar.gz. For Colab, the export
-is a notebook that writes that one-file job.sh, runs it, and downloads the result.
+Export writes one file for one launch, job.sh: the scheduler's header, environment setup with uv,
+then the same command the Launch form would run here. A project at a pushed git commit is cloned
+there; else job.sh carries what the job needs inside it, compressed: the launched experiment (every
+experiment for a launch not tied to one), louped.toml, any edited config under job/, and louped's
+source when this server runs from a checkout. On the other machine, job.sh writes everything under
+out/ as a louped home of its own (Inspect logs, MLflow, artifacts) with out/result.json and
+out/log.txt, and pushes its runs to the project's remote, where Pull brings them here. Export needs
+that remote: nothing is packed to carry back by hand. For Colab, the export is a notebook that
+writes that job.sh and runs it.
 
 Import reads that archive, or the folder it unpacks to: eval logs are copied into the local logs,
 MLflow runs re-logged into the local store with their metrics, params, tags and artifacts, every run
@@ -17,7 +20,8 @@ folder is read where it is.
 
 from __future__ import annotations
 
-import json
+import base64
+import io
 import re
 import secrets
 import shlex
@@ -67,8 +71,10 @@ DEFAULT_EXTRAS = ["interp", "evals", "tracking", "train"]
 #: What `uv sync` needs beside src/ to build louped from a checkout: pyproject.toml names the
 #: readme and license, and its wheel's build hook is hatch_build.py.
 BUILD = ("pyproject.toml", "uv.lock", "hatch_build.py", "README.md", "LICENSE", ".python-version")
-#: Files under experiments/ bigger than this stay behind; louped.json lists them.
+#: Files under experiments/ bigger than this stay behind; the export's note lists them.
 MAX_FILE = 50 * 2**20
+#: Launches that run one experiment's file (experiments/<name>/...): the job carries only it.
+SCOPED = ("script:", "notebook:", "train:", "grid:")
 SAFE = r"^[\w.:-]+$"
 
 
@@ -185,22 +191,19 @@ json.dump({{"job": "{job_id}", "host": "{host}", "node": socket.gethostname(), "
            "ended": datetime.now(UTC).isoformat(), "home": sys.argv[3]}},
           open("out/result.json", "w"), indent=2)
 PY
-{push}tar -czf "louped-result-{job_id}.tar.gz" --exclude=out/vendor out  # vendor: tool environments
-echo "Done ($code). Bring $ROOT/louped-result-{job_id}.tar.gz back and import it from louped's"
-echo "Runs page, or run: louped import louped-result-{job_id}.tar.gz"
-{hint}exit "$code"
-"""
-
-#: With a remote, the job pushes its results there and packs them only if that fails.
-PUSH = """if louped push --result out/result.json; then
+if louped push --result out/result.json; then
   echo "Done ($code). Results pushed to $LOUPED_REMOTE: Pull on louped's Runs page, or louped pull."
   exit "$code"
 fi
-echo "Pushing failed (above), so the result is packed to bring back by hand."
+echo "Pushing failed (above). The results stay in $ROOT/out: once this machine reaches" \
+  "$LOUPED_REMOTE, run there: cd $ROOT && source .venv/bin/activate &&" \
+  "louped push --result out/result.json" >&2
+exit 1
 """
 
-#: Without a remote: big results belong in storage, not on a laptop.
-LARGE = "For large results, set a remote in louped.toml so the job pushes them straight to storage."
+#: Export's refusal when the job has nowhere to push.
+NO_REMOTE = ("a job pushes its results to the project's remote, and {why}. Set one with Runs > "
+             "Connect, or remote = \"hf://buckets/<you>/<project>\" in louped.toml.")  # fmt: skip
 
 #: An hf:// remote: say a missing token before the run, not after it.
 TOKEN = """python -c 'import huggingface_hub as h, sys; sys.exit(h.get_token() is None)' || {
@@ -208,22 +211,16 @@ TOKEN = """python -c 'import huggingface_hub as h, sys; sys.exit(h.get_token() i
   echo "run hf auth login once on this machine, or set HF_TOKEN."; exit 1; }
 """
 
+#: What job.sh carries when git cannot bring it: a .tar.gz, base64 so it stays text.
+PAYLOAD = """base64 -d <<'LOUPED_PAYLOAD' | tar -xz
+{data}
+LOUPED_PAYLOAD
+"""
+
 #: A one-file job gets the project from git at the exported commit.
 FETCH = """[ -d repo ] || git clone --quiet {url} repo
 git -C repo fetch --quiet
 git -C repo checkout --quiet --detach {commit}
-"""
-
-README = """louped job {job_id}: {title}
-
-1. Copy this folder to {where}.
-2. Run: {run}
-3. {back}
-
-The job installs its environment with uv{cache_note}. Gated Hugging Face models need a token
-there: HF_TOKEN, or `hf auth login` once (louped cluster token <name> copies this machine's).
-If compute nodes have no internet, run the install and model download once on a login node
-first: the same commands as job.sh up to `source .venv/bin/activate`.
 """
 
 #: What a remote URL may hold to go into job.sh as it is.
@@ -301,23 +298,24 @@ def _extras(launchable: str) -> list[str]:
 
 def export(req: ExportRequest, jobs: Jobs, title: str) -> tuple[Path, str, Job]:
     """What runs req on another machine, in a temporary folder, with a line saying what it does,
-    and its job, recorded as exported. One file, job.sh, when the project is a pushed git commit
-    and louped is a release or in that repository; else a .tar.gz of job.sh and what it needs.
-    For Colab, a notebook running that one file; ValueError when the project is not pushed."""
+    and its job, recorded as exported: one file, job.sh, that clones the project at a pushed
+    commit or carries it inside, and pushes its results to the project's remote. For Colab, a
+    notebook running that file. ValueError when there is no remote the job can reach."""
+    remote = sync.configured()
+    if remote is None:
+        raise ValueError(NO_REMOTE.format(why="this project has none"))
+    if sync.is_local(remote):  # a folder on this machine: the other machine cannot reach it
+        raise ValueError(NO_REMOTE.format(why=f"{remote} is a folder on this machine"))
+    if not SAFE_URL.match(remote):
+        raise ValueError(f"the remote {remote!r} has characters job.sh cannot carry")
+    target = req.target
+    if target.extras is None:
+        target = target.model_copy(update={"extras": _extras(req.id)})
     job_id = datetime.now(UTC).strftime("%Y%m%d-%H%M%S-") + secrets.token_hex(2)
     out = Path(tempfile.mkdtemp(prefix="louped-export-"))
     root = out / f"louped-{job_id}"
     (root / "job").mkdir(parents=True)
-    target = req.target
-    if target.extras is None:
-        target = target.model_copy(update={"extras": _extras(req.id)})
-    remote = sync.configured()
-    # a folder on this machine is not reachable from the cluster: the job packs its result instead
-    local = remote if remote is not None and sync.is_local(remote) else None
-    remote = None if local else remote
-    if remote is not None and not SAFE_URL.match(remote):
-        raise ValueError(f"the remote {remote!r} has characters job.sh cannot carry")
-    extras = [*(target.extras or []), *(["sync"] if remote else [])]
+    extras = [*(target.extras or []), "sync"]
     header = _header(target, job_id)
     command = argv(req, root / "job", remote=True)
     project, source = root_of_project(), _checkout()
@@ -325,7 +323,7 @@ def export(req: ExportRequest, jobs: Jobs, title: str) -> tuple[Path, str, Job]:
     needed += [source / n for n in ("pyproject.toml", "uv.lock", "src")] if source else []
     clone = _clone(needed) if needed else None
     if isinstance(clone, Clone) and (bad := _unsafe(root / "job")):
-        clone = f"{bad} cannot go inside job.sh"
+        clone = f"{bad} cannot go in a heredoc"
     flags = " ".join(f"--extra {e}" for e in extras)
     if source is None:
         spec = f"louped[{','.join(extras)}]=={__version__}"
@@ -345,78 +343,57 @@ def export(req: ExportRequest, jobs: Jobs, title: str) -> tuple[Path, str, Job]:
                'export UV_CACHE_DIR="${UV_CACHE_DIR:-/scratch/$USER/uv-cache}"\n')  # fmt: skip
     colab = target.provider == "colab"
     pushed = clone if isinstance(clone, Clone) else None
-    one_file = pushed is not None or (clone is None and source is None)
-    if colab and not one_file:
-        shutil.rmtree(out)
-        raise ValueError("Colab gets the project with git, so it must be a pushed commit: "
-                         f"{clone}. Commit and push it, then export again.")  # fmt: skip
+    # nothing to carry when git brings the project, or there is no project and louped is a release
+    carry = pushed is None and not (clone is None and source is None)
     run = "sbatch job.sh" if target.provider in ("sol", "slurm") else "bash job.sh"
     host = {"sol": "sol", "slurm": "slurm", "shell": "vm", "colab": "colab"}[target.provider]
     where = {"sol": "Sol (scratch is a good place: /scratch/$USER)", "slurm": "the cluster",
              "shell": "the machine", "colab": "Colab"}[target.provider]  # fmt: skip
-    back = (f"Its results are pushed to {remote}: Pull on louped's Runs page." if remote else
-            f"When it ends, the last cell downloads louped-result-{job_id}.tar.gz: import it on "
-            "louped's Runs page." if colab else
-            f"When it ends, bring back louped-result-{job_id}.tar.gz and import it on louped's "
-            f"Runs page (or `louped import` it). {LARGE}")  # fmt: skip
-    if remote and sync.bucket(remote):
+    back = f"Its results are pushed to {remote}: Pull on louped's Runs page."
+    if sync.bucket(remote):
         back += (" Pushing there needs a Hugging Face token: the HF_TOKEN secret in Colab." if colab
                  else " Pushing there needs a Hugging Face token: run hf auth login once on that "
                  "machine.")  # fmt: skip
     parts = {"header": "\n".join(header), "job_id": job_id, "title": title, "run": run,
              "cache": scratch if sol else "", "command": shlex.join(command), "host": host,
              "launch": shlex.quote(req.id),
-             "remote": f'export LOUPED_REMOTE="${{LOUPED_REMOTE:-{remote}}}"\n' if remote else "",
-             "push": PUSH if remote else "", "install": install,
-             "hint": "" if remote else f'echo "{LARGE}"\n',
-             "token": TOKEN if remote and sync.bucket(remote) else ""}  # fmt: skip
-    if one_file:
+             "remote": f'export LOUPED_REMOTE="${{LOUPED_REMOTE:-{remote}}}"\n',
+             "install": install, "token": TOKEN if sync.bucket(remote) else ""}  # fmt: skip
+    skipped: list[str] = []
+    if carry:
+        data, skipped = _payload(root, req.id, project)
+        fetch = PAYLOAD.format(data=data)
+    else:
         fetch = FETCH.format(url=shlex.quote(pushed.url), commit=pushed.commit) if pushed else ""
         if pushed and experiments_dir().is_dir():
             fetch += f"ln -sfn {_in_repo(experiments_dir(), pushed)} experiments\n"
         if pushed and project is not None:
             fetch += f"cp {_in_repo(project / FILE, pushed)} {FILE}\n"
         fetch += _embedded(root / "job")
-        usage = (
-            f"# Copy it to {where} and run it there; it works in louped-{job_id}/ beside it.\n"
-            if not colab
-            else "# The notebook writes and runs this file.\n"
-        ) + f"# {back}\n"
-        script = SCRIPT.format(**parts, usage=usage, folder=f"/louped-{job_id}", fetch=fetch)
-        shutil.rmtree(root)
-        if colab:
-            job = out / f"louped-{job_id}.ipynb"
-            at = pushed.commit if pushed else None
-            nb = notebook(script, job_id, title, shlex.join(command), at, remote)
-            nbformat.write(nb, str(job))
-            note = ("A notebook: open it in Colab (File > Upload notebook), pick a GPU runtime "
-                    "and run all. " + back)  # fmt: skip
-        else:
-            job = out / f"louped-{job_id}.sh"
-            job.write_text(script, encoding="utf-8")
-            job.chmod(0o755)
-            note = f"One file: run it there with {run}. " + back
+    usage = (
+        f"# Copy it to {where} and run it there; it works in louped-{job_id}/ beside it.\n"
+        if not colab
+        else "# The notebook writes and runs this file.\n"
+    ) + f"# {back}\n"
+    script = SCRIPT.format(**parts, usage=usage, folder=f"/louped-{job_id}", fetch=fetch)
+    shutil.rmtree(root)
+    if colab:
+        job = out / f"louped-{job_id}.ipynb"
+        at = pushed.commit if pushed else None
+        nb = notebook(script, job_id, title, shlex.join(command), at, remote)
+        nbformat.write(nb, str(job))
+        note = ("A notebook: open it in Colab (File > Upload notebook), pick a GPU runtime "
+                "and run all. " + back)  # fmt: skip
     else:
-        _bundle(root, project)
-        script = SCRIPT.format(**parts, usage="# See README.txt.\n", folder="", fetch="")
-        (root / "job.sh").write_text(script, encoding="utf-8")
-        (root / "job.sh").chmod(0o755)
-        cache_note = ", caching it and models under /scratch/$USER" if sol else ""
-        readme = README.format(job_id=job_id, title=title, where=where, run=run,
-                               cache_note=cache_note, back=back)  # fmt: skip
-        (root / "README.txt").write_text(readme)
-        manifest = {"job": job_id, "title": title, "argv": command, "target": target.model_dump(),
-                    "louped": __version__, "request": req.model_dump(exclude={"target"}),
-                    "skipped": _skipped(root)}  # fmt: skip
-        (root / "louped.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
-        job = out / f"louped-{job_id}.tar.gz"
-        with tarfile.open(job, "w:gz") as tar:
-            tar.add(root, arcname=root.name)
-        shutil.rmtree(root)
-        why = f" ({clone})" if clone else ""
-        note = f"A folder, not one file{why}: copy it there and run {run}. " + back
-    if local:
-        note += f" The remote {local} is a folder here, which the job cannot reach."
+        job = out / f"louped-{job_id}.sh"
+        job.write_text(script, encoding="utf-8")
+        job.chmod(0o755)
+        note = f"One file: run it there with {run}. " + back
+    if carry and clone:
+        note += f" It carries the project inside it ({clone})."
+    if skipped:
+        note += (f" Left out, over {MAX_FILE // 2**20} MB: {', '.join(skipped)}; put big data in "
+                 "the Hub or the remote.")  # fmt: skip
     recorded = Job(id=job_id, title=f"{title} · {host}", argv=command, status="exported",
                    launch=req.id)  # fmt: skip
     jobs.record(recorded)
@@ -448,7 +425,7 @@ except (userdata.SecretNotFoundError, userdata.NotebookAccessError):
     )
 """
 
-#: job.sh with its output shown as it runs; its exit code said, not raised, so the result cell runs.
+#: job.sh with its output shown as it runs, and its exit code said.
 COLAB_RUN = """import subprocess
 
 job = subprocess.Popen(["bash", "job.sh"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -459,45 +436,28 @@ code = job.wait()
 print(f"job.sh ended with exit code {code}." if code else "job.sh succeeded.")
 """
 
-COLAB_DOWNLOAD = """from google.colab import files
-
-files.download("louped-{job_id}/louped-result-{job_id}.tar.gz")
-"""
-
-#: With a remote, the result is packed only when pushing it failed.
-COLAB_PUSHED = """from pathlib import Path
-
-archive = Path("louped-{job_id}/louped-result-{job_id}.tar.gz")
-if archive.exists():  # pushing failed (above): bring the result back by hand
-    from google.colab import files
-
-    files.download(str(archive))
-else:
-    print("The results are pushed to {remote}: Pull on louped's Runs page.")
-"""
-
 
 def notebook(script: str, job_id: str, title: str, command: str, commit: str | None,
-             remote: str | None) -> nbformat.NotebookNode:  # fmt: skip
+             remote: str) -> nbformat.NotebookNode:  # fmt: skip
     """A Colab notebook that runs a one-file job.sh: it writes it, sets the Hugging Face token
-    from Colab's secrets, runs it, and downloads the result (or says it was pushed)."""
+    from Colab's secrets and runs it; the job pushes its results to remote."""
     v4 = nbformat.v4
-    source = f"the project at commit `{commit[:12]}`" if commit else f"louped {__version__}"
-    bucket = remote is not None and sync.bucket(remote)
-    back = (f"The job pushes its results to `{remote}`: then Pull on louped's Runs page." if remote
-            else f"The last cell downloads `louped-result-{job_id}.tar.gz`: import it on "
-            "louped's Runs page.")  # fmt: skip
+    source = (
+        f"the project at commit `{commit[:12]}`"
+        if commit
+        else f"this export (louped {__version__})"
+    )
+    bucket = sync.bucket(remote)
+    back = f"The job pushes its results to `{remote}`: then Pull on louped's Runs page."
     intro = COLAB_INTRO.format(job_id=job_id, title=title, command=command, source=source,
                                push=", and pushing the results," if bucket else "",
                                back=back)  # fmt: skip
     need = ("Pushing the results needs it." if bucket else
             "Only gated models need it; the job goes on without.")  # fmt: skip
     token = COLAB_TOKEN.format(missing="raise RuntimeError" if bucket else "print", need=need)
-    result = (COLAB_PUSHED.format(job_id=job_id, remote=remote) if remote else
-              COLAB_DOWNLOAD.format(job_id=job_id))  # fmt: skip
     cells = [v4.new_markdown_cell(intro), v4.new_code_cell(token),
-             v4.new_code_cell(f"%%writefile job.sh\n{script}"), v4.new_code_cell(COLAB_RUN),
-             v4.new_code_cell(result)]  # fmt: skip
+             v4.new_code_cell(f"%%writefile job.sh\n{script}"),
+             v4.new_code_cell(COLAB_RUN)]  # fmt: skip
     meta = {"accelerator": "GPU", "colab": {"provenance": []},
             "kernelspec": {"name": "python3", "display_name": "Python 3"}}  # fmt: skip
     nb = v4.new_notebook(cells=cells, metadata=meta)
@@ -529,8 +489,11 @@ def _embedded(job_dir: Path) -> str:
     return "".join(lines)
 
 
-def _bundle(root: Path, project: Path | None) -> None:
-    """The experiments, project file and louped source a folder export carries."""
+def _payload(root: Path, launch: str, project: Path | None) -> tuple[str, list[str]]:
+    """What job.sh carries when git cannot bring it, as base64 of a .tar.gz: the launched
+    experiment (every experiment for a launch not tied to one), the project file, the edited
+    configs under root/job, and louped's source when this server runs from a checkout. Files over
+    MAX_FILE stay behind; returns their paths under experiments/."""
     skipped: list[str] = []
 
     def keep(src: str, names: list[str]) -> set[str]:
@@ -542,8 +505,10 @@ def _bundle(root: Path, project: Path | None) -> None:
                 skipped.append(path.relative_to(experiments_dir()).as_posix())
         return drop
 
-    if experiments_dir().is_dir():
-        shutil.copytree(experiments_dir(), root / "experiments", ignore=keep)
+    one = launch.split(":", 1)[1].split("/")[0] if launch.startswith(SCOPED) else None
+    found = experiments_dir() / one if one else experiments_dir()
+    if found.is_dir():
+        shutil.copytree(found, root / "experiments" / (one or ""), ignore=keep)
     if project is not None:  # its domains, so its experiments read there
         shutil.copy2(project / FILE, root / FILE)
     if (source := _checkout()) is not None:
@@ -551,14 +516,14 @@ def _bundle(root: Path, project: Path | None) -> None:
             if (source / name).exists():
                 shutil.copy2(source / name, root / name)
         shutil.copytree(source / "src", root / "src", ignore=shutil.ignore_patterns("__pycache__"))
-    (root / ".skipped").write_text("\n".join(skipped), encoding="utf-8")
-
-
-def _skipped(root: Path) -> list[str]:
-    marker = root / ".skipped"
-    found = [x for x in marker.read_text(encoding="utf-8").splitlines() if x]
-    marker.unlink()
-    return found
+    if not any((root / "job").iterdir()):
+        (root / "job").rmdir()
+    packed = io.BytesIO()
+    with tarfile.open(fileobj=packed, mode="w:gz") as tar:
+        for path in sorted(root.iterdir()):
+            tar.add(path, arcname=path.name)
+    text = base64.b64encode(packed.getvalue()).decode()
+    return "\n".join(text[i : i + 76] for i in range(0, len(text), 76)), skipped
 
 
 def _out(folder: Path) -> Path:
@@ -656,9 +621,7 @@ def routes(api: APIRouter, queue: Callable[[], Jobs], known: Callable[[str], Lau
             job, note, _ = export(req, jobs, title)
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
-        kind = {".gz": "application/gzip", ".ipynb": "application/x-ipynb+json"}.get(
-            job.suffix, "text/x-shellscript"
-        )
+        kind = "application/x-ipynb+json" if job.suffix == ".ipynb" else "text/x-shellscript"
         # what the download is and does, for the UI to say; headers are latin-1
         said = {"x-louped-note": note.encode("ascii", "replace").decode()}
         return FileResponse(job, media_type=kind, filename=job.name, headers=said,

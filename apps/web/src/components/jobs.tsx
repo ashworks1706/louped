@@ -12,7 +12,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Help } from "@/components/help";
 import { Part, part, partId, useRules } from "@/components/parts";
 import { QueryState } from "@/components/query-state";
-import { ImportResult, Sync } from "@/components/sync";
+import { Sync } from "@/components/sync";
 import { KindBadge, StatusDot } from "@/components/run-badges";
 import { Button } from "@/components/ui/button";
 import { cancelJob, deleteJob, isLive, q, type Job } from "@/lib/api";
@@ -104,7 +104,6 @@ export function JobsPanel() {
         </h2>
         <div className="flex flex-wrap items-center gap-2">
           <Sync />
-          <ImportResult />
           <Button
             asChild
             variant="outline"

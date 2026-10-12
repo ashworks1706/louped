@@ -212,7 +212,7 @@ KINDS: list[Kind] = [
     _k(part="runs/filter/*", about="A runs filter: search, kind, experiment, status, clear.",
        rules=PICK),
     _k(part="runs/*", about="Runs' count and Compare.", rules=PICK),
-    _k(part="runs/action/*", about="Runs' push, pull, connect, import and launch.",
+    _k(part="runs/action/*", about="Runs' push, pull, connect and launch.",
        rules=["hidden"]),
     _k(part="runs/heading/*", about="The Jobs or Runs heading on Runs.", rules=PICK),
     _k(part="runs/job/*", about="One job in the queue.", rules=PICK),
@@ -411,7 +411,8 @@ KINDS: list[Kind] = [
        rules=["note"]),
     _k(part="launch/submit/*", about="Submits it to a cluster louped.toml names, by name.",
        rules=["hidden"]),
-    _k(part="launch/*", about="The picker, title, command and Launch button.", rules=PICK),
+    _k(part="launch/*", about="The picker, title, command, Launch button and the note when "
+       "there is no remote.", rules=PICK),
     # a job
     _k(part="job/log", about="The job's log.", rules=["note"]),
     _k(part="job/wrote", about="The runs the job wrote.", rules=["note"]),

@@ -98,7 +98,10 @@ def test_an_agent_launches_follows_and_cancels_jobs_through_the_queue(tmp_path: 
     assert (tmp_path / "experiments" / "my-q" / "README.md").exists()
 
 
-def test_an_agent_starts_a_question_exports_a_run_and_imports_a_result(tmp_path: Path) -> None:
+def test_an_agent_starts_a_question_exports_a_run_and_imports_a_result(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("LOUPED_REMOTE", "s3://bucket/runs")  # the job pushes its results there
     mcp = tools()
     done = call(mcp, "new_experiment", name="does-it-cave", domain="honesty")
     assert done["status"] == "succeeded", done["log"]

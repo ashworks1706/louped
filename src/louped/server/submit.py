@@ -2,10 +2,9 @@
 
 Submit exports the launch as Export does, copies it into the cluster's dir and starts it (sbatch,
 or nohup bash on a VM), and records the scheduler's id on the job. While the server runs, a
-thread asks the cluster every FOLLOW seconds how its jobs are (sacct). A job that ends brings
-its result back: pulled from the remote when the project has one the cluster reaches, else (or
-when the job could not push) its louped-result-<id>.tar.gz copied here, imported and deleted. A
-job that ends with no result says what the scheduler said and the end of its output.
+thread asks the cluster every FOLLOW seconds how its jobs are (sacct). A job that ends is pulled
+from the project's remote, where it pushed its runs. A job that ends with nothing there says
+what the scheduler said and the end of its output.
 
 --after makes a job wait on the cluster for an earlier one to succeed (afterok), so a chain runs
 in order without this machine online. A gate step, `louped gate <experiment> --pull`, is a job of
@@ -16,7 +15,6 @@ from __future__ import annotations
 
 import logging
 import shutil
-import tarfile
 import threading
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -27,7 +25,7 @@ from pydantic import BaseModel, Field
 from louped import clusters, sync
 from louped.clusters import SshError
 from louped.server.launch import LIVE, Job, Jobs, Launchable, require_json
-from louped.server.remote import ExportRequest, Target, export, import_result, pull_results
+from louped.server.remote import ExportRequest, Target, export, pull_results
 from louped.stores import gates
 
 log = logging.getLogger(__name__)
@@ -152,28 +150,17 @@ def chain(experiment: str, cluster: str, jobs: Jobs, titles: dict[str, str],
 
 
 def _ended(jobs: Jobs, job: Job, cluster: clusters.Cluster, state: str) -> None:
-    """A job the scheduler says has ended: its result brought back, else what is known."""
+    """A job the scheduler says has ended: its result pulled from the remote, else what is
+    known."""
     remote = sync.configured()
-    if remote is not None and not sync.is_local(remote):
-        try:
-            pull_results(jobs)
-        except (ValueError, OSError) as exc:  # unreachable now: try again on the next round
-            _note(jobs, job.id, f"pulling its result from {remote} failed, retrying: {exc}")
-            return
-    if jobs.get(job.id).status not in LIVE:
-        return
-    name = f"louped-result-{job.id}.tar.gz"
-    path = jobs.dir / job.id / name
-    why = ""
     try:
-        clusters.fetch(cluster, f"{job.remote_dir}/louped-{job.id}/{name}", path)
-        import_result(path, jobs)
-    except (SshError, ValueError, tarfile.TarError, KeyError) as exc:
-        why = str(exc)
-    finally:
-        path.unlink(missing_ok=True)
+        pull_results(jobs)
+    except (ValueError, OSError) as exc:  # unreachable now: try again on the next round
+        _note(jobs, job.id, f"pulling its result from {remote} failed, retrying: {exc}")
+        return
     if jobs.get(job.id).status not in LIVE:
         return
+    why = f"nothing from it in {remote}"
     out = f"{job.remote_dir}/louped-{job.id}.out"
     try:
         end = clusters.tail(cluster, out)

@@ -266,7 +266,7 @@ export async function exportJob(req: ExportRequest): Promise<{ name: string; not
   const res = await send("/launch/export", req);
   const name =
     /filename="?([^";]+)"?/.exec(res.headers.get("content-disposition") ?? "")?.[1] ??
-    "louped-job.tar.gz";
+    "louped-job.sh";
   const url = URL.createObjectURL(await res.blob());
   const a = Object.assign(document.createElement("a"), { href: url, download: name });
   a.click();
@@ -294,16 +294,6 @@ export const pullRuns = () => post<Imported[]>("/launch/pull", {});
 export const connectRemote = (body: Schemas["Connect"]) =>
   post<RemoteState>("/launch/remote", body);
 
-/** Adds a result archive from another machine to this louped. */
-export async function importResult(file: File): Promise<Imported> {
-  const res = await fetch(`${API}/api/launch/import`, {
-    method: "POST",
-    headers: { "content-type": "application/gzip" },
-    body: file,
-  });
-  if (!res.ok) throw new ApiError(res.status, await detail(res, "/launch/import"));
-  return res.json() as Promise<Imported>;
-}
 export const setLabel = (run: string, sample: string, label: Label | null) =>
   post<Record<string, Label>>(
     `/runs/${encodeURIComponent(run)}/labels/${encodeURIComponent(sample)}`,

@@ -124,24 +124,24 @@ test("a grid's config is edited in place and sent without a recipe", async ({ pa
     .toEqual({ id: "grid", options: {}, config: "# louped grid\nmodel: edited\n" });
 });
 
-test("a launch exports for Sol and its result imports back", async ({ page }, info) => {
+test("a launch exports one job.sh for Sol, which pushes its result to the remote", async ({
+  page,
+}, info) => {
   await mockApi(page);
+  const health = (remote: string | null) =>
+    page.route("**/api/health", (r) =>
+      r.fulfill({ json: { status: "ok", version: "0", home: "/x", launching: true, remote } }),
+    );
+  await health("hf://buckets/ash/runs");
   let exported: unknown;
   await page.route("**/api/launch/export", (r) => {
     exported = r.request().postDataJSON();
     return r.fulfill({
-      body: Buffer.from([0x1f, 0x8b]),
+      body: "#!/bin/bash\n",
       headers: {
-        "content-type": "application/gzip",
-        "content-disposition": 'attachment; filename="louped-j2.tar.gz"',
+        "content-type": "text/x-shellscript",
+        "content-disposition": 'attachment; filename="louped-j2.sh"',
       },
-    });
-  });
-  let imported = "";
-  await page.route("**/api/launch/import", (r) => {
-    imported = r.request().headers()["content-type"];
-    return r.fulfill({
-      json: { job: "j2", host: "sol", exit_code: 0, runs: ["m-1", "e-2"], skipped: [] },
     });
   });
   await page.goto("/launch/");
@@ -151,23 +151,19 @@ test("a launch exports for Sol and its result imports back", async ({ page }, in
   await page.screenshot({ path: info.outputPath("export.png"), fullPage: true });
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export" }).click();
-  expect((await download).suggestedFilename()).toBe("louped-j2.tar.gz");
+  expect((await download).suggestedFilename()).toBe("louped-j2.sh");
   expect(exported).toMatchObject({
     id: "script:hello/run.py",
     target: { provider: "sol", gpu: "a30", gpus: 1, hours: 2 },
   });
-  // A result comes back on Runs, where every job is followed.
-  await page.route("**/api/health", (r) =>
-    r.fulfill({ json: { status: "ok", version: "0.0.0", home: "/tmp", launching: true } }),
-  );
-  await page.goto("/runs/");
-  await page.getByLabel("Result archive").setInputFiles({
-    name: "louped-result-j2.tar.gz",
-    mimeType: "application/gzip",
-    buffer: Buffer.from([0x1f, 0x8b]),
-  });
-  await expect(page.getByText("2 runs imported from sol")).toBeVisible();
-  expect(imported).toBe("application/gzip");
+
+  // with no remote the job has nowhere to push: nothing to export, and the page says where to fix it
+  await page.unroute("**/api/health");
+  await health(null);
+  await page.reload();
+  await page.getByLabel("Run on").selectOption("sol");
+  await expect(page.locator('[data-part="launch/no-remote"]')).toContainText("Connect one on Runs");
+  await expect(page.getByRole("button", { name: "Export" })).toBeDisabled();
 });
 
 test("inspect eval's task is picked from the project's tasks and inspect_evals'", async ({
