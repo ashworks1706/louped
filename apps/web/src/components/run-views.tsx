@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, StickyNote, X } from "lucide-react";
 import Link from "next/link";
 import { Fragment, useRef, useState } from "react";
 import {
@@ -24,8 +24,11 @@ import { Help } from "@/components/help";
 import { MarkTrace, useOpenMark } from "@/components/mark-trace";
 import { part, partId, PartData, PartNote, useRules } from "@/components/parts";
 import { QueryState } from "@/components/query-state";
-import { PlotlyFigure } from "@/components/plotly-figure";
+import { NoteDialog } from "@/components/notes";
+import { pageOf, useCanPick } from "@/components/pick-parts";
+import { PlotlyFigure, type Lasso } from "@/components/plotly-figure";
 import { VegaFigure } from "@/components/vega-figure";
+import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import {
@@ -97,7 +100,8 @@ const READ: Record<View["kind"], string> = {
   tokens:
     "Each token is shaded by the picked series: darker is a larger value. Hover a token for its number.",
   vega: "A chart the run drew itself. Hover marks for their values.",
-  plotly: "A figure the run drew itself. Drag to turn a 3D one, scroll to zoom, hover points.",
+  plotly:
+    "A figure the run drew itself. Drag to turn a 3D one, scroll to zoom, hover points. On a flat one, Lasso Select in its toolbar notes the points you draw around.",
   board:
     "Panels that follow each other: a control, or a click on a mark, row or node, filters the panels that use it. Click it again to let it go.",
 };
@@ -111,6 +115,9 @@ export function Figure({ view, id, source }: { view: View; id?: string; source?:
   const [mark, setMark] = useState<string | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const open = useOpenMark(source);
+  const canNote = useCanPick() && !!id;
+  const [lasso, setLasso] = useState<Lasso | null>(null);
+  const [noting, setNoting] = useState(false);
   const traced = source && (view.kind === "plotly" || view.kind === "vega") && view.items;
   const onMark = traced
     ? (key: string | null, picked: boolean) => {
@@ -142,7 +149,42 @@ export function Figure({ view, id, source }: { view: View; id?: string; source?:
         {view.kind === "table" && <TableFigure view={view} />}
         {view.kind === "tokens" && <TokensFigure view={view} />}
         {view.kind === "vega" && <VegaFigure view={view} onMark={onMark} />}
-        {view.kind === "plotly" && <PlotlyFigure view={view} onMark={onMark} />}
+        {view.kind === "plotly" && (
+          <PlotlyFigure view={view} onMark={onMark} onLasso={canNote ? setLasso : undefined} />
+        )}
+        {lasso && id && (
+          <p
+            className="text-muted-foreground mt-2 flex items-center gap-2 text-xs"
+            {...part(`figures/lasso/${id.split("/").at(-1)}`)}
+          >
+            {lasso.count} point{lasso.count === 1 ? "" : "s"} drawn around
+            {lasso.items.length > 0 && ` · ${lasso.items.length} items`}
+            <Button variant="ghost" size="sm" onClick={() => setNoting(true)}>
+              <StickyNote /> Note
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Let the points go"
+              onClick={() => setLasso(null)}
+            >
+              <X />
+            </Button>
+            <NoteDialog
+              open={noting}
+              onOpenChange={setNoting}
+              anchors={[
+                {
+                  part: id,
+                  ...pageOf(),
+                  shows: `${lasso.count} points of ${view.title}`,
+                  data: lasso,
+                },
+              ]}
+              onSaved={() => setLasso(null)}
+            />
+          </p>
+        )}
         {view.kind === "board" && (
           <BoardFigure
             view={view}

@@ -279,7 +279,7 @@ The sidebar folds to icons.
 
 | Group | Pages |
 |---|---|
-| Research | Overview (Home, or the project's page), Experiments, Runs (jobs, then every run; training is a kind), Compare, Reports, and the project's boards and plugin pages |
+| Research | Overview (Home, or the project's page), Experiments, Runs (jobs, then every run; training is a kind), Compare, Reports, Notes, and the project's boards and plugin pages |
 | Instruments | Probe (reply, inspect, patch, dose), Circuits, Vectors (with Feature detail), Speed |
 | Data | Datasets, Benchmarks (eval and `louped bench` leaderboards), Training sets, Sources, Hub |
 | App (at the foot) | Feedback: requests for louped itself |
@@ -293,7 +293,10 @@ Probe and Speed are one set of tools (server/playground.py); each page shows its
 Feedback (server/feedback.py) keeps feature requests and bug reports for louped as drafts in
 `<home>/feedback/`. An agent writes one with `draft_feedback`; the person edits it and files it
 through GitHub's new-issue page, prefilled from the repository's issue forms. louped holds no
-GitHub token and sends nothing itself. Every
+GitHub token and sends nothing itself. Notes (stores/notes.py, server/notes.py) are
+Markdown on parts, kept as `notes/<id>.json` at the project's root. Each note has anchors: a part's
+address, its page, its text and its data then (a figure's lasso holds its points). The app shows
+them as marks (components/notes.tsx). Agents use `notes` and `add_note`. Every
 technical term has a ? from `apps/web/src/lib/glossary.ts`.
 
 Home, a run's page and an experiment's page are data (server/ui.py). They are regions

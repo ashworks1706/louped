@@ -290,6 +290,11 @@
     "rules": []
   },
   {
+    "part": "figures/lasso/*",
+    "about": "The points a lasso or box holds on one figure, with Note to keep a note on them.",
+    "rules": []
+  },
+  {
     "part": "config/param/*",
     "about": "One parameter.",
     "rules": ["hidden", "about", "order"]
@@ -782,6 +787,51 @@
   {
     "part": "source/pin/*",
     "about": "One pinned passage of the source, by id.",
+    "rules": []
+  },
+  {
+    "part": "notes/mark/*",
+    "about": "The mark on a part that has notes; it opens them.",
+    "rules": []
+  },
+  {
+    "part": "notes/close/*",
+    "about": "Closes a part's notes.",
+    "rules": []
+  },
+  {
+    "part": "notes/note/*",
+    "about": "One note: its text, who wrote it and when.",
+    "rules": []
+  },
+  {
+    "part": "notes/anchor/*/*",
+    "about": "A part one note is on, by the note's id and the part's place in it; it opens the part's page with the note.",
+    "rules": []
+  },
+  {
+    "part": "notes/edit/*",
+    "about": "Edits one note's text.",
+    "rules": []
+  },
+  {
+    "part": "notes/text/*",
+    "about": "One note's text, being edited.",
+    "rules": []
+  },
+  {
+    "part": "notes/save/*",
+    "about": "Saves one note's text.",
+    "rules": []
+  },
+  {
+    "part": "notes/cancel/*",
+    "about": "Stops editing one note.",
+    "rules": []
+  },
+  {
+    "part": "notes/delete/*",
+    "about": "Moves one note to the trash, after one confirm.",
     "rules": []
   },
   {

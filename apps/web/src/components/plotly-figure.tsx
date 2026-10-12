@@ -15,6 +15,46 @@ const keyOf = (p: Plotly.PlotDatum | undefined) => {
   return id == null ? null : String(id);
 };
 
+/** The most points a lasso keeps for its note; the count says how many there were. */
+const MAX_POINTS = 500;
+
+/** The points a lasso or box drew around: each with its trace, its values and, when the trace
+ * names its items, its item's id; and the drawn region in the axes' units. */
+export type Lasso = {
+  count: number;
+  points: { trace: string; x: unknown; y: unknown; z?: unknown; id?: string }[];
+  items: string[];
+  region: { lasso: unknown } | { box: unknown } | null;
+};
+
+function lassoOf(e: Plotly.PlotSelectionEvent | undefined): Lasso | null {
+  const all = e?.points ?? [];
+  if (all.length === 0) return null;
+  const points = all.slice(0, MAX_POINTS).map((p) => {
+    const id = keyOf(p);
+    const z = (p as { z?: unknown }).z;
+    return {
+      trace: String(p.data.name ?? p.curveNumber),
+      x: p.x,
+      y: p.y,
+      ...(z !== undefined && { z }),
+      ...(id !== null && { id }),
+    };
+  });
+  const items = [...new Set(all.map(keyOf).filter((k): k is string => k !== null))];
+  const drawn = e as { lassoPoints?: unknown; range?: unknown };
+  return {
+    count: all.length,
+    points,
+    items: items.slice(0, MAX_POINTS),
+    region: drawn.lassoPoints
+      ? { lasso: drawn.lassoPoints }
+      : drawn.range
+        ? { box: drawn.range }
+        : null,
+  };
+}
+
 /** How long the camera takes to go once around the scene when the figure orbits. */
 const ORBIT_TURN_MS = 24_000;
 
@@ -87,21 +127,26 @@ function moveWhenSeen(
  * onMark, hovering a point says which item it stands for and clicking one picks it. The view's
  * animation plays the frames when the figure comes into view (again from the first with loop) and
  * turns a 3D scene (orbit) until the person drags or zooms it; with reduced motion asked for,
- * nothing moves by itself and Play stays. */
+ * nothing moves by itself and Play stays. With onLasso, a lasso or box drawn on a 2D figure
+ * (Plotly's own tools) says which points it holds, and null when it is let go. */
 export function PlotlyFigure({
   view,
   onMark,
+  onLasso,
 }: {
   view: PlotlyView;
   onMark?: (key: string | null, picked: boolean) => void;
+  onLasso?: (lasso: Lasso | null) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const { resolvedTheme } = useTheme();
   const mark = useRef(onMark);
+  const lasso = useRef(onLasso);
   useEffect(() => {
     mark.current = onMark;
-  }, [onMark]);
+    lasso.current = onLasso;
+  }, [onMark, onLasso]);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -193,6 +238,8 @@ export function PlotlyFigure({
           const key = keyOf(e.points[0]);
           if (key !== null) mark.current?.(key, true);
         });
+        plot.on("plotly_selected", (e) => lasso.current?.(lassoOf(e)));
+        plot.on("plotly_deselect", () => lasso.current?.(null));
         // Plotly.animate settles when the frames end, and fails when Pause or the slider stops it
         const play = (fromcurrent: boolean) => {
           Plotly.animate(el, names, { ...step, mode: "immediate", fromcurrent }).then(

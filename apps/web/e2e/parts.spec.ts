@@ -92,6 +92,8 @@ const PAGES: [string, string][] = [
   ["board", "/b/?name=scores"],
   ["feedback", "/feedback/?id=a1b2c3d4"],
   ["new request", "/feedback/?id=new"],
+  ["notes", "/notes/"],
+  ["open note", "/run/?id=m-1&tab=items&note=n0000001"],
 ];
 
 for (const [name, url] of PAGES) {

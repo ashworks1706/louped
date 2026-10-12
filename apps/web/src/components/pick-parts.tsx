@@ -1,12 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Copy, X } from "lucide-react";
+import { Copy, StickyNote, X } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
 import { CohortActions } from "@/components/cohort-actions";
+import { NoteDialog, shortName } from "@/components/notes";
 import { partData } from "@/components/parts";
 import { Button } from "@/components/ui/button";
 import { isSnapshot, pick, q, type Picked } from "@/lib/api";
@@ -75,14 +76,21 @@ export function useCanPick() {
 const partAt = (target: EventTarget | null) =>
   target instanceof Element ? target.closest<HTMLElement>("[data-part]") : null;
 
-function read(el: HTMLElement): Picked {
+/** The page open now: its path and query, and the run or experiment it shows. */
+export function pageOf(): Pick<Picked, "url" | "run" | "experiment"> {
   const params = new URLSearchParams(location.search);
-  const id = el.dataset.part!;
   return {
-    id,
     url: location.pathname + location.search,
     run: location.pathname.startsWith("/run/") ? params.get("id") : null,
     experiment: location.pathname.includes("/experiment/") ? params.get("name") : null,
+  };
+}
+
+function read(el: HTMLElement): Picked {
+  const id = el.dataset.part!;
+  return {
+    id,
+    ...pageOf(),
     text: el.innerText.replace(/\s+/g, " ").trim().slice(0, 500),
     data: partData(id) as Picked["data"],
   };
@@ -122,6 +130,7 @@ export function PartPicker() {
   const agentRead = version > 0 && (server.data?.read ?? 0) >= version;
   const query = useSearchParams().toString();
   const here = usePathname() + (query ? `?${query}` : "");
+  const [noting, setNoting] = useState(false);
 
   useEffect(() => {
     if (!canPick) return;
@@ -223,6 +232,11 @@ export function PartPicker() {
         </ul>
         <CohortActions parts={parts} />
         {parts.length > 0 && (
+          <Button variant="ghost" size="sm" onClick={() => setNoting(true)}>
+            <StickyNote /> Note
+          </Button>
+        )}
+        {parts.length > 0 && (
           <Button
             variant="ghost"
             size="sm"
@@ -246,11 +260,21 @@ export function PartPicker() {
           {tap && parts.length === 0 ? "Done" : "Clear"}
         </Button>
       </div>
+      <NoteDialog
+        open={noting}
+        onOpenChange={setNoting}
+        anchors={parts.map((p) => ({
+          part: p.id,
+          url: p.url,
+          run: p.run,
+          experiment: p.experiment,
+          shows: p.text,
+          data: p.data,
+        }))}
+        onSaved={() => setPicked([])}
+      />
     </>
   );
 }
 
 const inTray = (t: EventTarget | null) => t instanceof Element && !!t.closest("[data-part-tray]");
-
-/** A part's name for the tray: its last two segments, decoded. */
-const shortName = (id: string) => id.split("/").slice(-2).map(decodeURIComponent).join(" / ");

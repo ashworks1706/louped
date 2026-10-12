@@ -56,6 +56,22 @@ it. Add the hook to it yourself:
 }
 ```
 
+## Keep notes on parts
+
+A note is like a note in a PDF reader, but you can put it on any part of a page. Shift+click the
+parts, then press **Note** in the tray. Write the note in Markdown and press **Keep note**. A mark
+shows on each part that has a note. Click the mark to read, edit or delete the note.
+
+To note points on a figure, use **Lasso Select** or **Box Select** in the figure's toolbar. Then
+press **Note** under the figure. The note keeps the points and their item ids.
+
+A note keeps the part's address, its page and what the part showed. Thus the note stays clear
+when the run changes. **Notes** in the sidebar lists every note. Each note links to its part.
+
+Notes are in `notes/` at the project's root, one file for each note, and you commit them with
+your experiments. Your agent reads them with `notes` and writes its own with `add_note`. A
+published dashboard shows the notes, but you cannot change them there.
+
 ## Items you pick are a cohort
 
 When you pick rows on a run's Items tab, the tray offers **Only these**. It reads every condition

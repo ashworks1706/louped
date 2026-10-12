@@ -37,6 +37,7 @@ from louped.server import (
     hub,
     inspect_view,
     launch,
+    notes,
     playground,
     plugins,
     serving,
@@ -862,6 +863,7 @@ def create_app(
     app.include_router(datasets.router(jobs))
     app.include_router(benchmarks.router(editing))
     app.include_router(feedback.router(editing))
+    app.include_router(notes.router(editing))
     pages: dict[str, list[str]] = {}  # the plugins' pages, once plugins.mount has served them
     app.include_router(ui.router(launching, pages))
     # louped's look and helpers for plugin pages (louped.server.ui, plugins.mdx)

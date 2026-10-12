@@ -82,7 +82,7 @@ def publish(out: Path, web: Path) -> Published:
         done.files += 1
         return got.json()
 
-    for path in ("/health", "/vectors", "/ui/layout", "/ui/theme"):
+    for path in ("/health", "/vectors", "/ui/layout", "/ui/theme", "/notes"):
         save(path)
     for graph in save("/graphs") or []:
         save(f"/graphs/{_enc(graph['slug'])}")
