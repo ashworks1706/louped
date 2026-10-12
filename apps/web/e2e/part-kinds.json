@@ -11,7 +11,7 @@
   },
   {
     "part": "shell/group/*",
-    "about": "A group of pages in the sidebar: research, instruments, data.",
+    "about": "A group of pages in the sidebar: research, instruments, data, and app at its foot.",
     "rules": ["label"]
   },
   {
@@ -785,13 +785,73 @@
     "rules": []
   },
   {
+    "part": "feedback/heading",
+    "about": "The list of requests for louped.",
+    "rules": []
+  },
+  {
+    "part": "feedback/new",
+    "about": "Starts a new request.",
+    "rules": []
+  },
+  {
+    "part": "feedback/item/*",
+    "about": "One request in the list, by id.",
+    "rules": []
+  },
+  {
+    "part": "feedback/editor",
+    "about": "The open request.",
+    "rules": []
+  },
+  {
+    "part": "feedback/editor/heading",
+    "about": "The open request's heading.",
+    "rules": []
+  },
+  {
+    "part": "feedback/kind/*",
+    "about": "Feature or bug.",
+    "rules": []
+  },
+  {
+    "part": "feedback/title",
+    "about": "The request's title, the issue's title.",
+    "rules": []
+  },
+  {
+    "part": "feedback/field/*",
+    "about": "One field of the issue form, by its id.",
+    "rules": []
+  },
+  {
+    "part": "feedback/save",
+    "about": "Saves the request here.",
+    "rules": []
+  },
+  {
+    "part": "feedback/open",
+    "about": "Opens GitHub's new-issue page with the request filled in.",
+    "rules": []
+  },
+  {
+    "part": "feedback/delete",
+    "about": "Moves the request to the trash.",
+    "rules": []
+  },
+  {
     "part": "hub/account",
-    "about": "The Hugging Face account signed in here, or Connect.",
+    "about": "The Hugging Face account signed in here, with its token.",
     "rules": []
   },
   {
     "part": "hub/token",
     "about": "The token dialog's form.",
+    "rules": []
+  },
+  {
+    "part": "hub/token/*",
+    "about": "Change the token (or Connect), or sign out.",
     "rules": []
   },
   {

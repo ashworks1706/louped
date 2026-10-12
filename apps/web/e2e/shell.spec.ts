@@ -16,6 +16,7 @@ const PAGES = [
   ["/benchmarks/", "Benchmarks"],
   ["/reports/", "Reports"],
   ["/sources/", "Sources"],
+  ["/feedback/", "Feedback"],
 ] as const;
 
 for (const [path, title] of PAGES) {

@@ -550,6 +550,34 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         return await send("PUT", f"/boards/{quote(name, safe='')}", json=board)
 
     @mcp.tool(annotations=READ)
+    async def feedback() -> list[dict[str, Any]]:
+        """The feature requests and bug reports for louped itself on the Feedback page, newest
+        first: id, kind, title, fields, created, opened (when the person opened it on GitHub to
+        submit it; null while it is a draft) and issue_url."""
+        return await get("/feedback")
+
+    @mcp.tool(annotations=WRITE)
+    async def draft_feedback(
+        kind: Literal["feature", "bug"],
+        title: str,
+        problem: str | None = None,
+        prebuilt: str | None = None,
+        what: str | None = None,
+        repro: str | None = None,
+    ) -> dict[str, Any]:
+        """Draft a request for louped itself when it lacks something the work needs, or does
+        something wrong. A feature takes problem (the research task it enables) and prebuilt
+        (free tools that already do part of it); a bug takes what (what happened, what was
+        expected) and repro (steps to reproduce). Nothing goes to GitHub: the person reads and
+        edits the draft on the Feedback page and submits it there. ui_show them to page, then
+        tell them what you drafted and why. Draft one request per need, not one per session; it
+        must fit GitHub's prefilled link (about 8000 characters, encoded)."""
+        given = {"problem": problem, "prebuilt": prebuilt, "what": what, "repro": repro}
+        fields = {k: v for k, v in given.items() if v is not None}
+        made = await post("/feedback", {"kind": kind, "title": title, "fields": fields})
+        return {**made, "page": f"/feedback/?id={made['id']}"}
+
+    @mcp.tool(annotations=READ)
     async def preview_view(view: dict[str, Any] | None = None, ref: str | None = None) -> Image:
         """See a figure as a PNG before the person does: view, a figure as add_view takes it
         (not saved; an error says what in it is wrong), or ref, a saved one

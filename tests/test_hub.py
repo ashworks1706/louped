@@ -158,10 +158,12 @@ def test_hub_errors_are_said_not_crashed(hub_api: type[FakeApi], monkeypatch) ->
 
 
 def test_the_account_and_a_new_token(hub_api: type[FakeApi], monkeypatch) -> None:
+    for var in ("HF_TOKEN", "HUGGING_FACE_HUB_TOKEN"):
+        monkeypatch.delenv(var, raising=False)
     api = client()
     assert api.get("/api/hub/me").json() == {
         "token": True, "name": "ash", "avatar": "https://huggingface.co/avatars/a.png",
-        "error": None}  # fmt: skip
+        "error": None, "env": False}  # fmt: skip
     hub_api.who = refused(401)  # a token that no longer works is said
     me = api.get("/api/hub/me").json()
     assert me["token"] and me["name"] is None and "refused the token" in me["error"]
@@ -186,6 +188,25 @@ def test_the_account_and_a_new_token(hub_api: type[FakeApi], monkeypatch) -> Non
     exposed = client(launching=False)
     assert exposed.get("/api/hub/me").status_code == 403
     assert exposed.post("/api/hub/token", json={"token": "hf_good"}).status_code == 403
+    assert exposed.delete("/api/hub/token").status_code == 403
+
+
+def test_signing_out_removes_the_token_but_not_one_from_hf_token(
+    hub_api: type[FakeApi], monkeypatch
+) -> None:
+    monkeypatch.delenv("HUGGING_FACE_HUB_TOKEN", raising=False)
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+    out: list[bool] = []
+    monkeypatch.setattr(huggingface_hub, "logout", lambda: out.append(True))
+    api = client()
+    assert api.delete("/api/hub/token").json()["token"] is False and out == [True]
+
+    monkeypatch.setenv("HF_TOKEN", "hf_env")  # the app can neither change nor remove it
+    assert api.get("/api/hub/me").json()["env"] is True
+    gone = api.delete("/api/hub/token")
+    assert gone.status_code == 409 and "HF_TOKEN" in gone.json()["detail"] and out == [True]
+    kept = api.post("/api/hub/token", json={"token": "hf_good"})
+    assert kept.status_code == 400 and "HF_TOKEN" in kept.json()["detail"]
 
 
 def test_adding_lists_it_in_louped_toml_and_a_download_is_a_job(

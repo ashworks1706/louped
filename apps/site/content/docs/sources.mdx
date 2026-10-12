@@ -49,7 +49,10 @@ The app's Hub page searches the Hugging Face Hub for models, embedding models, d
 papers. It uses the Hugging Face token on this machine, so it also finds the gated and private
 repositories that your account can open. If there is no token, click **Connect** and paste one
 from [your token settings](https://huggingface.co/settings/tokens). louped keeps the token where
-Hugging Face's own tools keep it (as `hf auth login` does), never in the project.
+Hugging Face's own tools keep it (as `hf auth login` does), never in the project. To use another
+token, click **Change token**. **Sign out** removes the token from this machine (as
+`hf auth logout` does). If the token comes from the `HF_TOKEN` variable, the page says so. Change
+that variable to change the token.
 
 Click a result to read its card, license, size and files. Then:
 

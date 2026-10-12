@@ -132,11 +132,30 @@ def has_token() -> bool:
     return get_token() is not None
 
 
+def token_from_env() -> bool:
+    """Whether the token in use comes from HF_TOKEN (or HUGGING_FACE_HUB_TOKEN), which the app
+    can neither change nor remove."""
+    import os
+
+    return any(os.environ.get(k) for k in ("HF_TOKEN", "HUGGING_FACE_HUB_TOKEN"))
+
+
+def remove_token() -> None:
+    """Remove the Hugging Face token kept on this machine (`hf auth logout`)."""
+    from huggingface_hub import logout
+
+    if token_from_env():
+        raise ValueError("the token comes from HF_TOKEN; unset that variable to remove it")
+    logout()
+
+
 def save_token(token: str) -> str:
     """Check a Hugging Face token and keep it where huggingface_hub keeps it (`hf auth login`'s
     place), not in the project. Returns the account it belongs to."""
     from huggingface_hub import login, whoami
 
+    if token_from_env():
+        raise ValueError("the token in use comes from HF_TOKEN; change that variable instead")
     try:
         user = str(whoami(token=token)["name"])
     except OSError as exc:  # HfHubHTTPError, a 401 for a bad token: say so

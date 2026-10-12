@@ -246,8 +246,9 @@ function SidebarBody({
   const active = activeHref(pathname);
   const rule = useRules();
   const items = arrange(NAV, (n) => partId("shell/nav", n.href), rule);
+  const health = useQuery(q.health());
   return (
-    <nav className="flex flex-col gap-0.5 overflow-y-auto p-2" aria-label="Pages">
+    <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2" aria-label="Pages">
       <Suspense>
         <ProjectSwitcher folded={folded} onNavigate={onNavigate} />
       </Suspense>
@@ -292,6 +293,21 @@ function SidebarBody({
           )}
         </div>
       ))}
+      <div className="mt-auto flex flex-col gap-0.5 pt-4" {...part(partId("shell/group", "app"))}>
+        {items
+          // a shared server or a published dashboard keeps no requests
+          .filter((n) => n.group === "app" && health.data?.launching)
+          .map((item) => (
+            <NavLink
+              key={item.href}
+              item={{ ...item, title: rule(partId("shell/nav", item.href)).label ?? item.title }}
+              address={item.href}
+              active={item.href === active}
+              folded={folded}
+              onNavigate={onNavigate}
+            />
+          ))}
+      </div>
     </nav>
   );
 }

@@ -32,6 +32,7 @@ import {
   ApiError,
   hubAdd,
   q,
+  removeHubToken,
   saveHubToken,
   type HubDetail,
   type HubHit,
@@ -486,6 +487,7 @@ function Actions({ detail: d }: { detail: HubDetail }) {
 function Account() {
   const me = useQuery(q.hubMe());
   const [open, setOpen] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const a = me.data;
   return (
     <Part id="hub/account" className="flex items-center gap-2 pb-2 text-xs">
@@ -503,24 +505,91 @@ function Account() {
           <span className="font-mono">{a.name}</span>
         </a>
       ) : (
+        a?.error && <span className="text-negative">Token refused</span>
+      )}
+      {a?.env ? (
+        <span className="text-muted-foreground" title="Change or unset that variable to change it">
+          Token from <span className="font-mono">HF_TOKEN</span>
+        </span>
+      ) : (
         <>
-          {a?.error && <span className="text-negative">Token refused</span>}
-          <Button variant="outline" size="sm" onClick={() => setOpen(true)} disabled={!a}>
-            <KeyRound /> Connect
+          <Button
+            variant={a?.name && !a.error ? "ghost" : "outline"}
+            size="sm"
+            onClick={() => setOpen(true)}
+            disabled={!a}
+            {...part("hub/token/change")}
+          >
+            <KeyRound /> {a?.token ? "Change token" : "Connect"}
           </Button>
+          {a?.token && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setRemoving(true)}
+              {...part("hub/token/remove")}
+            >
+              Sign out
+            </Button>
+          )}
         </>
       )}
-      <TokenDialog open={open} onOpenChange={setOpen} />
+      <TokenDialog open={open} onOpenChange={setOpen} change={!!a?.token} />
+      <SignOutDialog open={removing} onOpenChange={setRemoving} />
     </Part>
+  );
+}
+
+function SignOutDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const client = useQueryClient();
+  const remove = useMutation({
+    mutationFn: removeHubToken,
+    meta: { action: "Sign out" },
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["hub"] });
+      onOpenChange(false);
+      toast("Signed out of Hugging Face");
+    },
+  });
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex flex-col gap-4 p-5">
+        <div className="flex flex-col gap-1">
+          <DialogTitle className="text-sm font-medium">Sign out of Hugging Face?</DialogTitle>
+          <DialogDescription className="text-muted-foreground text-xs">
+            This removes the token from this machine, for every tool that reads it (as{" "}
+            <span className="font-mono">hf auth logout</span> does). Gated and private repositories
+            stop opening until you connect again.
+          </DialogDescription>
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button size="sm" variant="ghost" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button size="sm" onClick={() => remove.mutate()} disabled={remove.isPending}>
+            Sign out
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 function TokenDialog({
   open,
   onOpenChange,
+  change,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** A token is there: the new one replaces it. */
+  change: boolean;
 }) {
   const client = useQueryClient();
   const save = useMutation({
@@ -536,10 +605,13 @@ function TokenDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex flex-col gap-4 p-5">
         <div className="flex flex-col gap-1">
-          <DialogTitle className="text-sm font-medium">Connect Hugging Face</DialogTitle>
+          <DialogTitle className="text-sm font-medium">
+            {change ? "Change the Hugging Face token" : "Connect Hugging Face"}
+          </DialogTitle>
           <DialogDescription className="text-muted-foreground text-xs">
             Search sees the gated and private repositories your account can open. The token stays on
-            this machine, where Hugging Face&apos;s own tools keep it.
+            this machine, where Hugging Face&apos;s own tools keep it
+            {change ? ", and replaces the one there" : ""}.
           </DialogDescription>
         </div>
         <form

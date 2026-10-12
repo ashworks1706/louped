@@ -260,7 +260,8 @@ bundle per push into the remote. The remote is any fsspec URL (`remote` in loupe
 
 The first push makes an `hf://buckets/` remote, private. Its token is huggingface_hub's own
 (`hf auth login`, HF_TOKEN). The app's Connect dialog and the CLI's first push ask for it and never
-write it into the project. The Hub page (server/hub.py) searches the Hugging Face Hub with the
+write it into the project. The Hub page changes it and signs out (`hf auth logout`); a token from
+HF_TOKEN it only names, since the app cannot change the environment. The Hub page (server/hub.py) searches the Hugging Face Hub with the
 same token through huggingface_hub's HfApi. It lists what a project adds under `[hub]` in
 louped.toml, keeps a paper as a source, and downloads as a job (`louped hub get`). It is off with
 `--expose`. `louped publish` (server/publish.py) writes the UI as static files, with
@@ -280,13 +281,18 @@ The sidebar folds to icons.
 | Research | Overview (Home, or the project's page), Experiments, Runs (jobs, then every run; training is a kind), Compare, Reports, and the project's boards and plugin pages |
 | Instruments | Probe (reply, inspect, patch, dose), Circuits, Vectors (with Feature detail), Speed |
 | Data | Datasets, Benchmarks (eval and `louped bench` leaderboards), Training sets, Sources, Hub |
+| App (at the foot) | Feedback: requests for louped itself |
 
 Projects and Launch have no sidebar entry: the switcher's icon and the top bar's Launch button
 open them. Behavior and efficiency are an experiment's axis, a filter (`?axis=`) on Experiments,
 Runs, Datasets and Benchmarks, not a place. Detail pages (project, experiment, run) show where they
 sit as a trail: project, experiment, run. The old `/behavior/...` and `/efficiency/...` addresses
 are pages that replace themselves with the new address (`MOVED` in `apps/web/src/lib/nav.ts`).
-Probe and Speed are one set of tools (server/playground.py); each page shows its own. Every
+Probe and Speed are one set of tools (server/playground.py); each page shows its own.
+Feedback (server/feedback.py) keeps feature requests and bug reports for louped as drafts in
+`<home>/feedback/`. An agent writes one with `draft_feedback`; the person edits it and files it
+through GitHub's new-issue page, prefilled from the repository's issue forms. louped holds no
+GitHub token and sends nothing itself. Every
 technical term has a ? from `apps/web/src/lib/glossary.ts`.
 
 Home, a run's page and an experiment's page are data (server/ui.py). They are regions

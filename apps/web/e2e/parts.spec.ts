@@ -90,6 +90,8 @@ const PAGES: [string, string][] = [
   ["markdown report", "/report/?path=1b.md"],
   ["deck report", "/report/?path=lab.pptx"],
   ["board", "/b/?name=scores"],
+  ["feedback", "/feedback/?id=a1b2c3d4"],
+  ["new request", "/feedback/?id=new"],
 ];
 
 for (const [name, url] of PAGES) {

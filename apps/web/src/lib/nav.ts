@@ -9,6 +9,7 @@ import {
   FolderKanban,
   Gauge,
   GitCompareArrows,
+  Lightbulb,
   House,
   LayoutDashboard,
   ListTree,
@@ -23,9 +24,9 @@ import {
 } from "lucide-react";
 
 /** The sidebar's groups: the research (questions, runs, write-ups), the instruments (one prompt,
- * live) and the data. Launch and Projects have no sidebar entry: the top bar's New button and
- * the project switcher open them. */
-export type Group = "research" | "instruments" | "data" | "hidden";
+ * live) and the data; at its foot, louped itself (Feedback). Launch and Projects have no sidebar
+ * entry: the top bar's Launch button and the project switcher open them. */
+export type Group = "research" | "instruments" | "data" | "app" | "hidden";
 
 /** Behavior or efficiency: an experiment's axis, a filter on lists, not a place in the app. */
 export type Axis = "behavior" | "efficiency";
@@ -155,6 +156,14 @@ export const NAV: NavItem[] = [
     group: "data",
   },
   {
+    href: "/feedback/",
+    title: "Feedback",
+    description: "What louped lacks or gets wrong, drafted here and filed on GitHub.",
+    icon: Lightbulb,
+    shortcut: "G F",
+    group: "app",
+  },
+  {
     href: "/projects/",
     title: "Projects",
     description: "The goals the experiments serve, each with its README, links and runs.",
@@ -173,7 +182,7 @@ export const NAV: NavItem[] = [
 ];
 
 /** The sidebar's groups in order, with their headings. */
-export const GROUPS: { group: Exclude<Group, "hidden">; title: string }[] = [
+export const GROUPS: { group: Exclude<Group, "app" | "hidden">; title: string }[] = [
   { group: "research", title: "Research" },
   { group: "instruments", title: "Instruments" },
   { group: "data", title: "Data" },
