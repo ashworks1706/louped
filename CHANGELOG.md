@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.1](https://github.com/ashworks1706/louped/compare/v0.11.0...v0.11.1) (2026-10-12)
+
+
+### Bug Fixes
+
+* keep the landing page; remove only its docs ([0fc7d5f](https://github.com/ashworks1706/louped/commit/0fc7d5f0d38bdbf971764a7533404107f0cd6e9d))
+
 ## [0.11.0](https://github.com/ashworks1706/louped/compare/v0.10.0...v0.11.0) (2026-10-12)
 
 
