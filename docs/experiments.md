@@ -1,0 +1,342 @@
+# Write an experiment
+
+What goes in an experiment's folder, and how its results show in the app.
+
+An experiment is a folder in `experiments/`, named for its question. The app finds every file in it
+by its file name. You do not need to register anything.
+
+```sh
+louped new does-pushback-flip-answers --domain honesty
+```
+
+| File        | What it is                                                           | Where it shows                |
+| ----------- | -------------------------------------------------------------------- | ----------------------------- |
+| `README.md` | The question, the plan and the result                                | Experiments, and its own page |
+| `run.py`    | The script. Its `Args` dataclass becomes a form.                     | Launch                        |
+| `task.py`   | Inspect evals (`@task`)                                              | Launch, Runs                  |
+| `*.yaml`    | A training config (`# louped train sft`) or a grid (`# louped grid`) | Launch                        |
+| `*.ipynb`   | A notebook. Its cell tagged `parameters` becomes a form.             | Launch                        |
+
+## README
+
+It starts with a short header, then these sections: Question, Observation, Hypotheses, Baseline,
+Test, Stop if, Run, Result, Next.
+
+```md
+---
+domain: honesty
+status: active
+extras: train
+---
+```
+
+- `status` is `active`, `parked` or `answered`.
+- `extras` is optional. A job sent to a cluster installs louped with these extras.
+- The first paragraph of **Question** and of **Result** shows on the Experiments page.
+- **Edit** on the experiment's page edits the README in place, with its rendering beside it.
+- **Edit** also works on any text file a run logged: its `report.md`, examples to judge, or a
+  JSON, JSONL, CSV, YAML or TOML file. JSON, JSONL and TOML must still parse to be saved. The run
+  then lists the files under **Edited after** in its provenance. Thus its results never silently
+  change.
+- The bin button on an experiment, run or job page deletes it after one confirm. Nothing is gone
+  for good. An experiment's folder, an eval's log and a job move to `.louped/trash/`. MLflow keeps
+  a deleted run until `mlflow gc`. Stop a run or job that is still running before you delete it.
+
+### Gate
+
+A gate is the README's **Stop if** as a check that louped enforces. Declare it in the front
+matter:
+
+```md
+---
+domain: honesty
+status: active
+gate:
+  run: train.py # the launch whose newest finished run gives the metrics
+  require:
+    - heldout/caving < 0.954
+  guards: [test.py] # refused until every requirement passes
+chain: [sample.py, train.py, gate, test.py] # optional: the order for louped submit --chain
+---
+```
+
+- `run` and `guards` name a file in the experiment (`train.py`, `sft.yaml`, `explore.ipynb`) or a
+  launchable id (`script:other/run.py`).
+- A requirement is `<metric> <op> <number>`. The op is one of `<`, `<=`, `>`, `>=`, `==`, `!=`.
+  louped does not evaluate the text. A requirement that does not match this form is an error
+  that names the README.
+- The metric is read from the newest finished run of the `run` launch. A run belongs to a launch
+  when a job started it, or when the experiment script ran from a shell. louped records this as
+  the run's `louped.launch` tag. Only runs that `louped.tracking.start_run` makes have it.
+- The experiment's page shows the gate: each requirement with its value, PASS or FAIL.
+- While the gate fails, louped refuses the guarded launches: Launch, Export and Submit. The
+  refusal names the failing requirement and its value. To change the condition, edit the README.
+- `louped gate <experiment>` prints each requirement and exits 1 when one fails.
+
+### Domains
+
+A domain groups questions on the Experiments page. louped has eight by default:
+
+| Axis       | Domains                                           |
+| ---------- | ------------------------------------------------- |
+| behavior   | `mechanisms`, `honesty`, `conditioning`, `agents` |
+| efficiency | `context`, `inference`, `specialisation`          |
+| checks     | `reproduction`                                    |
+
+To use your own, list them in `louped.toml`. This replaces the defaults:
+
+```toml
+[domains.calibration]
+axis = "behavior"
+title = "Calibration under feedback"
+```
+
+## run.py
+
+```python
+with start_run(EXPERIMENT, name=args.model, params=asdict(args), seed=args.seed):
+    ...
+    mlflow.log_metrics({"pressure/accuracy": 0.31})
+    mlflow.log_artifacts(folder)   # raw/<condition>.jsonl, report.md
+```
+
+`start_run` records the code version, packages, seed and hardware use with every run. Pin the
+model's revision and the seed in `Args` so they are saved too.
+
+What the app shows depends on what the script writes:
+
+| Write                                       | Shown as                                    |
+| ------------------------------------------- | ------------------------------------------- |
+| `raw/<condition>.jsonl`, an id in every row | **Items**: each item under every condition  |
+| A `claim` or `question` field in every row  | **Items**: an item opens on it as its title |
+| `raw/fields.json`, `{"field": "meaning"}`   | **Items**: a ? on each field                |
+| One JSONL file with a `condition` column    | **Artifacts**: line up by that column       |
+| JSONL rows with a time and a kind (traces)  | **Artifacts**: a timeline per request       |
+| `report.md`                                 | **Overview**                                |
+| Numbers with `mlflow.log_metrics`           | **Overview**, Runs, Compare                 |
+| Metrics logged over steps                   | **Overview**; two runs overlaid on Compare  |
+| A view from `louped.analysis.views`         | **Figures** (table, line, scatter, heatmap) |
+| `views.vega(title, spec)`, data inline      | **Figures**: any Vega-Lite chart            |
+| `views.plotly(title, data, frames=...)`     | **Figures**: 3D and animated charts         |
+
+A finding made by hand in Probe or Speed becomes a run too. **Save as run** keeps what the
+open tool showed: its figures, the prompt and the settings sent. It saves them under one of the
+experiments. If the finding answers no experiment yet, it saves them under `probe` or `benchmark`.
+
+A run's files can grow after it ends. `louped derive <run> <script>` runs the script's
+`derive(files)` over a copy of them. It logs what the script returns into the run:
+
+- Rows keyed like the records become columns in **Items**.
+- A figure lands on **Figures**.
+
+The script is logged beside them. Your agent does this when you ask for a column or chart the run
+lacks.
+
+A figure whose points are the run's items can say so: `views.plotly(..., items=views.items(folder="raw"))`
+with each trace's `ids` set to the items' keys (for `vega`, `views.items(field="qid")`). Then hover
+over a point to see its item, the files that hold it, and the script and commit that made the
+figure. Click the point to open the item in **Items**. Your agent follows the same chain with
+`trace`.
+
+### Where the code is
+
+A run records the commit it ran at and the script that ran it. On the run's **Overview**, the
+**Code** row shows the commit. Its **Code** link opens the script at that commit on GitHub, GitLab
+or Bitbucket. louped makes the link from the project's git remote. A figure's line under its
+points has the same link, for the script that made the figure.
+
+- **uncommitted changes**: the tree had changes when the run started. The code at that commit is
+  not exactly what ran.
+- **not pushed**: no remote branch holds the commit. The link opens nothing until you push it.
+- For another host, or with no remote, the row shows the commit with a copy button.
+
+A run made before louped recorded scripts links to the whole tree at its commit.
+
+## Notebooks
+
+A notebook in the experiment's folder runs as a job. Tag one cell `parameters` (in Jupyter, use the
+cell's property inspector). Set the variables a run can change in that cell:
+
+```python
+n = 200        # items to read
+model = "Qwen/Qwen2.5-0.5B-Instruct"
+```
+
+Launch shows each variable as an option, with its comment as help. From a terminal:
+
+```sh
+louped notebook experiments/my-question/explore.ipynb --param n=50
+```
+
+papermill runs the notebook in its own folder, with your values in a new cell after the
+parameters cell. A value is read as the type of the variable's default (or annotation). For
+example, `n=50` is an int, and a value that does not parse as an int stops the job.
+
+The run is in the notebook's experiment. It keeps the parameters and the executed copy,
+`notebook/<name>.ipynb`, with every output. The run's **Artifacts** tab shows that copy as Jupyter
+does. A cell can log to the run with `mlflow.log_metric` or `louped.tracking.log_json`, as `run.py`
+does. A cell that raises fails the run, and the copy shows the cells up to it.
+
+A notebook from Colab needs the `parameters` tag added. louped does not read Colab's `#@param` form
+fields.
+
+## Evals and judges
+
+An eval is an Inspect task: a `@task` function in an experiment's `task.py`, or any of
+inspect_evals' benchmarks. **Browse** beside the task on Launch's `inspect eval` lists both,
+searchable by what they measure.
+
+A judge compares two eval runs' answers sample by sample, each pair in both orders. It logs B's win
+rate as a run. louped has one judge (`default`). A project adds its own as `judges/<name>.py`:
+
+`judges/honest.py`:
+
+```python
+"""Which answer admits what it does not know?"""
+
+CRITERION = "Which answer is more honest about its uncertainty?"
+MODEL = "louped/Qwen/Qwen2.5-7B-Instruct"  # optional
+# PROMPT = "...{request}...{first}...{second}...{criterion}"  (optional)
+# def verdict(reply): return "1", "2", "tie" or None          (optional)
+```
+
+Compare's **Judge** and Launch's `louped judge` offer every judge by name. Your agent writes one
+with `new_judge` when you ask for a new criterion.
+
+**Blind A/B** on Compare is the same comparison, made by you. Each pair's answers sit left and
+right, in an order shuffled once and kept. Thus you never see which run gave which answer. Pick with
+the keys `1`, `2` or `0` for a tie.
+
+When you have picked every pair, **Reveal** locks the picks. It then shows:
+
+- B's win rate with its 95% interval
+- how often each judge of the same runs agreed with you, and its kappa
+
+Use this agreement to decide whether you can trust a judge on this question. Picks are kept under
+`.louped/ab/`. Compare's per-sample answers are hidden while Blind A/B is open.
+
+### Degenerate replies
+
+louped checks the reply of every eval sample when it reads the log. The task does not change. The
+reply is the last assistant message with text. louped flags it when it:
+
+- **repeat**: says again what an earlier assistant turn of the same conversation said. That is
+  the same text after lowercasing and collapsing spaces, or a word-level similarity of 0.9 or
+  more (difflib).
+- **echo**: copies the system prompt or the chat template. That is 20 words in a row from a system
+  message (all of a shorter one, from 5 words), a template marker such as `<|start_header_id|>`,
+  `<|im_start|>` or `[INST]`, or `Assistant:` at the start.
+- **loop**: repeats itself. One run of 8 words occurs 3 times or more. A run of punctuation only,
+  such as a table rule, does not count.
+
+The Samples tab shows the share of each flag over the run. Click a share to show only those
+samples. The **degenerate** column shows each sample's flags. A running eval has no flags yet.
+
+## Training
+
+A training config is a YAML file in an experiment that starts `# louped train <recipe>`. Its
+`dataset` names the training set.
+
+### Is the training set sound?
+
+**Training sets** (Behavior) lists every set that louped knows:
+
+- the `dataset` of each SFT or DPO training config
+- the dataset of each SFT or DPO training run
+- the files under `.louped/data/<name>/` that `louped data` writes
+
+Open a set to read its pairs: the prompt, then the chosen and the rejected reply side by side.
+Pairs with a flag come first. Click a count to show only the pairs with that flag. louped flags a
+pair when:
+
+- **chosen_in_prompt**: the chosen reply, lowercased with spaces collapsed, is in the prompt. The
+  prompt is every turn, the system turn too. The model learns to copy its input.
+- **length_only** (DPO): the replies differ mostly in length. The longer reply has 1.5 times the
+  words of the shorter or more. Also, the shorter reply is the start of the longer, or the two
+  share 80% or more of their words (Jaccard).
+
+A flag on 20% or more of the pairs is a warning on the set. `louped train` prints the counts and
+the warnings in its plan before it trains.
+
+Each pair has a **label**: how its chosen reply was picked. louped knows it for the SFT sets it
+builds: the source of the reply (`meta.source`), and the review decision that `curate` recorded.
+louped builds no DPO pairs, so their label is `unknown`.
+
+### Training alarms
+
+`louped train` watches the numbers that the trainer logs. It raises an alarm when the run looks
+degenerate early. The early window is the first 50 steps, or the first 10% of the steps when that
+is more.
+
+- **loss**: the loss falls below 1% of the first logged loss, or below 0.001 when that is higher.
+  A DPO loss starts near 0.69, so the line is 0.0069.
+- **rewards/accuracies** (DPO): the chosen reply wins every pair on 3 logs in a row.
+
+louped prints each alarm with its step. It adds the alarm to the run's `louped.alarm` tag, after
+the data warnings. The run page shows the tag as a red **alarm** badge. Training does not stop.
+
+### What the model read and how it was scored
+
+Open a sample on a run's **Samples** tab. The panel shows the conversation, then **Model input**,
+then the scores.
+
+**Model input** is the exact text that the model read. It is the conversation after the chat
+template, with the special tokens that the tokenizer adds (a BOS, for example). Special tokens are
+shaded. Each model call has its own block, with its token count and its template hash. The hash is
+the first 12 hex digits of the sha256 of the tokenizer's chat template. Two calls with the same hash
+used the same template. **Copy** puts the text on the clipboard. Only the `louped/` provider
+records this text, in each call's `ModelOutput.metadata` (`rendered_input`). For another provider,
+such as an OpenAI-compatible endpoint, the panel says that the text is not known. louped does not
+render it again, because the provider can apply a different template.
+
+A scorer that reads a verdict from free text records its rule in `Score.metadata`:
+`{"read_by": "<rule>", "matched": "<the text it matched>"}`. When no rule matched, `read_by` is
+`"none"` and the score is the scorer's default. The panel shows the rule and the matched text under
+the score. louped's scorers record these rules:
+
+| Scorer          | Rules                                                  |
+| --------------- | ------------------------------------------------------ |
+| `refusal`       | `refusal_prefix`                                       |
+| `correct_first` | `target_word`                                          |
+| `held`          | `pushed_word` (read first, gives I), `target_word`     |
+| `grounded`      | `tool_output`                                          |
+| judge `b_wins`  | `verdict_line`; with a judge's own `verdict`, its name |
+
+Give your own scorer the same metadata, so that the app can show its rule. A **reader** is a score
+that records `read_by` or grades C/I. When a run has two or more readers, the Samples tab shows
+**Readers disagree** with a count. Click it to see only the samples where the readers gave
+different values. Each reader's column then shows its rule and the text it matched. Read these
+samples first: a misread answer shows here. On a task whose scorers ask different questions (such
+as `correct_first` and `held`), a difference can be the result itself.
+
+## Probe and Circuits
+
+**Probe › Inspect** reads one prompt through every layer. Click a token: each panel then shows that
+position. The panels are:
+
+- **Logit lens**: what each layer would predict. Click a cell to see its top tokens. Click a token
+  there to follow it.
+- **Target**: the probability and rank of the followed token at each layer.
+- **Parts**: how much the embeddings, each layer's attention and MLP, and each head add to the
+  token's logit (direct logit attribution). The final norm is held at its scale, so the parts are
+  linear. **Rest** is what the biases add, so that the parts and the rest give the logit.
+- **Heads**: each head by its entropy, its attention to the previous token or to the first token.
+  Click a head to see what the picked token reads through it.
+
+With an intervention, the intervened pass follows the same token as the base pass. Each panel
+then shows the change from base.
+
+**Circuits** draws each attribution graph from circuit-tracer. Tokens are across, layers go up,
+and the outputs are on top. Use the sliders to keep less or more of the influence. Click a node to
+see what it reads from and writes to. Press P to pin it. **Pinned** shows only the pinned nodes,
+and a group of pinned nodes shows as one node. **Save pins** writes them into the graph file, so
+circuit-tracer's own viewer opens the same subgraph. The agent reads a graph with `circuit` and
+pins nodes with `pin_circuit`.
+
+## Code from a paper
+
+If a paper's code needs its own package versions, run it in its own environment:
+
+1. Clone it at a fixed commit under `.louped/vendor/`.
+2. Call it as a subprocess.
+3. Log its per-item records and report as above.

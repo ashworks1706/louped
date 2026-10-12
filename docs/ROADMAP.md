@@ -3,8 +3,7 @@
 ### 1. Release
 
 - [ ] The repository made public, after removing private project names from its history.
-- [ ] The docs site on a public address, with a read-only demo of real runs beside it
-      (`louped publish` writes the demo).
+- [ ] A read-only demo of real runs on a public address (`louped publish` writes it).
 
 ### 2. The agent harness
 

@@ -1,0 +1,89 @@
+# Use your coding agent
+
+Let Claude Code, Codex or Cursor write, run and read your experiments.
+
+louped has no agent of its own. It connects to the one you already use.
+
+`louped init` writes three things your agent reads:
+
+- `AGENTS.md`: how to work in the project.
+- `.mcp.json`: starts `louped mcp`, which talks to the running app.
+- `.claude/skills/`: steps for starting an experiment, reading results, running on a cluster,
+  writing a report, changing the app's pages and adding a plugin.
+
+Start the app with `louped serve`. Then open your agent in the project folder and ask it what to
+test.
+
+## Tools the agent gets
+
+| Tool                                                     | What it does                                            |
+| -------------------------------------------------------- | ------------------------------------------------------- |
+| `status`                                                 | The server's version, home, and whether it launches     |
+| `experiments`, `experiment`, `runs`, `run`               | Lists questions and runs                                |
+| `samples`, `sample`, `figures`, `figure`, `compare`      | Reads results                                           |
+| `new_experiment`                                         | Starts a question, in a project when given              |
+| `projects`, `project`                                    | Lists projects; reads one with its experiments          |
+| `new_project`, `set_project`, `move_experiment`          | Makes and changes projects; moves an experiment         |
+| `launchables`, `launch_options`, `launch`                | Starts a job                                            |
+| `jobs`, `job`, `cancel_job`                              | Follows or stops jobs                                   |
+| `submit_job`                                             | Sends a job to a cluster over ssh and follows it        |
+| `export_job`, `import_result`                            | Sends a job to a cluster or Colab, brings it back       |
+| `push`, `pull`                                           | Shares runs through the remote                          |
+| `ui_page`, `ui_selection`                                | Reads the app's pages and what you picked               |
+| `set_part`, `set_layout`, `set_preset`                   | Changes what a page shows                               |
+| `ui_show`                                                | Points you at parts of a page, with a note              |
+| `notes`, `add_note`, `edit_note`, `delete_note`          | Reads your notes on parts; keeps notes of its own       |
+| `cohort`, `cohorts`, `save_cohort`                       | Reads and saves a set of a run's items                  |
+| `eval_tasks`, `judges`, `new_judge`                      | Finds eval tasks; lists and writes judges               |
+| `ab_results`                                             | Reads your blind A/B picks of two runs                  |
+| `add_view`, `derive`                                     | Adds a figure or columns from a run's files             |
+| `check_view`, `add_page`                                 | Checks a board, and keeps one as a page of its own      |
+| `preview_view`                                           | Draws a figure as an image for the agent to check       |
+| `circuit`, `pin_circuit`                                 | Reads an attribution graph's strongest nodes; pins some |
+| `vectors`                                                | Lists saved directions                                  |
+| `sources`, `search_sources`, `source_page`, `add_source` | Searches, quotes and keeps the project's sources        |
+| `pins`, `pin`                                            | Reads and pins the passages a claim rests on            |
+| `hub_search`, `hub_info`, `hub_add`                      | Finds and adds Hugging Face models, data and papers     |
+| `datasets`, `dataset`                                    | Lists a domain's datasets; reads one dataset's rows     |
+| `benchmarks`, `benchmark`, `add_benchmark`               | Reads leaderboards; makes a Hub dataset a benchmark     |
+| `trace`                                                  | Follows a figure's point to its rows, script and code   |
+| `check`                                                  | Finds numbers and citations with no source              |
+| `reports`, `export_figure`                               | Lists reports/ and exports a figure into it             |
+| `feedback`, `draft_feedback`                             | Drafts a feature request or bug report for louped       |
+
+Work the agent starts shows in the app like your own. To ask about or change a part of a page,
+Shift+click it. You can pick as many parts as you like. Your agent gets them with their data. In
+Claude Code they come with your next message; `@sel 2` names one pick
+([Customize the app](customize.md)).
+
+You can ask for a view the app lacks ("these claims in 3D", "a column for which ones hedge"). The
+agent makes it where it belongs:
+
+- a column in the run's Items
+- a figure on the run or on the experiment's page
+
+Then it points you at it. Ask again to change it; it keeps the name.
+
+## Ask for what louped lacks
+
+If louped cannot do a thing the work needs, the agent drafts a request with `draft_feedback`. A
+request is a feature or a bug. It goes to **Feedback**, at the foot of the sidebar. There you read
+it and edit it. Then press **Open on GitHub**. GitHub's new-issue page opens with the request
+filled in, and you submit it there as yourself. louped holds no GitHub token and sends nothing.
+You can also write a request yourself with **New request**.
+
+## Without `louped init`
+
+Add this to your agent's MCP config. Use `uv run louped mcp` if louped is installed in a uv
+project.
+
+```json
+{ "mcpServers": { "louped": { "command": "louped", "args": ["mcp"] } } }
+```
+
+In Claude Code you can also install it as a plugin:
+
+```
+/plugin marketplace add ashworks1706/louped
+/plugin install louped@louped
+```

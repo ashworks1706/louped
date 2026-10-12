@@ -1,0 +1,230 @@
+# Share and run elsewhere
+
+Keep runs in a remote everyone can pull from, send jobs to a cluster or Colab, and publish a read-only dashboard.
+
+## A remote for runs
+
+Runs live in `.louped/`, which git ignores. To share them, or to keep them beside the code, give
+the project a remote. To set one, use **Runs → Connect** or a first `louped push`:
+
+- Leave the remote empty to use a private Hugging Face Storage Bucket of your own, named after the
+  project (`hf://buckets/<you>/<project>`). louped creates the bucket.
+- Paste a Hugging Face token with write access if this machine is not signed in. It is kept where
+  `hf auth login` keeps it, never in the project.
+
+Either way, the remote is saved to `louped.toml`. You can also set it there by hand:
+
+```toml
+remote = "hf://buckets/<user>/<name>"   # a Hugging Face Storage Bucket
+# remote = "runs"                        # or a folder, such as one in the repository
+# remote = "s3://<bucket>/runs"          # or S3-compatible storage such as Cloudflare R2
+```
+
+`LOUPED_REMOTE` overrides it. Then:
+
+```sh
+louped push   # this louped's new runs, as one new bundle in the remote
+louped pull   # every bundle this louped has not pulled
+```
+
+**Runs** has the same **Push** and **Pull** buttons. If an `hf://` remote finds no token, they open
+Connect to ask for one. Each push writes a new folder and rewrites nothing. Thus two people or two
+machines never conflict. A bundle holds Inspect logs, an MLflow store with its artifacts, and
+`result.json`, which tells where it ran. Model weights stay out.
+
+### Large results
+
+Big files stay in the remote. On a pull, louped copies metrics, params, tags and small artifacts,
+such as figures and records. An artifact file over 100 MB stays in the remote. The run lists it
+with its size. When you or an agent open it, louped fetches it once into `.louped/remote-cache/`
+and serves it from there. If the remote cannot be reached, the error says so. To change the limit,
+set it in `louped.toml`:
+
+```toml
+large_artifact_mb = 500
+```
+
+louped unpacks, pulls and writes bundles in `.louped/staging/`, not in `/tmp`. Before it unpacks an
+archive, it checks that the disk has space for it. If not, the error gives the bytes needed, the
+bytes free and the folder. To use a bigger disk, set `LOUPED_HOME`. An unpacked folder is imported
+from where it is.
+
+### Hugging Face bucket
+
+1. Run `hf auth login` with a token that has write access.
+2. Press **Runs → Connect**, or run `louped push`. louped creates a private bucket
+   `hf://buckets/<you>/<project>` and saves it to `louped.toml`.
+
+### S3 or Cloudflare R2
+
+The `sync` extra includes `s3fs`. Credentials come from the usual AWS variables:
+
+```sh
+export AWS_ACCESS_KEY_ID=<key id>
+export AWS_SECRET_ACCESS_KEY=<secret>
+export AWS_ENDPOINT_URL=https://<account id>.r2.cloudflarestorage.com   # R2 only
+```
+
+Then set `remote = "s3://<bucket>/runs"`. A cluster job needs the same variables. Export them
+before `sbatch`.
+
+## Run on a cluster
+
+A job that runs elsewhere pushes its results to the project's remote, so set one first (see
+above). Without a remote, **Export** is off.
+
+1. In the app, open **Launch**.
+2. Set the options.
+3. In **Run on**, choose ASU Sol, a Slurm cluster or another machine.
+4. Press **Export**.
+5. Copy the downloaded file to the cluster.
+6. Submit it:
+
+   ```sh
+   sbatch louped-<id>.sh     # or: bash louped-<id>.sh on a plain machine
+   ```
+
+   The export is always this one file. When the project is a pushed git commit, the job clones
+   the project at that commit. Otherwise the file carries what the job needs, compressed: the
+   launched experiment, `louped.toml` and any edited config. It carries no other experiment.
+   Files over 50 MB stay behind, and the app names them. Put big data on the Hub or in the
+   remote.
+
+7. Get the results back. The job pushes them to the remote. Press **Pull** on **Runs**, or run
+   `louped pull`. If the push fails, the job says so and keeps the results in its `out/` folder.
+   Push them from there later with `louped push --result out/result.json`.
+
+Pulled runs show like local ones, marked with where they ran.
+
+To skip the copying, let louped submit the job. See [Clusters](#clusters).
+
+### Tips
+
+- **Hugging Face token**: gated models (such as Llama) and `hf://` remotes need one on the
+  cluster. Run `louped cluster token <name>` here once (see [Clusters](#clusters)). Or run
+  `hf auth login` there, or export `HF_TOKEN` before `sbatch`. A job with no token prints one
+  warning before it installs: gated models then fail with HTTP 401. A job that pushes to an
+  `hf://` remote stops before it runs if it finds no token.
+- **Private repositories**: the cluster needs access to clone the repository, such as an SSH key on
+  GitHub.
+- **First run**: run the job's install line once on a login node. The job then reuses the
+  downloaded packages. This avoids timeouts and the need for internet on compute nodes.
+- **Sol**: jobs use the `public` partition and QOS. Models and packages are cached under
+  `/scratch/$USER`, since home space is small.
+
+## Run on Colab
+
+Use Google Colab when you have no cluster. Colab gives a free GPU for a few hours.
+
+1. Set a remote (see above). The job pushes its results there.
+2. In the app, open **Launch** and set the options.
+3. In **Run on**, choose **Google Colab**. Colab has no GPU fields: you pick the GPU in Colab.
+4. Press **Export**. The app downloads `louped-<id>.ipynb`.
+5. Open [Colab](https://colab.research.google.com) and upload the notebook (**File → Upload
+   notebook**).
+6. Pick a GPU runtime: **Runtime → Change runtime type**.
+7. For gated models, or to push to an `hf://` remote, add a Hugging Face token as the secret
+   `HF_TOKEN` (the key icon on the left). Let the notebook read it. The notebook never holds the
+   token.
+8. Run all: **Runtime → Run all**. The job's output shows as it runs.
+9. Get the results back: the job pushes them. Press **Pull** on **Runs**.
+
+The notebook writes the same one-file `job.sh` as a cluster export and runs it with `bash`. Thus
+it installs uv and louped the same way, and clones a pushed commit or carries the experiment.
+
+## Clusters
+
+louped can submit a job to a cluster over ssh and follow it to its result.
+
+1. Set up ssh to the cluster. Add a `Host` to `~/.ssh/config` with your user and key. louped never
+   asks for a password and never stores one. On Sol, a `ControlMaster` lets one Duo login serve
+   many commands:
+
+   ```txt
+   Host sol
+     HostName sol.asu.edu
+     User <asurite>
+     ControlMaster auto
+     ControlPath ~/.ssh/cm-%r@%h:%p
+     ControlPersist 8h
+   ```
+
+2. Name the cluster in `louped.toml`:
+
+   ```toml
+   [clusters.sol]
+   ssh = "sol"                   # the Host from ~/.ssh/config
+   provider = "sol"              # sol, slurm or shell (a VM: nohup bash)
+   dir = "/scratch/$USER/louped" # where jobs are copied; the cluster expands $USER
+   ```
+
+3. Copy your Hugging Face token to the cluster once:
+
+   ```sh
+   louped cluster token sol
+   ```
+
+   The token goes to `~/.cache/huggingface/token` there, readable only by you. It goes over ssh's
+   input. It is never in a command line, in `job.sh` or in a log.
+
+4. Submit a job. In the app, open **Launch**, choose the cluster's kind in **Run on**, and press
+   **Submit to sol**. Or:
+
+   ```sh
+   louped submit script:my-question/train.py --on sol --hours 6
+   ```
+
+louped exports the job as **Export** does. It copies the job to `dir` and runs `sbatch` there
+(`nohup bash` for `shell`). The job page shows the cluster, the Slurm job id and the log. While
+`louped serve` runs, it asks the cluster every minute how the job is (`sacct`). When the job ends,
+louped gets the result:
+
+- louped pulls the results that the job pushed to the remote.
+- If no result comes back, the job page shows the state that Slurm gives (such as `TIMEOUT`) and
+  the end of the job's output.
+
+A failed ssh, scp or `sbatch` call marks the job failed and shows the error on its page.
+**Stop** on the job page runs `scancel`.
+
+### Chains
+
+`--after <job>` makes a job wait on the cluster until an earlier job succeeds
+(`--dependency=afterok`). Thus a chain runs in order while your laptop is off. In the app, choose
+the earlier job in **After**.
+
+A chain can include the experiment's [gate](experiments.md#gate) as a step of its own:
+
+```sh
+louped submit gate --experiment my-question --on sol --after <train job>
+```
+
+The gate step runs `louped gate my-question --pull` on the cluster. It pulls the earlier steps'
+runs from the remote. Thus a gate step needs a remote that
+the cluster can reach, and louped refuses it without one. If the gate fails, the step fails, and
+Slurm cancels the steps after it. A launch that the gate guards can be submitted after the gate
+step, even before the gate passes here.
+
+To submit a whole chain, list its steps in the README (`chain: [sample.py, train.py, gate,
+test.py]`), then run:
+
+```sh
+louped submit my-question --chain --on sol
+```
+
+louped checks every step before it sends the first. The gate step asks for no GPU and one hour.
+
+## Publish a read-only dashboard
+
+```sh
+louped publish site/
+```
+
+This writes the app and every answer its pages need as static files. Serve them at a domain's
+root:
+
+- **Hugging Face**: a static Space, `hf upload <user>/<space> site/ --repo-type space`.
+- **Vercel**: `vercel deploy site/`.
+- **GitHub Pages**: a user or organization site (`<user>.github.io`).
+
+Nothing runs there. Launching, Probe, Speed, labeling and comparing two runs are off.
+Sources and reports are not in it.

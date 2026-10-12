@@ -1,10 +1,7 @@
-<p align="center"><img src="https://louped.vercel.app/wordmark.svg" alt="louped" height="48"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/ashworks1706/louped/main/docs/brand/wordmark.svg" alt="louped" height="48"></p>
 <p align="center">An astute harness for LLM behavior and inference research.</p>
 
-<p align="center">
-  <a href="https://louped.vercel.app">Website</a> •
-  <a href="https://louped.vercel.app/docs">Docs</a>
-</p>
+<p align="center"><a href="https://github.com/ashworks1706/louped/tree/main/docs">Docs</a></p>
 
 Keep your research questions about language models in a project. Each question is an experiment
 with a README (the question and the test) and a script that runs it. Your coding agent writes and
@@ -13,8 +10,8 @@ You read the results item by item in louped's app. Everything runs on your machi
 your cluster, with open-weight models.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://louped.vercel.app/demo/items-dark.png">
-  <img alt="Fifty items under three conditions, each against the reference: a re-analysis of released CAA results" src="https://louped.vercel.app/demo/items-light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/ashworks1706/louped/main/docs/images/items-dark.png">
+  <img alt="Fifty items under three conditions, each against the reference: a re-analysis of released CAA results" src="https://raw.githubusercontent.com/ashworks1706/louped/main/docs/images/items-light.png">
 </picture>
 
 ## Start
@@ -41,7 +38,7 @@ Open http://127.0.0.1:8000 and launch the example experiment.
 
 Already have results? `louped view <folder>` opens them read-only.
 
-See the [docs](https://louped.vercel.app/docs) for writing experiments, changing models, using
+See the [docs](docs/README.md) for writing experiments, changing models, using
 your agent and running on a cluster.
 
 ## Develop
@@ -50,7 +47,7 @@ You need [just](https://just.systems), [uv](https://docs.astral.sh/uv) and Node 
 
 ```sh
 just bootstrap     # install everything and the git hooks
-just check         # lint, types, tests, and the app and site builds
+just check         # lint, types, tests, and the app build
 just serve         # the app on :8000
 ```
 

@@ -1,0 +1,107 @@
+# Sources
+
+The papers, docs, slides and notebooks your claims rest on, kept with the project.
+
+`sources/` sits beside `experiments/` and is committed with it. Each paper, doc, deck or notebook
+there has a key, a title and the URL it came from. A citation names the key. `sources/index.json`
+lists them. louped reads each one page by page, so that you and your agent can search and quote
+it.
+
+```bash
+louped source add paper.pdf --key sharma23
+louped source add https://arxiv.org/abs/2310.13548
+louped source search "sycophancy pushback"
+louped source list
+```
+
+| You add                                                 | louped keeps                                                 |
+| ------------------------------------------------------- | ------------------------------------------------------------ |
+| A PDF, `.pptx`, `.docx`, `.ipynb`, `.md` or `.txt` file | A copy in `sources/`                                         |
+| An arXiv page                                           | The paper's PDF and title                                    |
+| A shared Google Doc or Slides deck                      | A PDF snapshot, so a quote points at text that cannot change |
+| A notebook on GitHub or opened from it in Colab         | The `.ipynb`                                                 |
+| A direct link to a file                                 | The file                                                     |
+
+A page is a PDF page, a slide, a notebook cell, or a whole Markdown, text or Word file. A
+notebook's page also shows the whole notebook with its saved outputs, as Jupyter does. The page
+runs no scripts from the notebook. Thus:
+
+- Math shows as TeX.
+- An interactive chart shows only if the notebook saved a static copy of it.
+
+The search index lives in louped's state folder. louped rebuilds it from the files whenever one
+changes. Thus you never need to commit it.
+
+A Colab notebook kept in Google Drive needs your sign-in. Download it (File > Download .ipynb) and
+add the file instead. louped fetches over https from public addresses only. It never fetches from
+this machine or its local network.
+
+Your agent:
+
+- searches `sources/` with `search_sources` before it looks anything up on the web
+- quotes from `source_page`
+- keeps a new paper with `add_source`, which records the URL the file came from
+
+## The Hugging Face Hub
+
+The app's Hub page searches the Hugging Face Hub for models, embedding models, datasets and
+papers. It uses the Hugging Face token on this machine, so it also finds the gated and private
+repositories that your account can open. If there is no token, click **Connect** and paste one
+from [your token settings](https://huggingface.co/settings/tokens). louped keeps the token where
+Hugging Face's own tools keep it (as `hf auth login` does), never in the project. To use another
+token, click **Change token**. **Sign out** removes the token from this machine (as
+`hf auth logout` does). If the token comes from the `HF_TOKEN` variable, the page says so. Change
+that variable to change the token.
+
+Click a result to read its card, license, size and files. Then:
+
+- **Add** lists a model, embedding model or dataset in the project's `louped.toml`. The Probe's
+  model field and the Launch form's model options then offer it.
+- **Download** also gets it into this machine's cache as a job (`louped hub get <id>`). The job
+  shows on Runs.
+- **Add to sources** keeps a paper in `sources/` from its arXiv page, as `louped source add` does.
+
+```toml
+[hub]
+models = ["Qwen/Qwen2.5-0.5B-Instruct"]
+embeddings = ["BAAI/bge-small-en-v1.5"]
+datasets = ["openai/gsm8k"]
+```
+
+A gated model needs access first. Its page on the Hub has the request. The Hub page is off on a
+server started with `--expose`, because it uses this machine's token.
+
+Your agent uses `hub_search`, `hub_info` and `hub_add` in the same way.
+
+## Read, pin and cite
+
+The Sources page (G S) searches every page and lists the sources. Open a source to read it. A PDF
+shows as it prints; any other file shows as its text. To keep a passage, select words on the page
+and press Pin. You can add a note. Pins are kept in `sources/pins.jsonl`. Each pin has its quote,
+its page and the words on each side of it. Thus a pin can always be found again.
+
+A pin holds words that are on its page. The app and the agent's `pin` tool both refuse a
+paraphrase. Thus a citation always points at what the source says.
+
+Cite a page in any Markdown louped shows (for example, an experiment's README) as
+`[@<key> p<page>]`, for example `[@sharma23 p4]`. It shows as a chip that opens the page. On hover,
+the chip shows the source's title and the passages pinned there. If the key is not a source, the
+chip says so.
+
+## Check a write-up
+
+`louped check` reads the Markdown under `experiments/` and `reports/`, and the decks and documents
+in them (or the files you name). It lists what is not grounded, by file and line:
+
+- A result number (a decimal such as 0.92, a percentage, or a fraction such as 12/40) with no ref
+  (`run:<id>`, `run:<id>/<file>`), live ref (`{{run:<id> <metric>}}`) or citation in its
+  paragraph, list item or table. A table counts with the paragraph above it.
+- A citation that names no source, no page, or a page with nothing pinned on it.
+- A ref that does not resolve.
+- A live ref that does not resolve: no run, no metric of that name, no figure, or a bad format.
+  See [Reports](reports.md#live-numbers-and-figures).
+- A pin whose words are no longer on its page, because the source file changed.
+
+It exits 1 when it finds anything, so it can run in CI. Your agent runs it as `check` before it
+hands over a write-up, as its `ground-claims` and `write-report` skills say. It does not check whole
+numbers (such as counts and years) or anything in `code`. Thus write versions and paths as code.

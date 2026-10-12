@@ -1,0 +1,16 @@
+# Share results
+
+Serve the app read-only with Docker.
+
+To share results without a server, `louped publish` writes a read-only dashboard for any static
+host ([Share and run elsewhere](remote.md#publish-a-read-only-dashboard)). The Docker image
+serves the app without GPU support. Use it to share results, not to run them.
+
+```sh
+docker run -p 8000:8000 -v "$PWD/.louped:/data" ghcr.io/ashworks1706/louped
+```
+
+`/data` is the project's `.louped/` folder.
+
+The server has no login. Anyone who can reach it can read every run. Thus expose only results you
+would publish.

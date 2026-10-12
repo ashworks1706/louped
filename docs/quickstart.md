@@ -1,0 +1,61 @@
+# Get started
+
+Install louped, make a project and run the example.
+
+You need Python 3.12 or newer.
+
+```sh
+pip install louped
+louped init my-research
+cd my-research
+louped serve
+```
+
+Open http://127.0.0.1:8000. Go to **Launch**, pick `does-pushback-flip-answers` and press
+**Launch**. Tick `tiny` to try it offline without downloading a model. When the run finishes, open
+it and read the **Items** tab.
+
+## What `louped init` makes
+
+| Path              | What it is                                                  |
+| ----------------- | ----------------------------------------------------------- |
+| `louped.toml`     | Marks the project's root. Commands work from any subfolder. |
+| `experiments/`    | One folder per question. The example is here.               |
+| `AGENTS.md`       | Instructions for your coding agent.                         |
+| `.mcp.json`       | Connects your agent to the app.                             |
+| `.claude/skills/` | The skills your agent follows, such as `new-experiment`.    |
+| `.gitignore`      | Keeps `.louped/` out of git.                                |
+| `.louped/`        | Runs, logs and jobs. Not committed to git.                  |
+
+## Extras
+
+`pip install louped` gives the app, evals, run tracking, model loading (torch, nnsight), push and
+pull, sources, reports, notebooks and the MCP server your coding agent uses. Extras add the rest:
+`pip install 'louped[train]'`.
+
+| Extra   | Adds                                           |
+| ------- | ---------------------------------------------- |
+| `train` | Fine-tuning (TRL, PEFT)                        |
+| `rl`    | Tasks with checkable answers, for GRPO         |
+| `rag`   | Retrieval (bm25s, sentence-transformers)       |
+| `sae`   | Sparse autoencoders (SAELens)                  |
+| `data`  | Building training sets from logged model calls |
+
+## Results you already have
+
+```sh
+louped view path/to/results
+```
+
+This opens Inspect logs, an MLflow store, or any folder of JSONL, JSON, CSV or Markdown files in
+the app, read-only. No project is needed.
+
+## From source
+
+You need [just](https://just.systems), [uv](https://docs.astral.sh/uv) and Node 22 with pnpm.
+
+```sh
+git clone https://github.com/ashworks1706/louped && cd louped
+just bootstrap
+just serve
+```

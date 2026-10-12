@@ -1,0 +1,113 @@
+# Plugins
+
+Add pages, tabs, blocks, routes, a command or agent tools to louped from your own project.
+
+Most additions need no plugin. A new chart is a [view](experiments.md), and `views.vega` draws
+any Vega-Lite chart. A plugin is for the rest:
+
+- a page of your own in the app
+- a tab on every run or experiment
+- the API routes they call
+- a command
+- tools for your agent
+
+You don't need a louped release for any of it.
+
+A plugin is a folder under `plugins/` in your project:
+
+```
+plugins/verdicts/
+  plugin.toml       # required
+  plugin.py         # optional: routes, a command, agent tools
+  panel/
+    index.html        # optional: a page of its own, at its sidebar entry
+    run.html          # optional: a tab on every run's page
+    experiment.html   # optional: a tab on every experiment's page
+```
+
+`plugin.toml`:
+
+```toml
+title = "Verdicts"              # its sidebar entry
+section = "behavior"            # optional and unused: one sidebar lists every plugin
+description = "Judge each example."
+```
+
+`plugin.py`:
+
+```python
+from fastapi import APIRouter
+
+router = APIRouter()            # served at /api/x/verdicts
+
+
+@router.get("/left")
+def left() -> dict:
+    return {"left": 3}
+
+
+def main(argv: list[str]) -> None:      # louped verdicts ...
+    print("verdicts", argv)
+
+
+def tools(mcp, api) -> None:            # tools in louped mcp
+    @mcp.tool()
+    async def verdicts_left() -> dict:
+        """How many examples are left to judge."""
+        return (await api.get("/x/verdicts/left")).json()
+```
+
+The pages are served from `/x/verdicts/`:
+
+- `index.html` shows at the plugin's sidebar entry.
+- `run.html` is a tab, named after the plugin, on every run's page. It opens with `?run=<run id>`.
+- `experiment.html` is a tab on every experiment's page. It opens with `?experiment=<name>`.
+
+Any other page in `panel/`, such as `card.html`, is a block a [layout](customize.md) can place
+anywhere, sized to what it draws.
+
+## The kit
+
+Build pages from louped's kit, so they look like the rest of the app in both modes:
+
+`panel/run.html`:
+
+```html
+<link rel="stylesheet" href="/kit/louped.css" />
+<script type="module">
+  import { api, run, stats, table } from "/kit/louped.js";
+
+  const r = await api(`/runs/${run}`);
+  document.body.append(stats(Object.entries(r.metrics)));
+  document.body.append(table(await api(`/x/verdicts/rows?run=${run}`)));
+</script>
+```
+
+| From the kit                                                    | What it is                                                  |
+| --------------------------------------------------------------- | ----------------------------------------------------------- |
+| `run`, `experiment`                                             | The run or experiment the page is on                        |
+| `api(path, init)`                                               | `/api<path>` as JSON; a failure throws the server's message |
+| `stats([[label, value, note]])`                                 | The app's metric cards                                      |
+| `table(rows, columns)`                                          | The app's table, numbers right-aligned                      |
+| `h(tag, props, ...children)`, `empty`                           | An element; an empty state                                  |
+| `l-card`, `l-button`, `l-input`, `l-badge`, `l-muted`, `l-mono` | Classes for the rest                                        |
+
+Its scripts call the same API the app does, such as `fetch("/api/runs")` or
+`fetch("/api/x/verdicts/left")`. The app hands every page its theme:
+
+- the colors as CSS variables, such as `var(--foreground)` and `var(--border)`
+- the fonts as `var(--font-geist-sans)` and `var(--font-geist-mono)`
+
+A plugin your agent adds while `louped serve` runs shows in the app within a few seconds. You do
+not restart. A change to `plugin.py` also loads within a few seconds: louped imports it again and
+replaces its routes. If the changed `plugin.py` fails to load, its page shows the error and its
+routes are removed. A change to a page shows at the next reload.
+
+`plugin.py` loads again only in `louped serve`. `louped <name>` reads it each time it runs, so
+your command is always current. `louped mcp` reads it once, when it starts. After you change
+`tools`, restart `louped mcp` (in Claude Code, `/mcp` reconnects it). A tool that calls the
+plugin's routes gets the new routes without a restart.
+
+A plugin that fails to load shows its error on its page. Plugins run your project's code in
+louped's process. They load only on your own machine. They never load with
+`louped serve --expose` or in `louped publish`.

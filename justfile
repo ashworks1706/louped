@@ -7,7 +7,6 @@ export NEXT_TELEMETRY_DISABLED := "1"
 export MLFLOW_DISABLE_AGENT_HINT := "1"
 
 web := "apps/web"
-site := "apps/site"
 
 default:
     @just --list
@@ -20,10 +19,9 @@ bootstrap: setup
 setup:
     uv sync --locked --all-extras
     cd {{web}} && pnpm install --frozen-lockfile
-    cd {{site}} && pnpm install --frozen-lockfile
 
 # the gate: CI and the hooks run exactly this
-check: check-python check-web check-site
+check: check-python check-web
 
 # format, lint, types, layers, tests
 check-python:
@@ -37,10 +35,6 @@ check-python:
 check-web:
     cd {{web}} && pnpm format:check && pnpm lint && pnpm typecheck && pnpm build
 
-# format, lint, types, static build of the landing page and docs
-check-site:
-    cd {{site}} && pnpm format:check && pnpm lint && pnpm typecheck && pnpm build
-
 # browser tests against the built UI (run check-web first)
 test-e2e:
     cd {{web}} && pnpm test:e2e
@@ -50,7 +44,6 @@ fmt:
     uv run ruff format .
     uv run ruff check --fix .
     cd {{web}} && pnpm format
-    cd {{site}} && pnpm format
 
 # the API and the UI on :8000; rebuilds the UI so it always serves current code
 serve *args:
@@ -70,14 +63,6 @@ web-build:
 install-check: web-build
     rm -rf dist && uv build --wheel
     bash scripts/install-check.sh dist/*.whl
-
-# the landing page and docs on :3001
-site:
-    cd {{site}} && pnpm dev
-
-# remake the landing page's screenshots and demo video from a fresh demo project (apps/site/demo)
-site-demo:
-    uv run --with pillow bash apps/site/demo/make.sh
 
 # the louped image
 image:
