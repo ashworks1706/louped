@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/ashworks1706/louped/compare/v0.10.0...v0.11.0) (2026-10-12)
+
+
+### Features
+
+* export is one job.sh that pushes its results; push only ([#85](https://github.com/ashworks1706/louped/issues/85)) ([a48cba0](https://github.com/ashworks1706/louped/commit/a48cba0a32666a72f7e91e55f86c4d2dbdee83ce))
+
 ## [0.10.0](https://github.com/ashworks1706/louped/compare/v0.9.0...v0.10.0) (2026-10-11)
 
 
