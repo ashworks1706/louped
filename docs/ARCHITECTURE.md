@@ -317,7 +317,7 @@ louped.js), so it reads as the app's own. louped.toml's `[theme]` sets token val
 Picked item rows are a cohort. `stores/items.py` reads a run's conditions on them, with the
 paired bootstrap interval `compare` uses. `core/cohorts.py` saves them in the experiment
 (`cohorts/<name>.json`) for a run.py's `--cohort` (`louped.tracking.cohort_ids`).
-Design rules are in `apps/web/AGENTS.md`. The user docs are Markdown files in `docs/`.
+Design rules are in `apps/web/AGENTS.md`. `apps/site` is the landing page. The user docs are Markdown files in `docs/`.
 
 ## Correctness traps the code must test
 

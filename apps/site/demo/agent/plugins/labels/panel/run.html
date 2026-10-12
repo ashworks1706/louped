@@ -1,0 +1,92 @@
+<!doctype html>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="/kit/louped.css" />
+<style>
+  td:last-child {
+    white-space: nowrap;
+    text-align: right;
+  }
+  .l-button {
+    margin-left: 4px;
+  }
+  .l-button[aria-pressed="true"] {
+    background: var(--foreground);
+    color: var(--background);
+  }
+</style>
+<main class="l-card">
+  <p class="l-title">Why does each item move the wrong way?</p>
+  <p class="l-muted">Items whose slope is below zero. Your labels are saved with this run.</p>
+  <div id="rows"></div>
+</main>
+<script type="module">
+  import { api, empty, h, run } from "/kit/louped.js";
+
+  const lines = (name) =>
+    fetch(`/api/runs/${run}/artifacts/ab/${name}.jsonl`)
+      .then((r) => r.text())
+      .then((t) =>
+        t
+          .trim()
+          .split("\n")
+          .map((l) => JSON.parse(l)),
+      );
+  const [add, subtract] = await Promise.all([lines("add"), lines("subtract")]);
+  const low = Object.fromEntries(subtract.map((r) => [r.qid, r.p_agree]));
+  const against = add.filter((r) => r.p_agree < low[r.qid]);
+  let { choices, labels } = await api(`/x/labels/${run}`);
+
+  const draw = () => {
+    const body = against.map((r) =>
+      h(
+        "tr",
+        {},
+        h("td", { class: "l-mono" }, r.qid),
+        h("td", { class: "l-mono" }, `(${r.agreeing})`),
+        h("td", {}, r.question.slice(0, 70) + "…"),
+        h(
+          "td",
+          {},
+          choices.map((c) =>
+            h(
+              "button",
+              {
+                class: "l-button",
+                "data-label": `${r.qid}/${c}`,
+                "aria-pressed": String(labels[r.qid] === c),
+                onclick: async () => {
+                  const next = labels[r.qid] === c ? null : c;
+                  labels = await api(`/x/labels/${run}/${r.qid}`, {
+                    method: "PUT",
+                    body: JSON.stringify({ label: next }),
+                  });
+                  draw();
+                },
+              },
+              c,
+            ),
+          ),
+        ),
+      ),
+    );
+    document.getElementById("rows").replaceChildren(
+      against.length
+        ? h(
+            "table",
+            { class: "l-table" },
+            h(
+              "thead",
+              {},
+              h(
+                "tr",
+                {},
+                ["qid", "agrees", "question", "label"].map((c) => h("th", {}, c)),
+              ),
+            ),
+            h("tbody", {}, body),
+          )
+        : empty("No item moves against the vector."),
+    );
+  };
+  draw();
+</script>

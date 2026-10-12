@@ -32,11 +32,12 @@ the doc instead.
 
 ```
 just bootstrap          first run: dependencies and git hooks
-just check              the gate: Python (ruff, pyright, import-linter, pytest) and the web build
+just check              the gate: Python (ruff, pyright, import-linter, pytest), web and site builds
 just test-e2e           Playwright on the built UI; screenshots land in apps/web/test-results
 just fmt                format everything
 just serve              build the UI, then serve the API and UI on :8000
 just web                UI dev server on :3000
+just site               landing page on :3001
 just api-types          regenerate the UI's API types after changing a server route or model
 ```
 
@@ -63,6 +64,7 @@ src/louped/        the package (distribution louped); layers in docs/ARCHITECTUR
                   (also the Claude Code plugin, listed in .claude-plugin/), the example experiment
   init.py         `louped init`
 apps/web/         the UI; its AGENTS.md holds the design rules
+apps/site/        the landing page (the docs are in docs/)
 docs/             the user docs (Markdown, read on GitHub), ARCHITECTURE.md and ROADMAP.md
 hatch_build.py    puts the built UI in the wheel as louped/web
 tests/            Python tests, CPU only
