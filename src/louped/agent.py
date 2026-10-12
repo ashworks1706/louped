@@ -219,7 +219,7 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         """An attribution graph: its prompt, its outputs with their probability, its pinned nodes
         and groups, and the `top` nodes with the largest share of the influence on the output
         (id, label, kind, layer, token, score). No slug: the list of graphs. Point the person at a
-        node with ui_show part circuits/node/<id> on /behavior/circuits/?slug=<slug>&node=<id>."""
+        node with ui_show part circuits/node/<id> on /circuits/?slug=<slug>&node=<id>."""
         if slug is None:
             return {"graphs": await get("/graphs")}
         g = await get(f"/graphs/{slug}")
@@ -354,9 +354,10 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
     ) -> dict[str, Any]:
         """Add a Hub model, embedding model or dataset to the project's louped.toml ([hub]),
         where the app's model fields offer it; with download, also get it into this machine's
-        cache as a job (follow it with job). domains, for a dataset only, lists it on those
-        sections' Datasets pages ([hub.domains], added to what it had); a dataset with none
-        shows on both. A paper (its arXiv id) is kept in sources/ to search, quote and cite."""
+        cache as a job (follow it with job). domains, for a dataset only, files it under those
+        axes on the Datasets page's filter ([hub.domains], added to what it had); a dataset
+        with none shows under both. A paper (its arXiv id) is kept in sources/ to search,
+        quote and cite."""
         body = {"kind": kind, "id": id, "download": download, "domains": domains or []}
         return await post("/hub/add", body)
 
@@ -544,9 +545,8 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
     @mcp.tool(annotations=WRITE)
     async def add_page(name: str, board: dict[str, Any]) -> dict[str, Any]:
         """Keep a board as a page of its own, listed in the sidebar (boards/<name>.json at the
-        project's root, to commit; "section": workspace, behavior or efficiency picks which
-        sidebar). The same name replaces it. Check it first with check_view; then ui_show the
-        person to it: the page is /b/?name=<name> (/behavior/b/, /efficiency/b/)."""
+        project's root, to commit). The same name replaces it. Check it first with check_view;
+        then ui_show the person to it: the page is /b/?name=<name>."""
         return await send("PUT", f"/boards/{quote(name, safe='')}", json=board)
 
     @mcp.tool(annotations=READ)

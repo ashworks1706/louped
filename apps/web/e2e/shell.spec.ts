@@ -1,22 +1,21 @@
 import { expect, test } from "./fixtures";
 
 const PAGES = [
-  ["/", "Home"],
-  ["/behavior/experiments/", "Experiments"],
+  ["/", "Overview"],
+  ["/experiments/", "Experiments"],
   ["/launch/", "Launch"],
   ["/runs/", "Runs"],
   ["/compare/", "Compare"],
   ["/hub/", "Hub"],
-  ["/behavior/vectors/", "Vectors"],
-  ["/behavior/training-sets/", "Training sets"],
-  ["/behavior/circuits/", "Circuits"],
-  ["/behavior/probe/", "Probe"],
-  ["/behavior/", "Behavior"],
-  ["/efficiency/", "Efficiency"],
-  ["/efficiency/benchmark/", "Speed"],
-  ["/behavior/datasets/", "Datasets"],
-  ["/efficiency/benchmarks/", "Benchmarks"],
-  ["/efficiency/training/", "Training"],
+  ["/vectors/", "Vectors"],
+  ["/training-sets/", "Training sets"],
+  ["/circuits/", "Circuits"],
+  ["/probe/", "Probe"],
+  ["/speed/", "Speed"],
+  ["/datasets/", "Datasets"],
+  ["/benchmarks/", "Benchmarks"],
+  ["/reports/", "Reports"],
+  ["/sources/", "Sources"],
 ] as const;
 
 for (const [path, title] of PAGES) {
@@ -43,7 +42,7 @@ test("command menu navigates", async ({ page, isMobile }) => {
   await expect(page.getByPlaceholder("Go to, or run a command…")).toBeVisible();
   await page.keyboard.type("vectors");
   await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\/behavior\/vectors\/$/);
+  await expect(page).toHaveURL(/\/vectors\/$/);
   await expect(page.getByRole("heading", { level: 1, name: "Vectors" })).toBeVisible();
 });
 
@@ -63,31 +62,26 @@ test("an empty page links to what fills it in the app, not a terminal", async ({
     "href",
     "/launch/",
   );
-  await page.goto("/behavior/circuits/");
+  await page.goto("/circuits/");
   await expect(page.getByRole("link", { name: "Launch a circuit" })).toHaveAttribute(
     "href",
     "/launch/?id=circuit",
   );
   // An experiment is a folder: the app reads it and shows the command that makes one.
-  await page.goto("/behavior/experiments/");
+  await page.goto("/experiments/");
   await expect(page.getByText("louped new my-question --domain honesty")).toBeVisible();
 });
 
-test("each domain has its own sidebar, entered from the top bar", async ({ page, isMobile }) => {
-  // On a phone the sections and the pages share one sheet.
+test("one sidebar lists every page once, and old addresses move", async ({ page, isMobile }) => {
   const open = async () => {
     if (isMobile) await page.getByRole("button", { name: "Menu" }).click();
   };
-  const sections = () =>
-    isMobile ? page.getByRole("dialog") : page.getByRole("navigation", { name: "Sections" });
   const pages = () => page.getByRole("navigation", { name: "Pages" }).last();
   await page.goto("/");
+  await expect(page.getByRole("navigation", { name: "Sections" })).toHaveCount(0);
   await open();
-  await sections().getByRole("link", { name: "Behavior" }).click();
-  await expect(page).toHaveURL(/\/behavior\/$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Behavior" })).toBeVisible();
-  await open();
-  await expect(pages().getByRole("link", { name: "Runs" })).toHaveCount(0);
+  for (const name of ["Experiments", "Runs", "Probe", "Speed", "Datasets", "Benchmarks"])
+    await expect(pages().getByRole("link", { name, exact: true })).toHaveCount(1);
   await pages().getByRole("link", { name: "Vectors" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Vectors" })).toBeVisible();
   await open();
@@ -95,15 +89,16 @@ test("each domain has its own sidebar, entered from the top bar", async ({ page,
     "aria-current",
     "page",
   );
-  await sections().getByRole("link", { name: "Efficiency" }).click();
-  await open();
-  await expect(pages().getByRole("link", { name: "Speed" })).toBeVisible();
-  await expect(pages().getByRole("link", { name: "Vectors" })).toHaveCount(0);
+  // a bookmark from when each domain had its own pages opens the page where it is now
+  await page.goto("/efficiency/benchmarks/?task=x");
+  await expect(page).toHaveURL(/\/benchmarks\/\?axis=efficiency&task=x$/);
+  await page.goto("/behavior/training/");
+  await expect(page).toHaveURL(/\/runs\/\?kind=training$/);
 });
 
 test("the sidebar folds to icons and stays folded", async ({ page, isMobile }) => {
   test.skip(isMobile, "the sidebar is a sheet on a phone");
-  await page.goto("/behavior/vectors/");
+  await page.goto("/vectors/");
   await page.getByRole("button", { name: "Collapse sidebar" }).click();
   const pages = page.getByRole("navigation", { name: "Pages" });
   await expect(pages.getByRole("link", { name: "Vectors" })).toHaveText("");
@@ -129,12 +124,12 @@ test("a vector says what each column means and opens Probe with it", async ({ pa
       ],
     }),
   );
-  await page.goto("/behavior/vectors/");
+  await page.goto("/vectors/");
   await page.getByRole("button", { name: "What is Layer?" }).click();
   await expect(page.getByRole("tooltip")).toContainText("Steering adds it back");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("link", { name: "Steer with refusal" })).toHaveAttribute(
     "href",
-    "/behavior/probe/?vector=refusal&layer=3&tab=reply",
+    "/probe/?vector=refusal&layer=3&tab=reply",
   );
 });

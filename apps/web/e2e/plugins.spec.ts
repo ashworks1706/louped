@@ -20,7 +20,7 @@ const plugins = [
 ];
 
 for (const scheme of ["dark", "light"] as const) {
-  test(`a plugin's page is in its section's sidebar and themed like the app in ${scheme}`, async ({
+  test(`a plugin's page is in the sidebar and themed like the app in ${scheme}`, async ({
     page,
   }, info) => {
     await page.addInitScript((t) => localStorage.setItem("theme", t), scheme);
@@ -31,7 +31,7 @@ for (const scheme of ["dark", "light"] as const) {
         body: '<body style="background:var(--background);color:var(--foreground);font-family:var(--font-geist-sans)"><p>3 verdicts left</p></body>',
       }),
     );
-    await page.goto("/behavior/x/?name=verdicts");
+    await page.goto("/x/?name=verdicts");
     if (info.project.name === "desktop")
       await expect(page.getByRole("link", { name: "Verdicts" })).toHaveAttribute(
         "aria-current",
@@ -129,7 +129,7 @@ test("a plugin adds a tab to an experiment's page, opened with its name", async 
       },
     }),
   );
-  await page.goto("/behavior/experiment/?name=hello&tab=x-verdicts");
+  await page.goto("/experiment/?name=hello&tab=x-verdicts");
   await expect(
     page.frameLocator('iframe[title="verdicts"]').getByText("?experiment=hello"),
   ).toBeVisible();

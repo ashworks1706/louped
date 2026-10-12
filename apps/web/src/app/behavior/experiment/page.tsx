@@ -1,14 +1,12 @@
-import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { ExperimentView } from "@/components/experiment-view";
+import { Moved } from "@/components/moved";
 
-export const metadata: Metadata = { title: "Experiment" };
-
+/** An old address: sends the visitor to where the page is now. */
 export default function Page() {
   return (
     <Suspense>
-      <ExperimentView axis="behavior" />
+      <Moved />
     </Suspense>
   );
 }

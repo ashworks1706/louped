@@ -43,8 +43,8 @@ const addresses = (page: Page) =>
 const PAGES: [string, string][] = [
   ["home", "/"],
   ["runs", "/runs/"],
-  ["experiments", "/behavior/experiments/"],
-  ["experiment", "/behavior/experiment/?name=hello"],
+  ["experiments", "/experiments/"],
+  ["experiment", "/experiment/?name=hello"],
   ["overview", "/run/?id=m-1"],
   ["items", "/run/?id=m-1&tab=items"],
   ["item", "/run/?id=m-1&tab=items&item=28"],
@@ -54,27 +54,24 @@ const PAGES: [string, string][] = [
   ["sample", "/run/?id=e-1&tab=samples&sample=1"],
   ["figures", "/run/?id=m-1&tab=figures"],
   ["training run", "/run/?id=t-1"],
-  ["behavior", "/behavior/"],
-  ["efficiency", "/efficiency/"],
-  ["efficiency experiments", "/efficiency/experiments/"],
-  ["probe reply", "/behavior/probe/?tab=reply"],
-  ["probe inspect", "/behavior/probe/?tab=inspect"],
-  ["probe patch", "/behavior/probe/?tab=patch"],
-  ["probe dose", "/behavior/probe/?tab=dose"],
-  ["speed", "/efficiency/benchmark/"],
-  ["behavior datasets", "/behavior/datasets/"],
-  ["dataset", "/behavior/datasets/?open=openai%2Fgsm8k"],
-  ["local dataset", "/efficiency/datasets/?open=data%2Fpairs.jsonl"],
-  ["dataset search", "/behavior/datasets/?q=gsm"],
-  ["behavior benchmarks", "/behavior/benchmarks/"],
-  ["leaderboard", "/behavior/benchmarks/?task=louped%2Fgsm8k"],
-  ["efficiency benchmarks", "/efficiency/benchmarks/"],
-  ["vectors", "/behavior/vectors/"],
-  ["training sets", "/behavior/training-sets/?set=%2Fhome%2Fme%2F.louped%2Fdata%2Fpushback.jsonl"],
-  ["circuits", "/behavior/circuits/"],
-  ["feature", "/behavior/feature/?run=m-1&f=12"],
-  ["training", "/efficiency/training/"],
-  ["behavior training", "/behavior/training/"],
+  ["efficiency experiments", "/experiments/?axis=efficiency"],
+  ["probe reply", "/probe/?tab=reply"],
+  ["probe inspect", "/probe/?tab=inspect"],
+  ["probe patch", "/probe/?tab=patch"],
+  ["probe dose", "/probe/?tab=dose"],
+  ["speed", "/speed/"],
+  ["datasets", "/datasets/"],
+  ["dataset", "/datasets/?open=openai%2Fgsm8k"],
+  ["local dataset", "/datasets/?axis=efficiency&open=data%2Fpairs.jsonl"],
+  ["dataset search", "/datasets/?q=gsm"],
+  ["eval benchmarks", "/benchmarks/?axis=behavior"],
+  ["leaderboard", "/benchmarks/?axis=behavior&task=louped%2Fgsm8k"],
+  ["efficiency benchmarks", "/benchmarks/?axis=efficiency"],
+  ["vectors", "/vectors/"],
+  ["training sets", "/training-sets/?set=%2Fhome%2Fme%2F.louped%2Fdata%2Fpushback.jsonl"],
+  ["circuits", "/circuits/"],
+  ["feature", "/feature/?run=m-1&f=12"],
+  ["training", "/runs/?kind=training"],
   ["compare", "/compare/?a=e-1&b=e-1"],
   ["compare curves", "/compare/?a=t-1&b=t-2"],
   ["compare sample", "/compare/?a=e-1&b=e-1&changed=false&sample=1"],
@@ -92,7 +89,7 @@ const PAGES: [string, string][] = [
   ["missing project", "/projects/p/?name=gone"],
   ["markdown report", "/report/?path=1b.md"],
   ["deck report", "/report/?path=lab.pptx"],
-  ["board", "/behavior/b/?name=scores"],
+  ["board", "/b/?name=scores"],
 ];
 
 for (const [name, url] of PAGES) {
@@ -187,20 +184,20 @@ test("a layout hides, renames and hints parts of the tool pages too", async ({ p
     "playground/field/follow-up": { hidden: true },
     "launch/option/--loud": { hidden: true },
     "launch/option/--name": { hidden: false, label: "who", note: "Your **advisor**." },
-    "domain/section/runs": { hidden: true },
+    "shell/group/instruments": { hidden: false, label: "Tools" },
     "compare/section/paired": { hidden: false, note: "Read the interval, not the mean." },
     "feature/figure/histogram": { hidden: true },
     "job/log": { hidden: false, note: "The error is at the end." },
-    "empty/no-experiments-here-yet": { hidden: false, note: "Start one with the agent." },
+    "shell/project": { hidden: false, label: "Every project" },
   });
-  await page.goto("/behavior/probe/");
+  await page.goto("/probe/");
   const tabs = page.locator('[data-part^="playground/tab/"]');
   await expect(tabs).toHaveText(["Dose", "Reply", "Inspect"]);
   await expect(page.getByRole("tab", { name: "Dose" })).toHaveAttribute("aria-selected", "true");
   const strength = page.locator('[data-part="playground/field/strength"]');
   await expect(strength).toContainText("Push");
   await expect(strength).toContainText("Try 2 first.");
-  await page.goto("/behavior/probe/?tab=reply");
+  await page.goto("/probe/?tab=reply");
   await expect(page.getByLabel("Prompt")).toBeVisible();
   await expect(page.getByLabel("Follow-up")).toHaveCount(0);
 
@@ -210,18 +207,17 @@ test("a layout hides, renames and hints parts of the tool pages too", async ({ p
   await expect(page.locator('[data-part="launch/option/--name"]')).toContainText("who");
   await expect(page.locator('[data-part="launch/option/--name"] strong')).toHaveText("advisor");
 
-  await page.goto("/behavior/");
-  await expect(page.locator('[data-part="domain/section/tools"]')).toBeVisible();
-  await expect(page.locator('[data-part="domain/section/runs"]')).toHaveCount(0);
-  await page.goto("/efficiency/");
-  await expect(page.locator('[data-part="empty/no-experiments-here-yet"]')).toContainText(
-    "Start one with the agent.",
-  );
+  await page.goto("/experiments/");
+  const sidebar = page.getByRole("navigation", { name: "Pages" }).first();
+  if (await sidebar.isVisible()) {
+    await expect(sidebar.locator('[data-part="shell/group/instruments"]')).toContainText("Tools");
+    await expect(sidebar.getByLabel("Project", { exact: true })).toContainText("Every project");
+  }
   await page.goto("/compare/?a=e-1&b=e-1");
   await expect(page.locator('[data-part="compare/section/paired"]')).toContainText(
     "Read the interval, not the mean.",
   );
-  await page.goto("/behavior/feature/?run=m-1&f=12");
+  await page.goto("/feature/?run=m-1&f=12");
   await expect(page.locator('[data-part="feature/figure/promotes"]')).toBeVisible();
   await expect(page.locator('[data-part="feature/figure/histogram"]')).toHaveCount(0);
   await page.goto("/job/?id=j1");
@@ -238,13 +234,11 @@ test("a layout's parts rename, explain, order, hide and set defaults", async ({ 
     "run/meta/id": { hidden: true },
     "run.overview/metrics/flips": { hidden: false, label: "answers flipped", order: 0 },
     "run.overview/metrics/accuracy": { hidden: false, about: "Right answers in the baseline." },
-    "run/back": { hidden: true },
     "runs/action/launch": { hidden: true },
     "home/more/runs": { hidden: true },
   });
   await page.goto("/run/?id=m-1");
   await expect(page.locator('[data-part="run/meta/id"]')).toBeHidden();
-  await expect(page.locator('[data-part="run/back"]')).toBeHidden();
   const cards = page.locator('[data-part^="run.overview/metrics/"]');
   await expect(cards.first()).toContainText("answers flipped");
   const accuracy = page.locator('[data-part="run.overview/metrics/accuracy"]');

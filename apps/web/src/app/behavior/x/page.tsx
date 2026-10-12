@@ -1,14 +1,12 @@
-import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { PluginPage } from "@/components/plugin-page";
+import { Moved } from "@/components/moved";
 
-export const metadata: Metadata = { title: "Plugin" };
-
+/** An old address: sends the visitor to where the page is now. */
 export default function Page() {
   return (
     <Suspense>
-      <PluginPage />
+      <Moved />
     </Suspense>
   );
 }

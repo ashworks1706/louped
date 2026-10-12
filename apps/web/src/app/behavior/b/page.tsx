@@ -1,14 +1,12 @@
-import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { BoardPage } from "@/components/board-page";
+import { Moved } from "@/components/moved";
 
-export const metadata: Metadata = { title: "Board" };
-
+/** An old address: sends the visitor to where the page is now. */
 export default function Page() {
   return (
     <Suspense>
-      <BoardPage />
+      <Moved />
     </Suspense>
   );
 }

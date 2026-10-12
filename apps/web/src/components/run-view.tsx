@@ -2,8 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MetricName } from "@/components/term";
-import { ArrowLeft, ListTree } from "lucide-react";
-import Link from "next/link";
+import { ListTree } from "lucide-react";
 import { useTheme } from "next-themes";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { useEffect, useRef, useState } from "react";
@@ -47,6 +46,7 @@ import {
 import { artifactQuery } from "@/lib/artifacts";
 import { cn } from "@/lib/utils";
 import { ago, headline, metricLabel } from "@/lib/format";
+import { Crumbs, useTrail } from "@/components/crumbs";
 import { ExperimentLink } from "@/components/experiment-link";
 import { Help } from "@/components/help";
 import { arrange, part, partId, PartNote, PartScope, useRules } from "@/components/parts";
@@ -89,6 +89,7 @@ function RunLoaded({ id }: { id: string }) {
 
 function RunHeader({ run }: { run: RunDetail }) {
   const rule = useRules();
+  const trail = useTrail(run.experiment);
   const meta: { name: string; label: string; value: React.ReactNode; className?: string }[] = [
     { name: "model", label: "Model", value: run.model ?? "—", className: "font-mono" },
     {
@@ -108,16 +109,12 @@ function RunHeader({ run }: { run: RunDetail }) {
   return (
     <header className="border-b">
       <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 py-6">
-        <Link
-          href="/runs/"
-          className={cn(
-            "text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 text-xs",
-            rule("run/back").hidden && "hidden",
-          )}
-          {...part("run/back")}
-        >
-          <ArrowLeft className="size-3" /> Runs
-        </Link>
+        <Crumbs
+          items={[
+            ...(run.experiment ? trail : [{ key: "runs", label: "Runs", href: "/runs/" }]),
+            { key: "run", label: run.name },
+          ]}
+        />
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-semibold tracking-tight" {...part("run/title")}>
             {run.name}

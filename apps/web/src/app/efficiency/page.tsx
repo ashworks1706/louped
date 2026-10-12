@@ -1,16 +1,12 @@
-import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { DomainOverview } from "@/components/domain-overview";
-import { PageHeader } from "@/components/page-header";
-import { navItem } from "@/lib/nav";
+import { Moved } from "@/components/moved";
 
-export const metadata: Metadata = { title: "Efficiency" };
-
+/** An old address: sends the visitor to where the page is now. */
 export default function Page() {
   return (
-    <>
-      <PageHeader item={navItem("/efficiency/")} title="Efficiency" />
-      <DomainOverview section="efficiency" />
-    </>
+    <Suspense>
+      <Moved />
+    </Suspense>
   );
 }

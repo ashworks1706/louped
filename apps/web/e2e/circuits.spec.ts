@@ -12,7 +12,7 @@ test("a circuit is pruned, walked and pinned", async ({ page }, info) => {
       ],
     }),
   );
-  await page.goto("/behavior/circuits/?keep=0.99&edges=1");
+  await page.goto("/circuits/?keep=0.99&edges=1");
   await expect(page.locator('[data-part="circuits/stat/output"]')).toContainText("Paris");
   await expect(page.getByRole("link", { name: "circuit-tracer viewer" })).toHaveAttribute(
     "href",

@@ -1,10 +1,11 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, FlaskConical, Rocket } from "lucide-react";
+import { FlaskConical, Rocket } from "lucide-react";
 import Link from "next/link";
 import { parseAsString, useQueryState } from "nuqs";
 
+import { Crumbs, useTrail } from "@/components/crumbs";
 import { EmptyState } from "@/components/empty-state";
 import { Help } from "@/components/help";
 import { arrange, part, partId, PartScope, useRules } from "@/components/parts";
@@ -38,7 +39,7 @@ import {
 } from "@/lib/api";
 import { ago, num } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { axisPath, experimentHref, projectHref, runHref } from "@/lib/href";
+import { experimentHref, projectHref, runHref } from "@/lib/href";
 
 const AXIS_TITLE: Record<ExperimentDetail["axis"], string> = {
   behavior: "Behavior & alignment",
@@ -48,7 +49,7 @@ const AXIS_TITLE: Record<ExperimentDetail["axis"], string> = {
 
 /** One research question: what it asks, how it is tested, what it found, its runs, and what
  * launches it. */
-export function ExperimentView({ axis }: { axis: "behavior" | "efficiency" }) {
+export function ExperimentView() {
   const [name] = useQueryState("name", parseAsString);
   if (!name) {
     return (
@@ -56,8 +57,8 @@ export function ExperimentView({ axis }: { axis: "behavior" | "efficiency" }) {
         <EmptyState
           icon={FlaskConical}
           title="No experiment selected"
-          body="Open one from this domain's experiments."
-          action={{ href: `/${axis}/experiments/`, label: "Experiments" }}
+          body="Open one from the experiments."
+          action={{ href: "/experiments/", label: "Experiments" }}
         />
       </section>
     );
@@ -92,6 +93,7 @@ function ExperimentLoaded({ name }: { name: string }) {
 }
 
 function ExperimentHeader({ experiment: e }: { experiment: ExperimentDetail }) {
+  const trail = useTrail(e.name);
   const live = e.runs.filter((r) => isLive(r.status)).length;
   const last = e.runs[0];
   const rule = useRules();
@@ -125,13 +127,7 @@ function ExperimentHeader({ experiment: e }: { experiment: ExperimentDetail }) {
   return (
     <header className="border-b">
       <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 py-6">
-        <Link
-          href={`${axisPath(e.axis)}/experiments/`}
-          className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 text-xs"
-          {...part("experiment/back")}
-        >
-          <ArrowLeft className="size-3" /> Experiments
-        </Link>
+        <Crumbs items={trail} />
         <div className="flex flex-col items-start gap-x-6 gap-y-3 sm:flex-row">
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <div className="flex flex-wrap items-center gap-3">
@@ -163,7 +159,7 @@ function ExperimentHeader({ experiment: e }: { experiment: ExperimentDetail }) {
                 name={e.name}
                 undo={`Its folder moves to .louped/trash/experiments; move it back to experiments/ to restore it. Its ${e.runs.length} runs stay.`}
                 remove={() => deleteExperiment(e.name)}
-                then={`${axisPath(e.axis)}/experiments/`}
+                then={e.project ? projectHref(e.project) : "/experiments/"}
               />
             </span>
           </div>
@@ -237,7 +233,7 @@ function firstRun(
       href: `/launch/?id=${encodeURIComponent(first.id)}`,
       label: `Launch ${first.title.slice(name.length + 1)}`,
     };
-  return { href: experimentHref(name, axis, "design"), label: "How it runs" };
+  return { href: experimentHref(name, "design"), label: "How it runs" };
 }
 
 /** A gate's requirements, each with its value now and whether it holds; open when all do. */

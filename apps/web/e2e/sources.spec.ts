@@ -123,7 +123,7 @@ test("a citation in Markdown names the passage it rests on", async ({ page }) =>
       },
     }),
   );
-  await page.goto("/behavior/experiment/?name=hello");
+  await page.goto("/experiment/?name=hello");
   const cite = page.locator('[data-cite="pushback"]');
   await expect(cite).toHaveText("pushback p1");
   await cite.hover();

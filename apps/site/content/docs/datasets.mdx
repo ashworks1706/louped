@@ -3,7 +3,8 @@ title: Datasets and benchmarks
 description: The data your project uses, and leaderboards of evals and speed runs.
 ---
 
-Behavior and Efficiency each have a **Datasets** page and a **Benchmarks** page.
+The **Datasets** and **Benchmarks** pages are in the sidebar under Data. Each has an axis filter:
+Both, Behavior or Efficiency.
 
 ## Datasets
 
@@ -15,8 +16,8 @@ The Datasets page lists the data the project uses. It reads three places:
 | Local    | Files in `data/` at the project's root: JSONL, CSV, TSV, JSON or Parquet |
 | Training | The training sets louped reads. They open on the Training sets page.     |
 
-A Hub dataset can be filed under one domain or both. `[hub.domains]` keeps the domains. A dataset
-that is not in it shows on both pages.
+A Hub dataset can be filed under one axis or both. `[hub.domains]` keeps the axes. A dataset that
+is not in it shows under both.
 
 ```toml
 [hub]
@@ -34,12 +35,12 @@ account can open show too. For a file, you see its columns and its first rows.
 When louped cannot read a dataset, the page tells you why. For example, the viewer does not
 support the dataset, or the Hub is not reachable.
 
-Search the Hub at the top of the page. **Add** files the dataset under the page's domain.
+Search the Hub at the top of the page. **Add** files the dataset under the axis picked, or under both when Both is picked.
 **Download** puts it in this machine's cache as a job (`louped hub get`). Follow the job on Runs.
 
-## Benchmarks (Behavior)
+## Benchmarks: evals
 
-The Behavior Benchmarks page lists every eval task that Launch can run:
+With Behavior or Both picked, the Benchmarks page lists every eval task that Launch can run:
 
 - the project's own Inspect tasks
 - the benchmarks the project makes from Hub datasets
@@ -82,9 +83,9 @@ The benchmark is then the Inspect task `louped/<name>`. Launch it like any other
 inspect eval louped/gsm8k --model louped/Qwen/Qwen2.5-0.5B-Instruct --limit 50
 ```
 
-## Benchmarks (Efficiency)
+## Benchmarks: speed
 
-The Efficiency Benchmarks page shows the speed runs of `louped bench`. It has one row for each
+With Efficiency or Both picked, the Benchmarks page shows the speed runs of `louped bench`. It has one row for each
 model and weight format:
 
 - throughput: the most tokens per second, and the batch size that gave it

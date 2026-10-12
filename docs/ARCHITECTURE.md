@@ -271,15 +271,21 @@ the same HTTP API the UI does. Thus an agent's jobs share the queue and the `--e
 show on the Runs page. `louped picks --hook`, a Claude Code prompt hook, reads the same API: it adds
 the parts the person Shift+clicked to their next message, and marks them read for the app's tray.
 
-Pages: a top bar of sections is over a sidebar of the section's pages. The sidebar folds to icons.
+Pages: one sidebar, with a project switcher on top. The switcher (`?project=`, carried by every
+sidebar link) scopes Experiments and Runs to one project, and Overview opens that project's page.
+The sidebar folds to icons.
 
-| Section | Pages |
+| Group | Pages |
 |---|---|
-| Workspace | Home, Projects (with each project's page), Runs (jobs with their progress, then every run), Compare, Launch, Sources, Hub and Reports, with Run, Job, Source and Report detail |
-| `/behavior/` | Overview, Experiments, Probe (reply, inspect, patch, dose), Vectors, Training sets, Datasets, Benchmarks (eval leaderboards), Training, Circuits, Feature |
-| `/efficiency/` | Overview, Experiments, Speed (speed, reply), Datasets, Benchmarks (`louped bench` leaderboard), Training |
+| Research | Overview (Home, or the project's page), Experiments, Runs (jobs, then every run; training is a kind), Compare, Reports, and the project's boards and plugin pages |
+| Instruments | Probe (reply, inspect, patch, dose), Circuits, Vectors (with Feature detail), Speed |
+| Data | Datasets, Benchmarks (eval and `louped bench` leaderboards), Training sets, Sources, Hub |
 
-Each research domain lives under its own path. An experiment's page is under its domain's path.
+Projects and Launch have no sidebar entry: the switcher's icon and the top bar's Launch button
+open them. Behavior and efficiency are an experiment's axis, a filter (`?axis=`) on Experiments,
+Runs, Datasets and Benchmarks, not a place. Detail pages (project, experiment, run) show where they
+sit as a trail: project, experiment, run. The old `/behavior/...` and `/efficiency/...` addresses
+are pages that replace themselves with the new address (`MOVED` in `apps/web/src/lib/nav.ts`).
 Probe and Speed are one set of tools (server/playground.py); each page shows its own. Every
 technical term has a ? from `apps/web/src/lib/glossary.ts`.
 

@@ -7,6 +7,7 @@ import { parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { AxisFilter } from "@/components/experiments-list";
 import { EmptyState } from "@/components/empty-state";
 import { Part, part, partId, PartData } from "@/components/parts";
 import { QueryState } from "@/components/query-state";
@@ -35,6 +36,7 @@ import {
 } from "@/lib/api";
 import { ago, num } from "@/lib/format";
 import { runHref } from "@/lib/href";
+import { useAxis } from "@/lib/scope";
 import { cn } from "@/lib/utils";
 
 const NUM = "text-right font-mono tabular-nums";
@@ -42,7 +44,7 @@ const launchHref = (task: string) => `/launch/?id=eval&task=${encodeURIComponent
 
 /** Every eval task with its runs as a leaderboard; inspect_evals' tasks without runs show when a
  * search finds them. */
-export function EvalBenchmarks() {
+function EvalBenchmarks() {
   const [s, set] = useQueryStates({ q: parseAsString, task: parseAsString });
   const rows = useQuery(q.benchmarks());
   const [adding, setAdding] = useState(false);
@@ -440,7 +442,7 @@ const SHOWS = ["newest", "best"] as const;
 
 /** Speed benchmarks (louped bench runs) by model and weight format: newest first, or each
  * model's fastest. */
-export function SpeedBenchmarks() {
+function SpeedBenchmarks() {
   const [s, set] = useQueryStates({ show: parseAsStringLiteral(SHOWS).withDefault("newest") });
   const rows = useQuery(q.speed());
   const col = (id: string) => partId("benchmarks/speed-column", id);
@@ -552,5 +554,27 @@ function SpeedLine({ row: r }: { row: SpeedRow }) {
         </Link>
       </TableCell>
     </TableRow>
+  );
+}
+
+/** Eval leaderboards (behavior) and speed leaderboards (efficiency), one axis or both. */
+export function BenchmarksView() {
+  const [axis] = useAxis();
+  return (
+    <div className="flex flex-col gap-8">
+      <AxisFilter area="benchmarks" />
+      {axis !== "efficiency" && (
+        <section className="flex flex-col gap-3" {...part(partId("benchmarks/section", "evals"))}>
+          {axis == null && <h2 className="text-sm font-medium">Evals</h2>}
+          <EvalBenchmarks />
+        </section>
+      )}
+      {axis !== "behavior" && (
+        <section className="flex flex-col gap-3" {...part(partId("benchmarks/section", "speed"))}>
+          {axis == null && <h2 className="text-sm font-medium">Speed</h2>}
+          <SpeedBenchmarks />
+        </section>
+      )}
+    </div>
   );
 }

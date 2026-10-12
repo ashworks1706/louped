@@ -9,8 +9,7 @@ description: Add a page, a tab on every run or experiment, API routes, a command
    - A report is Markdown the run logs.
    - Write a plugin only for a page, a tab, routes, a command or tools.
 2. Make `plugins/<name>/plugin.toml`. Write the name in lowercase letters, digits and `-`. Give
-   the file a `title`, a `section` (`workspace`, `behavior` or `efficiency`) and a one-line
-   `description`.
+   the file a `title` and a one-line `description`.
 3. Put code in `plugins/<name>/plugin.py`. Write only the parts the feature needs:
    - `router`, a FastAPI `APIRouter`, served at `/api/x/<name>`. It reads louped's stores (the
      runs' files, MLflow, Inspect logs) instead of keeping a copy. It writes only files the person

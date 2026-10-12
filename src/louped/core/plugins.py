@@ -3,7 +3,7 @@
 A plugin is a folder under the project's plugins/ with a plugin.toml:
 
     title = "Verdicts"          # its name in the sidebar
-    section = "behavior"        # workspace, behavior or efficiency: whose sidebar lists it
+    section = "behavior"        # optional, from when the app had a sidebar per domain; unused
     description = "..."         # one line, for the command menu
 
 and any of:

@@ -4,11 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Fragment } from "react";
 
-import { ChevronRight } from "lucide-react";
-
 import { ActiveExperiments } from "@/components/experiments-list";
 import { LayoutErrors, PluginBlock, RegionGrid, useLayout } from "@/components/layout";
 import { arrange, part, partId, useRules } from "@/components/parts";
+import { ProjectGrid } from "@/components/projects-view";
 import { QueryState } from "@/components/query-state";
 import { RunsList } from "@/components/runs-list";
 
@@ -17,7 +16,6 @@ import { Stat, StatGrid } from "@/components/stat-grid";
 import { isLive, q } from "@/lib/api";
 import { ago } from "@/lib/format";
 import { jobHref, runHref } from "@/lib/href";
-import { DOMAINS, NAV } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 const WEEK_MS = 7 * 24 * 3600 * 1000;
@@ -63,7 +61,7 @@ function HomeStats() {
       el: (
         <Stat
           label="Active questions"
-          href="/behavior/experiments/?status=active"
+          href="/experiments/?status=active"
           part="home/stat/active"
           note={experiments.data ? `of ${all.length} experiments` : undefined}
         >
@@ -76,7 +74,7 @@ function HomeStats() {
       el: (
         <Stat
           label="Answered"
-          href="/behavior/experiments/?status=answered"
+          href="/experiments/?status=answered"
           part="home/stat/answered"
           note={
             experiments.data
@@ -173,48 +171,6 @@ function LiveNow() {
   );
 }
 
-/** The two research domains, each opening its own section, with how many questions it holds. */
-function DomainCards() {
-  const experiments = useQuery(q.experiments());
-  return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      {DOMAINS.map((d) => {
-        const overview = NAV.find((n) => n.section === d.section);
-        const tools = NAV.filter((n) => n.section === d.section).slice(2);
-        const mine = (experiments.data ?? []).filter((e) =>
-          d.section === "behavior" ? e.axis !== "efficiency" : e.axis === "efficiency",
-        );
-        const active = mine.filter((e) => e.status === "active").length;
-        return (
-          <Link
-            key={d.section}
-            {...part(partId("home/domain", d.section))}
-            href={overview?.href ?? "/"}
-            className="hover:bg-accent/40 focus-visible:ring-ring/50 group flex flex-col gap-3 rounded-xl border p-5 transition-colors outline-none focus-visible:ring-[3px]"
-          >
-            <span className="flex items-center gap-2 font-medium">
-              <d.icon className="text-muted-foreground size-4" />
-              {d.title}
-              <ChevronRight className="text-muted-foreground group-hover:text-foreground ml-auto size-4 transition-colors" />
-            </span>
-            <span className="text-muted-foreground text-sm">{overview?.description}</span>
-            <span className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-              {experiments.data && (
-                <span>
-                  <span className="text-foreground font-mono tabular-nums">{mine.length}</span>{" "}
-                  {mine.length === 1 ? "question" : "questions"} ·{" "}
-                  <span className="text-foreground font-mono tabular-nums">{active}</span> active
-                </span>
-              )}
-              <span>{tools.map((t) => t.title).join(" · ")}</span>
-            </span>
-          </Link>
-        );
-      })}
-    </div>
-  );
-}
-
 const MORE =
   "text-muted-foreground hover:text-foreground text-sm underline-offset-4 hover:underline";
 
@@ -236,30 +192,22 @@ export function HomeBlocks() {
               return { body: <HomeStats /> };
             case "live":
               return { body: <LiveNow /> };
+            case "projects":
             case "domains":
-              return { title: "Domains", body: <DomainCards /> };
+              return { title: "Projects", body: <ProjectGrid /> };
             case "active":
               return {
                 title: "Active questions",
                 body: (
                   <>
                     <ActiveExperiments />
-                    <div className="flex gap-4">
-                      <Link
-                        href="/behavior/experiments/"
-                        className={cn(MORE, rule("home/more/behavior").hidden && "hidden")}
-                        {...part("home/more/behavior")}
-                      >
-                        Behavior experiments
-                      </Link>
-                      <Link
-                        href="/efficiency/experiments/"
-                        className={cn(MORE, rule("home/more/efficiency").hidden && "hidden")}
-                        {...part("home/more/efficiency")}
-                      >
-                        Efficiency experiments
-                      </Link>
-                    </div>
+                    <Link
+                      href="/experiments/"
+                      className={cn(MORE, rule("home/more/experiments").hidden && "hidden")}
+                      {...part("home/more/experiments")}
+                    >
+                      All experiments
+                    </Link>
                   </>
                 ),
               };

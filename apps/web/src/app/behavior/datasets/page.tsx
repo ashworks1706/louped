@@ -1,21 +1,12 @@
-import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { DatasetsView } from "@/components/datasets-view";
-import { PageHeader } from "@/components/page-header";
-import { navItem } from "@/lib/nav";
+import { Moved } from "@/components/moved";
 
-export const metadata: Metadata = { title: "Datasets" };
-
+/** An old address: sends the visitor to where the page is now. */
 export default function Page() {
   return (
-    <>
-      <PageHeader item={navItem("/behavior/datasets/")} />
-      <section className="mx-auto max-w-6xl px-6 py-8">
-        <Suspense>
-          <DatasetsView domain="behavior" />
-        </Suspense>
-      </section>
-    </>
+    <Suspense>
+      <Moved />
+    </Suspense>
   );
 }

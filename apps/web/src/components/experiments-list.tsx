@@ -3,106 +3,144 @@
 import { useQuery } from "@tanstack/react-query";
 import { FlaskConical, FolderKanban } from "lucide-react";
 import Link from "next/link";
-import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 
 import { EmptyState } from "@/components/empty-state";
-import { part, partId, useRules } from "@/components/parts";
+import { part, partId } from "@/components/parts";
 import { MetricValue } from "@/components/metric";
 import { QueryState } from "@/components/query-state";
-import { NativeSelect } from "@/components/ui/native-select";
+import { NewExperiment } from "@/components/new-experiment";
 import { q, type Experiment, type Project } from "@/lib/api";
 import { ago, headline, metricLabel } from "@/lib/format";
 import { experimentHref } from "@/lib/href";
+import { AXES, type Axis } from "@/lib/nav";
+import { useAxis, useProject } from "@/lib/scope";
 import { cn } from "@/lib/utils";
 
 type Status = Experiment["status"] | Project["status"];
-type Axis = "behavior" | "efficiency";
 
 const FILTERS = ["all", "active", "parked", "answered"] as const;
 
-/** A domain's experiments; the checks file under behavior. */
-const inAxis = (e: Experiment, axis: Axis) =>
-  axis === "behavior" ? e.axis !== "efficiency" : e.axis === "efficiency";
+/** Whether an experiment is on an axis; the checks file under behavior. */
+export const onAxis = (e: Experiment, axis: Axis | null) =>
+  axis == null || (axis === "behavior" ? e.axis !== "efficiency" : e.axis === "efficiency");
 
-/** The domain an empty state's command names, one that exists on each axis. */
-const EXAMPLE_DOMAIN: Record<Axis, string> = { behavior: "honesty", efficiency: "inference" };
-
-/** One axis's experiments grouped by domain, filtered by status through ?status= and by
- * project through ?project=. */
-export function ExperimentsList({ axis }: { axis: Axis }) {
+/** The experiments grouped by domain: the sidebar's project, the axis (?axis=) and the status
+ * (?status=) narrow them. */
+export function ExperimentsList() {
   const [status, setStatus] = useQueryState(
     "status",
     parseAsStringLiteral(FILTERS).withDefault("all"),
   );
-  const [chosen, setProject] = useQueryState("project", parseAsString);
-  const rule = useRules()("experiments/project");
-  const project = chosen ?? rule.default ?? null;
+  const [axis] = useAxis();
+  const [project] = useProject();
+  const health = useQuery(q.health());
   const experiments = useQuery(q.experiments());
   return (
     <QueryState query={experiments}>
       {(everything) => {
-        const axisAll = everything.filter((e) => inAxis(e, axis));
-        if (axisAll.length === 0) return <NoExperiments axis={axis} />;
-        const projects = [...new Set(axisAll.flatMap((e) => (e.project ? [e.project] : [])))];
-        const all = project ? axisAll.filter((e) => e.project === project) : axisAll;
-        const shown = status === "all" ? all : all.filter((e) => e.status === status);
+        const scope = everything.filter(
+          (e) => onAxis(e, axis) && (project == null || e.project === project),
+        );
+        const shown = status === "all" ? scope : scope.filter((e) => e.status === status);
         return (
           <div className="flex flex-col gap-8">
             <div className="flex flex-wrap items-center gap-3">
-              <div
-                role="group"
-                aria-label="Status"
-                className="bg-muted/50 flex w-fit items-center gap-0.5 rounded-lg border p-0.5"
-              >
-                {FILTERS.map((f) => {
-                  const n = f === "all" ? all.length : all.filter((e) => e.status === f).length;
-                  return (
-                    <button
-                      key={f}
-                      type="button"
-                      {...part(partId("experiments/filter", f))}
-                      aria-pressed={status === f}
-                      onClick={() => void setStatus(f === "all" ? null : f)}
-                      className={cn(
-                        "focus-visible:ring-ring/30 flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs capitalize outline-none focus-visible:ring-[3px]",
-                        status === f
-                          ? "bg-background text-foreground ring-border ring-1"
-                          : "text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      {f}
-                      <span className="font-mono text-[11px] tabular-nums opacity-70">{n}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              {(projects.length > 0 || project) && !rule.hidden && (
-                <span {...part("experiments/project")}>
-                  <NativeSelect
-                    aria-label={rule.label ?? "Project"}
-                    value={project ?? ""}
-                    onChange={(e) => void setProject(e.target.value || null)}
-                    className="h-8 text-xs"
-                  >
-                    <option value="">Every project</option>
-                    {[...new Set([...projects, ...(project ? [project] : [])])].sort().map((p) => (
-                      <option key={p} value={p}>
-                        {p}
-                      </option>
-                    ))}
-                  </NativeSelect>
+              <Segmented
+                label="Status"
+                value={status}
+                options={FILTERS.map((f) => ({
+                  value: f,
+                  title: f,
+                  count: f === "all" ? scope.length : scope.filter((e) => e.status === f).length,
+                  address: partId("experiments/filter", f),
+                }))}
+                onChange={(f) => void setStatus(f === "all" ? null : f)}
+              />
+              <AxisFilter area="experiments" />
+              {health.data?.launching && (
+                <span className="ml-auto">
+                  <NewExperiment project={project} />
                 </span>
               )}
             </div>
-            {shown.length > 0 ? (
-              <DomainGroups experiments={shown} />
+            {everything.length === 0 ? (
+              <NoExperiments />
+            ) : shown.length > 0 ? (
+              <DomainGroups experiments={shown} showProject={project == null} />
             ) : (
-              <p className="text-muted-foreground text-sm">No {status} experiments.</p>
+              <p className="text-muted-foreground text-sm">
+                No {status === "all" ? "" : `${status} `}experiments
+                {project ? ` in ${project}` : ""}
+                {axis ? ` on ${axis}` : ""}.
+              </p>
             )}
           </div>
         );
       }}
     </QueryState>
+  );
+}
+
+/** A row of buttons, one pressed: a filter whose options are few. */
+export function Segmented<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: { value: T; title: string; count?: number; address: string }[];
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={label}
+      className="bg-muted/50 flex w-fit items-center gap-0.5 rounded-lg border p-0.5"
+    >
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          {...part(o.address)}
+          aria-pressed={value === o.value}
+          onClick={() => onChange(o.value)}
+          className={cn(
+            "focus-visible:ring-ring/30 flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs capitalize outline-none focus-visible:ring-[3px]",
+            value === o.value
+              ? "bg-background text-foreground ring-border ring-1"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {o.title}
+          {o.count != null && (
+            <span className="font-mono text-[11px] tabular-nums opacity-70">{o.count}</span>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Both axes, behavior or efficiency: ?axis=, on any list that has both. */
+export function AxisFilter({ area }: { area: string }) {
+  const [axis, setAxis] = useAxis();
+  return (
+    <Segmented
+      label="Axis"
+      value={axis ?? "both"}
+      options={[
+        { value: "both", title: "Both", address: partId(`${area}/axis`, "both") },
+        ...AXES.map((a) => ({
+          value: a.axis,
+          title: a.title,
+          address: partId(`${area}/axis`, a.axis),
+        })),
+      ]}
+      onChange={(v) => void setAxis(v === "both" ? null : v)}
+    />
   );
 }
 
@@ -130,35 +168,15 @@ export function ActiveExperiments() {
   );
 }
 
-/** One domain's questions, for its overview page. */
-export function AxisExperiments({ axis }: { axis: Axis }) {
-  const experiments = useQuery(q.experiments());
-  return (
-    <QueryState query={experiments}>
-      {(all) => {
-        const mine = all.filter((e) => inAxis(e, axis));
-        return mine.length === 0 ? (
-          <NoExperiments axis={axis} />
-        ) : (
-          <CardGrid>
-            {mine.map((e) => (
-              <ExperimentCard key={e.name} experiment={e} showDomain />
-            ))}
-          </CardGrid>
-        );
-      }}
-    </QueryState>
-  );
-}
-
-/** Experiments are folders: the app reads them, an editor or a coding agent writes them. */
-function NoExperiments({ axis }: { axis: Axis }) {
+/** Experiments are folders: the app writes one with New experiment; an editor or a coding agent
+ * fills it in. */
+function NoExperiments() {
   return (
     <EmptyState
       icon={FlaskConical}
-      title="No experiments here yet"
-      body="An experiment is a folder under experiments/ with a README naming its domain. It shows up here as soon as the folder exists."
-      command={`louped new my-question --domain ${EXAMPLE_DOMAIN[axis]}`}
+      title="No experiments yet"
+      body="An experiment is a folder under experiments/ with a README naming its question and domain. New experiment writes one; it shows up here as soon as the folder exists."
+      command="louped new my-question --domain honesty"
     />
   );
 }
@@ -229,7 +247,7 @@ function ExperimentCard({
   const metric = last ? headline(last.metrics).at(-1) : undefined;
   return (
     <Link
-      href={experimentHref(e.name, e.axis)}
+      href={experimentHref(e.name)}
       {...part(partId("experiments/row", e.name))}
       title={e.question ?? e.name}
       className="hover:bg-accent/40 focus-visible:ring-ring/50 flex min-w-0 flex-col gap-2 rounded-xl border p-4 transition-colors outline-none focus-visible:ring-[3px]"
