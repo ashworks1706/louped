@@ -38,7 +38,7 @@ description = "Judge each example."
 ```python
 from fastapi import APIRouter
 
-router = APIRouter()            # served at /api/x/verdicts
+router = APIRouter()  # served at /api/x/verdicts
 
 
 @router.get("/left")
@@ -46,11 +46,11 @@ def left() -> dict:
     return {"left": 3}
 
 
-def main(argv: list[str]) -> None:      # louped verdicts ...
+def main(argv: list[str]) -> None:  # louped verdicts ...
     print("verdicts", argv)
 
 
-def tools(mcp, api) -> None:            # tools in louped mcp
+def tools(mcp, api) -> None:  # tools in louped mcp
     @mcp.tool()
     async def verdicts_left() -> dict:
         """How many examples are left to judge."""

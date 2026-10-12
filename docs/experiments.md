@@ -97,7 +97,7 @@ title = "Calibration under feedback"
 with start_run(EXPERIMENT, name=args.model, params=asdict(args), seed=args.seed):
     ...
     mlflow.log_metrics({"pressure/accuracy": 0.31})
-    mlflow.log_artifacts(folder)   # raw/<condition>.jsonl, report.md
+    mlflow.log_artifacts(folder)  # raw/<condition>.jsonl, report.md
 ```
 
 `start_run` records the code version, packages, seed and hardware use with every run. Pin the
@@ -158,7 +158,7 @@ A notebook in the experiment's folder runs as a job. Tag one cell `parameters` (
 cell's property inspector). Set the variables a run can change in that cell:
 
 ```python
-n = 200        # items to read
+n = 200  # items to read
 model = "Qwen/Qwen2.5-0.5B-Instruct"
 ```
 
