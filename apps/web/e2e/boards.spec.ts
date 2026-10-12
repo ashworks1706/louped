@@ -6,12 +6,10 @@ import { mockPages } from "./pages-api";
 test("a board's panels follow its controls and each other", async ({ page }, info) => {
   await mockPages(page);
   await mockBoards(page);
-  await page.goto("/behavior/b/?name=scores");
+  await page.goto("/b/?name=scores");
   await expect(page.getByRole("heading", { name: "Scores by model" })).toBeVisible();
   if (info.project.name === "desktop")
-    await expect(
-      page.locator('[data-part="shell/nav/%2Fbehavior%2Fb%2F%3Fname%3Dscores"]'),
-    ).toBeVisible();
+    await expect(page.locator('[data-part="shell/nav/%2Fb%2F%3Fname%3Dscores"]')).toBeVisible();
   const rows = page.locator('[data-part="board/scores/panel/rows"] tbody tr');
   const mean = page.locator('[data-part="board/scores/panel/mean"]');
   await expect(rows).toHaveCount(3);

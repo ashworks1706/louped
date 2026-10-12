@@ -1,21 +1,12 @@
-import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { PageHeader } from "@/components/page-header";
-import { TrainingSets } from "@/components/training-sets";
-import { navItem } from "@/lib/nav";
+import { Moved } from "@/components/moved";
 
-export const metadata: Metadata = { title: "Training sets" };
-
+/** An old address: sends the visitor to where the page is now. */
 export default function Page() {
   return (
-    <>
-      <PageHeader item={navItem("/behavior/training-sets/")} />
-      <section className="mx-auto max-w-6xl px-6 py-8">
-        <Suspense>
-          <TrainingSets />
-        </Suspense>
-      </section>
-    </>
+    <Suspense>
+      <Moved />
+    </Suspense>
   );
 }

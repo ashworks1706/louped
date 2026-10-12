@@ -10,7 +10,7 @@ A project groups experiments that serve one goal. It is a folder in `projects/`,
 louped project new sycophancy-under-pushback --title "Sycophancy under pushback"
 ```
 
-You can also use **New project** on the Projects page (`G J`). The app writes the same file.
+You can also use **New project** on the Projects page (`G J`, or the folder icon in the sidebar). The app writes the same file.
 
 ## README
 
@@ -61,12 +61,16 @@ and **Create its README** makes the file.
 
 ## In the app
 
-- **Projects** shows a card for each project: title, summary, status, tags, experiments and the
+- The **project switcher** at the top of the sidebar picks one project. Experiments and Runs then
+  show only that project's, and **Overview** opens its page. **All projects** shows everything.
+  The switcher keeps its pick in the address (`?project=`), so a link opens the same view.
+- The folder icon beside the switcher opens **Projects**: a card for each project: title, summary, status, tags, experiments and the
   last run.
 - A project's page shows its README (**Edit** changes it in place), its metadata, its experiments
   by domain and their runs. **Edit metadata** changes the front matter and keeps the text.
-- An experiment's page links to its project. The Experiments pages show a project badge on each
-  card, and a filter for one project.
+- A project's, an experiment's and a run's page show where they sit at the top: project,
+  experiment, run. Click a step to go up.
+- With All projects picked, each experiment card shows its project.
 - The app writes files only on a server that launches. With `--expose`, it writes nothing.
 
 ## Your agent

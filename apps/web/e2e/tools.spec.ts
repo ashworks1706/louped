@@ -37,7 +37,7 @@ test("a follow-up pushes back on each side's own reply", async ({ page }, info) 
     const text = body.history.length ? (steered ? " Yes, 4." : " You are right, it is 5.") : " 4";
     r.fulfill({ contentType: "text/plain", body: text });
   });
-  await page.goto("/behavior/probe/");
+  await page.goto("/probe/");
   await page.getByLabel("Follow-up").fill("I think it's 5. Are you sure?");
   await page.getByLabel("Prompt", { exact: true }).fill("What is 2 + 2?");
   await page.getByRole("button", { name: /Run/ }).click();
@@ -96,7 +96,7 @@ test("patch, dose and speed send their requests and draw what comes back", async
       r.fulfill({ json: { views } });
     });
   }
-  await page.goto("/behavior/probe/?tab=patch");
+  await page.goto("/probe/?tab=patch");
   await page.getByLabel("Prompt", { exact: true }).fill("The capital of France is");
   await expect(page.getByRole("button", { name: /Run/ })).toBeDisabled();
   await page.getByLabel("Prompt", { exact: true }).press("Control+Enter");
@@ -127,7 +127,7 @@ test("patch, dose and speed send their requests and draw what comes back", async
   await page.screenshot({ path: info.outputPath("dose.png"), fullPage: true });
 
   // Speed is a cost, so it lives on the Speed page, under Efficiency.
-  await page.goto("/efficiency/benchmark/");
+  await page.goto("/speed/");
   await expect(page.getByRole("tab", { name: "Speed" })).toHaveAttribute("data-state", "active");
   await expect(page.getByRole("tab", { name: "Patch" })).toHaveCount(0);
   await page.getByLabel("Prompt", { exact: true }).fill("The capital of France is");
@@ -185,7 +185,7 @@ test("a diffusion model opens on Reply when the URL asks for a causal-only tab",
     r.fulfill({ json: { model: "tiny", layers: 2, heads: null, bank: [], diffusion: true } }),
   );
   await page.route("**/api/vectors", (r) => r.fulfill({ json: [] }));
-  await page.goto("/behavior/probe/?tab=patch");
+  await page.goto("/probe/?tab=patch");
   await expect(page.getByRole("tab", { name: "Reply" })).toHaveAttribute("data-state", "active");
   await expect(page.getByLabel("Corrupt prompt", { exact: true })).toHaveCount(0);
 });

@@ -219,7 +219,7 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         """An attribution graph: its prompt, its outputs with their probability, its pinned nodes
         and groups, and the `top` nodes with the largest share of the influence on the output
         (id, label, kind, layer, token, score). No slug: the list of graphs. Point the person at a
-        node with ui_show part circuits/node/<id> on /behavior/circuits/?slug=<slug>&node=<id>."""
+        node with ui_show part circuits/node/<id> on /circuits/?slug=<slug>&node=<id>."""
         if slug is None:
             return {"graphs": await get("/graphs")}
         g = await get(f"/graphs/{slug}")
@@ -354,9 +354,10 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
     ) -> dict[str, Any]:
         """Add a Hub model, embedding model or dataset to the project's louped.toml ([hub]),
         where the app's model fields offer it; with download, also get it into this machine's
-        cache as a job (follow it with job). domains, for a dataset only, lists it on those
-        sections' Datasets pages ([hub.domains], added to what it had); a dataset with none
-        shows on both. A paper (its arXiv id) is kept in sources/ to search, quote and cite."""
+        cache as a job (follow it with job). domains, for a dataset only, files it under those
+        axes on the Datasets page's filter ([hub.domains], added to what it had); a dataset
+        with none shows under both. A paper (its arXiv id) is kept in sources/ to search,
+        quote and cite."""
         body = {"kind": kind, "id": id, "download": download, "domains": domains or []}
         return await post("/hub/add", body)
 
@@ -544,10 +545,37 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
     @mcp.tool(annotations=WRITE)
     async def add_page(name: str, board: dict[str, Any]) -> dict[str, Any]:
         """Keep a board as a page of its own, listed in the sidebar (boards/<name>.json at the
-        project's root, to commit; "section": workspace, behavior or efficiency picks which
-        sidebar). The same name replaces it. Check it first with check_view; then ui_show the
-        person to it: the page is /b/?name=<name> (/behavior/b/, /efficiency/b/)."""
+        project's root, to commit). The same name replaces it. Check it first with check_view;
+        then ui_show the person to it: the page is /b/?name=<name>."""
         return await send("PUT", f"/boards/{quote(name, safe='')}", json=board)
+
+    @mcp.tool(annotations=READ)
+    async def feedback() -> list[dict[str, Any]]:
+        """The feature requests and bug reports for louped itself on the Feedback page, newest
+        first: id, kind, title, fields, created, opened (when the person opened it on GitHub to
+        submit it; null while it is a draft) and issue_url."""
+        return await get("/feedback")
+
+    @mcp.tool(annotations=WRITE)
+    async def draft_feedback(
+        kind: Literal["feature", "bug"],
+        title: str,
+        problem: str | None = None,
+        prebuilt: str | None = None,
+        what: str | None = None,
+        repro: str | None = None,
+    ) -> dict[str, Any]:
+        """Draft a request for louped itself when it lacks something the work needs, or does
+        something wrong. A feature takes problem (the research task it enables) and prebuilt
+        (free tools that already do part of it); a bug takes what (what happened, what was
+        expected) and repro (steps to reproduce). Nothing goes to GitHub: the person reads and
+        edits the draft on the Feedback page and submits it there. ui_show them to page, then
+        tell them what you drafted and why. Draft one request per need, not one per session; it
+        must fit GitHub's prefilled link (about 8000 characters, encoded)."""
+        given = {"problem": problem, "prebuilt": prebuilt, "what": what, "repro": repro}
+        fields = {k: v for k, v in given.items() if v is not None}
+        made = await post("/feedback", {"kind": kind, "title": title, "fields": fields})
+        return {**made, "page": f"/feedback/?id={made['id']}"}
 
     @mcp.tool(annotations=READ)
     async def preview_view(view: dict[str, Any] | None = None, ref: str | None = None) -> Image:

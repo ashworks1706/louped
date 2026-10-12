@@ -60,23 +60,39 @@ for (const scheme of ["dark", "light"] as const) {
   });
 }
 
-test("an experiment links its project, and the lists badge and filter by it", async ({ page }) => {
+test("an experiment links its project, and the switcher scopes the lists to it", async ({
+  page,
+  isMobile,
+}) => {
   await mockAll(page);
   await page.route("**/api/experiments", (r) =>
     r.fulfill({ json: [{ ...experiment, project: "pushback" }, orphan] }),
   );
-  await page.goto("/behavior/experiment/?name=hello");
+  await page.goto("/experiment/?name=hello");
   const link = page.locator('[data-part="experiment/meta/project"] a');
   await expect(link).toHaveText("pushback");
   await link.click();
   await expect(page).toHaveURL(/\/projects\/p\/\?name=pushback/);
 
-  await page.goto("/behavior/experiments/");
+  await page.goto("/experiments/");
   await expect(page.locator('[data-part="experiments/row/hello"]')).toContainText("pushback");
-  await page.getByLabel("Project").selectOption("gone");
+  if (isMobile) await page.getByRole("button", { name: "Menu" }).click();
+  await page.getByLabel("Project", { exact: true }).last().selectOption("gone");
   await expect(page).toHaveURL(/project=gone/);
+  if (isMobile) await page.keyboard.press("Escape");
   await expect(page.locator('[data-part="experiments/row/second-turn"]')).toBeVisible();
   await expect(page.locator('[data-part="experiments/row/hello"]')).toHaveCount(0);
+  // the scope stays as the sidebar moves on, and Overview opens the project's page
+  if (isMobile) await page.getByRole("button", { name: "Menu" }).click();
+  const pages = page.getByRole("navigation", { name: "Pages" }).last();
+  await expect(pages.getByRole("link", { name: "Runs" })).toHaveAttribute(
+    "href",
+    "/runs/?project=gone",
+  );
+  await expect(pages.getByRole("link", { name: "Overview" })).toHaveAttribute(
+    "href",
+    "/projects/p/?name=gone",
+  );
 });
 
 test("New project writes its README and opens it", async ({ page }, info) => {
@@ -115,7 +131,7 @@ test("New experiment starts one inside the project", async ({ page }) => {
   await expect(dialog.getByLabel("Domain")).toHaveValue("honesty");
   await dialog.getByLabel("Name, for the question").fill("flip");
   await dialog.getByRole("button", { name: "Create" }).click();
-  await expect(page).toHaveURL(/\/behavior\/experiment\/\?name=flip/);
+  await expect(page).toHaveURL(/\/experiment\/\?name=flip/);
   expect(sent).toEqual([{ name: "flip", domain: "honesty", project: "pushback" }]);
 });
 

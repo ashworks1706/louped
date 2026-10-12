@@ -645,7 +645,8 @@ class BoardView(BaseModel):
     data: dict[str, BoardData] = Field(min_length=1)
     controls: list[BoardControl] = []
     panels: list[BoardPanel] = Field(min_length=1)
-    #: As its own page (boards/<name>.json): the sidebar it is listed in.
+    #: Read from boards written when the app had a sidebar per domain; every board page is now
+    #: listed once, under Research.
     section: Literal["workspace", "behavior", "efficiency"] = "workspace"
 
     @model_validator(mode="after")

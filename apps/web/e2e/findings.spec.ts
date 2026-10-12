@@ -21,7 +21,7 @@ test("a Probe result is kept as a run under an experiment", async ({ page }, inf
     sent = r.request().postDataJSON();
     return r.fulfill({ json: { run: "m-1" } });
   });
-  await page.goto("/behavior/probe/?tab=inspect&mode=heads&heads=");
+  await page.goto("/probe/?tab=inspect&mode=heads&heads=");
   const save = page.locator('[data-part="playground/save"]');
   await expect(save).toBeDisabled();
   await page.getByLabel("Prompt").fill("hi");
@@ -41,7 +41,7 @@ test("a Probe result is kept as a run under an experiment", async ({ page }, inf
 
 test("Vectors says how alike a model's vectors are", async ({ page }, info) => {
   await mockPages(page);
-  await page.goto("/behavior/vectors/");
+  await page.goto("/vectors/");
   const alike = page.locator('[data-part="vectors/similar/tiny"]');
   await expect(alike).toContainText("How alike they are");
   await expect(alike.getByTestId("heat-cell").nth(1)).toHaveText("0.12");

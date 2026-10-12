@@ -32,6 +32,7 @@ from louped.core.paths import experiments_dir, inside
 from louped.server import (
     benchmarks,
     datasets,
+    feedback,
     graphs,
     hub,
     inspect_view,
@@ -860,6 +861,7 @@ def create_app(
     app.include_router(hub.router(jobs))
     app.include_router(datasets.router(jobs))
     app.include_router(benchmarks.router(editing))
+    app.include_router(feedback.router(editing))
     pages: dict[str, list[str]] = {}  # the plugins' pages, once plugins.mount has served them
     app.include_router(ui.router(launching, pages))
     # louped's look and helpers for plugin pages (louped.server.ui, plugins.mdx)

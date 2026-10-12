@@ -161,7 +161,8 @@ CATALOG: dict[Region, list[Kind]] = {
     "home": [
         Kind(block="stats", about="Live now, active questions, answered, runs this week."),
         Kind(block="live", about="Jobs and runs going now; absent when none are."),
-        Kind(block="domains", about="The research domains, each with its count of questions."),
+        Kind(block="projects", about="The projects, each with its experiments and runs."),
+        Kind(block="domains", about="The old name of projects: shows the projects."),
         Kind(block="active", about="The questions marked active."),
         Kind(block="latest", about="The newest runs."),
         TEXT,
@@ -232,7 +233,7 @@ CATALOG: dict[Region, list[Kind]] = {
 
 _b = Block
 DEFAULT: dict[Region, list[Block]] = {
-    "home": [_b(block=b) for b in ("stats", "live", "domains", "active", "latest")],
+    "home": [_b(block=b) for b in ("stats", "live", "projects", "active", "latest")],
     "run.tabs": [
         _b(block=b)
         for b in ("overview", "items", "figures", "samples", "log", "artifacts", "config")

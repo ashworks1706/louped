@@ -6,7 +6,7 @@ import { mockPages } from "./pages-api";
 // benchmark, and louped bench runs by speed.
 test("each eval task's runs are its leaderboard, launched from there", async ({ page }, info) => {
   await mockPages(page);
-  await page.goto("/behavior/benchmarks/");
+  await page.goto("/benchmarks/?axis=behavior");
   await expect(page.getByRole("heading", { level: 1, name: "Benchmarks" })).toBeVisible();
   const tasks = page.locator('[data-part^="benchmarks/task/"]');
   // tasks with runs and the project's; inspect_evals' without runs wait for a search
@@ -63,7 +63,7 @@ test("a Hub dataset becomes a benchmark from its field mapping", async ({ page }
       },
     });
   });
-  await page.goto("/behavior/benchmarks/");
+  await page.goto("/benchmarks/?axis=behavior");
   await page.locator('[data-part="benchmarks/add"]').click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Name", { exact: true }).fill("gsm8k");
@@ -81,7 +81,7 @@ test("speed benchmarks by model and setting, newest or each model's fastest", as
   page,
 }, info) => {
   await mockPages(page);
-  await page.goto("/efficiency/benchmarks/");
+  await page.goto("/benchmarks/?axis=efficiency");
   const rows = page.locator('[data-part^="benchmarks/speed/"]');
   await expect(rows).toHaveCount(3);
   await expect(rows.nth(1)).toContainText("990.1");
@@ -93,11 +93,11 @@ test("speed benchmarks by model and setting, newest or each model's fastest", as
   await expect(rows.first()).toContainText("int8");
 
   // the speed tool keeps its URL, now named Speed
-  await page.goto("/efficiency/benchmark/");
+  await page.goto("/speed/");
   await expect(page.getByRole("heading", { level: 1, name: "Speed" })).toBeVisible();
 
   await page.route("**/api/benchmarks/speed", (r) => r.fulfill({ json: [] }));
-  await page.goto("/efficiency/benchmarks/");
+  await page.goto("/benchmarks/?axis=efficiency");
   await expect(page.getByRole("link", { name: "Launch louped bench" })).toHaveAttribute(
     "href",
     "/launch/?id=bench",

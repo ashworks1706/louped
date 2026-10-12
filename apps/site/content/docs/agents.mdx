@@ -49,6 +49,7 @@ test.
 | `trace`                                                  | Follows a figure's point to its rows, script and code   |
 | `check`                                                  | Finds numbers and citations with no source              |
 | `reports`, `export_figure`                               | Lists reports/ and exports a figure into it             |
+| `feedback`, `draft_feedback`                             | Drafts a feature request or bug report for louped       |
 
 Work the agent starts shows in the app like your own. To ask about or change a part of a page,
 Shift+click it. You can pick as many parts as you like. Your agent gets them with their data. In
@@ -62,6 +63,14 @@ agent makes it where it belongs:
 - a figure on the run or on the experiment's page
 
 Then it points you at it. Ask again to change it; it keeps the name.
+
+## Ask for what louped lacks
+
+If louped cannot do a thing the work needs, the agent drafts a request with `draft_feedback`. A
+request is a feature or a bug. It goes to **Feedback**, at the foot of the sidebar. There you read
+it and edit it. Then press **Open on GitHub**. GitHub's new-issue page opens with the request
+filled in, and you submit it there as yourself. louped holds no GitHub token and sends nothing.
+You can also write a request yourself with **New request**.
 
 ## Without `louped init`
 

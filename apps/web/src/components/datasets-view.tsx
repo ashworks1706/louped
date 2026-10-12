@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { parseAsString, useQueryStates } from "nuqs";
 import { toast } from "sonner";
 
+import { AxisFilter } from "@/components/experiments-list";
 import { EmptyState } from "@/components/empty-state";
 import { Markdown } from "@/components/markdown";
 import { Part, part, partId, PartData } from "@/components/parts";
@@ -36,21 +37,25 @@ import {
   type HubHit,
 } from "@/lib/api";
 import { jobHref } from "@/lib/href";
+import { useAxis } from "@/lib/scope";
 
 const compact = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 });
 const count = (n: number | null | undefined) => (n == null ? "—" : compact.format(n));
 const bytes = (n: number | null | undefined) =>
   n == null ? "—" : n < 1e6 ? `${compact.format(n / 1e3)} KB` : `${compact.format(n / 1e6)} MB`;
 const DOMAIN_TITLE: Record<Domain, string> = { behavior: "Behavior", efficiency: "Efficiency" };
+/** What adding does: list a dataset under the axis shown, or under both. */
+const addTo = (domain: Domain | null) => (domain ? `Add to ${DOMAIN_TITLE[domain]}` : "Add");
 /** A cell's value as text, cut so a long passage does not fill the table. */
 const cell = (v: unknown) => {
   const text = typeof v === "string" ? v : JSON.stringify(v);
   return text === undefined ? "—" : text.length > 240 ? `${text.slice(0, 240)}…` : text;
 };
 
-/** The datasets this domain uses (its own and those listed under none), the Hub to add more,
- * and one dataset's rows in a side panel. */
-export function DatasetsView({ domain }: { domain: Domain }) {
+/** The datasets the project uses, on one axis (its own and those listed under none) or both, the
+ * Hub to add more, and one dataset's rows in a side panel. */
+export function DatasetsView() {
+  const [domain] = useAxis();
   const [s, set] = useQueryStates({
     q: parseAsString,
     open: parseAsString,
@@ -58,11 +63,14 @@ export function DatasetsView({ domain }: { domain: Domain }) {
     split: parseAsString,
   });
   const all = useQuery(q.datasets());
-  const mine = (all.data ?? []).filter((d) => !d.domains?.length || d.domains.includes(domain));
+  const mine = (all.data ?? []).filter(
+    (d) => domain == null || !d.domains?.length || d.domains.includes(domain),
+  );
   const opened = mine.find((d) => d.id === s.open) ?? null;
   const openId = (id: string | null) => void set({ open: id, config: null, split: null });
   return (
     <div className="flex flex-col gap-6">
+      <AxisFilter area="datasets" />
       {!isSnapshot() && <HubSearch domain={domain} q={s.q} onSearch={(t) => void set({ q: t })} />}
       <QueryState query={all}>
         {() =>
@@ -151,7 +159,7 @@ function DatasetsTable({
                   <TableCell className="max-w-md font-mono text-xs">
                     {training ? (
                       <Link
-                        href={`/behavior/training-sets/?set=${encodeURIComponent(d.path ?? "")}`}
+                        href={`/training-sets/?set=${encodeURIComponent(d.path ?? "")}`}
                         className="underline-offset-4 hover:underline"
                         title={d.path ?? undefined}
                       >
@@ -188,7 +196,7 @@ function HubSearch({
   q: text,
   onSearch,
 }: {
-  domain: Domain;
+  domain: Domain | null;
   q: string | null;
   onSearch: (q: string | null) => void;
 }) {
@@ -235,7 +243,7 @@ function HubSearch({
   );
 }
 
-function Hits({ domain, text }: { domain: Domain; text: string }) {
+function Hits({ domain, text }: { domain: Domain | null; text: string }) {
   const hits = useQuery(
     q.hubSearch({ kind: "datasets", q: text, task: "", library: "", sort: "downloads" }),
   );
@@ -280,16 +288,16 @@ function Hits({ domain, text }: { domain: Domain; text: string }) {
   );
 }
 
-function Hit({ hit, domain }: { hit: HubHit; domain: Domain }) {
+function Hit({ hit, domain }: { hit: HubHit; domain: Domain | null }) {
   const client = useQueryClient();
   const [, set] = useQueryStates({ open: parseAsString });
   const add = useMutation({
-    mutationFn: () => hubAdd({ kind: "datasets", id: hit.id, domains: [domain] }),
+    mutationFn: () => hubAdd({ kind: "datasets", id: hit.id, domains: domain ? [domain] : [] }),
     meta: { action: "Add" },
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["datasets"] });
       void client.invalidateQueries({ queryKey: ["hub", "added"] });
-      toast(`Added to ${DOMAIN_TITLE[domain]}`, { description: hit.id });
+      toast(domain ? `Added to ${DOMAIN_TITLE[domain]}` : "Added", { description: hit.id });
     },
   });
   const num = "text-right font-mono tabular-nums";
@@ -315,7 +323,7 @@ function Hit({ hit, domain }: { hit: HubHit; domain: Domain }) {
           disabled={add.isPending || add.isSuccess}
           {...part(partId("datasets/add", hit.id))}
         >
-          {add.isSuccess ? "Added" : `Add to ${DOMAIN_TITLE[domain]}`}
+          {add.isSuccess ? "Added" : addTo(domain)}
         </Button>
       </TableCell>
     </TableRow>
@@ -334,7 +342,7 @@ function Detail({
   id: string;
   hub: boolean;
   listed: boolean;
-  domain: Domain;
+  domain: Domain | null;
   config: string | null;
   split: string | null;
   onPick: (config: string | null, split: string | null) => void;
@@ -374,7 +382,7 @@ function DetailBody({
 }: {
   detail: DatasetDetail;
   listed: boolean;
-  domain: Domain;
+  domain: Domain | null;
   onPick: (config: string | null, split: string | null) => void;
 }) {
   const h = d.hub;
@@ -530,14 +538,14 @@ function HubActions({
 }: {
   id: string;
   listed: boolean;
-  domain: Domain;
+  domain: Domain | null;
   url?: string;
 }) {
   const client = useQueryClient();
   const router = useRouter();
   const add = useMutation({
     mutationFn: (download: boolean) =>
-      hubAdd({ kind: "datasets", id, download, domains: listed ? [] : [domain] }),
+      hubAdd({ kind: "datasets", id, download, domains: listed || !domain ? [] : [domain] }),
     meta: { action: "Add" },
     onSuccess: (done) => {
       void client.invalidateQueries({ queryKey: ["datasets"] });
@@ -545,7 +553,7 @@ function HubActions({
       if (done.job) {
         void client.invalidateQueries({ queryKey: ["jobs"] });
         router.push(jobHref(done.job.id));
-      } else toast(`Added to ${DOMAIN_TITLE[domain]}`, { description: id });
+      } else toast(domain ? `Added to ${DOMAIN_TITLE[domain]}` : "Added", { description: id });
     },
   });
   return (
@@ -557,7 +565,7 @@ function HubActions({
           disabled={add.isPending}
           {...part("datasets/detail/add")}
         >
-          Add to {DOMAIN_TITLE[domain]}
+          {addTo(domain)}
         </Button>
       )}
       <Button

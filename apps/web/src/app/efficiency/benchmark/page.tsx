@@ -1,18 +1,12 @@
-import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { PageHeader } from "@/components/page-header";
-import { BENCHMARK, Playground } from "@/components/playground";
-import { navItem } from "@/lib/nav";
+import { Moved } from "@/components/moved";
 
-export const metadata: Metadata = { title: "Speed" };
-
+/** An old address: sends the visitor to where the page is now. */
 export default function Page() {
   return (
-    <>
-      <PageHeader item={navItem("/efficiency/benchmark/")} />
-      <section className="mx-auto max-w-6xl px-6 py-8">
-        <Playground tools={BENCHMARK} />
-      </section>
-    </>
+    <Suspense>
+      <Moved />
+    </Suspense>
   );
 }

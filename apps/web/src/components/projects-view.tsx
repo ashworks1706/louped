@@ -1,14 +1,17 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ExternalLink, FlaskConical, FolderKanban, Pencil, Plus } from "lucide-react";
+import { ExternalLink, FlaskConical, FolderKanban, Pencil, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { Crumbs } from "@/components/crumbs";
 import { EmptyState } from "@/components/empty-state";
+import { FormDialog, Label, NAME_PATTERN, text } from "@/components/form-dialog";
+import { NewExperiment } from "@/components/new-experiment";
 import { DomainGroups, StatusLabel } from "@/components/experiments-list";
 import { Help } from "@/components/help";
 import { EditableText } from "@/components/markdown-editor";
@@ -16,12 +19,10 @@ import { arrange, Part, part, partId, PartData, useRules } from "@/components/pa
 import { QueryState } from "@/components/query-state";
 import { RunsTable } from "@/components/runs-table";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  createExperiment,
   createProject,
   projectReadme,
   q,
@@ -32,12 +33,10 @@ import {
   type ProjectMeta,
 } from "@/lib/api";
 import { ago } from "@/lib/format";
-import { experimentHref, host, projectHref } from "@/lib/href";
+import { host, projectHref } from "@/lib/href";
 import { cn } from "@/lib/utils";
 
 const STATUSES = ["active", "parked", "done"] as const;
-/** A project's name: its folder under projects/, as louped.core.paths.NAME allows. */
-const NAME_PATTERN = "[a-z0-9][a-z0-9\\-]{0,63}";
 
 /** Every project as a card: what it is for, where it stands, and its experiments and runs. */
 export function ProjectsList() {
@@ -85,6 +84,30 @@ export function ProjectsList() {
         )
       }
     </QueryState>
+  );
+}
+
+/** The projects as cards, for Home; nothing while there are none. */
+export function ProjectGrid() {
+  const projects = useQuery(q.projects());
+  const all = projects.data ?? [];
+  if (all.length === 0) {
+    return (
+      <p className="text-muted-foreground text-sm">
+        No projects yet.{" "}
+        <Link href="/projects/" className="text-foreground underline-offset-4 hover:underline">
+          Make one
+        </Link>{" "}
+        to group experiments toward a goal.
+      </p>
+    );
+  }
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {all.map((p) => (
+        <ProjectCard key={p.name} project={p} />
+      ))}
+    </div>
   );
 }
 
@@ -198,13 +221,12 @@ function ProjectHeader({ project: p }: { project: ProjectDetail }) {
   return (
     <header className="border-b">
       <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 py-6">
-        <Link
-          href="/projects/"
-          className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 text-xs"
-          {...part("projects/back")}
-        >
-          <ArrowLeft className="size-3" /> Projects
-        </Link>
+        <Crumbs
+          items={[
+            { key: "projects", label: "Projects", href: "/projects/" },
+            { key: "project", label: p.title },
+          ]}
+        />
         <div className="flex flex-col items-start gap-x-6 gap-y-3 sm:flex-row">
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <div className="flex flex-wrap items-center gap-3">
@@ -475,64 +497,6 @@ function Field({
   );
 }
 
-/** A dialog's form, its fields as labels over inputs. */
-function FormDialog({
-  open,
-  onOpenChange,
-  id,
-  title,
-  description,
-  children,
-  onSubmit,
-  pending,
-  submit,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  id: string;
-  title: string;
-  description: string;
-  children: React.ReactNode;
-  onSubmit: (form: FormData) => void;
-  pending: boolean;
-  submit: string;
-}) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex flex-col gap-4 p-5" {...part(partId("projects/dialog", id))}>
-        <div className="flex flex-col gap-1">
-          <DialogTitle className="text-sm font-medium">{title}</DialogTitle>
-          <DialogDescription className="text-muted-foreground text-xs">
-            {description}
-          </DialogDescription>
-        </div>
-        <form
-          className="flex flex-col gap-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            onSubmit(new FormData(e.currentTarget));
-          }}
-        >
-          {children}
-          <Button type="submit" size="sm" className="self-end" disabled={pending}>
-            {submit}
-          </Button>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function Label({ text, children }: { text: string; children: React.ReactNode }) {
-  return (
-    <label className="flex flex-col gap-1 text-xs">
-      {text}
-      {children}
-    </label>
-  );
-}
-
-const text = (form: FormData, key: string) => String(form.get(key) ?? "").trim();
 /** A comma-separated field as its items. */
 const list = (form: FormData, key: string) =>
   text(form, key)
@@ -614,67 +578,6 @@ function NewProject() {
         </Label>
         <Label text="Status">
           <StatusSelect value="active" />
-        </Label>
-      </FormDialog>
-    </>
-  );
-}
-
-/** Writes experiments/<name>/ in this project and opens its page, to write its question. */
-function NewExperiment({ project }: { project: string }) {
-  const [open, setOpen] = useState(false);
-  const client = useQueryClient();
-  const router = useRouter();
-  const domains = useQuery({ ...q.domains(), enabled: open });
-  const make = useMutation({
-    mutationFn: createExperiment,
-    meta: { action: "Create experiment" },
-    onSuccess: (e) => {
-      void client.invalidateQueries({ queryKey: ["project", project] });
-      void client.invalidateQueries({ queryKey: ["projects"] });
-      void client.invalidateQueries({ queryKey: ["experiments"] });
-      void client.invalidateQueries({ queryKey: ["launchables"] });
-      setOpen(false);
-      toast(`Created ${e.name}`, { description: `experiments/${e.name}/, in ${project}` });
-      router.push(experimentHref(e.name, e.axis, "design"));
-    },
-  });
-  return (
-    <>
-      <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
-        <FlaskConical /> New experiment
-      </Button>
-      <FormDialog
-        open={open}
-        onOpenChange={setOpen}
-        id="new-experiment"
-        title={`New experiment in ${project}`}
-        description="Writes experiments/<name>/ with its README to fill in and a run.py, active, with project: in its front matter."
-        pending={make.isPending}
-        submit="Create"
-        onSubmit={(form) =>
-          make.mutate({ name: text(form, "name"), domain: text(form, "domain"), project })
-        }
-      >
-        <Label text="Name, for the question">
-          <Input
-            name="name"
-            required
-            pattern={NAME_PATTERN}
-            title="Lowercase letters, digits and -"
-            placeholder="does-pushback-flip-answers"
-            className="font-mono placeholder:font-sans"
-            autoComplete="off"
-          />
-        </Label>
-        <Label text="Domain">
-          <NativeSelect name="domain" required className="w-full" key={domains.data?.length}>
-            {(domains.data ?? []).map((d) => (
-              <option key={d.key} value={d.key}>
-                {d.title}
-              </option>
-            ))}
-          </NativeSelect>
         </Label>
       </FormDialog>
     </>

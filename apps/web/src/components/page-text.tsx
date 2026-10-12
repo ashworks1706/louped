@@ -3,7 +3,7 @@
 import { part, useRules } from "@/components/parts";
 import { partId } from "@/lib/parts";
 
-/** A page's name in addresses: its path as words, page/runs, page/behavior-vectors. */
+/** A page's name in addresses: its path as words, page/runs, page/training-sets. */
 const pageName = (href: string) => href.split("/").filter(Boolean).join("-") || "home";
 
 /** A page's title and purpose, as parts the layout can rename or (the purpose) hide. */

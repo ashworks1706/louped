@@ -36,7 +36,7 @@ const paper = {
 
 export async function mockHub(page: Page) {
   const json = (glob: string, body: unknown) => page.route(glob, (r) => r.fulfill({ json: body }));
-  await json("**/api/hub/me", { token: true, name: "ash", avatar: null, error: null });
+  await json("**/api/hub/me", { token: true, name: "ash", avatar: null, error: null, env: false });
   await json("**/api/hub/added", { models: [qwen.id], embeddings: [], datasets: [] });
   await page.route("**/api/hub/search?*", (r) =>
     r.fulfill({ json: r.request().url().includes("kind=papers") ? [paper] : [qwen] }),

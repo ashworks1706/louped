@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Menu, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
+import { FolderKanban, Menu, PanelLeftClose, PanelLeftOpen, Rocket, Search } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState, useSyncExternalStore } from "react";
@@ -25,18 +25,19 @@ import {
 } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { q } from "@/lib/api";
+import { NativeSelect } from "@/components/ui/native-select";
+import { projectHref } from "@/lib/href";
 import {
   activeHref,
+  BOARD_PATH,
   boardItem,
-  boardPath,
-  DOMAINS,
+  GROUPS,
   NAV,
+  PLUGIN_PATH,
   pluginItem,
-  pluginPath,
-  SECTIONS,
-  sectionOf,
   type NavItem,
 } from "@/lib/nav";
+import { scoped, useProject } from "@/lib/scope";
 import { cn } from "@/lib/utils";
 
 /** Whether the sidebar is folded to icons: this viewer's choice, kept in the browser when it
@@ -85,7 +86,7 @@ function useFolded(): [boolean, () => void] {
   return [folded, toggle];
 }
 
-/** The top bar (sections, search, what is running) over a sidebar of the section's pages. */
+/** The top bar (search, Launch, what is running) over the sidebar: the project, then every page. */
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [folded, toggle] = useFolded();
   return (
@@ -112,9 +113,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 function TopBar({ folded, toggle }: { folded: boolean; toggle: () => void }) {
-  const pathname = usePathname();
-  const section = sectionOf(pathname);
-  const rule = useRules();
   return (
     <header className="bg-background/80 sticky top-0 z-40 flex h-12 items-center gap-2 border-b px-3 backdrop-blur">
       <MobileNav />
@@ -129,37 +127,33 @@ function TopBar({ folded, toggle }: { folded: boolean; toggle: () => void }) {
       >
         {folded ? <PanelLeftOpen /> : <PanelLeftClose />}
       </Button>
-      <Link
-        href="/"
-        className="flex items-center gap-2 pr-2 text-sm font-semibold tracking-tight"
-        {...part("shell/home")}
-      >
-        <Mark className="size-5" />
-        louped
-      </Link>
-      <nav aria-label="Sections" className="hidden items-center gap-0.5 sm:flex">
-        {arrange(SECTIONS, (s) => partId("shell/domain", s.section), rule).map((s) => (
+      <Scoped href="/">
+        {(href) => (
           <Link
-            key={s.section}
-            href={s.href}
-            {...part(partId("shell/domain", s.section))}
-            aria-current={s.section === section ? "page" : undefined}
-            className={cn(
-              "flex h-8 items-center rounded-md px-3 text-sm transition-colors",
-              s.section === section
-                ? "bg-accent text-foreground font-medium"
-                : "text-muted-foreground hover:text-foreground",
-            )}
+            href={href}
+            className="flex items-center gap-2 pr-2 text-sm font-semibold tracking-tight"
+            {...part("shell/home")}
           >
-            {rule(partId("shell/domain", s.section)).label ?? s.title}
+            <Mark className="size-5" />
+            louped
           </Link>
-        ))}
-      </nav>
+        )}
+      </Scoped>
       <div className="ml-auto flex items-center gap-2">
         <span {...part("shell/jobs")} className="contents">
           <LiveJobs />
         </span>
         <SearchButton />
+        <Scoped href="/launch/">
+          {(href) => (
+            <Button asChild size="sm" variant="outline" {...part("shell/launch")}>
+              <Link href={href} aria-label="Launch">
+                <Rocket />
+                <span className="hidden sm:inline">Launch</span>
+              </Link>
+            </Button>
+          )}
+        </Scoped>
         <span className="hidden lg:block" {...part("shell/status")}>
           <ServerStatus />
         </span>
@@ -169,6 +163,27 @@ function TopBar({ folded, toggle }: { folded: boolean; toggle: () => void }) {
       </div>
     </header>
   );
+}
+
+/** A link in the picked project's scope; unscoped while the address is read (a static page reads
+ * it under Suspense). */
+function Scoped({ href, children }: { href: string; children: (href: string) => React.ReactNode }) {
+  return (
+    <Suspense fallback={children(href)}>
+      <InScope href={href}>{children}</InScope>
+    </Suspense>
+  );
+}
+
+function InScope({
+  href,
+  children,
+}: {
+  href: string;
+  children: (href: string) => React.ReactNode;
+}) {
+  const [project] = useProject();
+  return children(scoped(href, project));
 }
 
 /** What is running, a click from the Runs page that follows it. */
@@ -204,59 +219,152 @@ function SearchButton() {
   );
 }
 
-/** The current section's pages; folded, their icons with the name on hover. */
-function SidebarNav({ folded = false, onNavigate }: { folded?: boolean; onNavigate?: () => void }) {
+/** The project switcher, then each group's pages; folded, their icons with the name on hover. */
+function SidebarNav(props: { folded?: boolean; onNavigate?: () => void }) {
+  return (
+    <Suspense fallback={<SidebarBody {...props} project={null} />}>
+      <ScopedSidebar {...props} />
+    </Suspense>
+  );
+}
+
+function ScopedSidebar(props: { folded?: boolean; onNavigate?: () => void }) {
+  const [project] = useProject();
+  return <SidebarBody {...props} project={project} />;
+}
+
+function SidebarBody({
+  folded = false,
+  onNavigate,
+  project,
+}: {
+  folded?: boolean;
+  onNavigate?: () => void;
+  project: string | null;
+}) {
   const pathname = usePathname();
-  const section = sectionOf(pathname);
-  const domain = DOMAINS.find((d) => d.section === section);
   const active = activeHref(pathname);
   const rule = useRules();
-  const items = arrange(
-    NAV.filter((n) => n.section === section),
-    (n) => partId("shell/nav", n.href),
-    rule,
-  );
+  const items = arrange(NAV, (n) => partId("shell/nav", n.href), rule);
+  const health = useQuery(q.health());
   return (
-    <nav className="flex flex-col gap-0.5 p-2" aria-label="Pages">
-      {!folded && (
-        <p className="text-muted-foreground flex h-8 items-center gap-2 px-2 text-xs font-medium">
-          {domain ? (
-            <>
-              <domain.icon className="size-3.5" />
-              {domain.title}
-            </>
-          ) : (
-            "Workspace"
-          )}
-        </p>
-      )}
-      {items.map((item) => (
-        <NavLink
-          key={item.href}
-          item={{ ...item, title: rule(partId("shell/nav", item.href)).label ?? item.title }}
-          active={item.href === active}
-          folded={folded}
-          onNavigate={onNavigate}
-        />
-      ))}
+    <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2" aria-label="Pages">
       <Suspense>
-        <BoardLinks folded={folded} onNavigate={onNavigate} />
-        <PluginLinks folded={folded} onNavigate={onNavigate} />
+        <ProjectSwitcher folded={folded} onNavigate={onNavigate} />
       </Suspense>
+      {GROUPS.map((g) => (
+        <div
+          key={g.group}
+          className="flex flex-col gap-0.5"
+          {...part(partId("shell/group", g.group))}
+        >
+          {folded ? (
+            <span className="bg-border mx-auto my-1.5 h-px w-6" aria-hidden />
+          ) : (
+            <p className="text-muted-foreground flex h-8 items-end px-2 pb-1 text-xs font-medium">
+              {rule(partId("shell/group", g.group)).label ?? g.title}
+            </p>
+          )}
+          {items
+            .filter((n) => n.group === g.group)
+            .map((item) => (
+              <NavLink
+                key={item.href}
+                item={{
+                  ...item,
+                  // the overview of a project is its page
+                  href:
+                    item.href === "/" && project
+                      ? projectHref(project)
+                      : scoped(item.href, project),
+                  title: rule(partId("shell/nav", item.href)).label ?? item.title,
+                }}
+                address={item.href}
+                active={item.href === active}
+                folded={folded}
+                onNavigate={onNavigate}
+              />
+            ))}
+          {g.group === "research" && (
+            <Suspense>
+              <BoardLinks folded={folded} onNavigate={onNavigate} />
+              <PluginLinks folded={folded} onNavigate={onNavigate} />
+            </Suspense>
+          )}
+        </div>
+      ))}
+      <div className="mt-auto flex flex-col gap-0.5 pt-4" {...part(partId("shell/group", "app"))}>
+        {items
+          // a shared server or a published dashboard keeps no requests
+          .filter((n) => n.group === "app" && health.data?.launching)
+          .map((item) => (
+            <NavLink
+              key={item.href}
+              item={{ ...item, title: rule(partId("shell/nav", item.href)).label ?? item.title }}
+              address={item.href}
+              active={item.href === active}
+              folded={folded}
+              onNavigate={onNavigate}
+            />
+          ))}
+      </div>
     </nav>
   );
 }
 
-/** The project's boards shown as pages in this section: boards/<name>.json, one entry each. */
+/** Which project the app is scoped to: every list then shows that project's part. */
+function ProjectSwitcher({ folded, onNavigate }: { folded: boolean; onNavigate?: () => void }) {
+  const projects = useQuery(q.projects());
+  const [project, setProject] = useProject();
+  const pathname = usePathname();
+  const rule = useRules()("shell/project");
+  if (rule.hidden) return null;
+  const all = projects.data ?? [];
+  const manage = (
+    <Link
+      href="/projects/"
+      onClick={onNavigate}
+      aria-label="All projects"
+      title="All projects"
+      aria-current={pathname.startsWith("/projects/") && !project ? "page" : undefined}
+      className={cn(
+        "text-muted-foreground hover:bg-accent/60 hover:text-foreground flex size-8 shrink-0 items-center justify-center rounded-md transition-colors",
+        folded && "mx-auto",
+      )}
+      {...part("shell/projects")}
+    >
+      <FolderKanban className="size-4" />
+    </Link>
+  );
+  if (folded) return manage;
+  return (
+    <div className="flex items-center gap-1 pb-1" {...part("shell/project")}>
+      <NativeSelect
+        aria-label="Project"
+        value={project ?? ""}
+        onChange={(e) => void setProject(e.target.value || null)}
+        className="h-8 min-w-0 flex-1 text-sm"
+      >
+        <option value="">{rule.label ?? "All projects"}</option>
+        {[...new Set([...all.map((p) => p.name), ...(project ? [project] : [])])].map((name) => (
+          <option key={name} value={name}>
+            {all.find((p) => p.name === name)?.title ?? name}
+          </option>
+        ))}
+      </NativeSelect>
+      {manage}
+    </div>
+  );
+}
+
+/** The project's boards shown as pages: boards/<name>.json, one entry each. */
 function BoardLinks({ folded, onNavigate }: { folded: boolean; onNavigate?: () => void }) {
   const pathname = usePathname();
   const name = useSearchParams().get("name");
-  const section = sectionOf(pathname);
   const boards = useQuery(q.boards());
-  const here = pathname.replace(/\/?$/, "/") === boardPath(section);
+  const here = pathname.replace(/\/?$/, "/") === BOARD_PATH;
   return (boards.data ?? [])
     .map(boardItem)
-    .filter((b) => b.section === section)
     .map((b) => (
       <NavLink
         key={b.href}
@@ -268,33 +376,33 @@ function BoardLinks({ folded, onNavigate }: { folded: boolean; onNavigate?: () =
     ));
 }
 
-/** The project's plugins in this section: louped.core.plugins, one entry each. */
+/** The project's plugins with a page: louped.core.plugins, one entry each. */
 function PluginLinks({ folded, onNavigate }: { folded: boolean; onNavigate?: () => void }) {
   const pathname = usePathname();
   const name = useSearchParams().get("name");
-  const section = sectionOf(pathname);
   const plugins = useQuery(q.plugins());
-  const here = pathname.replace(/\/?$/, "/") === pluginPath(section);
-  return (plugins.data ?? [])
-    .filter((p) => p.section === section)
-    .map((p) => (
-      <NavLink
-        key={p.name}
-        item={pluginItem(p)}
-        active={here && name === p.name}
-        folded={folded}
-        onNavigate={onNavigate}
-      />
-    ));
+  const here = pathname.replace(/\/?$/, "/") === PLUGIN_PATH;
+  return (plugins.data ?? []).map((p) => (
+    <NavLink
+      key={p.name}
+      item={pluginItem(p)}
+      active={here && name === p.name}
+      folded={folded}
+      onNavigate={onNavigate}
+    />
+  ));
 }
 
 function NavLink({
   item,
+  address = item.href,
   active,
   folded,
   onNavigate,
 }: {
   item: NavItem;
+  /** The part address: the page's own href, without the project scope. */
+  address?: string;
   active: boolean;
   folded: boolean;
   onNavigate?: () => void;
@@ -303,7 +411,7 @@ function NavLink({
     <Link
       href={item.href}
       onClick={onNavigate}
-      {...part(partId("shell/nav", item.href))}
+      {...part(partId("shell/nav", address))}
       aria-current={active ? "page" : undefined}
       aria-label={folded ? item.title : undefined}
       className={cn(
@@ -327,11 +435,9 @@ function NavLink({
   );
 }
 
-/** On a phone: the sections and the current section's pages, in a sheet. */
+/** On a phone: the sidebar, in a sheet. */
 function MobileNav() {
   const [open, setOpen] = useState(false);
-  const pathname = usePathname();
-  const section = sectionOf(pathname);
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
@@ -347,26 +453,9 @@ function MobileNav() {
       </SheetTrigger>
       <SheetContent side="left" className="w-64 p-3">
         <SheetTitle className="sr-only">Navigation</SheetTitle>
-        <SheetDescription className="sr-only">Sections and their pages.</SheetDescription>
+        <SheetDescription className="sr-only">The project and its pages.</SheetDescription>
         <div className="mt-8 flex flex-col gap-4">
-          <div className="flex flex-col gap-0.5">
-            {SECTIONS.map((s) => (
-              <Link
-                key={s.section}
-                href={s.href}
-                onClick={() => setOpen(false)}
-                className={cn(
-                  "flex h-8 items-center rounded-md px-2 text-sm",
-                  s.section === section ? "bg-accent font-medium" : "text-muted-foreground",
-                )}
-              >
-                {s.title}
-              </Link>
-            ))}
-          </div>
-          <div className="border-t pt-2">
-            <SidebarNav onNavigate={() => setOpen(false)} />
-          </div>
+          <SidebarNav onNavigate={() => setOpen(false)} />
           <ServerStatus />
         </div>
       </SheetContent>

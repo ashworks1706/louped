@@ -4,15 +4,14 @@ import {
   Boxes,
   Brain,
   Database,
-  Dumbbell,
   FlaskConical,
   FileText,
   FolderKanban,
   Gauge,
   GitCompareArrows,
+  Lightbulb,
   House,
   LayoutDashboard,
-  LayoutGrid,
   ListTree,
   MessageSquareText,
   Move3d,
@@ -24,8 +23,13 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-/** Where a page lives in the sidebar: the workspace, or one research domain. */
-export type Section = "workspace" | "behavior" | "efficiency";
+/** The sidebar's groups: the research (questions, runs, write-ups), the instruments (one prompt,
+ * live) and the data; at its foot, louped itself (Feedback). Launch and Projects have no sidebar
+ * entry: the top bar's Launch button and the project switcher open them. */
+export type Group = "research" | "instruments" | "data" | "app" | "hidden";
+
+/** Behavior or efficiency: an experiment's axis, a filter on lists, not a place in the app. */
+export type Axis = "behavior" | "efficiency";
 
 export type NavItem = {
   href: string;
@@ -33,27 +37,27 @@ export type NavItem = {
   description: string;
   icon: LucideIcon;
   shortcut: string;
-  section: Section;
+  group: Group;
 };
 
-/** Every page, in sidebar order within its section. The command menu and the sidebar both read
+/** Every page, in sidebar order within its group. The command menu and the sidebar both read
  * this list. */
 export const NAV: NavItem[] = [
   {
     href: "/",
-    title: "Home",
+    title: "Overview",
     description: "What is running and what is being asked.",
     icon: House,
     shortcut: "G H",
-    section: "workspace",
+    group: "research",
   },
   {
-    href: "/projects/",
-    title: "Projects",
-    description: "The goals the experiments serve, each with its README, links and runs.",
-    icon: FolderKanban,
-    shortcut: "G J",
-    section: "workspace",
+    href: "/experiments/",
+    title: "Experiments",
+    description: "The questions, by domain.",
+    icon: FlaskConical,
+    shortcut: "G E",
+    group: "research",
   },
   {
     href: "/runs/",
@@ -61,7 +65,7 @@ export const NAV: NavItem[] = [
     description: "Every job, eval, analysis and training run, newest first.",
     icon: ListTree,
     shortcut: "G R",
-    section: "workspace",
+    group: "research",
   },
   {
     href: "/compare/",
@@ -69,23 +73,7 @@ export const NAV: NavItem[] = [
     description: "Two runs, sample by sample.",
     icon: GitCompareArrows,
     shortcut: "G C",
-    section: "workspace",
-  },
-  {
-    href: "/sources/",
-    title: "Sources",
-    description: "The papers, docs, slides and notebooks the project rests on.",
-    icon: BookOpen,
-    shortcut: "G S",
-    section: "workspace",
-  },
-  {
-    href: "/hub/",
-    title: "Hub",
-    description: "Models, embeddings, datasets and papers on Hugging Face, added to the project.",
-    icon: Boxes,
-    shortcut: "G U",
-    section: "workspace",
+    group: "research",
   },
   {
     href: "/reports/",
@@ -93,7 +81,95 @@ export const NAV: NavItem[] = [
     description: "What the project hands to people: write-ups, decks, documents and figures.",
     icon: FileText,
     shortcut: "G O",
-    section: "workspace",
+    group: "research",
+  },
+  {
+    href: "/probe/",
+    title: "Probe",
+    description: "One prompt, with and without an intervention.",
+    icon: MessageSquareText,
+    shortcut: "G P",
+    group: "instruments",
+  },
+  {
+    href: "/circuits/",
+    title: "Circuits",
+    description: "Which internal features produce an answer.",
+    icon: Waypoints,
+    shortcut: "G I",
+    group: "instruments",
+  },
+  {
+    href: "/vectors/",
+    title: "Vectors",
+    description: "Directions in a model's activations that stand for a concept.",
+    icon: Move3d,
+    shortcut: "G V",
+    group: "instruments",
+  },
+  {
+    href: "/speed/",
+    title: "Speed",
+    description: "Latency, throughput and memory of one prompt.",
+    icon: Activity,
+    shortcut: "G K",
+    group: "instruments",
+  },
+  {
+    href: "/datasets/",
+    title: "Datasets",
+    description: "What data does the project use? Its Hub datasets, files and training sets.",
+    icon: Table2,
+    shortcut: "G A",
+    group: "data",
+  },
+  {
+    href: "/benchmarks/",
+    title: "Benchmarks",
+    description: "Which model scores best on each eval task, and which runs fastest?",
+    icon: Trophy,
+    shortcut: "G M",
+    group: "data",
+  },
+  {
+    href: "/training-sets/",
+    title: "Training sets",
+    description: "Is a training set sound? Its pairs side by side, with what is wrong flagged.",
+    icon: Database,
+    shortcut: "G D",
+    group: "data",
+  },
+  {
+    href: "/sources/",
+    title: "Sources",
+    description: "The papers, docs, slides and notebooks the project rests on.",
+    icon: BookOpen,
+    shortcut: "G S",
+    group: "data",
+  },
+  {
+    href: "/hub/",
+    title: "Hub",
+    description: "Models, embeddings, datasets and papers on Hugging Face, added to the project.",
+    icon: Boxes,
+    shortcut: "G U",
+    group: "data",
+  },
+  {
+    href: "/feedback/",
+    title: "Feedback",
+    description: "What louped lacks or gets wrong, drafted here and filed on GitHub.",
+    icon: Lightbulb,
+    shortcut: "G F",
+    group: "app",
+  },
+  {
+    href: "/projects/",
+    title: "Projects",
+    description: "The goals the experiments serve, each with its README, links and runs.",
+    icon: FolderKanban,
+    shortcut: "G J",
+    group: "hidden",
   },
   {
     href: "/launch/",
@@ -101,164 +177,33 @@ export const NAV: NavItem[] = [
     description: "Start a script, a config or a command, here or on a cluster.",
     icon: Rocket,
     shortcut: "G L",
-    section: "workspace",
-  },
-  {
-    href: "/behavior/",
-    title: "Overview",
-    description: "What models do, and the mechanisms behind it.",
-    icon: LayoutGrid,
-    shortcut: "G B",
-    section: "behavior",
-  },
-  {
-    href: "/behavior/experiments/",
-    title: "Experiments",
-    description: "The behavior questions, by domain.",
-    icon: FlaskConical,
-    shortcut: "G E",
-    section: "behavior",
-  },
-  {
-    href: "/behavior/probe/",
-    title: "Probe",
-    description: "One prompt, with and without an intervention.",
-    icon: MessageSquareText,
-    shortcut: "G P",
-    section: "behavior",
-  },
-  {
-    href: "/behavior/vectors/",
-    title: "Vectors",
-    description: "Directions in a model's activations that stand for a concept.",
-    icon: Move3d,
-    shortcut: "G V",
-    section: "behavior",
-  },
-  {
-    href: "/behavior/training-sets/",
-    title: "Training sets",
-    description: "Is a training set sound? Its pairs side by side, with what is wrong flagged.",
-    icon: Database,
-    shortcut: "G D",
-    section: "behavior",
-  },
-  {
-    href: "/behavior/datasets/",
-    title: "Datasets",
-    description: "What data does the project use? Its Hub datasets, files and training sets.",
-    icon: Table2,
-    shortcut: "G A",
-    section: "behavior",
-  },
-  {
-    href: "/behavior/benchmarks/",
-    title: "Benchmarks",
-    description: "Which model scores best on each eval task? Its runs as a leaderboard.",
-    icon: Trophy,
-    shortcut: "G M",
-    section: "behavior",
-  },
-  {
-    href: "/behavior/training/",
-    title: "Training",
-    description: "Fine-tuning runs that change what a model does: SFT, DPO, GRPO.",
-    icon: Dumbbell,
-    shortcut: "G N",
-    section: "behavior",
-  },
-  {
-    href: "/behavior/circuits/",
-    title: "Circuits",
-    description: "Which internal features produce an answer.",
-    icon: Waypoints,
-    shortcut: "G I",
-    section: "behavior",
-  },
-  {
-    href: "/efficiency/",
-    title: "Overview",
-    description: "What it costs to run a model, and what a change saves.",
-    icon: LayoutGrid,
-    shortcut: "G F",
-    section: "efficiency",
-  },
-  {
-    href: "/efficiency/experiments/",
-    title: "Experiments",
-    description: "The efficiency questions, by domain.",
-    icon: FlaskConical,
-    shortcut: "G X",
-    section: "efficiency",
-  },
-  {
-    href: "/efficiency/benchmark/",
-    title: "Speed",
-    description: "Latency, throughput and memory of one prompt.",
-    icon: Activity,
-    shortcut: "G K",
-    section: "efficiency",
-  },
-  {
-    href: "/efficiency/datasets/",
-    title: "Datasets",
-    description: "What data does the project use? Its Hub datasets, files and training sets.",
-    icon: Table2,
-    shortcut: "G Q",
-    section: "efficiency",
-  },
-  {
-    href: "/efficiency/benchmarks/",
-    title: "Benchmarks",
-    description: "Which model and setting runs fastest? Speed benchmarks as a leaderboard.",
-    icon: Trophy,
-    shortcut: "G W",
-    section: "efficiency",
-  },
-  {
-    href: "/efficiency/training/",
-    title: "Training",
-    description: "Fine-tuning and adapter runs.",
-    icon: Dumbbell,
-    shortcut: "G T",
-    section: "efficiency",
+    group: "hidden",
   },
 ];
 
-/** The research domains: each a sidebar of its own, entered from the workspace. */
-export const DOMAINS: {
-  section: Exclude<Section, "workspace">;
-  title: string;
-  icon: LucideIcon;
-}[] = [
-  { section: "behavior", title: "Behavior", icon: Brain },
-  { section: "efficiency", title: "Efficiency", icon: Gauge },
+/** The sidebar's groups in order, with their headings. */
+export const GROUPS: { group: Exclude<Group, "app" | "hidden">; title: string }[] = [
+  { group: "research", title: "Research" },
+  { group: "instruments", title: "Instruments" },
+  { group: "data", title: "Data" },
 ];
 
-/** The top bar's sections, each opening its sidebar at its first page. */
-export const SECTIONS: { section: Section; title: string; href: string }[] = [
-  { section: "workspace", title: "Workspace", href: "/" },
-  { section: "behavior", title: "Behavior", href: "/behavior/" },
-  { section: "efficiency", title: "Efficiency", href: "/efficiency/" },
+export const AXES: { axis: Axis; title: string; icon: LucideIcon }[] = [
+  { axis: "behavior", title: "Behavior", icon: Brain },
+  { axis: "efficiency", title: "Efficiency", icon: Gauge },
 ];
 
 /** Detail pages with no sidebar entry, and the list page that stays highlighted on them. */
 const DETAIL: Record<string, string> = {
   "/run/": "/runs/",
   "/job/": "/runs/",
-  "/projects/p/": "/projects/",
-  "/behavior/experiment/": "/behavior/experiments/",
-  "/efficiency/experiment/": "/efficiency/experiments/",
-  "/behavior/feature/": "/behavior/vectors/",
+  "/projects/": "/",
+  "/projects/p/": "/",
+  "/experiment/": "/experiments/",
+  "/feature/": "/vectors/",
 };
 
 const slash = (path: string) => (path.endsWith("/") ? path : `${path}/`);
-
-/** The section a path belongs to, which picks the sidebar shown: its first segment. */
-export function sectionOf(pathname: string): Section {
-  const first = slash(pathname).split("/")[1];
-  return first === "behavior" || first === "efficiency" ? first : "workspace";
-}
 
 /** The sidebar entry a path highlights: its own, or its list page's on a detail page. */
 export function activeHref(pathname: string): string | undefined {
@@ -272,53 +217,60 @@ export function navItem(href: string): NavItem {
   return item;
 }
 
-/** The title a page shows in the command menu: a domain page carries its domain's name. */
-export function fullTitle(item: NavItem): string {
-  const domain = DOMAINS.find((d) => d.section === item.section);
-  return domain ? `${domain.title} · ${item.title}` : item.title;
-}
-
-/** Where a section's plugin pages live: /x/, /behavior/x/, /efficiency/x/, with ?name=. */
-export const pluginPath = (section: Section) =>
-  section === "workspace" ? "/x/" : `/${section}/x/`;
+/** Where a project's plugin pages live, with ?name=. */
+export const PLUGIN_PATH = "/x/";
 
 /** A project plugin's sidebar entry (louped.core.plugins); no G jump, since names are the
  * project's own. */
-export function pluginItem(p: {
-  name: string;
-  title: string;
-  description: string;
-  section: Section;
-}): NavItem {
+export function pluginItem(p: { name: string; title: string; description: string }): NavItem {
   return {
-    href: `${pluginPath(p.section)}?name=${encodeURIComponent(p.name)}`,
+    href: `${PLUGIN_PATH}?name=${encodeURIComponent(p.name)}`,
     title: p.title,
     description: p.description,
     icon: Puzzle,
     shortcut: "",
-    section: p.section,
+    group: "research",
   };
 }
 
-/** Where a section's boards shown as pages live: /b/, /behavior/b/, /efficiency/b/, with ?name=. */
-export const boardPath = (section: Section) => (section === "workspace" ? "/b/" : `/${section}/b/`);
+/** Where boards shown as pages live, with ?name=. */
+export const BOARD_PATH = "/b/";
 
 /** A board's sidebar entry (boards/<name>.json); no G jump, since names are the project's own. */
-export function boardItem(b: {
-  name: string;
-  title: string;
-  about?: string | null;
-  section: string;
-}): NavItem {
-  const section = (
-    ["behavior", "efficiency"].includes(b.section) ? b.section : "workspace"
-  ) as Section;
+export function boardItem(b: { name: string; title: string; about?: string | null }): NavItem {
   return {
-    href: `${boardPath(section)}?name=${encodeURIComponent(b.name)}`,
+    href: `${BOARD_PATH}?name=${encodeURIComponent(b.name)}`,
     title: b.title,
     description: b.about ?? "A board the project's agent made.",
     icon: LayoutDashboard,
     shortcut: "",
-    section,
+    group: "research",
   };
 }
+
+/** Pages the app had under /behavior/ and /efficiency/, and where each is now. Old links, published
+ * dashboards and agents' notes keep working through these. */
+export const MOVED: Record<string, string> = {
+  "/behavior/": "/experiments/?axis=behavior",
+  "/efficiency/": "/experiments/?axis=efficiency",
+  "/behavior/experiments/": "/experiments/?axis=behavior",
+  "/efficiency/experiments/": "/experiments/?axis=efficiency",
+  "/behavior/experiment/": "/experiment/",
+  "/efficiency/experiment/": "/experiment/",
+  "/behavior/probe/": "/probe/",
+  "/behavior/circuits/": "/circuits/",
+  "/behavior/vectors/": "/vectors/",
+  "/behavior/feature/": "/feature/",
+  "/behavior/training-sets/": "/training-sets/",
+  "/behavior/training/": "/runs/?kind=training",
+  "/efficiency/training/": "/runs/?kind=training",
+  "/behavior/datasets/": "/datasets/?axis=behavior",
+  "/efficiency/datasets/": "/datasets/?axis=efficiency",
+  "/behavior/benchmarks/": "/benchmarks/?axis=behavior",
+  "/efficiency/benchmarks/": "/benchmarks/?axis=efficiency",
+  "/efficiency/benchmark/": "/speed/",
+  "/behavior/b/": "/b/",
+  "/efficiency/b/": "/b/",
+  "/behavior/x/": "/x/",
+  "/efficiency/x/": "/x/",
+};

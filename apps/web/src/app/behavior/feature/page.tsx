@@ -1,14 +1,12 @@
-import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { FeatureView } from "@/components/feature-view";
+import { Moved } from "@/components/moved";
 
-export const metadata: Metadata = { title: "Feature" };
-
+/** An old address: sends the visitor to where the page is now. */
 export default function Page() {
   return (
     <Suspense>
-      <FeatureView />
+      <Moved />
     </Suspense>
   );
 }

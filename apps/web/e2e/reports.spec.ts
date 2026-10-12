@@ -42,7 +42,7 @@ test("reports are grouped and a write-up renders its citations and live numbers"
 test("an experiment's page lists the reports on it", async ({ page }) => {
   await mock(page);
   await mockReports(page);
-  await page.goto("/behavior/experiment/?name=hello");
+  await page.goto("/experiment/?name=hello");
   const block = page.locator('[data-part="experiment/report/lab.pptx"]');
   await expect(block).toContainText("pptx");
   await expect(block.getByRole("link", { name: "lab.pptx" })).toHaveAttribute(

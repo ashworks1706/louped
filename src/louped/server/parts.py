@@ -65,16 +65,23 @@ KINDS: list[Kind] = [
     _k(part="panel/close", about="Closes a side panel.", rules=PICK),
     _k(part="shell/nav/*", about="A page in the sidebar, by its path.",
        rules=["hidden", "label", "order"]),
-    _k(part="shell/domain/*", about="A section in the top bar: workspace, behavior, efficiency.",
-       rules=["hidden", "label", "order"]),
-    _k(part="shell/*", about="The top bar's home link, sidebar switch, jobs, search, status and "
-       "theme switch.", rules=PICK),
-    _k(part="page/*/title", about="A page's title, by its path (runs, behavior-vectors).",
+    _k(part="shell/group/*", about="A group of pages in the sidebar: research, instruments, "
+       "data, and app at its foot.",
+       rules=["label"]),
+    _k(part="shell/project", about="The project switcher: every list shows that project's part.",
+       rules=["hidden", "label"]),
+    _k(part="shell/*", about="The top bar's home link, sidebar switch, jobs, search, Launch, "
+       "status and theme switch; the sidebar's link to every project.", rules=PICK),
+    # where a page sits
+    _k(part="crumbs", about="Where the page sits: project, experiment, run.", rules=PICK),
+    _k(part="crumbs/step/*", about="One step of the trail: project, experiments, experiment, "
+       "runs, run, projects.", rules=PICK),
+    _k(part="moved", about="The link on an old address to where its page is now.", rules=PICK),
+    _k(part="page/*/title", about="A page's title, by its path (runs, vectors).",
        rules=["label"]),
     _k(part="page/*/description", about="A page's one-line purpose.", rules=["hidden", "label"]),
     # a run's page
     _k(part="run/title", about="The run's name.", rules=PICK),
-    _k(part="run/back", about="The link back to Runs.", rules=["hidden"]),
     _k(part="run/badge/*", about="The run's kind, host, status, cohort or training alarm.",
        rules=["hidden"]),
     _k(part="run/meta/*", about="The run's model, experiment, created time or id.", rules=LIST),
@@ -166,14 +173,22 @@ KINDS: list[Kind] = [
     _k(part="experiment/delete", about="Moves the experiment to the trash.", rules=["hidden"]),
     _k(part="experiment/gate/*", about="One requirement of the experiment's gate, by its metric, "
        "with its value and PASS or FAIL.", rules=PICK),
-    _k(part="experiment/*", about="The experiment's name, status, question and back link.",
+    _k(part="experiment/*", about="The experiment's name, status and question.",
        rules=PICK),
     _k(part="experiments/row/*", about="One experiment in a list.", rules=PICK),
     _k(part="experiments/domain/*", about="A domain's heading in a list.", rules=PICK),
     _k(part="experiments/filter/*", about="A status filter: all, active, answered, parked.",
        rules=PICK),
-    _k(part="experiments/project", about="Shows only one project's experiments.",
-       rules=CONTROL),
+    _k(part="experiments/new", about="Starts an experiment, in the project when one is picked.",
+       rules=PICK),
+    _k(part="experiments/axis/*", about="The axis filter: both, behavior or efficiency.",
+       rules=PICK),
+    _k(part="runs/axis/*", about="The axis filter: both, behavior or efficiency.", rules=PICK),
+    _k(part="datasets/axis/*", about="The axis filter: both, behavior or efficiency.",
+       rules=PICK),
+    _k(part="benchmarks/axis/*", about="The axis filter: both, behavior or efficiency.",
+       rules=PICK),
+    _k(part="benchmarks/section/*", about="The eval or speed leaderboards.", rules=PICK),
     # the projects and one project's page
     _k(part="projects/card/*", about="One project in the list, by name.", rules=PICK),
     _k(part="projects/new", about="Starts a project: projects/<name>/README.md.",
@@ -189,7 +204,7 @@ KINDS: list[Kind] = [
     _k(part="projects/dialog/*", about="A form: new-project, new-experiment or edit (the "
        "metadata).", rules=PICK),
     _k(part="projects/*", about="The count of projects; a project's title, status, summary and "
-       "back link; the note on a project with no README and its create button.", rules=PICK),
+       "the note on a project with no README and its create button.", rules=PICK),
     # runs tables
     _k(part="runs/column/*", about="A column of a runs table: select, run, kind, model, "
        "headline, status, created.", rules=LIST),
@@ -206,16 +221,10 @@ KINDS: list[Kind] = [
        rules=ALL),
     _k(part="home/live/*/*", about="A job or run going now.", rules=PICK),
     _k(part="home/live/title", about="The Running heading.", rules=PICK),
-    _k(part="home/domain/*", about="A research domain's card.", rules=PICK),
     _k(part="home/more/*", about="A link to every experiment or run.", rules=["hidden"]),
     # any page
     _k(part="empty/*", about="What a page or panel shows before it has data, by its title "
        "(no-runs-yet), and what fills it.", rules=["note"]),
-    # a domain's front page
-    _k(part="domain/section/*", about="Tools, questions or runs on a domain's front page.",
-       rules=["hidden", "note"]),
-    _k(part="domain/tool/*", about="A tool's card, by its page (probe, vectors, benchmark).",
-       rules=PICK),
     # Probe and Benchmark
     _k(part="playground/load", about="Loading a model, before one is loaded.", rules=["note"]),
     _k(part="playground/field/*", about="One control: model, adapters, intervention, vector, "
@@ -309,10 +318,24 @@ KINDS: list[Kind] = [
        "for a notebook, the whole notebook.",
        rules=PICK),
     _k(part="source/pin/*", about="One pinned passage of the source, by id.", rules=PICK),
+    # Feedback
+    _k(part="feedback/heading", about="The list of requests for louped.", rules=PICK),
+    _k(part="feedback/new", about="Starts a new request.", rules=PICK),
+    _k(part="feedback/item/*", about="One request in the list, by id.", rules=PICK),
+    _k(part="feedback/editor", about="The open request.", rules=PICK),
+    _k(part="feedback/editor/heading", about="The open request's heading.", rules=PICK),
+    _k(part="feedback/kind/*", about="Feature or bug.", rules=PICK),
+    _k(part="feedback/title", about="The request's title, the issue's title.", rules=PICK),
+    _k(part="feedback/field/*", about="One field of the issue form, by its id.", rules=PICK),
+    _k(part="feedback/save", about="Saves the request here.", rules=PICK),
+    _k(part="feedback/open", about="Opens GitHub's new-issue page with the request filled in.",
+       rules=PICK),
+    _k(part="feedback/delete", about="Moves the request to the trash.", rules=PICK),
     # Hub
-    _k(part="hub/account", about="The Hugging Face account signed in here, or Connect.",
+    _k(part="hub/account", about="The Hugging Face account signed in here, with its token.",
        rules=PICK),
     _k(part="hub/token", about="The token dialog's form.", rules=PICK),
+    _k(part="hub/token/*", about="Change the token (or Connect), or sign out.", rules=PICK),
     _k(part="hub/tab/*", about="Models, embeddings, datasets or papers.", rules=PICK),
     _k(part="hub/search", about="Search the Hub.", rules=PICK),
     _k(part="hub/filter/*", about="A search's task, library or sort.", rules=PICK),

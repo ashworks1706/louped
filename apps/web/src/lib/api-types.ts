@@ -1611,7 +1611,11 @@ export interface paths {
      * @description Check a token and keep it where huggingface_hub keeps it, not in the project.
      */
     post: operations["token_api_hub_token_post"];
-    delete?: never;
+    /**
+     * Remove Token
+     * @description Remove the token kept on this machine. A token from HF_TOKEN stays: 409.
+     */
+    delete: operations["remove_token_api_hub_token_delete"];
     options?: never;
     head?: never;
     patch?: never;
@@ -1812,6 +1816,92 @@ export interface paths {
     get: operations["speed_api_benchmarks_speed_get"];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/feedback": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Feedback
+     * @description Every request, newest first: drafts and those opened on GitHub. Off on a shared
+     *     server: a bug's steps can name this machine's paths.
+     */
+    get: operations["feedback_api_feedback_get"];
+    put?: never;
+    /**
+     * Draft
+     * @description Keeps a draft for the person to read on the Feedback page; nothing goes to GitHub.
+     */
+    post: operations["draft_api_feedback_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/feedback/forms": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Forms
+     * @description Each kind's form: what a feature request or a bug report asks.
+     */
+    get: operations["forms_api_feedback_forms_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/feedback/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Edit */
+    put: operations["edit_api_feedback__id__put"];
+    post?: never;
+    /**
+     * Delete
+     * @description Moves it to the trash (<home>/trash/feedback).
+     */
+    delete: operations["delete_api_feedback__id__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/feedback/{id}/opened": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Opened
+     * @description Marks that the person opened it on GitHub to submit it.
+     */
+    post: operations["opened_api_feedback__id__opened_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -2144,6 +2234,11 @@ export interface components {
       avatar?: string | null;
       /** Error */
       error?: string | null;
+      /**
+       * Env
+       * @default false
+       */
+      env: boolean;
     };
     /** AddRequest */
     AddRequest: {
@@ -2969,6 +3064,26 @@ export interface components {
       chat: boolean;
     };
     /**
+     * Draft
+     * @description What a request says: its kind, a title and its form's fields.
+     */
+    Draft: {
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "feature" | "bug";
+      /** Title */
+      title: string;
+      /**
+       * Fields
+       * @default {}
+       */
+      fields: {
+        [key: string]: string;
+      };
+    };
+    /**
      * Entry
      * @description One finished eval run of a task.
      */
@@ -3115,6 +3230,45 @@ export interface components {
       /** Sae Id */
       sae_id?: string | null;
     };
+    /** Feedback */
+    Feedback: {
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "feature" | "bug";
+      /** Title */
+      title: string;
+      /**
+       * Fields
+       * @default {}
+       */
+      fields: {
+        [key: string]: string;
+      };
+      /** Id */
+      id: string;
+      /**
+       * Created
+       * Format: date-time
+       */
+      created: string;
+      /** Opened */
+      opened?: string | null;
+      /**
+       * Issue Url
+       * @description GitHub's new-issue page with this request filled into its form. The louped version is
+       *     added to the last field.
+       */
+      readonly issue_url: string;
+    };
+    /** Field */
+    Field: {
+      /** Id */
+      id: string;
+      /** Label */
+      label: string;
+    };
     /** FigureRequest */
     FigureRequest: {
       /** Ref */
@@ -3132,6 +3286,21 @@ export interface components {
        * @default false
        */
       replace: boolean;
+    };
+    /**
+     * Form
+     * @description A kind's issue form on GitHub (.github/ISSUE_TEMPLATE) and its fields, in order.
+     */
+    Form: {
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "feature" | "bug";
+      /** Template */
+      template: string;
+      /** Fields */
+      fields: components["schemas"]["Field"][];
     };
     /**
      * GateCheck
@@ -8304,6 +8473,26 @@ export interface operations {
       };
     };
   };
+  remove_token_api_hub_token_delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Account"];
+        };
+      };
+    };
+  };
   hub_search_api_hub_search_get: {
     parameters: {
       query: {
@@ -8611,6 +8800,176 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["SpeedRow"][];
+        };
+      };
+    };
+  };
+  feedback_api_feedback_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Feedback"][];
+        };
+      };
+    };
+  };
+  draft_api_feedback_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Draft"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Feedback"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  forms_api_feedback_forms_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Form"][];
+        };
+      };
+    };
+  };
+  edit_api_feedback__id__put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Draft"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Feedback"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  delete_api_feedback__id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  opened_api_feedback__id__opened_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Feedback"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

@@ -10,18 +10,38 @@
     "rules": ["hidden", "label", "order"]
   },
   {
-    "part": "shell/domain/*",
-    "about": "A section in the top bar: workspace, behavior, efficiency.",
-    "rules": ["hidden", "label", "order"]
+    "part": "shell/group/*",
+    "about": "A group of pages in the sidebar: research, instruments, data, and app at its foot.",
+    "rules": ["label"]
+  },
+  {
+    "part": "shell/project",
+    "about": "The project switcher: every list shows that project's part.",
+    "rules": ["hidden", "label"]
   },
   {
     "part": "shell/*",
-    "about": "The top bar's home link, sidebar switch, jobs, search, status and theme switch.",
+    "about": "The top bar's home link, sidebar switch, jobs, search, Launch, status and theme switch; the sidebar's link to every project.",
+    "rules": []
+  },
+  {
+    "part": "crumbs",
+    "about": "Where the page sits: project, experiment, run.",
+    "rules": []
+  },
+  {
+    "part": "crumbs/step/*",
+    "about": "One step of the trail: project, experiments, experiment, runs, run, projects.",
+    "rules": []
+  },
+  {
+    "part": "moved",
+    "about": "The link on an old address to where its page is now.",
     "rules": []
   },
   {
     "part": "page/*/title",
-    "about": "A page's title, by its path (runs, behavior-vectors).",
+    "about": "A page's title, by its path (runs, vectors).",
     "rules": ["label"]
   },
   {
@@ -33,11 +53,6 @@
     "part": "run/title",
     "about": "The run's name.",
     "rules": []
-  },
-  {
-    "part": "run/back",
-    "about": "The link back to Runs.",
-    "rules": ["hidden"]
   },
   {
     "part": "run/badge/*",
@@ -336,7 +351,7 @@
   },
   {
     "part": "experiment/*",
-    "about": "The experiment's name, status, question and back link.",
+    "about": "The experiment's name, status and question.",
     "rules": []
   },
   {
@@ -355,9 +370,34 @@
     "rules": []
   },
   {
-    "part": "experiments/project",
-    "about": "Shows only one project's experiments.",
-    "rules": ["hidden", "label", "default"]
+    "part": "experiments/new",
+    "about": "Starts an experiment, in the project when one is picked.",
+    "rules": []
+  },
+  {
+    "part": "experiments/axis/*",
+    "about": "The axis filter: both, behavior or efficiency.",
+    "rules": []
+  },
+  {
+    "part": "runs/axis/*",
+    "about": "The axis filter: both, behavior or efficiency.",
+    "rules": []
+  },
+  {
+    "part": "datasets/axis/*",
+    "about": "The axis filter: both, behavior or efficiency.",
+    "rules": []
+  },
+  {
+    "part": "benchmarks/axis/*",
+    "about": "The axis filter: both, behavior or efficiency.",
+    "rules": []
+  },
+  {
+    "part": "benchmarks/section/*",
+    "about": "The eval or speed leaderboards.",
+    "rules": []
   },
   {
     "part": "projects/card/*",
@@ -401,7 +441,7 @@
   },
   {
     "part": "projects/*",
-    "about": "The count of projects; a project's title, status, summary and back link; the note on a project with no README and its create button.",
+    "about": "The count of projects; a project's title, status, summary and the note on a project with no README and its create button.",
     "rules": []
   },
   {
@@ -455,11 +495,6 @@
     "rules": []
   },
   {
-    "part": "home/domain/*",
-    "about": "A research domain's card.",
-    "rules": []
-  },
-  {
     "part": "home/more/*",
     "about": "A link to every experiment or run.",
     "rules": ["hidden"]
@@ -468,16 +503,6 @@
     "part": "empty/*",
     "about": "What a page or panel shows before it has data, by its title (no-runs-yet), and what fills it.",
     "rules": ["note"]
-  },
-  {
-    "part": "domain/section/*",
-    "about": "Tools, questions or runs on a domain's front page.",
-    "rules": ["hidden", "note"]
-  },
-  {
-    "part": "domain/tool/*",
-    "about": "A tool's card, by its page (probe, vectors, benchmark).",
-    "rules": []
   },
   {
     "part": "playground/load",
@@ -760,13 +785,73 @@
     "rules": []
   },
   {
+    "part": "feedback/heading",
+    "about": "The list of requests for louped.",
+    "rules": []
+  },
+  {
+    "part": "feedback/new",
+    "about": "Starts a new request.",
+    "rules": []
+  },
+  {
+    "part": "feedback/item/*",
+    "about": "One request in the list, by id.",
+    "rules": []
+  },
+  {
+    "part": "feedback/editor",
+    "about": "The open request.",
+    "rules": []
+  },
+  {
+    "part": "feedback/editor/heading",
+    "about": "The open request's heading.",
+    "rules": []
+  },
+  {
+    "part": "feedback/kind/*",
+    "about": "Feature or bug.",
+    "rules": []
+  },
+  {
+    "part": "feedback/title",
+    "about": "The request's title, the issue's title.",
+    "rules": []
+  },
+  {
+    "part": "feedback/field/*",
+    "about": "One field of the issue form, by its id.",
+    "rules": []
+  },
+  {
+    "part": "feedback/save",
+    "about": "Saves the request here.",
+    "rules": []
+  },
+  {
+    "part": "feedback/open",
+    "about": "Opens GitHub's new-issue page with the request filled in.",
+    "rules": []
+  },
+  {
+    "part": "feedback/delete",
+    "about": "Moves the request to the trash.",
+    "rules": []
+  },
+  {
     "part": "hub/account",
-    "about": "The Hugging Face account signed in here, or Connect.",
+    "about": "The Hugging Face account signed in here, with its token.",
     "rules": []
   },
   {
     "part": "hub/token",
     "about": "The token dialog's form.",
+    "rules": []
+  },
+  {
+    "part": "hub/token/*",
+    "about": "Change the token (or Connect), or sign out.",
     "rules": []
   },
   {

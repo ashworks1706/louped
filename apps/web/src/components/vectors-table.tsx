@@ -26,7 +26,7 @@ import { runHref } from "@/lib/href";
 /** Probe with this vector already picked, on the tab named. */
 function probeHref(v: Direction, tab: "reply" | "dose") {
   const p = new URLSearchParams({ vector: v.name, layer: String(v.layer), tab });
-  return `/behavior/probe/?${p}`;
+  return `/probe/?${p}`;
 }
 
 /** Saved vectors, one table per model since a vector only applies to its own model; each row

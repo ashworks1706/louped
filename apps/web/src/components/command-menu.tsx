@@ -19,7 +19,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Kbd } from "@/components/ui/kbd";
 import { q } from "@/lib/api";
 import { experimentHref, sourceHref } from "@/lib/href";
-import { boardItem, fullTitle, NAV, pluginItem } from "@/lib/nav";
+import { boardItem, NAV, pluginItem } from "@/lib/nav";
 
 const DOCS = "https://github.com/ashworks1706/louped/tree/main/docs";
 
@@ -99,11 +99,11 @@ export function CommandMenu({ children }: { children: React.ReactNode }) {
                 ].map((item) => (
                   <CommandItem
                     key={item.href}
-                    value={`${fullTitle(item)} ${item.description}`}
+                    value={`${item.title} ${item.description}`}
                     onSelect={() => run(() => router.push(item.href))}
                   >
                     <item.icon />
-                    <span>{fullTitle(item)}</span>
+                    <span>{item.title}</span>
                     <span className="ml-auto flex gap-1">
                       {item.shortcut
                         .split(" ")
@@ -121,7 +121,7 @@ export function CommandMenu({ children }: { children: React.ReactNode }) {
                     <CommandItem
                       key={e.name}
                       value={`${e.name} ${e.domain_title} ${e.question ?? ""}`}
-                      onSelect={() => run(() => router.push(experimentHref(e.name, e.axis)))}
+                      onSelect={() => run(() => router.push(experimentHref(e.name)))}
                     >
                       <FlaskConical />
                       <span className="font-mono">{e.name}</span>

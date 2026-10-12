@@ -106,7 +106,7 @@ test("an experiment's page shows the figures an agent put there", async ({ page 
   await page.route("**/api/experiments/hello/views", (r) =>
     r.fulfill({ json: [{ path: "views/claims-3d.json", view: cloud }] }),
   );
-  await page.goto("/behavior/experiment/?name=hello");
+  await page.goto("/experiment/?name=hello");
   const figure = page.locator('[data-part="experiment/view/views%2Fclaims-3d.json"]');
   await expect(figure).toContainText("Claims in 3D");
   await expect(figure.getByTestId("plotly").locator(".main-svg").first()).toBeVisible();

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "louped",
-    "version": "0.8.0"
+    "version": "0.10.0"
   },
   "paths": {
     "/api/health": {
@@ -3915,6 +3915,23 @@
             }
           }
         }
+      },
+      "delete": {
+        "summary": "Remove Token",
+        "description": "Remove the token kept on this machine. A token from HF_TOKEN stays: 409.",
+        "operationId": "remove_token_api_hub_token_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Account"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/hub/search": {
@@ -4401,6 +4418,214 @@
                   },
                   "type": "array",
                   "title": "Response Speed Api Benchmarks Speed Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/feedback": {
+      "get": {
+        "summary": "Feedback",
+        "description": "Every request, newest first: drafts and those opened on GitHub. Off on a shared\nserver: a bug's steps can name this machine's paths.",
+        "operationId": "feedback_api_feedback_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Feedback"
+                  },
+                  "type": "array",
+                  "title": "Response Feedback Api Feedback Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Draft",
+        "description": "Keeps a draft for the person to read on the Feedback page; nothing goes to GitHub.",
+        "operationId": "draft_api_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Draft"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Feedback"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/feedback/forms": {
+      "get": {
+        "summary": "Forms",
+        "description": "Each kind's form: what a feature request or a bug report asks.",
+        "operationId": "forms_api_feedback_forms_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Form"
+                  },
+                  "type": "array",
+                  "title": "Response Forms Api Feedback Forms Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/feedback/{id}": {
+      "put": {
+        "summary": "Edit",
+        "operationId": "edit_api_feedback__id__put",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Draft"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Feedback"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete",
+        "description": "Moves it to the trash (<home>/trash/feedback).",
+        "operationId": "delete_api_feedback__id__delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/feedback/{id}/opened": {
+      "post": {
+        "summary": "Opened",
+        "description": "Marks that the person opened it on GitHub to submit it.",
+        "operationId": "opened_api_feedback__id__opened_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Feedback"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -5162,6 +5387,11 @@
               }
             ],
             "title": "Error"
+          },
+          "env": {
+            "type": "boolean",
+            "title": "Env",
+            "default": false
           }
         },
         "type": "object",
@@ -7374,6 +7604,33 @@
         "title": "DoseRequest",
         "description": "A saved direction swept over strengths, read at the next token."
       },
+      "Draft": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["feature", "bug"],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "fields": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Fields",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": ["kind", "title"],
+        "title": "Draft",
+        "description": "What a request says: its kind, a title and its form's fields."
+      },
       "Entry": {
         "properties": {
           "run": {
@@ -7853,6 +8110,74 @@
         "title": "FeatureDashboard",
         "description": "One SAE feature over a dataset, as `louped features` logs it under features/."
       },
+      "Feedback": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["feature", "bug"],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "fields": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Fields",
+            "default": {}
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created"
+          },
+          "opened": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opened"
+          },
+          "issue_url": {
+            "type": "string",
+            "title": "Issue Url",
+            "description": "GitHub's new-issue page with this request filled into its form. The louped version is\nadded to the last field.",
+            "readOnly": true
+          }
+        },
+        "type": "object",
+        "required": ["kind", "title", "id", "created", "issue_url"],
+        "title": "Feedback"
+      },
+      "Field": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": ["id", "label"],
+        "title": "Field"
+      },
       "FigureRequest": {
         "properties": {
           "ref": {
@@ -7885,6 +8210,30 @@
         "type": "object",
         "required": ["ref"],
         "title": "FigureRequest"
+      },
+      "Form": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["feature", "bug"],
+            "title": "Kind"
+          },
+          "template": {
+            "type": "string",
+            "title": "Template"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/Field"
+            },
+            "type": "array",
+            "title": "Fields"
+          }
+        },
+        "type": "object",
+        "required": ["kind", "template", "fields"],
+        "title": "Form",
+        "description": "A kind's issue form on GitHub (.github/ISSUE_TEMPLATE) and its fields, in order."
       },
       "GateCheck": {
         "properties": {

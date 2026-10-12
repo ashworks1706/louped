@@ -70,6 +70,8 @@ class Account(BaseModel):
     avatar: str | None = None
     #: Why the token on this machine was refused.
     error: str | None = None
+    #: The token comes from HF_TOKEN, so the app can neither change nor remove it.
+    env: bool = False
 
 
 class Token(BaseModel):
@@ -371,16 +373,17 @@ def router(jobs: Jobs | None) -> APIRouter:
         said in error."""
         if not sync.has_token():
             return Account(token=False)
+        env = sync.token_from_env()
         try:
             who = _hub(lambda: _api().whoami())
         except HTTPException as exc:
             if exc.status_code != 401:
                 raise
-            return Account(token=True, error=str(exc.detail))
+            return Account(token=True, error=str(exc.detail), env=env)
         avatar = who.get("avatarUrl")
         if avatar and avatar.startswith("/"):
             avatar = SITE + avatar
-        return Account(token=True, name=who.get("name"), avatar=avatar)
+        return Account(token=True, name=who.get("name"), avatar=avatar, env=env)
 
     @api.post("/token", dependencies=[Depends(on), Depends(require_json)])
     def token(req: Token) -> Account:
@@ -390,6 +393,15 @@ def router(jobs: Jobs | None) -> APIRouter:
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
         return Account(token=True, name=name)
+
+    @api.delete("/token", dependencies=[Depends(on)])
+    def remove_token() -> Account:
+        """Remove the token kept on this machine. A token from HF_TOKEN stays: 409."""
+        try:
+            sync.remove_token()
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        return Account(token=False)
 
     @api.get("/search", dependencies=[Depends(on)])
     def hub_search(kind: Kind, q: str = "", task: str | None = None,

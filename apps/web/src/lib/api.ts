@@ -43,6 +43,9 @@ export type SourcePage = Schemas["SourcePage"];
 export type Pushed = Schemas["Pushed"];
 export type RemoteState = Schemas["RemoteState"];
 export type HubAccount = Schemas["Account"];
+export type Feedback = Schemas["Feedback"];
+export type FeedbackDraft = Schemas["Draft"];
+export type FeedbackForm = Schemas["Form"];
 export type HubHit = Schemas["HubHit"];
 export type HubDetail = Schemas["HubDetail"];
 export type HubAdded = Schemas["HubAdded"];
@@ -313,6 +316,16 @@ export const sourceNotebook = (key: string) =>
   `${API}/api/sources/${encodeURIComponent(key)}/notebook`;
 /** Checks a Hugging Face token and keeps it where huggingface_hub keeps it. */
 export const saveHubToken = (token: string) => post<HubAccount>("/hub/token", { token });
+/** Keeps a request for louped itself as a draft; nothing goes to GitHub. */
+export const createFeedback = (draft: FeedbackDraft) => post<Feedback>("/feedback", draft);
+export const saveFeedback = (id: string, draft: FeedbackDraft) =>
+  put<Feedback>(`/feedback/${encodeURIComponent(id)}`, draft);
+/** Marks that the person opened it on GitHub to submit it. */
+export const openedFeedback = (id: string) =>
+  post<Feedback>(`/feedback/${encodeURIComponent(id)}/opened`, {});
+export const deleteFeedback = (id: string) => del(`/feedback/${encodeURIComponent(id)}`);
+/** Removes the Hugging Face token from this machine (`hf auth logout`). */
+export const removeHubToken = () => del("/hub/token");
 /** Lists a model, embedding model or dataset in louped.toml (and downloads it as a job), or
  * keeps a paper as a source. */
 export const hubAdd = (
@@ -652,6 +665,18 @@ export const q = {
   evalTasks: () => ({
     queryKey: ["eval-tasks"],
     queryFn: () => get<EvalTask[]>("/evals"),
+  }),
+  /** Requests for louped itself, none in a published dashboard; polled, so one an agent drafts
+   * shows while the page is open. */
+  feedback: () => ({
+    queryKey: ["feedback"],
+    queryFn: () => (isSnapshot() ? Promise.resolve([]) : get<Feedback[]>("/feedback")),
+    refetchInterval: 3000,
+  }),
+  feedbackForms: () => ({
+    queryKey: ["feedback", "forms"],
+    queryFn: () => (isSnapshot() ? Promise.resolve([]) : get<FeedbackForm[]>("/feedback/forms")),
+    staleTime: Infinity,
   }),
   projects: () => ({
     queryKey: ["projects"],

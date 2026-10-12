@@ -29,8 +29,12 @@ The UI is the product: quiet, dense, keyboard-first.
 - Launching opens the job's page; jobs are followed on Runs, never on Launch.
 - Every figure has a ? beside its title saying how to read it: the view's `about`, set where the
   figure is made.
-- Pages are filed by section in `NAV`: the workspace, or a research domain (Behavior, Efficiency),
-  each domain a sidebar of its own. A new tool goes under the domain whose question it answers.
+- One sidebar. Pages are filed by group in `NAV`: research (questions, runs, write-ups),
+  instruments (one prompt, live) or data. Each page is listed once. Behavior and efficiency are
+  an experiment's axis: a filter (`AxisFilter`, `?axis=`) on a list, never a section or a path.
+- The project switcher scopes the app (`useProject`, `?project=`); a list of experiments or runs
+  shows the picked project's. A detail page shows where it sits with `Crumbs`.
+- A page that moves keeps its old address working: add it to `MOVED` with a `Moved` page.
 - A technical term gets its ? from `src/lib/glossary.ts` (`Term`, `MetricName`), so it reads the
   same everywhere.
 - Every navigation is reachable from the ⌘K menu; new pages go in `NAV` and get a `G <key>` jump.

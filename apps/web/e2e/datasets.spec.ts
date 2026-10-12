@@ -8,7 +8,7 @@ test("each domain lists its datasets, and one opens with its rows", async ({ pag
   await mockPages(page);
   const asked: string[] = [];
   page.on("request", (r) => r.url().includes("/api/datasets/hub") && asked.push(r.url()));
-  await page.goto("/behavior/datasets/");
+  await page.goto("/datasets/");
   await expect(page.getByRole("heading", { level: 1, name: "Datasets" })).toBeVisible();
   const rows = page.locator('[data-part^="datasets/row/"]');
   await expect(rows).toHaveCount(4);
@@ -16,7 +16,7 @@ test("each domain lists its datasets, and one opens with its rows", async ({ pag
   // a training set opens on its own page
   await expect(page.getByRole("link", { name: "pushback.jsonl" })).toHaveAttribute(
     "href",
-    "/behavior/training-sets/?set=%2Fhome%2Fme%2F.louped%2Fdata%2Fpushback%2Fpushback.jsonl",
+    "/training-sets/?set=%2Fhome%2Fme%2F.louped%2Fdata%2Fpushback%2Fpushback.jsonl",
   );
   await page.screenshot({ path: info.outputPath("datasets.png"), fullPage: true });
 
@@ -39,7 +39,7 @@ test("each domain lists its datasets, and one opens with its rows", async ({ pag
   await expect.poll(() => asked.some((u) => u.includes("split=test"))).toBe(true);
 
   // Efficiency lists those filed under it or under none: not gsm8k
-  await page.goto("/efficiency/datasets/");
+  await page.goto("/datasets/?axis=efficiency");
   await expect(page.locator('[data-part^="datasets/row/"]')).toHaveCount(3);
   await expect(page.locator('[data-part="datasets/row/openai%2Fgsm8k"]')).toHaveCount(0);
 });
@@ -60,7 +60,7 @@ test("a dataset found on the Hub is added to this domain, or downloaded", async 
       json: { added: { models: [], embeddings: [], datasets: [] }, source: null, job },
     });
   });
-  await page.goto("/efficiency/datasets/");
+  await page.goto("/datasets/?axis=efficiency");
   await page.getByLabel("Search datasets on the Hub").fill("arc");
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/q=arc/);
@@ -70,7 +70,7 @@ test("a dataset found on the Hub is added to this domain, or downloaded", async 
     .toEqual([{ kind: "datasets", id: "allenai/ai2_arc", domains: ["efficiency"] }]);
   await expect(page.locator('[data-part="datasets/add/allenai%2Fai2_arc"]')).toHaveText("Added");
 
-  await page.goto("/behavior/datasets/?open=openai%2Fgsm8k");
+  await page.goto("/datasets/?open=openai%2Fgsm8k");
   await page.locator('[data-part="datasets/detail/download"]').click();
   await expect(page).toHaveURL(/\/job\/\?id=j1/); // a download is a job, followed on its page
   expect(sent.at(-1)).toEqual({
@@ -97,7 +97,7 @@ test("what the viewer cannot read is said, and an empty page says what fills it"
       },
     }),
   );
-  await page.goto("/behavior/datasets/?open=cais%2Fmmlu");
+  await page.goto("/datasets/?open=cais%2Fmmlu");
   await expect(page.locator('[data-part="datasets/detail/error"]')).toContainText(
     "answered 501 for /splits",
   );
@@ -105,7 +105,7 @@ test("what the viewer cannot read is said, and an empty page says what fills it"
   await page.screenshot({ path: info.outputPath("dataset-error.png") });
 
   await page.route("**/api/datasets", (r) => r.fulfill({ json: [] }));
-  await page.goto("/behavior/datasets/");
+  await page.goto("/datasets/");
   await expect(page.getByRole("heading", { name: "No datasets here yet" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Browse the Hub" })).toHaveAttribute(
     "href",

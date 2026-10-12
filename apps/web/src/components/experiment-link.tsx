@@ -14,7 +14,7 @@ export function ExperimentLink({ name, className }: { name: string; className?: 
   if (!found) return <span className={className}>{name}</span>;
   return (
     <Link
-      href={experimentHref(name, found.axis)}
+      href={experimentHref(name)}
       className={`${className ?? ""} hover:underline`}
       onClick={(e) => e.stopPropagation()}
     >
