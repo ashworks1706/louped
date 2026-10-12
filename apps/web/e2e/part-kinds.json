@@ -466,7 +466,7 @@
   },
   {
     "part": "runs/action/*",
-    "about": "Runs' push, pull, connect, import and launch.",
+    "about": "Runs' push, pull, connect and launch.",
     "rules": ["hidden"]
   },
   {
@@ -1096,7 +1096,7 @@
   },
   {
     "part": "launch/*",
-    "about": "The picker, title, command and Launch button.",
+    "about": "The picker, title, command, Launch button and the note when there is no remote.",
     "rules": []
   },
   {

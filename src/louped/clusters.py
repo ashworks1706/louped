@@ -98,7 +98,7 @@ def scp(source: str, target: str, timeout: int = COPY_TIMEOUT) -> None:
 
 
 def start(cluster: Cluster, script: Path, job_id: str, after: str | None) -> tuple[str, str]:
-    """Copy an exported job (louped-<id>.sh, or louped-<id>.tar.gz) into the cluster's dir and
+    """Copy an exported job (louped-<id>.sh) into the cluster's dir and
     start it: sbatch, or nohup bash on a plain machine. after is a Slurm job id it waits for and
     needs to succeed. Returns the folder it was copied to and the scheduler's id (a process id
     for shell). Its output goes to <folder>/louped-<id>.out, its result under
@@ -114,11 +114,7 @@ def start(cluster: Cluster, script: Path, job_id: str, after: str | None) -> tup
     job = f"louped-{job_id}"
     out = shlex.quote(f"{folder}/{job}.out")
     go = f"cd {shlex.quote(folder)} && "
-    if script.name.endswith(".tar.gz"):  # a folder: job.sh works where it is unpacked
-        go += f"tar -xzf {job}.tar.gz && rm {job}.tar.gz && cd {job} && "
-        name = "job.sh"
-    else:  # one file: it works in louped-<id>/ beside it
-        name = script.name
+    name = script.name  # it works in louped-<id>/ beside it
     if cluster.provider == "shell":
         said = ssh(cluster.ssh, go + f"{{ nohup bash {name} > {out} 2>&1 < /dev/null & echo $!; }}")
     else:
@@ -157,11 +153,6 @@ def cancel(cluster: Cluster, scheduler_id: str) -> None:
         ssh(cluster.ssh, f"pkill -TERM -P {scheduler_id}; kill {scheduler_id}")
     else:
         ssh(cluster.ssh, f"scancel {scheduler_id}")
-
-
-def fetch(cluster: Cluster, path: str, target: Path) -> None:
-    """Copy a file from the cluster to this machine; path is one louped made, with no spaces."""
-    scp(f"{cluster.ssh}:{path}", str(target))
 
 
 def tail(cluster: Cluster, path: str, lines: int = 80) -> str:

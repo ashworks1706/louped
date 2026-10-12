@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Rocket, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { parseAsString, useQueryState, useQueryStates } from "nuqs";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -196,6 +197,9 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
   const [place, setPlace] = useState<Place>("here");
   const [target, setTarget] = useState<Partial<Target>>({ gpu: "a100", gpus: 1, hours: 4 });
   const client = useQueryClient();
+  const health = useQuery(q.health());
+  // a job run elsewhere pushes its results to the remote: no remote, nothing to export
+  const noRemote = place !== "here" && health.data != null && !health.data.remote;
   const out = useMutation({
     mutationFn: exportJob,
     meta: { action: "Export" },
@@ -353,6 +357,16 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
         <CopyButton text={command} />
       </div>
       <Where place={place} setPlace={setPlace} target={target} setTarget={setTarget} />
+      {noRemote && (
+        <p className="text-muted-foreground text-xs" {...part("launch/no-remote")}>
+          A job run elsewhere pushes its results to the project&apos;s remote, and this project has
+          none.{" "}
+          <Link href="/runs/" className="text-foreground underline underline-offset-2">
+            Connect one on Runs
+          </Link>
+          .
+        </p>
+      )}
       <div className="flex flex-wrap items-center gap-3" {...part("launch/submit")}>
         {cluster && (
           <>
@@ -371,7 +385,7 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
             )}
             <Button
               onClick={send}
-              disabled={busy || missing.length > 0}
+              disabled={busy || missing.length > 0 || noRemote}
               {...part(partId("launch/submit", cluster.name))}
             >
               <Send /> Submit to {cluster.name}
@@ -381,7 +395,7 @@ function Form({ item, onLaunched }: { item: Launchable; onLaunched: (job: Job) =
         <Button
           onClick={submit}
           variant={cluster ? "outline" : "default"}
-          disabled={busy || missing.length > 0}
+          disabled={busy || missing.length > 0 || noRemote}
         >
           {place === "here" ? (
             <>
@@ -464,19 +478,19 @@ function Where({
         </NativeSelect>
         {place !== "here" && place !== "colab" && (
           <Help label="How does running elsewhere work?">
-            Export downloads job.sh: one file when the project is a pushed git commit, else a folder
-            with what it needs. Run it there (sbatch on a cluster, bash on a VM). It installs louped
-            with uv and runs this command. With a remote set, it pushes the results and Pull on Runs
-            brings them here; else import the louped-result-….tar.gz it packs. Submit does all of
-            this over ssh for a cluster louped.toml names, and follows the job to its result; After
-            makes it wait there for an earlier job to succeed.
+            Export downloads one file, job.sh. It clones the project at a pushed git commit, or
+            carries this experiment inside it. Run it there (sbatch on a cluster, bash on a VM). It
+            installs louped with uv, runs this command and pushes the results to the project&apos;s
+            remote; Pull on Runs brings them here. Submit does all of this over ssh for a cluster
+            louped.toml names, and follows the job to its result; After makes it wait there for an
+            earlier job to succeed.
           </Help>
         )}
       </div>
       {place === "colab" && (
         <p className="text-muted-foreground text-xs">
-          Export downloads a notebook: upload it to Colab, pick a GPU runtime and run all. It needs
-          the project as a pushed git commit, and gated models need an HF_TOKEN secret there.
+          Export downloads a notebook: upload it to Colab, pick a GPU runtime and run all. It pushes
+          the results to the project&apos;s remote, and gated models need an HF_TOKEN secret there.
         </p>
       )}
       {slurm && (

@@ -1,11 +1,8 @@
 """Submitting to a cluster over ssh, following the job there and bringing its result back, with
 ssh, scp and the scheduler stood in for."""
 
-import io
 import json
-import shutil
 import subprocess
-import tarfile
 from pathlib import Path
 
 import pytest
@@ -47,7 +44,6 @@ class Cluster:
         self.calls: list[tuple[list[str], str | None]] = []
         self.scripts: dict[str, bytes] = {}
         self.states: dict[str, str] = {}
-        self.results: dict[str, Path] = {}
         self.fail: dict[str, str] = {}
         self.next = 4100
 
@@ -58,14 +54,8 @@ class Cluster:
             if word in " ".join(argv):
                 raise clusters.SshError(f"{what} failed (exit 1): {said}")
         if argv[0] == "scp":
-            source, target = argv[-2], argv[-1]
-            if source.startswith("sol:"):  # bringing a result back
-                name = source.rsplit("/", 1)[-1]
-                if name not in self.results:
-                    raise clusters.SshError(f"{what} failed (exit 1): No such file")
-                shutil.copy(self.results[name], target)
-            else:
-                self.scripts[Path(source).name] = Path(source).read_bytes()
+            source = argv[-2]
+            self.scripts[Path(source).name] = Path(source).read_bytes()
             return ""
         if command.endswith("&& pwd"):
             return "/scratch/ash/louped\n"
@@ -93,18 +83,18 @@ def cluster(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Cluster:
     for name in ("train.py", "test.py"):
         (folder / name).write_text(SCRIPT)
     monkeypatch.chdir(tmp_path)
+    # the remote jobs push to: a folder here stands in for a bucket the cluster reaches
+    (tmp_path / "runs").mkdir()
+    monkeypatch.setenv("LOUPED_REMOTE", str(tmp_path / "runs"))
+    monkeypatch.setattr(remote_module.sync, "is_local", lambda url: False)
     fake = Cluster()
     monkeypatch.setattr(clusters, "_run", fake)
     return fake
 
 
-def job_sh(bundle: bytes) -> str:
-    """The job.sh inside an exported louped-<id>.tar.gz."""
-    with tarfile.open(fileobj=io.BytesIO(bundle)) as tar:
-        member = next(m for m in tar.getmembers() if m.name.endswith("/job.sh"))
-        found = tar.extractfile(member)
-        assert found is not None
-        return found.read().decode()
+def job_sh(exported: bytes) -> str:
+    """An exported louped-<id>.sh."""
+    return exported.decode()
 
 
 def client() -> TestClient:
@@ -171,7 +161,7 @@ def test_submit_copies_the_job_there_starts_it_and_records_its_id(cluster: Clust
     mkdir, start = cluster.commands()
     assert mkdir == "mkdir -p /scratch/$USER/louped && cd /scratch/$USER/louped && pwd"
     assert "sbatch --parsable -o /scratch/ash/louped/louped-" in start
-    assert "--dependency" not in start and start.endswith("job.sh")
+    assert "--dependency" not in start and start.endswith(".sh")
     [data] = cluster.scripts.values()
     script = job_sh(data)
     assert "#SBATCH -G a100:1" in script and "LOUPED_LAUNCH=script:caving/train.py" in script
@@ -205,6 +195,7 @@ def test_a_guarded_launch_is_refused_alone_but_runs_after_its_gate_step(
     refused = api.post("/api/launch/submit", json=test)
     assert refused.status_code == 409 and "no finished run yet" in refused.text
     gate = {"id": "gate", "cluster": "sol", "options": {"experiment": "caving"}, "target": {}}
+    monkeypatch.delenv("LOUPED_REMOTE")
     no_remote = api.post("/api/launch/submit", json=gate)
     assert no_remote.status_code == 400 and "set remote in louped.toml" in no_remote.text
 
@@ -234,23 +225,17 @@ def test_a_chain_goes_in_order_each_step_after_the_last(
         submit_module.chain("caving", "vm", Jobs(work=False), titles)
 
 
-def result(tmp_path: Path, job: str, code: int) -> Path:
-    """A louped-result-<id>.tar.gz as job.sh packs it, with no runs."""
-    out = tmp_path / "far" / "out"
-    out.mkdir(parents=True)
-    (out / "result.json").write_text(json.dumps({
+def pushed(tmp_path: Path, job: str, code: int) -> None:
+    """What a job's `louped push --result` leaves in the remote, with no runs."""
+    bundle = tmp_path / "runs" / f"20261006-110000-sol-{job[-4:]}"
+    bundle.mkdir(parents=True)
+    (bundle / "log.txt").write_text("training… done\n")
+    (bundle / "result.json").write_text(json.dumps({
         "job": job, "host": "sol", "exit_code": code, "started": "2026-10-06T10:00:00Z",
-        "ended": "2026-10-06T11:00:00+00:00", "home": str(out)}))  # fmt: skip
-    (out / "log.txt").write_text("training… done\n")
-    archive = tmp_path / f"louped-result-{job}.tar.gz"
-    with tarfile.open(archive, "w:gz") as tar:
-        tar.add(out, arcname="out")
-    return archive
+        "ended": "2026-10-06T11:00:00+00:00", "home": "out"}))  # fmt: skip
 
 
-def test_a_job_that_ends_brings_its_result_back_and_deletes_the_copy(
-    cluster: Cluster, tmp_path: Path
-) -> None:
+def test_a_job_that_ends_is_pulled_from_the_remote(cluster: Cluster, tmp_path: Path) -> None:
     api = client()
     body = {"id": "script:caving/train.py", "cluster": "sol", "target": {}}
     job = api.post("/api/launch/submit", json=body).json()
@@ -259,11 +244,11 @@ def test_a_job_that_ends_brings_its_result_back_and_deletes_the_copy(
     submit_module.follow(jobs)
     assert jobs.get(job["id"]).status == "running"
     cluster.states = {"4101": "COMPLETED"}
-    cluster.results[f"louped-result-{job['id']}.tar.gz"] = result(tmp_path, job["id"], 0)
+    pushed(tmp_path, job["id"], 0)
     submit_module.follow(jobs)
     done = jobs.get(job["id"])
     assert done.status == "succeeded" and done.exit_code == 0
-    assert not list((jobs.dir / job["id"]).glob("*.tar.gz"))
+    assert not [c for c in cluster.commands() if c.startswith("scp")]  # nothing copied back
     assert "training… done" in jobs.detail(job["id"]).log
 
 
@@ -292,7 +277,7 @@ def test_a_shell_machine_runs_the_job_with_nohup(cluster: Cluster) -> None:
     job = api.post("/api/launch/submit", json=body).json()
     assert job["scheduler_id"] == "777"
     start = cluster.commands()[-1]
-    assert "{ nohup bash job.sh > /scratch/ash/louped/louped-" in start and "echo $!" in start
+    assert "{ nohup bash louped-" in start and "echo $!" in start
     refused = api.post("/api/launch/submit", json={**body, "after": job["id"]})
     assert refused.status_code == 400 and "--after needs a Slurm cluster" in refused.text
 

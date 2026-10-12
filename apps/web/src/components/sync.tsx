@@ -1,17 +1,15 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Cloud, CloudDownload, CloudUpload, Upload } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { Cloud, CloudDownload, CloudUpload } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { part, useRules } from "@/components/parts";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { ApiError, connectRemote, importResult, pullRuns, pushRuns, q } from "@/lib/api";
-import { jobHref } from "@/lib/href";
+import { ApiError, connectRemote, pullRuns, pushRuns, q } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 /** Push and Pull with the project's remote, when it has one. */
@@ -185,52 +183,5 @@ export function TokenField({
         autoComplete="off"
       />
     </label>
-  );
-}
-
-/** Takes the louped-result-….tar.gz an exported job wrote elsewhere; its runs join Runs. */
-export function ImportResult() {
-  const rule = useRules();
-  const client = useQueryClient();
-  const router = useRouter();
-  const picker = useRef<HTMLInputElement>(null);
-  const bring = useMutation({
-    mutationFn: importResult,
-    meta: { action: "Import" },
-    onSuccess: (done) => {
-      void client.invalidateQueries({ queryKey: ["jobs"] });
-      void client.invalidateQueries({ queryKey: ["runs"] });
-      toast(`${done.runs.length} runs imported from ${done.host}`, {
-        description: done.skipped.length ? `${done.skipped.length} were already here.` : undefined,
-      });
-      if (done.job) router.push(jobHref(done.job));
-    },
-  });
-  return (
-    <>
-      <input
-        ref={picker}
-        type="file"
-        accept=".gz,.tgz,application/gzip"
-        className="hidden"
-        aria-label="Result archive"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) bring.mutate(file);
-          e.target.value = "";
-        }}
-      />
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => picker.current?.click()}
-        {...part("runs/action/import")}
-        className={cn(rule("runs/action/import").hidden && "hidden")}
-        disabled={bring.isPending}
-        title="The louped-result-….tar.gz a job exported to Sol, a cluster or a VM wrote"
-      >
-        <Upload /> Import result
-      </Button>
-    </>
   );
 }

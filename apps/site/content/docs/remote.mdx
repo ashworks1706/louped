@@ -71,6 +71,9 @@ before `sbatch`.
 
 ## Run on a cluster
 
+A job that runs elsewhere pushes its results to the project's remote, so set one first (see
+above). Without a remote, **Export** is off.
+
 1. In the app, open **Launch**.
 2. Set the options.
 3. In **Run on**, choose ASU Sol, a Slurm cluster or another machine.
@@ -82,18 +85,17 @@ before `sbatch`.
    sbatch louped-<id>.sh     # or: bash louped-<id>.sh on a plain machine
    ```
 
-   When the project is a pushed git commit, the export is this one file. The job clones the
-   project at that commit. Otherwise the export is `louped-<id>.tar.gz`, and the app says why.
-   Unpack it and run its `job.sh` instead.
+   The export is always this one file. When the project is a pushed git commit, the job clones
+   the project at that commit. Otherwise the file carries what the job needs, compressed: the
+   launched experiment, `louped.toml` and any edited config. It carries no other experiment.
+   Files over 50 MB stay behind, and the app names them. Put big data on the Hub or in the
+   remote.
 
-7. Get the results back:
-   - With a remote set, the job pushes its results itself. Press **Pull** on **Runs**, or run
-     `louped pull`.
-   - Without a remote, copy `louped-result-<id>.tar.gz` back. Then open **Runs → Import result**
-     (or run `louped import louped-result-<id>.tar.gz`). For large results, set a remote
-     instead. The job then pushes them straight to storage.
+7. Get the results back. The job pushes them to the remote. Press **Pull** on **Runs**, or run
+   `louped pull`. If the push fails, the job says so and keeps the results in its `out/` folder.
+   Push them from there later with `louped push --result out/result.json`.
 
-Pulled and imported runs show like local ones, marked with where they ran.
+Pulled runs show like local ones, marked with where they ran.
 
 To skip the copying, let louped submit the job. See [Clusters](#clusters).
 
@@ -115,8 +117,7 @@ To skip the copying, let louped submit the job. See [Clusters](#clusters).
 
 Use Google Colab when you have no cluster. Colab gives a free GPU for a few hours.
 
-1. Commit and push the project. The notebook clones it at that commit. If the commit is not
-   pushed, the export stops and says why.
+1. Set a remote (see above). The job pushes its results there.
 2. In the app, open **Launch** and set the options.
 3. In **Run on**, choose **Google Colab**. Colab has no GPU fields: you pick the GPU in Colab.
 4. Press **Export**. The app downloads `louped-<id>.ipynb`.
@@ -127,13 +128,10 @@ Use Google Colab when you have no cluster. Colab gives a free GPU for a few hour
    `HF_TOKEN` (the key icon on the left). Let the notebook read it. The notebook never holds the
    token.
 8. Run all: **Runtime → Run all**. The job's output shows as it runs.
-9. Get the results back:
-   - With a remote set, the job pushes its results. Press **Pull** on **Runs**.
-   - Without a remote, the last cell downloads `louped-result-<id>.tar.gz`. Open **Runs → Import
-     result** and pick it.
+9. Get the results back: the job pushes them. Press **Pull** on **Runs**.
 
 The notebook writes the same one-file `job.sh` as a cluster export and runs it with `bash`. Thus
-it installs uv and louped the same way.
+it installs uv and louped the same way, and clones a pushed commit or carries the experiment.
 
 ## Clusters
 
@@ -182,9 +180,7 @@ louped exports the job as **Export** does. It copies the job to `dir` and runs `
 `louped serve` runs, it asks the cluster every minute how the job is (`sacct`). When the job ends,
 louped gets the result:
 
-- With a remote, louped pulls the results that the job pushed.
-- Without a remote, louped copies `louped-result-<id>.tar.gz` here with `scp`, imports it and
-  deletes the copy.
+- louped pulls the results that the job pushed to the remote.
 - If no result comes back, the job page shows the state that Slurm gives (such as `TIMEOUT`) and
   the end of the job's output.
 

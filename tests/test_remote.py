@@ -1,8 +1,9 @@
 """Export a launch, run its job.sh as the other machine would, and import the result."""
 
+import base64
 import io
-import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -57,6 +58,12 @@ def experiment(tmp_path: Path) -> None:
     (folder / "run.py").write_text(SCRIPT)
 
 
+@pytest.fixture(autouse=True)
+def remote(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A remote the other machine reaches: a job pushes its results there."""
+    monkeypatch.setenv("LOUPED_REMOTE", "s3://bucket/runs")
+
+
 def client() -> TestClient:
     return TestClient(create_app(launching=True), base_url="http://localhost")
 
@@ -70,20 +77,30 @@ def export(api: TestClient, target: dict) -> tuple[str, bytes]:
 
 
 def unpack(data: bytes, where: Path) -> Path:
-    with tarfile.open(fileobj=io.BytesIO(data)) as tar:
-        tar.extractall(where, filter="data")
-    [root] = list(where.iterdir())
+    """The folder an exported job.sh works in, louped-<id>/, with the script in it as job.sh and
+    what it carries unpacked there, as the script itself would."""
+    script = data.decode()
+    found = re.search(r"# louped job (\S+):", script)
+    assert found
+    root = where / f"louped-{found[1]}"
+    root.mkdir(parents=True)
+    (root / "job.sh").write_text(script)
+    if carried := re.search(r"<<'LOUPED_PAYLOAD'.*?\n(.*?)\nLOUPED_PAYLOAD", script, re.S):
+        with tarfile.open(fileobj=io.BytesIO(base64.b64decode(carried[1]))) as tar:
+            tar.extractall(root, filter="data")
     return root
 
 
 def test_a_sol_bundle_asks_sol_for_its_gpu_and_runs_the_launch_command(tmp_path: Path) -> None:
     experiment(tmp_path)
+    (tmp_path / "experiments" / "other").mkdir()
+    (tmp_path / "experiments" / "other" / "data.bin").write_bytes(b"x" * 1000)
     api = client()
     name, data = export(api, {"provider": "sol", "gpu": "a100", "gpus": 1, "hours": 2,
                               "constraint": "a100_80"})  # fmt: skip
     root = unpack(data, tmp_path / "far")
     job = root.name.removeprefix("louped-")
-    assert name == f"louped-{job}.tar.gz"
+    assert name == f"louped-{job}.sh"
     script = (root / "job.sh").read_text()
     for line in ("#SBATCH -p public", "#SBATCH -q public", "#SBATCH -G a100:1",
                  "#SBATCH -t 2:00:00", "#SBATCH -C a100_80", "/scratch/$USER/huggingface",
@@ -91,6 +108,9 @@ def test_a_sol_bundle_asks_sol_for_its_gpu_and_runs_the_launch_command(tmp_path:
                  "python experiments/hello/run.py --name sol"):  # fmt: skip
         assert line in script
     assert (root / "experiments/hello/run.py").exists() and (root / "uv.lock").exists()
+    # only what the job needs: no README, no manifest, no other experiment
+    assert not (root / "README.txt").exists() and not (root / "louped.json").exists()
+    assert not (root / "experiments" / "other").exists()
     [listed] = [j for j in api.get("/api/launch/jobs").json() if j["id"] == job]
     assert listed["status"] == "exported" and listed["title"].endswith("· sol")
 
@@ -139,12 +159,11 @@ def test_a_job_installs_the_extras_its_experiment_declares(tmp_path: Path) -> No
     readme.write_text("---\ndomain: inference\nstatus: active\nextras: tracking\n---\n# hello\n")
     _, data = export(api, {"provider": "sol"})
     root = unpack(data, tmp_path / "b")
-    assert "uv sync --locked --no-dev --extra tracking\n" in (root / "job.sh").read_text()
-    assert json.loads((root / "louped.json").read_text())["target"]["extras"] == ["tracking"]
+    script = (root / "job.sh").read_text()
+    assert "uv sync --locked --no-dev --extra tracking --extra sync\n" in script
     _, data = export(api, {"provider": "sol", "extras": ["interp", "tracking"]})  # the form wins
-    assert (
-        "--extra interp --extra tracking\n" in (unpack(data, tmp_path / "c") / "job.sh").read_text()
-    )
+    script = (unpack(data, tmp_path / "c") / "job.sh").read_text()
+    assert "--extra interp --extra tracking --extra sync\n" in script
     readme.write_text("---\ndomain: inference\nstatus: active\nextras: gpu-magic\n---\n")
     bad = api.post("/api/launch/export", json={"id": "script:hello/run.py", "options": {},
                                                "target": {"provider": "sol"}})  # fmt: skip
@@ -161,13 +180,21 @@ def test_a_bad_sol_gpu_and_an_unsafe_field_are_refused(tmp_path: Path) -> None:
     assert unsafe.status_code == 422
 
 
-def test_a_result_run_elsewhere_imports_as_if_it_ran_here(tmp_path: Path) -> None:
+def test_a_carried_job_runs_elsewhere_pushes_and_pulls_as_if_it_ran_here(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     experiment(tmp_path)
+    # the "cluster" in this test is this machine, so its folder stands in for a bucket
+    monkeypatch.setenv("LOUPED_REMOTE", str(tmp_path / "runs"))
+    monkeypatch.setattr(remote_module.sync, "is_local", lambda url: False)
     api = client()
     _, data = export(api, {"provider": "shell"})
-    root = unpack(data, tmp_path / "far")
-    job = root.name.removeprefix("louped-")
-    assert "#SBATCH" not in (root / "job.sh").read_text()
+    far = tmp_path / "far"
+    far.mkdir()
+    (far / "job.sh").write_bytes(data)  # it unpacks what it carries into louped-<id>/ beside it
+    job = re.search(r"# louped job (\S+):", data.decode())[1]  # type: ignore[index]
+    root = far / f"louped-{job}"
+    assert "#SBATCH" not in data.decode() and "tar -czf" not in data.decode()
     (root / "out/vendor/harness").mkdir(parents=True)  # a paper harness's venv stays behind
     (root / "out/vendor/harness/big").write_text("x")
     # The other machine: uv is there and the environment is this one.
@@ -180,16 +207,15 @@ def test_a_result_run_elsewhere_imports_as_if_it_ran_here(tmp_path: Path) -> Non
     env = {k: v for k, v in os.environ.items() if not k.startswith(("LOUPED_", "INSPECT_"))}
     env |= {"PATH": f"{stub}:{env['PATH']}", "HOME": str(tmp_path)}
     env.pop("VIRTUAL_ENV", None)
-    ran = subprocess.run(["bash", "job.sh"], cwd=root, env=env, capture_output=True, text=True)
+    env.pop("MLFLOW_TRACKING_URI", None)
+    ran = subprocess.run(["bash", "job.sh"], cwd=far, env=env, capture_output=True, text=True)
     assert ran.returncode == 0, ran.stdout + ran.stderr
-    result = root / f"louped-result-{job}.tar.gz"
-    with tarfile.open(result) as tar:
-        assert not [n for n in tar.getnames() if n.startswith("out/vendor")]
+    assert "Results pushed to" in ran.stdout and not list(far.rglob("*.tar.gz"))
+    assert not [p for p in (tmp_path / "runs").rglob("*") if "vendor" in p.parts]
 
-    got = api.post("/api/launch/import", content=result.read_bytes(),
-                   headers={"content-type": "application/gzip"})  # fmt: skip
-    assert got.status_code == 200, got.text
-    done = got.json()
+    pulled = api.post("/api/launch/pull", json={})
+    assert pulled.status_code == 200, pulled.text
+    [done] = pulled.json()
     assert done["job"] == job and done["host"] == "vm" and done["exit_code"] == 0
     runs = {r.id: r for r in stores.list_runs()}
     assert set(done["runs"]) <= set(runs) and len(done["runs"]) == 2
@@ -202,9 +228,6 @@ def test_a_result_run_elsewhere_imports_as_if_it_ran_here(tmp_path: Path) -> Non
     assert [v.view.title for v in stores.list_views(analysis.id)] == ["t"]
     detail = api.get(f"/api/launch/jobs/{job}").json()
     assert detail["status"] == "succeeded" and "ran sol" in detail["log"]
-
-    again = api.post("/api/launch/import-path", json={"path": str(result)}).json()
-    assert again["runs"] == [] and sorted(again["skipped"]) == sorted(done["runs"])
 
 
 def test_import_refuses_what_is_not_a_result_and_an_exposed_server(tmp_path: Path) -> None:
@@ -247,9 +270,10 @@ def test_a_pushed_project_exports_as_one_file_whose_job_pushes_its_result(
     api = client()
     body = {"id": "script:hello/run.py", "options": {"--name": "sol"},
             "target": {"provider": "shell"}}  # fmt: skip
-    # a folder here is no remote for the cluster: the job packs its result and the note says why
+    # a folder here is no remote for the cluster: export says so and makes nothing
+    monkeypatch.delenv("LOUPED_REMOTE")
     got = api.post("/api/launch/export", json=body)
-    assert "cannot reach" in got.headers["x-louped-note"]
+    assert got.status_code == 400 and "a folder on this machine" in got.text
     # the "cluster" in this test is this machine, so its folder stands in for a bucket
     monkeypatch.setattr(remote_module.sync, "is_local", lambda url: False)
 
@@ -257,6 +281,7 @@ def test_a_pushed_project_exports_as_one_file_whose_job_pushes_its_result(
                                                "options": {"--name": "sol"},
                                                "target": {"provider": "shell"}})  # fmt: skip
     assert got.status_code == 200 and "not pushed" in got.headers["x-louped-note"]
+    assert "LOUPED_PAYLOAD" in got.text  # it carries the project instead
     git(project, "remote", "add", "origin", str(tmp_path / "origin.git"))
     git(project, "push", "-q", "origin", "main")
     (project / "experiments/hello/notes.txt").write_text("draft")
@@ -289,7 +314,7 @@ def test_a_pushed_project_exports_as_one_file_whose_job_pushes_its_result(
     ran = subprocess.run(["bash", name], cwd=far, env=env, capture_output=True, text=True)
     assert ran.returncode == 0, ran.stdout + ran.stderr
     assert "Results pushed to" in ran.stdout
-    assert not list((far / f"louped-{job}").glob("*.tar.gz"))
+    assert not list(far.rglob("*.tar.gz"))
 
     pulled = api.post("/api/launch/pull", json={})
     assert pulled.status_code == 200, pulled.text
@@ -365,24 +390,24 @@ def test_a_result_unpacks_under_louped_home_once_it_is_known_to_fit(
     assert not list((isolated_home / "staging").iterdir())
 
 
-def test_an_export_without_a_remote_recommends_one_for_large_results(
+def test_an_export_needs_a_remote_the_job_can_push_to(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     experiment(tmp_path)
-    monkeypatch.delenv("LOUPED_REMOTE", raising=False)
+    monkeypatch.delenv("LOUPED_REMOTE")
     body = {"id": "script:hello/run.py", "target": {"provider": "sol"}}
     got = client().post("/api/launch/export", json=body)
-    hint = "set a remote in louped.toml so the job pushes them straight to storage"
-    assert hint in got.headers["x-louped-note"]
-    assert hint in (unpack(got.content, tmp_path / "far") / "job.sh").read_text()
+    assert got.status_code == 400 and "this project has none" in got.text
+    assert "Runs > Connect" in got.text
     monkeypatch.setenv("LOUPED_REMOTE", "s3://bucket/runs")
     got = client().post("/api/launch/export", json=body)
-    assert hint not in got.headers["x-louped-note"]
-    script = (unpack(got.content, tmp_path / "near") / "job.sh").read_text()
-    assert hint not in script and "--extra sync" in script
+    assert got.status_code == 200
+    script = got.text
+    assert "--extra sync" in script and "louped push --result" in script
+    assert "tar -czf" not in script and "louped-result" not in script
 
 
-def test_colab_gets_a_notebook_that_clones_the_commit_runs_the_job_and_brings_it_back(
+def test_colab_gets_a_notebook_that_runs_the_job_which_pushes_its_result(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     import nbformat
@@ -390,7 +415,7 @@ def test_colab_gets_a_notebook_that_clones_the_commit_runs_the_job_and_brings_it
     project = tmp_path / "project"
     monkeypatch.setenv("LOUPED_EXPERIMENTS", str(project / "experiments"))
     monkeypatch.setenv("HF_TOKEN", "hf_never_in_the_notebook")
-    monkeypatch.delenv("LOUPED_REMOTE", raising=False)
+    monkeypatch.setenv("LOUPED_REMOTE", "hf://buckets/ash/runs")
     experiment(project)
     (project / "louped.toml").write_text("")
     (project / ".gitignore").write_text(".louped/\n")
@@ -403,8 +428,8 @@ def test_colab_gets_a_notebook_that_clones_the_commit_runs_the_job_and_brings_it
     api = client()
     body = {"id": "script:hello/run.py", "options": {"--name": "sol"},
             "target": {"provider": "colab"}}  # fmt: skip
-    refused = api.post("/api/launch/export", json=body)
-    assert refused.status_code == 400 and "pushed commit: this commit is not pushed" in refused.text
+    carried = api.post("/api/launch/export", json=body)  # not pushed: the job carries it
+    assert carried.status_code == 200 and "LOUPED_PAYLOAD" in carried.text
     git(project, "remote", "add", "origin", str(tmp_path / "origin.git"))
     git(project, "push", "-q", "origin", "main")
     sha = subprocess.run(["git", "-C", str(project), "rev-parse", "HEAD"], capture_output=True,
@@ -421,24 +446,16 @@ def test_colab_gets_a_notebook_that_clones_the_commit_runs_the_job_and_brings_it
 
     name, nb, note = notebook()
     job = name.removeprefix("louped-").removesuffix(".ipynb")
-    assert name.endswith(".ipynb") and "run all" in note
-    intro, token, script, run, result = nb.cells
+    assert name.endswith(".ipynb") and "run all" in note and "HF_TOKEN secret in Colab" in note
+    intro, token, script, run = nb.cells
     assert intro.cell_type == "markdown" and "GPU runtime" in intro.source
-    assert 'userdata.get("HF_TOKEN")' in token.source and "print(" in token.source
+    assert 'userdata.get("HF_TOKEN")' in token.source and "raise RuntimeError(" in token.source
     assert script.source.startswith("%%writefile job.sh\n#!/bin/bash")
     for line in ("git clone --quiet", f"checkout --quiet --detach {sha}",
-                 "python experiments/hello/run.py --name sol", "uv pip install"):  # fmt: skip
+                 "python experiments/hello/run.py --name sol", "uv pip install",
+                 "louped push --result out/result.json", "sync]=="):  # fmt: skip
         assert line in script.source
-    assert "#SBATCH" not in script.source and "louped push" not in script.source
+    assert "#SBATCH" not in script.source and "louped-result" not in script.source
     assert '["bash", "job.sh"]' in run.source
-    assert f'files.download("louped-{job}/louped-result-{job}.tar.gz")' in result.source
     [listed] = [j for j in api.get("/api/launch/jobs").json() if j["id"] == job]
     assert listed["title"].endswith("· colab")
-
-    # with a remote, the job pushes its result; the last cell downloads it only if that failed
-    monkeypatch.setenv("LOUPED_REMOTE", "hf://buckets/ash/runs")
-    _, nb, note = notebook()
-    _, token, script, _, result = nb.cells
-    assert "louped push --result out/result.json" in script.source and "sync]==" in script.source
-    assert "raise RuntimeError(" in token.source and "HF_TOKEN secret in Colab" in note
-    assert "archive.exists()" in result.source and "hf://buckets/ash/runs" in result.source

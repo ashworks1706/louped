@@ -793,11 +793,10 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         holds provider (sol, slurm, shell or colab), gpu, gpus, hours, cpus, partition, qos and
         constraint, the server filling in the rest (colab takes no GPU fields: the person picks
         the runtime). Saves it under out_dir and returns its path and a note: one file,
-        louped-<job>.sh, when the project is a pushed git commit, else louped-<job>.tar.gz with
-        job.sh inside; for colab, louped-<job>.ipynb, which needs a pushed commit. The person runs
-        it there (`sbatch`, bash on a VM, Run all in Colab with an HF_TOKEN secret for gated
-        models). With a remote set, its results come back with pull; else they bring back
-        louped-result-<job>.tar.gz for import_result."""
+        louped-<job>.sh, that clones the project at a pushed commit or carries the launched
+        experiment inside; for colab, louped-<job>.ipynb. The person runs it there (`sbatch`, bash
+        on a VM, Run all in Colab with an HF_TOKEN secret for gated models). The job pushes its
+        results to the project's remote, which export needs; bring them here with pull."""
         body = {"id": id, "options": options or {}, "target": target}
         try:
             response = await api.post("/launch/export", json=body)
@@ -806,7 +805,7 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         if not response.is_success:
             _read(response)
         found = re.search(r'filename="?([^";]+)"?', response.headers.get("content-disposition", ""))
-        name = found.group(1) if found else "louped-job.tar.gz"
+        name = found.group(1) if found else "louped-job.sh"
         path = Path(out_dir).expanduser().resolve() / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(response.content)
