@@ -156,6 +156,8 @@ KINDS: list[Kind] = [
        rules=PICK),
     _k(part="figures/code/*", about="Opens the script that made one figure, at its commit, on "
        "the forge.", rules=PICK),
+    _k(part="figures/lasso/*", about="The points a lasso or box holds on one figure, with Note "
+       "to keep a note on them.", rules=PICK),
     _k(part="config/param/*", about="One parameter.", rules=["hidden", "about", "order"]),
     _k(part="config/tag/*", about="One tag.", rules=["hidden", "about", "order"]),
     _k(part="config/*", about="The parameters' or tags' heading (params, tags).", rules=PICK),
@@ -319,6 +321,19 @@ KINDS: list[Kind] = [
        rules=PICK),
     _k(part="source/pin/*", about="One pinned passage of the source, by id.", rules=PICK),
     # Feedback
+    # notes on parts (louped.stores.notes), by the note's id
+    _k(part="notes/mark/*", about="The mark on a part that has notes; it opens them.",
+       rules=PICK),
+    _k(part="notes/close/*", about="Closes a part's notes.", rules=PICK),
+    _k(part="notes/note/*", about="One note: its text, who wrote it and when.", rules=PICK),
+    _k(part="notes/anchor/*/*", about="A part one note is on, by the note's id and the part's "
+       "place in it; it opens the part's page with the note.", rules=PICK),
+    _k(part="notes/edit/*", about="Edits one note's text.", rules=PICK),
+    _k(part="notes/text/*", about="One note's text, being edited.", rules=PICK),
+    _k(part="notes/save/*", about="Saves one note's text.", rules=PICK),
+    _k(part="notes/cancel/*", about="Stops editing one note.", rules=PICK),
+    _k(part="notes/delete/*", about="Moves one note to the trash, after one confirm.",
+       rules=PICK),
     _k(part="feedback/heading", about="The list of requests for louped.", rules=PICK),
     _k(part="feedback/new", about="Starts a new request.", rules=PICK),
     _k(part="feedback/item/*", about="One request in the list, by id.", rules=PICK),

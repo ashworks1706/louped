@@ -11,6 +11,7 @@ import { useLive } from "@/components/home-overview";
 import { Mark } from "@/components/mark";
 import { Cues } from "@/components/cues";
 import { arrange, part, partId, useRules } from "@/components/parts";
+import { NoteMarks } from "@/components/notes";
 import { PartPicker } from "@/components/pick-parts";
 import { ServerStatus } from "@/components/server-status";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -105,6 +106,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
       {/* outside the top bar: its backdrop blur would hold fixed children to it */}
       <Suspense>
+        <NoteMarks />
         <PartPicker />
         <Cues />
       </Suspense>

@@ -69,7 +69,8 @@ The app's pages are data: ui_page shows them and every kind of part on them; ui_
 which parts the person Shift+clicked, with their data. Call it when they refer to something on
 screen ("this row", "these", @sel 2); in Claude Code, new picks also arrive with their message.
 set_layout, set_preset and set_part change the pages; ui_show opens a page and points the person
-at parts, with a note."""
+at parts, with a note. Notes are the project's own, kept on parts: notes reads what the person
+wrote on runs, rows and figures (a lasso note holds the points); add_note leaves one of yours."""
 
 READ = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False)
@@ -576,6 +577,48 @@ def server(url: str = "http://127.0.0.1:8000", transport: httpx.AsyncBaseTranspo
         fields = {k: v for k, v in given.items() if v is not None}
         made = await post("/feedback", {"kind": kind, "title": title, "fields": fields})
         return {**made, "page": f"/feedback/?id={made['id']}"}
+
+    @mcp.tool(annotations=READ)
+    async def notes(
+        run: str | None = None, experiment: str | None = None, part: str | None = None
+    ) -> list[dict[str, Any]]:
+        """The notes kept on parts of the app's pages, newest first: id, text (Markdown), by
+        (person or agent), created, updated, and anchors, the parts each is on: address, page
+        url, run, experiment, shows (the part's text then) and data (what it stood for then; a
+        figure's lasso holds its points, with their item ids). With run, experiment or part (an
+        address, or its start such as "items/row"), only notes on a part there. Read them when
+        the person asks about their notes or about a run they have written on."""
+        return await get("/notes", run=run, experiment=experiment, part=part)
+
+    @mcp.tool(annotations=WRITE)
+    async def add_note(
+        text: str,
+        part: str,
+        url: str,
+        run: str | None = None,
+        experiment: str | None = None,
+        data: Any = None,
+    ) -> dict[str, Any]:
+        """Keep a note (Markdown) on a part of a page for the person: part is its address and
+        url the page it is on (ui_selection and ui_page give both), with the run or experiment
+        the page shows. data is what the part stands for, if the note depends on it. The note
+        shows as a mark on the part and on the Notes page, and goes into git with the project.
+        Write one when a finding belongs beside the thing it is about; do not repeat a report."""
+        anchor = {"part": part, "url": url, "run": run, "experiment": experiment, "data": data}
+        made = await post("/notes", {"text": text, "anchors": [anchor], "by": "agent"})
+        return {**made, "page": f"/notes/?id={made['id']}"}
+
+    @mcp.tool(annotations=WRITE)
+    async def edit_note(id: str, text: str) -> dict[str, Any]:
+        """Change what a note says; the parts it is on stay. Change the person's notes only when
+        they ask."""
+        return await send("PUT", f"/notes/{quote(id, safe='')}", json={"text": text})
+
+    @mcp.tool(annotations=STOP)
+    async def delete_note(id: str) -> dict[str, str]:
+        """Move a note to the trash. Delete the person's notes only when they ask."""
+        await send("DELETE", f"/notes/{quote(id, safe='')}")
+        return {"deleted": id}
 
     @mcp.tool(annotations=READ)
     async def preview_view(view: dict[str, Any] | None = None, ref: str | None = None) -> Image:

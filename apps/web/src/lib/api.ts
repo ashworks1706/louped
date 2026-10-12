@@ -46,6 +46,9 @@ export type HubAccount = Schemas["Account"];
 export type Feedback = Schemas["Feedback"];
 export type FeedbackDraft = Schemas["Draft"];
 export type FeedbackForm = Schemas["Form"];
+export type Note = Schemas["Note"];
+export type NoteDraft = Schemas["NoteDraft"];
+export type Anchor = Schemas["Anchor"];
 export type HubHit = Schemas["HubHit"];
 export type HubDetail = Schemas["HubDetail"];
 export type HubAdded = Schemas["HubAdded"];
@@ -314,6 +317,12 @@ export const saveFeedback = (id: string, draft: FeedbackDraft) =>
 export const openedFeedback = (id: string) =>
   post<Feedback>(`/feedback/${encodeURIComponent(id)}/opened`, {});
 export const deleteFeedback = (id: string) => del(`/feedback/${encodeURIComponent(id)}`);
+/** Keeps a note on parts of the app's pages, in the project's notes/. */
+export const addNote = (draft: NoteDraft) => post<Note>("/notes", draft);
+export const editNote = (id: string, text: string) =>
+  put<Note>(`/notes/${encodeURIComponent(id)}`, { text });
+/** Moves a note to the trash. */
+export const deleteNote = (id: string) => del(`/notes/${encodeURIComponent(id)}`);
 /** Removes the Hugging Face token from this machine (`hf auth logout`). */
 export const removeHubToken = () => del("/hub/token");
 /** Lists a model, embedding model or dataset in louped.toml (and downloads it as a job), or
@@ -662,6 +671,12 @@ export const q = {
     queryKey: ["feedback"],
     queryFn: () => (isSnapshot() ? Promise.resolve([]) : get<Feedback[]>("/feedback")),
     refetchInterval: 3000,
+  }),
+  /** Every note on the project's parts, newest first; polled, so one an agent leaves shows. */
+  notes: () => ({
+    queryKey: ["notes"],
+    queryFn: () => get<Note[]>("/notes"),
+    refetchInterval: () => (isSnapshot() ? false : 3000),
   }),
   feedbackForms: () => ({
     queryKey: ["feedback", "forms"],

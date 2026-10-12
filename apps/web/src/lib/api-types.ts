@@ -1908,6 +1908,53 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/notes": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Notes
+     * @description Every note, newest first; with run, experiment or part (an address, or the start of
+     *     one), those with a part there.
+     */
+    get: operations["notes_api_notes_get"];
+    put?: never;
+    /** Add */
+    post: operations["add_api_notes_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/notes/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Note */
+    get: operations["note_api_notes__id__get"];
+    /**
+     * Edit
+     * @description Changes what a note says; the parts it is on stay.
+     */
+    put: operations["edit_api_notes__id__put"];
+    post?: never;
+    /**
+     * Delete
+     * @description Moves it to the trash (<home>/trash/notes).
+     */
+    delete: operations["delete_api_notes__id__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/ui/layout": {
     parameters: {
       query?: never;
@@ -2299,6 +2346,26 @@ export interface components {
        * @description Cohen's kappa: agreement beyond chance.
        */
       kappa: number | null;
+    };
+    /**
+     * Anchor
+     * @description A part a note is on, where, and what it showed when the note was written.
+     */
+    Anchor: {
+      /** Part */
+      part: string;
+      /** Url */
+      url: string;
+      /** Run */
+      run?: string | null;
+      /** Experiment */
+      experiment?: string | null;
+      /**
+       * Shows
+       * @default
+       */
+      shows: string;
+      data?: components["schemas"]["JsonValue"];
     };
     /** Artifact */
     Artifact: {
@@ -4065,6 +4132,52 @@ export interface components {
       benchmarks: string[];
       /** Name */
       name: string;
+    };
+    /** Note */
+    Note: {
+      /** Text */
+      text: string;
+      /** Anchors */
+      anchors: components["schemas"]["Anchor"][];
+      /**
+       * By
+       * @default person
+       * @enum {string}
+       */
+      by: "person" | "agent";
+      /** Id */
+      id: string;
+      /**
+       * Created
+       * Format: date-time
+       */
+      created: string;
+      /**
+       * Updated
+       * Format: date-time
+       */
+      updated: string;
+    };
+    /**
+     * NoteDraft
+     * @description What a note says, and on what.
+     */
+    NoteDraft: {
+      /** Text */
+      text: string;
+      /** Anchors */
+      anchors: components["schemas"]["Anchor"][];
+      /**
+       * By
+       * @default person
+       * @enum {string}
+       */
+      by: "person" | "agent";
+    };
+    /** NoteText */
+    NoteText: {
+      /** Text */
+      text: string;
     };
     /**
      * Option
@@ -8961,6 +9074,169 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Feedback"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  notes_api_notes_get: {
+    parameters: {
+      query?: {
+        run?: string | null;
+        experiment?: string | null;
+        part?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Note"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  add_api_notes_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["NoteDraft"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Note"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  note_api_notes__id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Note"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  edit_api_notes__id__put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["NoteText"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Note"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  delete_api_notes__id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
         };
       };
       /** @description Validation Error */
