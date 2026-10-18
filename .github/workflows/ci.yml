@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: astral-sh/setup-uv@v10.3.0
         with:
           enable-cache: true
       - uses: extractions/setup-just@v4
@@ -75,7 +75,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: astral-sh/setup-uv@v10.3.0
         with:
           enable-cache: true
       - uses: extractions/setup-just@v4
@@ -95,7 +95,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: astral-sh/setup-uv@v10.3.0
         with:
           enable-cache: true
       - uses: extractions/setup-just@v4
@@ -122,7 +122,7 @@ jobs:
           node-version: 22
       - run: corepack enable && pnpm install --frozen-lockfile
       # The UI's API types must match the server's schema.
-      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: astral-sh/setup-uv@v10.3.0
       - uses: extractions/setup-just@v4
       - run: uv sync --locked --extra server && just api-types && git diff --exit-code src/lib/
       - run: pnpm format:check

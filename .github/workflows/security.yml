@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: astral-sh/setup-uv@v10.3.0
       - run: uv export --locked --all-extras --no-emit-project --format requirements-txt > requirements.txt
       # PYSEC-2026-3740: nltk (via sae-lens) model-path sandbox bypass; no fix released, and louped
       # calls no nltk parser or tagger.
