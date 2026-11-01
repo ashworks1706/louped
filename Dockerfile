@@ -7,7 +7,7 @@ RUN pnpm install --frozen-lockfile
 COPY apps/web/ ./
 RUN NEXT_TELEMETRY_DISABLED=1 pnpm build
 
-FROM python:3.12-slim
+FROM python:3.15-slim
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 WORKDIR /app
 COPY pyproject.toml uv.lock README.md LICENSE hatch_build.py ./
